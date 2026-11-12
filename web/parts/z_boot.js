@@ -1,0 +1,18 @@
+/* ---------- 啟動 ---------- */
+(async function main() {
+  try { const t = JSON.parse(localStorage.getItem('fm.theme') || 'null'); if (t) Object.assign(S, t); } catch (e) {}
+  applyTheme();
+  try { localStorage.removeItem('fm.otaFail'); } catch (e) {}
+  try { await loadAll(); } catch (e) { console.error(e); }
+  applyTheme(); initViewer(); initChips(); initSearch(); initCard(); initFav(); initRec(); initSet();
+  $('#tabbar').addEventListener('click', e => { const b = e.target.closest('button'); if (b) { buzz(8); showTab(b.dataset.tab); } });
+  $('#fb3d').onclick = () => { if (!M.map) return; const to3 = M.map.getPitch() <= 5; S.map3d = to3; saveS(); buzz(10); M.map.easeTo({pitch: to3 ? 55 : 0, duration: 500}); };
+  $('#fbN').onclick = () => { if (M.map) M.map.easeTo({bearing: 0, duration: 400}); };
+  $('#fbMe').onclick = () => locateMe(); $('#fbAdd').onclick = openAdd;
+  window.addEventListener('resize', mapResize);
+  renderChips(); updCounts();
+  await initMap();
+  if (!S.onboard) welcome();
+  Upd.boot();
+  window.__ready = true;
+})();
