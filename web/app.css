@@ -344,3 +344,53 @@ h1,h2,h3{margin:0;line-height:1.25;text-wrap:balance}
 .relR:first-child{border-top:0}
 .relN{white-space:pre-line}
 .vTag{display:inline-block;padding:0 .45rem;border-radius:99px;font-size:.7rem;font-weight:700;color:#fff;vertical-align:middle}
+
+/* 區域（縣市／鄉鎮市區）列 */
+#areaBar{display:flex;gap:.4rem;max-width:40rem;margin:0 auto;align-items:center}
+#areaBar select{flex:1;min-width:0;border-radius:999px;padding:.38rem .7rem;font-size:.86rem;font-weight:700;border:1.5px solid var(--edge);box-shadow:0 3px 10px var(--sh);color:var(--text);height:2.25rem}
+#areaBar select.on{border-color:var(--accent);color:var(--accent-2)}
+#areaBar select:disabled{opacity:.65}
+#areaBar .ic{width:2.25rem;height:2.25rem;font-size:.95rem}
+.arList{max-height:30vh;overflow-y:auto;margin:.5rem -.4rem -.3rem;border-top:1px solid var(--border-soft)}
+.arList .res{padding:.5rem .4rem}
+.arList small{display:block}
+
+/* 菜單：按鈕列、分類籤、圖檔版本、背景工作 */
+.mBtns{display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-bottom:.7rem}
+.mBtns .btn{white-space:normal;line-height:1.25;padding:.6rem .5rem;font-size:.86rem;border-radius:var(--r-sm)}
+.mcats{display:flex;gap:.4rem;overflow-x:auto;padding:.1rem 0 .55rem;scrollbar-width:none}
+.mcats::-webkit-scrollbar{display:none}
+.mcats .chip{box-shadow:none;background:var(--surface-3);border-color:var(--border);backdrop-filter:none;-webkit-backdrop-filter:none}
+.mcats .chip.on{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
+.album{background:var(--surface);border:1px solid var(--border-soft);border-radius:var(--r);padding:.75rem .8rem .5rem;margin-bottom:.8rem}
+.album input{padding:.4rem .6rem;font-weight:700}
+.thumbs .addTh{display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:1.4rem;color:var(--accent);border-style:dashed;background:transparent}
+.thumbs .addTh small{font-size:.68rem;color:var(--muted)}
+.jobBar{display:flex;gap:.7rem;align-items:center;padding:.65rem .8rem;border-radius:var(--r-sm);background:color-mix(in srgb,var(--olive) 16%,var(--surface));border:1px solid color-mix(in srgb,var(--olive) 40%,transparent);margin-bottom:.7rem;font-weight:700;font-size:.9rem}
+.jobBar small{display:block;font-weight:400;color:var(--muted)}
+.jobBar .spin,#aiPill .spin{width:1.2rem;height:1.2rem;margin:0;flex:none;border-width:2.5px}
+#aiPill{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--nav) + var(--sab) + .6rem);z-index:45;display:flex;gap:.5rem;align-items:center;padding:.45rem .9rem;border-radius:999px;font-size:.8rem;font-weight:700;max-width:92%;color:var(--text)}
+#aiPill span:last-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.callout a{color:var(--accent-2);font-weight:700}
+.dropOn{outline:3px dashed var(--accent);outline-offset:-2px}
+
+/* 食譜：小列（原本卡片的 1/4 高）、資料夾、份量比例表 */
+.rrow{display:flex;align-items:center;gap:.7rem;padding:.45rem .3rem .45rem .5rem;border-radius:var(--r-sm);background:var(--surface-3);margin-top:.45rem;border:1px solid var(--border-soft);cursor:pointer}
+.rrow .rth{width:3.2rem;height:3.2rem;border-radius:.7rem;flex:none;display:flex;align-items:center;justify-content:center;font-size:1.5rem;background:linear-gradient(135deg,color-mix(in srgb,var(--c,var(--accent)) 28%,var(--surface-2)),var(--surface-2)) center/cover}
+.rrow b{display:block;line-height:1.3}
+.rrow small{display:block;color:var(--muted);font-size:.78rem;line-height:1.4}
+.rtWrap{overflow-x:auto;border-radius:var(--r-sm);border:1px solid var(--border)}
+.rtWrap .rtable{border:0;border-radius:0;min-width:100%;width:max-content}
+.rtable.ratio th,.rtable.ratio td{white-space:nowrap;padding:.6rem .8rem}
+.rtable.ratio th:first-child,.rtable.ratio td:first-child{position:sticky;left:0;z-index:1}
+.rtable.ratio td:first-child{background:var(--surface-2);font-weight:700}
+.rtable.ratio th:first-child{background:#eb9d24}
+[data-theme=dark] .rtable.ratio th:first-child{background:#b8791a}
+.recipe .mcats{margin-top:-.3rem}
+.icard{align-items:flex-start;background:var(--surface);border:1px solid var(--border-soft);border-radius:var(--r-sm);padding:.5rem .3rem .5rem 0;margin-bottom:.5rem}
+.icard .grip{margin-top:.2rem}
+.pgrid{display:grid;grid-template-columns:1fr 1fr;gap:.35rem .5rem;margin-top:.4rem}
+.pgrid label{display:flex;flex-direction:column;font-size:.72rem;color:var(--muted);font-weight:700;gap:.1rem;min-width:0}
+.pgrid span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pgrid input{padding:.4rem .55rem}
+#rType{width:100%}

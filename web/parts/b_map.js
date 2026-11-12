@@ -34,6 +34,10 @@ async function mapStyle() {
   if (!b3) { const src = Object.keys(st.sources).find(k => st.sources[k].type === 'vector');
     if (src) { b3 = {id: 'fm-3d', type: 'fill-extrusion', source: src, 'source-layer': 'building', minzoom: 14, paint: {'fill-extrusion-height': ['coalesce', ['get', 'render_height'], 8], 'fill-extrusion-base': ['coalesce', ['get', 'render_min_height'], 0]}}; st.layers.push(b3); } }
   if (b3) { b3.paint = Object.assign({}, b3.paint, {'fill-extrusion-color': '#e3d6bf', 'fill-extrusion-opacity': .88}); }
+  /* 圖磚、字型、圖示都改走自訂通道：有離線地圖就讀手機裡的，沒有才上網抓 */
+  M.rawStyle = {glyphs: st.glyphs, sprite: st.sprite, fonts: [...new Set(st.layers.map(l => l.layout && l.layout['text-font']).filter(f => Array.isArray(f) && typeof f[0] === 'string').map(f => f.join(',')))]};
+  Object.keys(st.sources).forEach(k => { const so = st.sources[k]; if (so.type === 'vector' && (so.url || '').indexOf('openfreemap') >= 0) { Off.tjUrl = so.url; st.sources[k] = {type: 'vector', tiles: ['fmt://{z}/{x}/{y}'], minzoom: 0, maxzoom: 14, attribution: '© OpenFreeMap © OpenStreetMap'}; } });
+  if (typeof st.glyphs === 'string') st.glyphs = 'fmc://' + st.glyphs; if (typeof st.sprite === 'string') st.sprite = 'fmc://' + st.sprite;
   return st;
 }
 
@@ -41,19 +45,20 @@ function mapHint(msg) { let h = $('.mapHint'); if (!msg) { if (h) h.remove(); re
 
 async function initMap() {
   if (!window.maplibregl) { mapHint('地圖元件載入失敗'); return; }
+  Off.init();
   const st = await mapStyle(), v = S.view || {c: [120.96, 23.75], z: 6.6};
   try {
     M.map = new maplibregl.Map({container: 'map', style: st, center: v.c, zoom: v.z, pitch: S.map3d ? (v.p != null ? v.p : 55) : 0, bearing: v.b || 0, maxPitch: 70, attributionControl: false,
       localIdeographFontFamily: '"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif', fadeDuration: 0, dragRotate: true});
   } catch (e) { mapHint('這個裝置不支援 3D 向量地圖（WebGL），收藏與食譜功能仍可正常使用'); return; }
   const m = M.map; M.ready = true;
-  m.on('load', () => { try { m.setLight({anchor: 'viewport', intensity: .22, color: '#ffffff', position: [1.2, 200, 35]}); } catch (e) {} });
+  m.on('load', () => { try { m.setLight({anchor: 'viewport', intensity: .22, color: '#ffffff', position: [1.2, 200, 35]}); } catch (e) {} Area.draw(); });
   m.on('error', () => {});
   const saveView = debounce(() => { const c = m.getCenter(); S.view = {c: [+c.lng.toFixed(6), +c.lat.toFixed(6)], z: +m.getZoom().toFixed(2), p: Math.round(m.getPitch()), b: Math.round(m.getBearing())}; saveS(); }, 600);
   const onView = () => { $('#map').classList.toggle('zLbl', S.labels && m.getZoom() >= 13.5); $('#fb3d').classList.toggle('on', m.getPitch() > 5); $('#fb3d').textContent = m.getPitch() > 5 ? '3D' : '2D';
     $('#fbN svg').style.transform = `rotate(${-m.getBearing()}deg)`; };
   m.on('move', onView); m.on('moveend', saveView); onView();
-  m.on('click', () => { if (M.sel || M.draft) { clearSel(); } hideResults(); $('#mQ').blur(); });
+  m.on('click', e => { hideResults(); $('#mQ').blur(); if (M.sel || M.draft) { clearSel(); return; } Area.tap(e.lngLat.lng, e.lngLat.lat); });
   m.on('contextmenu', e => { e.preventDefault(); pickPoint(e.lngLat.lat, e.lngLat.lng); });
   { let lt = 0, sx = 0, sy = 0; const cv = m.getCanvasContainer();
     cv.addEventListener('touchstart', e => { clearTimeout(lt); if (e.touches.length !== 1 || e.target.closest('.pin')) return; sx = e.touches[0].clientX; sy = e.touches[0].clientY;
@@ -77,29 +82,31 @@ function syncMarkers() {
     if (mk && mk._sig !== sig) { mk.remove(); M.marks.delete(p.id); mk = null; }
     if (!mk) { const e = pinEl(p); e.addEventListener('click', ev => { ev.stopPropagation(); selectPlace(p.id); });
       mk = new maplibregl.Marker({element: e, anchor: 'center'}).setLngLat([p.lon, p.lat]).addTo(M.map); mk._sig = sig; M.marks.set(p.id, mk); }
-    const show = M.filter === 'all' || (p.cat || '') === M.filter || !DB.cats.some(c => c.id === p.cat) && M.filter === '';
+    const show = (M.filter === 'all' || (p.cat || '') === M.filter || !DB.cats.some(c => c.id === p.cat) && M.filter === '') && (Area.has(p) || M.sel === p.id);
     mk.getElement().style.display = show ? '' : 'none'; mk.getElement().classList.toggle('sel', M.sel === p.id); });
 }
 function placesIn(f) { return f === 'all' ? DB.places : DB.places.filter(p => (DB.cats.some(c => c.id === p.cat) ? p.cat : '') === f); }
+/* 目前地圖上看得到的：分類 ＋ 選取的縣市／鄉鎮市區 */
+function placesShown(f) { return placesIn(f).filter(p => Area.has(p)); }
 
 /* ---------- 上方分類列 ---------- */
 function renderChips() {
   const box = $('#chips'), un = placesIn('').length; if (M.filter !== 'all' && M.filter !== '' && !DB.cats.some(c => c.id === M.filter)) M.filter = 'all'; if (M.filter === '' && !un) M.filter = 'all';
-  box.innerHTML = `<button class="chip ${M.filter === 'all' ? 'on' : ''}" data-f="all">🗺️ 全部 <span class="n">${DB.places.length}</span></button>` +
-    DB.cats.map(c => `<button class="chip srt ${M.filter === c.id ? 'on' : ''}" data-f="${c.id}" style="--c:${c.color}">${esc(c.icon)} ${esc(c.name)} <span class="n">${placesIn(c.id).length}</span></button>`).join('') +
+  box.innerHTML = `<button class="chip ${M.filter === 'all' ? 'on' : ''}" data-f="all">🗺️ 全部 <span class="n">${placesShown('all').length}</span></button>` +
+    DB.cats.map(c => `<button class="chip srt ${M.filter === c.id ? 'on' : ''}" data-f="${c.id}" style="--c:${c.color}">${esc(c.icon)} ${esc(c.name)} <span class="n">${placesShown(c.id).length}</span></button>`).join('') +
     (un ? `<button class="chip ${M.filter === '' ? 'on' : ''}" data-f="" style="--c:${UNCAT.color}">📍 未分類 <span class="n">${un}</span></button>` : '') +
     `<button class="chip tool" data-f="+">✎ 分類</button>`;
 }
 function initChips() {
-  $('#chips').addEventListener('click', e => { const b = e.target.closest('.chip'); if (!b) return; const f = b.dataset.f; if (f === '+') { openCats(); return; }
-    buzz(10); M.filter = f; clearSel(); renderChips(); syncMarkers(); fitFilter(); });
+  $('#chips').addEventListener('click', e => { const b = e.target.closest('.chip'); if (!b) return; const f = b.dataset.f; if (f === '+') { openCats('place'); return; }
+    M.filter = f; clearSel(); renderChips(); syncMarkers(); if (S.area) Area.card(); else fitFilter(); });
   sortable($('#chips'), {item: '.chip.srt', axis: 'x', onSort(from, to) { moveItem(DB.cats, from, to); saveCats(); refreshAll(); }});
 }
-function fitFilter() { if (!M.map) return; const ps = placesIn(M.filter); if (!ps.length) { if (M.filter !== 'all') toast('這個分類還沒有收藏地點'); return; }
+function fitFilter() { if (!M.map) return; const ps = placesShown(M.filter); if (!ps.length) { if (M.filter !== 'all') toast('這個分類還沒有收藏地點'); return; }
   const b = M.map.getBounds(); if (ps.some(p => b.contains([p.lon, p.lat]))) return;
   if (ps.length === 1) { flyTo(ps[0].lat, ps[0].lon, 15); return; }
   const bb = new maplibregl.LngLatBounds(); ps.forEach(p => bb.extend([p.lon, p.lat])); M.map.fitBounds(bb, {padding: {top: 150, bottom: 120, left: 50, right: 70}, maxZoom: 16, duration: 900}); }
-function refreshAll() { renderChips(); syncMarkers(); if (curTab === 'Fav') renderFav(); updCounts(); }
+function refreshAll() { Area.cache.clear(); renderChips(); syncMarkers(); if (curTab === 'Fav') renderFav(); updCounts(); if (S.area && !M.sel && !M.draft && !Area.hideList) Area.card(); }
 
 /* ---------- 營業時間 ---------- */
 const WD = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'], WD2 = ['週日', '週一', '週二', '週三', '週四', '週五', '週六'], WD3 = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
@@ -117,13 +124,13 @@ function stateHtml(p) { const s = openState(p); if (!s) return ''; return `<span
 /* ---------- 地圖下方資訊卡 ---------- */
 function showCard(html) { const c = $('#mCard'); c.innerHTML = html; c.classList.add('on'); requestAnimationFrame(() => { $('#mapFabs').style.bottom = c.offsetHeight + 22 + 'px'; }); }
 function hideCard() { $('#mCard').classList.remove('on'); $('#mapFabs').style.bottom = ''; }
-function clearSel() { M.sel = null; M.draft = null; if (M.temp) { M.temp.remove(); M.temp = null; } hideCard(); syncMarkers(); }
-function mapBack() { if (curTab !== 'Map') return false; if (!$('#mResults').classList.contains('hide')) { hideResults(); return true; } if (M.sel || M.draft) { clearSel(); return true; } return false; }
+function clearSel() { M.sel = null; M.draft = null; if (M.temp) { M.temp.remove(); M.temp = null; } hideCard(); syncMarkers(); if (S.area && !Area.hideList) Area.card(); }
+function mapBack() { if (curTab !== 'Map') return false; if (!$('#mResults').classList.contains('hide')) { hideResults(); return true; } if (M.sel || M.draft) { clearSel(); return true; } if (S.area) { Area.set(null); return true; } return false; }
 function selectPlace(id, fly) {
   const p = DB.places.find(x => x.id === id); if (!p) return; if (curTab !== 'Map') showTab('Map');
   if (M.filter !== 'all' && (DB.cats.some(c => c.id === p.cat) ? p.cat : '') !== M.filter) { M.filter = 'all'; renderChips(); }
   M.draft = null; if (M.temp) { M.temp.remove(); M.temp = null; } M.sel = id; syncMarkers(); buzz(10); if (fly) flyTo(p.lat, p.lon, 16);
-  const c = catOf(p.cat), n = (p.menu || []).length, ni = (p.imgs || []).length;
+  const c = catOf(p.cat), n = (p.menu || []).length, ni = imgCount(p);
   showCard(`<div class="row" style="align-items:flex-start"><div class="grow" data-a="open"><h3>${esc(p.name)}</h3>
     <div class="small" style="margin:.25rem 0"><span class="tag" style="--c:${c.color}">${esc(c.icon)} ${esc(c.name)}</span></div>
     ${stateHtml(p) ? `<div class="small muted row" style="gap:.35rem">${stateHtml(p)}</div>` : ''}<div class="small muted">${esc(p.addr || '')}</div></div><button class="ic" data-a="x">✕</button></div>
@@ -131,6 +138,7 @@ function selectPlace(id, fly) {
 }
 function initCard() {
   $('#mCard').addEventListener('click', e => { const a = e.target.closest('[data-a]'); if (!a) return; const act = a.dataset.a;
+    if (act === 'ax') { Area.hideList = true; hideCard(); return; } if (act === 'ap') { selectPlace(a.dataset.id, true); return; } if (act === 'al') { Area.hideList = false; Area.card(); return; }
     if (act === 'x') { clearSel(); return; }
     if (M.sel) { const p = DB.places.find(x => x.id === M.sel); if (!p) return; if (act === 'open') openPlace(p.id); else if (act === 'nav') navTo(p); else if (act === 'menu') openPlace(p.id, true); return; }
     if (M.draft) { const d = M.draft; if (act === 'add') addDraft(d); else if (act === 'nav') navTo(d); else if (act === 'gm') openUrl(gmUrl(d)); } });
@@ -151,7 +159,7 @@ async function pickPoint(lat, lon) {
   catch (e) { const a = $('#dAddr'); if (a && M.draft === d) a.textContent = `${lat.toFixed(5)}, ${lon.toFixed(5)}`; }
 }
 async function addDraft(d) {
-  const p = {id: '', name: d.name || '', addr: d.addr || '', lat: d.lat, lon: d.lon, cat: M.filter !== 'all' ? M.filter : (DB.cats[0] ? DB.cats[0].id : ''), hours: [], phone: '', note: '', imgs: [], menu: [], gid: d.gid || '', gurl: ''};
+  const p = {id: '', name: d.name || '', addr: d.addr || '', lat: d.lat, lon: d.lon, cat: M.filter !== 'all' ? M.filter : (DB.cats[0] ? DB.cats[0].id : ''), hours: [], phone: '', note: '', albums: [], menu: [], gid: d.gid || '', gurl: ''};
   if (S.gkey) { busy('向 Google 取得營業時間…'); try { await gFill(p); } catch (e) { toast('Google 資料沒有帶入：' + e.message, 3500); } busy(false); }
   editPlace(p, true);
 }

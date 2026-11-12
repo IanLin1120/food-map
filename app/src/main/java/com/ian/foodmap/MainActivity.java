@@ -93,10 +93,12 @@ public class MainActivity extends Activity {
     /** 原生 → 網頁的事件（目前只有 App 內更新的進度：window.Upd.onApk） */
     static void emit(String type, final String json) {
         final MainActivity a = cur;
-        if (a == null || !"apk".equals(type)) return;
+        if (a == null) return;
+        final String fn = "apk".equals(type) ? "window.Upd&&Upd.onApk(" : "off".equals(type) ? "window.Off&&Off.onNative(" : null;
+        if (fn == null) return;
         a.runOnUiThread(new Runnable() {
             public void run() {
-                try { a.web.evaluateJavascript("window.Upd&&Upd.onApk(" + org.json.JSONObject.quote(json) + ")", null); } catch (Throwable t) { }
+                try { a.web.evaluateJavascript(fn + org.json.JSONObject.quote(json) + ")", null); } catch (Throwable t) { }
             }
         });
     }
@@ -149,6 +151,24 @@ public class MainActivity extends Activity {
             if (!HOST.equals(u.getHost())) return null;
             String p = u.getPath();
             if (p == null || p.equals("/") || p.isEmpty()) p = "/index.html";
+            /* 離線地圖：/vt/z/x/y＝已下載的圖磚，/oc?u=網址＝已快取的字型與圖示；沒有就回 404，網頁端會改上網抓 */
+            if (p.startsWith("/vt/") || p.equals("/oc")) {
+                try {
+                    if (p.equals("/oc")) {
+                        String src = u.getQueryParameter("u");
+                        java.io.File f = Offline.cached(MainActivity.this, src);
+                        if (f != null) {
+                            String m = src.contains(".json") ? "application/json" : src.contains(".png") ? "image/png" : "application/x-protobuf";
+                            return new WebResourceResponse(m, m.contains("json") ? "utf-8" : null, new java.io.FileInputStream(f));
+                        }
+                    } else {
+                        String[] q = p.substring(4).split("/");
+                        byte[] d = q.length == 3 ? Offline.tile(MainActivity.this, Integer.parseInt(q[0]), Integer.parseInt(q[1]), Integer.parseInt(q[2])) : null;
+                        if (d != null) return new WebResourceResponse("application/x-protobuf", null, new java.io.ByteArrayInputStream(d));
+                    }
+                } catch (Throwable t) { }
+                return new WebResourceResponse("text/plain", "utf-8", 404, "Not Found", null, new java.io.ByteArrayInputStream(new byte[0]));
+            }
             try {
                 InputStream in = getAssets().open(p.substring(1));
                 String m = mime(p);
@@ -270,6 +290,36 @@ public class MainActivity extends Activity {
                 if (Build.VERSION.SDK_INT >= 26) v.vibrate(VibrationEffect.createOneShot(ms, VibrationEffect.DEFAULT_AMPLITUDE)); else v.vibrate(ms);
             } catch (Exception e) { }
         }
+
+        /** 可指定強度（1~255）的震動；手機不支援調整強度時只用時間長短 */
+        @JavascriptInterface
+        public void vibrate2(int ms, int amp) {
+            try {
+                Vibrator v = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
+                if (v == null) return;
+                if (ms < 1) ms = 1;
+                if (ms > 500) ms = 500;
+                if (amp < 1) amp = 1;
+                if (amp > 255) amp = 255;
+                if (Build.VERSION.SDK_INT >= 26) v.vibrate(VibrationEffect.createOneShot(ms, v.hasAmplitudeControl() ? amp : VibrationEffect.DEFAULT_AMPLITUDE)); else v.vibrate(ms);
+            } catch (Exception e) { }
+        }
+
+        /* ---------- 離線地圖 ---------- */
+        @JavascriptInterface
+        public void packGet(String id, String url, String key) { Offline.packGet(MainActivity.this, id, url, key); }
+
+        @JavascriptInterface
+        public void cacheGet(String id, String url) { Offline.cacheGet(MainActivity.this, id, url); }
+
+        @JavascriptInterface
+        public String offList() { return Offline.list(MainActivity.this); }
+
+        @JavascriptInterface
+        public void offDelete(String key) { Offline.deleteAll(MainActivity.this); }
+
+        @JavascriptInterface
+        public void offCancel() { Offline.cancel = true; }
 
         @JavascriptInterface
         public String version() {
