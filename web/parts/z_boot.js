@@ -10,7 +10,7 @@
   $('#fbN').onclick = () => { if (M.map) M.map.easeTo({bearing: 0, duration: 400}); };
   $('#fbMe').onclick = () => locateMe(); $('#fbAdd').onclick = openAdd;
   window.addEventListener('resize', mapResize);
-  renderChips(); updCounts();
+  Area.init(); renderChips(); updCounts();
   await initMap();
   if (!S.onboard) welcome();
   Upd.boot();

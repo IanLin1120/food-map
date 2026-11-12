@@ -11,6 +11,7 @@
       </div>
       <div id="mResults" class="card hide"></div>
       <div id="chips" class="noSel"></div>
+      <div id="areaBar"><select id="arC" class="glass" aria-label="縣市"></select><select id="arT" class="glass" aria-label="鄉鎮市區"></select><button class="ic glass" id="arMe" aria-label="我所在的鄉鎮市區">📍</button><button class="ic glass hide" id="arX" aria-label="取消區域">✕</button></div>
     </div>
     <div class="mapFabs" id="mapFabs">
       <button class="fab glass" id="fb3d" aria-label="切換 2D／3D">3D</button>
@@ -32,8 +33,8 @@
   <section class="page" id="pgRec">
     <div class="pgHead"><div class="grow"><h1>我的食譜</h1><div class="sub" id="recSub"></div></div><button class="btn sm" id="recAI">✨ 圖片匯入</button><button class="btn sm pri" id="recAdd">＋ 新增</button></div>
     <div class="pgBody"><div class="pgInner">
-      <div class="searchBox" style="margin-bottom:.9rem"><input id="recQ" type="search" placeholder="搜尋食譜、食材…"></div>
-      <div id="recList" class="rcGrid noSel"></div>
+      <div class="row" style="margin-bottom:.9rem"><div class="searchBox grow"><input id="recQ" type="search" placeholder="搜尋食譜、食材…"></div><button class="btn sm" id="recCats">🗂️ 分類</button></div>
+      <div id="recList" class="noSel"></div>
     </div></div>
   </section>
 
@@ -49,7 +50,7 @@
     <button data-tab="Set"><svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>設定</button>
   </nav>
 </div>
-<div id="viewer"><div class="vTop"><button class="ic" id="vX">✕</button><b class="grow" id="vT"></b></div><div id="vScroll"><img id="vImg" alt=""></div><div class="vBot"><button class="btn" id="vPrev">‹ 上一張</button><button class="btn" id="vZo">－</button><button class="btn" id="vZi">＋</button><button class="btn" id="vNext">下一張 ›</button></div></div>
+<div id="viewer"><div class="vTop"><button class="ic" id="vX">✕</button><b class="grow" id="vT"></b><span id="vN" style="opacity:.85;font-size:.9rem"></span></div><div id="vScroll"><img id="vImg" alt=""></div><div class="vBot"><button class="btn" id="vPrev">‹ 上一張</button><button class="btn" id="vZo">－</button><button class="btn" id="vZi">＋</button><button class="btn" id="vNext">下一張 ›</button></div></div>
 <div id="busy"><div class="box"><div class="spin"></div><div id="busyT"></div></div></div>
 <div id="toast"></div>
 <input type="file" id="filePick" accept="image/*" multiple class="hide">

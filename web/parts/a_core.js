@@ -33,9 +33,13 @@ const IDB = {
 };
 
 /* ---------- 狀態 ---------- */
-const S_DEF = {autoUpd: true, theme: 'auto', palette: 'earth', scale: 100, haptic: true, map3d: true, labels: true, navApp: 'ask', gkey: '', aikey: '', aimodel: 'auto', view: null, onboard: false, fold: {}};
+const S_DEF = {autoUpd: true, theme: 'auto', palette: 'earth', scale: 100, haptic: true, hapLv: 2, map3d: true, area: null, rfold: {}, labels: true, navApp: 'ask', gkey: '', aikey: '', aimodel: 'auto', view: null, onboard: false, fold: {}};
 let S = Object.assign({}, S_DEF);
-const DB = {cats: [], places: [], recipes: []};
+const DB = {cats: [], places: [], recipes: [], rcats: []};
+/* 食譜分類（料理方式），可自訂名稱、圖示、排序 */
+const DEF_RCATS = [['煎', '🍳', '#D2603A'], ['炒', '🥘', '#E8A13A'], ['電鍋', '🍚', '#5A7A44'], ['湯', '🍲', '#3F8F86'], ['烤', '🔥', '#C23B4E'], ['甜點', '🍰', '#C2678F']];
+const RUNCAT = {id: '', name: '未分類', icon: '📖', color: '#7d6c57'};
+const rcatOf = id => DB.rcats.find(c => c.id === id) || RUNCAT;
 const DEF_CATS = [
   ['早餐', '🍳', '#E8A13A'], ['午餐', '🍱', '#D2603A'], ['晚餐', '🍽️', '#8E4B2B'], ['宵夜', '🌙', '#4A5B8C'],
   ['速食店', '🍔', '#C23B4E'], ['飲料店', '🧋', '#3F8F86'], ['咖啡廳', '☕', '#6B5344'], ['甜點', '🍰', '#C2678F']
@@ -47,6 +51,7 @@ const catOf = id => DB.cats.find(c => c.id === id) || UNCAT;
 
 const saveS = debounce(() => { IDB.put('kv', 'S', S).catch(() => {}); try { localStorage.setItem('fm.theme', JSON.stringify({theme: S.theme, palette: S.palette, scale: S.scale})); } catch (e) {} }, 150);
 const saveCats = () => IDB.put('kv', 'cats', DB.cats).catch(saveErr);
+const saveRcats = () => IDB.put('kv', 'rcats', DB.rcats).catch(saveErr);
 const savePlace = p => IDB.put('places', p.id, p).catch(saveErr);
 const saveRecipe = r => IDB.put('recipes', r.id, r).catch(saveErr);
 function saveErr(e) { toast('⚠️ 儲存失敗：' + (e && e.message || e), 4000); }
@@ -68,10 +73,23 @@ async function loadAll() {
   if (cats) DB.recipes = (await IDB.all('recipes').catch(() => [])) || [];
   DB.places = (await IDB.all('places').catch(() => [])) || [];
   DB.places.sort((a, b) => (a.ord || 0) - (b.ord || 0)); DB.recipes.sort((a, b) => (a.ord || 0) - (b.ord || 0));
+  const rc = await IDB.get('kv', 'rcats').catch(() => null);
+  if (rc) DB.rcats = rc; else { DB.rcats = DEF_RCATS.map(([name, icon, color], i) => ({id: 'r' + i + uid(), name, icon, color})); saveRcats(); }
+  /* 舊版資料升級：菜單圖片改成「版本資料夾」（每個版本可放多張） */
+  DB.places.forEach(p => { if (!p.albums) { p.albums = (p.imgs || []).length ? [{id: 'a' + uid(), name: dateName(p.t), t: p.t || Date.now(), imgs: p.imgs}] : []; delete p.imgs; savePlace(p); } });
 }
+const dateName = t => { const d = new Date(t || Date.now()); return d.getFullYear() + '/' + String(d.getMonth() + 1).padStart(2, '0') + '/' + String(d.getDate()).padStart(2, '0'); };
+/* 菜單圖檔：albums 由新到舊；allImgs 依序攤平（最新版本在最前面） */
+const albumsOf = p => (p.albums || []).slice().sort((a, b) => (b.t || 0) - (a.t || 0));
+const imgCount = p => (p.albums || []).reduce((n, a) => n + (a.imgs || []).length, 0);
 
 /* ---------- 震動、提示 ---------- */
-function buzz(ms) { if (!S.haptic) return; try { if (IS_APP && NB.vibrate) NB.vibrate(ms || 15); else if (navigator.vibrate) navigator.vibrate(ms || 15); } catch (e) {} }
+/* 震動：強度 0 關／1 弱／2 中／3 強。新版 APK 可直接控制馬達強度，舊版以震動時間長短代替 */
+let buzzAt = 0;
+function buzz(ms) { const lv = S.haptic === false ? 0 : (S.hapLv == null ? 2 : S.hapLv); if (!lv) return; const now = Date.now(); if (now - buzzAt < 45) return; buzzAt = now; ms = ms || 12;
+  try { if (IS_APP && NB.vibrate2) NB.vibrate2(Math.round(ms * [0, .8, 1, 1.4][lv]), [0, 70, 150, 255][lv]); else { const d = Math.max(1, Math.round(ms * [0, .5, 1, 2.2][lv])); if (IS_APP && NB.vibrate) NB.vibrate(d); else if (navigator.vibrate) navigator.vibrate(d); } } catch (e) {} }
+/* 所有可以點的按鈕、選項，點下去都震動一下 */
+document.addEventListener('click', e => { if (e.target.closest && e.target.closest('button,select,[data-a],.chip,.res,.pl,.rc,.rrow,.catRow,label.sw,input[type=checkbox],.pin,summary')) buzz(12); }, true);
 let toastT; function toast(msg, ms) { const t = $('#toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('on'), ms || 2400); }
 function busy(msg) { $('#busyT').textContent = msg || ''; $('#busy').classList.toggle('on', msg != null && msg !== false); }
 function openUrl(u) { if (IS_APP && NB.openUrl) NB.openUrl(u); else window.open(u, '_blank', 'noopener'); }
@@ -145,7 +163,7 @@ function sortable(root, o) {
     if (o.handle && o.handleOnly && !viaH) return;
     if (!viaH && e.target.closest('input,textarea,select')) return;
     const p = pt(e);
-    st = {it, x0: p.clientX, y0: p.clientY, x: p.clientX, y: p.clientY, on: false, scope: o.scope ? it.closest(o.scope) : null, touch: !!e.touches};
+    st = {it, x0: p.clientX, y0: p.clientY, x: p.clientX, y: p.clientY, on: false, scope: o.scope ? it.closest(o.scope) : null, gFrom: o.groups ? it.closest(o.groups) : null, touch: !!e.touches};
     if (viaH) { if (e.cancelable) e.preventDefault(); begin(); } else st.timer = setTimeout(begin, 380);
     if (!st.touch) { window.addEventListener('mousemove', move); window.addEventListener('mouseup', up); }
   }
@@ -155,12 +173,19 @@ function sortable(root, o) {
     const g = st.it.cloneNode(true); g.classList.add('dragGhost'); g.style.width = r.width + 'px'; g.style.height = r.height + 'px'; g.style.left = r.left + 'px'; g.style.top = r.top + 'px';
     document.body.append(g); st.ghost = g; st.it.classList.add('dragSrc');
     st.line = el(`<div class="dropLine ${o.axis === 'x' || o.axis === 'grid' ? 'v' : 'h'}"></div>`); document.body.append(st.line);
-    st.list = items(); st.from = st.list.indexOf(st.it); st.ins = st.from;
+    st.list = o.groups ? $$(o.item, st.gFrom).filter(e => e.offsetParent !== null) : items(); st.from = st.list.indexOf(st.it); st.ins = st.from; st.gTo = st.gFrom;
     st.scroller = o.scroller ? (typeof o.scroller === 'string' ? root.closest(o.scroller) : o.scroller) : root;
     document.body.classList.add('noSel'); place(); st.raf = requestAnimationFrame(auto);
   }
   function place() {
     const g = st.ghost, G = o.axis === 'grid'; if (o.axis === 'x' || G) g.style.left = st.x - st.dx + 'px'; if (o.axis !== 'x') g.style.top = st.y - st.dy + 'px';
+    if (o.groups) { /* 跨資料夾拖曳：先找出手指目前在哪個資料夾上 */
+      const gs = $$(o.groups, root).filter(e => e.offsetParent !== null); let best = st.gTo, bd = 1e9;
+      for (const e of gs) { const r = e.getBoundingClientRect(), d = st.y < r.top ? r.top - st.y : st.y > r.bottom ? st.y - r.bottom : 0; if (d < bd) { bd = d; best = e; } }
+      if (best !== st.gTo) { st.gTo = best; buzz(10); }
+      $$(o.groups, root).forEach(e => e.classList.toggle('dropOn', e === best && best !== st.gFrom));
+      st.list = $$(o.item, best).filter(e => e.offsetParent !== null);
+      if (!st.list.length) { const r = best.getBoundingClientRect(), ln = st.line.style; st.ins = 0; ln.height = '4px'; ln.width = r.width - 24 + 'px'; ln.left = r.left + 12 + 'px'; ln.top = r.bottom - 10 + 'px'; return; } }
     const L = st.list, X = o.axis === 'x' || G; let ins = 0;
     for (const e of L) { const r = e.getBoundingClientRect(); if (G ? (st.y > r.bottom || (st.y >= r.top && st.x > r.left + r.width / 2)) : (X ? st.x : st.y) > (X ? r.left + r.width / 2 : r.top + r.height / 2)) ins++; }
     if (ins !== st.ins) { st.ins = ins; buzz(8); }
@@ -181,11 +206,12 @@ function sortable(root, o) {
     if (!st.on) { if (Math.hypot(st.x - st.x0, st.y - st.y0) > 9) cancel(); return; }
     if (e.cancelable) e.preventDefault(); place();
   }
-  function cancel() { if (!st) return; clearTimeout(st.timer); cancelAnimationFrame(st.raf); if (st.ghost) st.ghost.remove(); if (st.line) st.line.remove(); st.it.classList.remove('dragSrc'); document.body.classList.remove('noSel');
+  function cancel() { if (!st) return; clearTimeout(st.timer); cancelAnimationFrame(st.raf); if (st.ghost) st.ghost.remove(); if (st.line) st.line.remove(); st.it.classList.remove('dragSrc'); document.body.classList.remove('noSel'); if (o.groups) $$(o.groups, root).forEach(e => e.classList.remove('dropOn'));
     window.removeEventListener('mousemove', move); window.removeEventListener('mouseup', up); st = null; }
   function up() {
-    if (!st) return; const was = st.on, from = st.from, ins = st.ins, scope = st.scope; cancel();
+    if (!st) return; const was = st.on, from = st.from, ins = st.ins, scope = st.scope, gFrom = st.gFrom, gTo = st.gTo; cancel();
     if (!was) return; swallow = Date.now();
+    if (o.groups) { const same = gTo === gFrom, t = same ? (ins > from ? ins - 1 : ins) : ins; if (!same || t !== from) { buzz(20); o.onSort(from, t, gFrom, gTo); } return; }
     const to = ins > from ? ins - 1 : ins; if (to !== from) { buzz(20); o.onSort(from, to, scope); }
   }
   let swallow = 0;
@@ -213,27 +239,32 @@ function pickImages(multi) { return new Promise(res => { const f = $('#filePick'
   f.onchange = () => { done = true; res([...f.files]); }; f.oncancel = () => { if (!done) res([]); }; f.click(); }); }
 const blobB64 = blob => new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(String(fr.result).split(',')[1] || ''); fr.onerror = () => rej(fr.error); fr.readAsDataURL(blob); });
 
-/* ---------- 圖片檢視（雙指縮放、左右切換） ---------- */
-const Viewer = {ids: [], i: 0, z: 1, title: '',
-  async open(ids, i, title) { if (!ids.length) return; Viewer.ids = ids; Viewer.i = i || 0; Viewer.title = title || ''; $('#viewer').classList.add('on'); await Viewer.show(); },
-  async show() { const im = $('#vImg'); im.src = await imgURL(Viewer.ids[Viewer.i]); Viewer.zoom(1, true); $('#vT').textContent = (Viewer.title ? Viewer.title + ' · ' : '') + (Viewer.i + 1) + ' / ' + Viewer.ids.length;
-    $('#vPrev').disabled = Viewer.i <= 0; $('#vNext').disabled = Viewer.i >= Viewer.ids.length - 1; },
+/* ---------- 圖片檢視（雙指縮放、左右滑動切換；items = [{id, label}]，第一張是最新版本） ---------- */
+const Viewer = {items: [], i: 0, z: 1, title: '',
+  async open(items, i, title) { items = items.map(x => typeof x === 'string' ? {id: x, label: ''} : x); if (!items.length) return; Viewer.items = items; Viewer.i = i || 0; Viewer.title = title || ''; $('#viewer').classList.add('on'); await Viewer.show(); },
+  async show() { const im = $('#vImg'), it = Viewer.items[Viewer.i]; im.src = await imgURL(it.id); Viewer.zoom(1, true);
+    $('#vT').innerHTML = esc(Viewer.title) + (it.label ? `<small style="display:block;font-weight:400;opacity:.8">${esc(it.label)}</small>` : ''); $('#vN').textContent = (Viewer.i + 1) + ' / ' + Viewer.items.length;
+    $('#vPrev').disabled = Viewer.i <= 0; $('#vNext').disabled = Viewer.i >= Viewer.items.length - 1; },
   zoom(z, abs) { const sc = $('#vScroll'), im = $('#vImg'); const old = Viewer.z; Viewer.z = Math.max(1, Math.min(8, abs ? z : Viewer.z * z));
     const cx = (sc.scrollLeft + sc.clientWidth / 2) / (sc.scrollWidth || 1), cy = (sc.scrollTop + sc.clientHeight / 2) / (sc.scrollHeight || 1);
     const fit = () => { const nw = im.naturalWidth || 1, nh = im.naturalHeight || 1, k = Math.min(sc.clientWidth / nw, sc.clientHeight / nh); im.style.width = nw * k * Viewer.z + 'px'; im.style.height = nh * k * Viewer.z + 'px';
       if (old !== Viewer.z) { sc.scrollLeft = cx * sc.scrollWidth - sc.clientWidth / 2; sc.scrollTop = cy * sc.scrollHeight - sc.clientHeight / 2; } };
     if (im.complete && im.naturalWidth) fit(); else im.onload = fit; },
-  step(d) { const n = Viewer.i + d; if (n < 0 || n >= Viewer.ids.length) return; Viewer.i = n; Viewer.show(); },
+  step(d) { const n = Viewer.i + d; if (n < 0 || n >= Viewer.items.length) { buzz(30); return; } buzz(10); Viewer.i = n; Viewer.show(); },
   close() { $('#viewer').classList.remove('on'); $('#vImg').removeAttribute('src'); }
 };
 function initViewer() {
   $('#vX').onclick = Viewer.close; $('#vPrev').onclick = () => Viewer.step(-1); $('#vNext').onclick = () => Viewer.step(1);
   $('#vZi').onclick = () => Viewer.zoom(1.5); $('#vZo').onclick = () => Viewer.zoom(1 / 1.5);
-  const sc = $('#vScroll'); let d0 = 0, z0 = 1, lastTap = 0;
+  const sc = $('#vScroll'); let d0 = 0, z0 = 1, lastTap = 0, sx = 0, sy = 0, multi = false;
   const dist = t => Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
-  sc.addEventListener('touchstart', e => { if (e.touches.length === 2) { d0 = dist(e.touches); z0 = Viewer.z; } }, {passive: true});
+  sc.addEventListener('touchstart', e => { if (e.touches.length === 2) { d0 = dist(e.touches); z0 = Viewer.z; multi = true; } else if (e.touches.length === 1) { sx = e.touches[0].clientX; sy = e.touches[0].clientY; multi = false; } }, {passive: true});
   sc.addEventListener('touchmove', e => { if (e.touches.length === 2 && d0) { e.preventDefault(); Viewer.zoom(z0 * dist(e.touches) / d0, true); } }, {passive: false});
-  sc.addEventListener('touchend', e => { if (e.touches.length < 2) d0 = 0; if (!e.touches.length) { const n = Date.now(); if (n - lastTap < 300) Viewer.zoom(Viewer.z > 1.2 ? 1 : 2.5, true); lastTap = n; } });
+  sc.addEventListener('touchend', e => { if (e.touches.length < 2) d0 = 0; if (e.touches.length) return; const t = e.changedTouches[0], dx = t.clientX - sx, dy = t.clientY - sy;
+    /* 沒放大時左右滑動換張：往左滑＝下一張（較舊），往右滑＝上一張（較新） */
+    if (!multi && Viewer.z <= 1.05 && Math.abs(dx) > 55 && Math.abs(dx) > Math.abs(dy) * 1.5) { Viewer.step(dx < 0 ? 1 : -1); lastTap = 0; return; }
+    if (Math.abs(dx) < 12 && Math.abs(dy) < 12) { const n = Date.now(); if (n - lastTap < 300) Viewer.zoom(Viewer.z > 1.2 ? 1 : 2.5, true); lastTap = n; } });
   if (!('ontouchstart' in window)) sc.addEventListener('dblclick', () => Viewer.zoom(Viewer.z > 1.2 ? 1 : 2.5, true));
   sc.addEventListener('wheel', e => { if (e.ctrlKey) { e.preventDefault(); Viewer.zoom(e.deltaY < 0 ? 1.15 : 1 / 1.15); } }, {passive: false});
+  document.addEventListener('keydown', e => { if (!$('#viewer').classList.contains('on')) return; if (e.key === 'ArrowRight') Viewer.step(1); else if (e.key === 'ArrowLeft') Viewer.step(-1); else if (e.key === 'Escape') Viewer.close(); });
 }
