@@ -172,7 +172,11 @@ public class MainActivity extends Activity {
             public void run() {
                 if (done[0]) return;
                 /* 文字＋連結＋大張圖片（菜單圖片通常是網頁裡最大的幾張） */
-                String js = "(function(){var L=[],I=[],seen={};try{var as=document.querySelectorAll('a[href]');for(var i=0;i<as.length&&L.length<80;i++){var a=as[i],t=(a.innerText||'').trim().replace(/\\s+/g,' ');if(t.length>3)L.push({h:a.href,t:t.slice(0,140)});}"
+                String js = "(function(){var L=[],I=[],seen={},hs={};try{var as=document.querySelectorAll('a[href]');for(var i=0;i<as.length&&i<1500;i++){var a=as[i],hr=a.href||'';if(!hr||hr.indexOf('javascript:')==0)continue;"
+                        + "var t=(a.innerText||'').trim();if(!t)t=(a.textContent||a.getAttribute('aria-label')||a.title||'').trim();if(!t){var gi=a.querySelector('img');if(gi)t=gi.alt||'';}t=t.replace(/\\s+/g,' ');"
+                        + "var img=/\\.(jpe?g|png|webp|gif)(\\?|#|$)/i.test(hr),mn=/菜單|menu|drink|價目|飲品|飲料|餐點|價格/i.test(t+' '+hr);if(!(t.length>3||img||(mn&&t.length>=2)))continue;"
+                        + "if(hs[hr+'|'+t])continue;hs[hr+'|'+t]=1;L.push({h:hr,t:t.slice(0,140),k:img?2:mn?1:0});}"
+                        + "L.sort(function(x,y){return y.k-x.k;});L=L.slice(0,200);"
                         + "var im=document.querySelectorAll('img');for(var j=0;j<im.length&&I.length<60;j++){var g=im[j],s=g.currentSrc||g.src||g.getAttribute('data-src')||g.getAttribute('data-original')||g.getAttribute('data-lazy-src')||'';var w=g.naturalWidth||0,h=g.naturalHeight||0;"
                         + "if(!s||s.indexOf('data:')==0||seen[s])continue;if(w&&w<350&&h<350)continue;seen[s]=1;I.push({s:s,w:w,h:h,a:(g.alt||'').slice(0,80)});}}catch(e){}"
                         + "return JSON.stringify({t:document.title,u:location.href,x:(document.body?document.body.innerText:'').slice(0,150000),links:L,imgs:I});})()";
