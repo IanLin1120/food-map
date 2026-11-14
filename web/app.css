@@ -418,3 +418,20 @@ h1,h2,h3{margin:0;line-height:1.25;text-wrap:balance}
 .fab.locating{color:var(--accent)}
 .meWrap{position:relative;width:18px;height:18px}
 .meAcc{position:absolute;left:50%;top:50%;border-radius:50%;background:rgba(47,111,214,.14);border:1px solid rgba(47,111,214,.35);transform:translate(-50%,-50%);pointer-events:none}
+
+/* 菜單：組合選項、加購 */
+.mSec{font-weight:800;margin:1rem 0 .45rem;display:flex;align-items:baseline;gap:.5rem}
+.mSec small{font-weight:400;color:var(--muted);font-size:.76rem}
+.optG{background:var(--surface-3);border:1px solid var(--border);border-radius:var(--r-sm);padding:.55rem .7rem;margin-bottom:.5rem}
+.optH{display:flex;align-items:center;gap:.5rem;margin-bottom:.4rem}
+.optH b{color:var(--accent-2)}
+.optL{display:flex;flex-wrap:wrap;gap:.35rem}
+.optL span{background:var(--surface);border:1px solid var(--border-soft);border-radius:999px;padding:.18rem .6rem;font-size:.86rem}
+.optL em{font-style:normal;color:var(--accent-2);font-weight:700}
+.mtable.add td.p{color:var(--accent-2);font-weight:700}
+.mtable.edit select{padding:.3rem .2rem;border-radius:8px;font-size:.84rem;width:100%}
+
+.steps>div{display:flex;gap:.7rem;align-items:flex-start;padding:.55rem 0;border-bottom:1px solid var(--border-soft);line-height:1.6}
+.steps>div>b{flex:none;width:1.7rem;height:1.7rem;border-radius:50%;background:var(--accent);color:var(--accent-fg);display:flex;align-items:center;justify-content:center;font-size:.85rem}
+.shList{max-height:40vh;overflow-y:auto;border:1px solid var(--border-soft);border-radius:var(--r-sm);background:var(--surface)}
+.shList .res.on{background:color-mix(in srgb,var(--accent) 12%,var(--surface))}
