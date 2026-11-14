@@ -144,6 +144,15 @@ function ask(msg, okLabel, danger) {
     $('.shBg', w).onclick = () => me.close(false); $$('button', w).forEach(b => b.onclick = () => me.close(b.dataset.a === '1'));
     document.body.append(w); w.offsetHeight; w.classList.add('on'); sheets.push(me); });
 }
+function askText(msg, val, ph) {
+  return new Promise(res => { let done = false;
+    const w = el(`<div class="shWrap center"><div class="shBg"></div><div class="dlg"><p></p><input style="margin-bottom:1rem"><div class="row"><button class="btn ghost" data-a="0">取消</button><button class="btn pri" data-a="1">確定</button></div></div></div>`);
+    $('p', w).textContent = msg; const inp = $('input', w); inp.value = val || ''; inp.placeholder = ph || '';
+    const me = {el: w, closed: false, close(v) { if (done) return; done = true; me.closed = true; const i = sheets.indexOf(me); if (i >= 0) sheets.splice(i, 1); w.classList.remove('on'); setTimeout(() => w.remove(), 220); res(v); }};
+    $('.shBg', w).onclick = () => me.close(null); $$('button', w).forEach(b => b.onclick = () => me.close(b.dataset.a === '1' ? inp.value : null));
+    inp.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing) me.close(inp.value); });
+    document.body.append(w); w.offsetHeight; w.classList.add('on'); sheets.push(me); setTimeout(() => inp.focus(), 250); });
+}
 /* Android 返回鍵：先關最上層的面板／圖片，其次回到地圖頁；回傳 false 代表交給系統 */
 window.__back = function () {
   if ($('#viewer').classList.contains('on')) { Viewer.close(); return true; }

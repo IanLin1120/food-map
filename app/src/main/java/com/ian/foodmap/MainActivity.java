@@ -151,14 +151,16 @@ public class MainActivity extends Activity {
         web.evaluateJavascript("window.__nbPage&&window.__nbPage(" + org.json.JSONObject.quote(id) + "," + ok + "," + jsLiteral + ")", null);
     }
 
-    void startPageRead(final String id, final String url) {
+    void startPageRead(final String id, final String url) { startPageRead(id, url, false); }
+
+    void startPageRead(final String id, final String url, final boolean full) {
         if (url == null || !(url.startsWith("https://") || url.startsWith("http://"))) { pageDone(id, false, org.json.JSONObject.quote("網址不正確")); return; }
         final android.widget.FrameLayout host = (android.widget.FrameLayout) findViewById(android.R.id.content);
         final WebView w = new WebView(this);
         WebSettings ws = w.getSettings();
         ws.setJavaScriptEnabled(true);
         ws.setDomStorageEnabled(true);
-        ws.setBlockNetworkImage(true);
+        ws.setBlockNetworkImage(!full);
         ws.setAllowFileAccess(false);
         host.addView(w, 0, new android.widget.FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         final android.os.Handler h = new android.os.Handler(android.os.Looper.getMainLooper());
@@ -169,7 +171,12 @@ public class MainActivity extends Activity {
         final Runnable extract = new Runnable() {
             public void run() {
                 if (done[0]) return;
-                w.evaluateJavascript("JSON.stringify({t:document.title,u:location.href,x:(document.body?document.body.innerText:'').slice(0,150000)})", new ValueCallback<String>() {
+                /* 文字＋連結＋大張圖片（菜單圖片通常是網頁裡最大的幾張） */
+                String js = "(function(){var L=[],I=[],seen={};try{var as=document.querySelectorAll('a[href]');for(var i=0;i<as.length&&L.length<80;i++){var a=as[i],t=(a.innerText||'').trim().replace(/\\s+/g,' ');if(t.length>3)L.push({h:a.href,t:t.slice(0,140)});}"
+                        + "var im=document.querySelectorAll('img');for(var j=0;j<im.length&&I.length<60;j++){var g=im[j],s=g.currentSrc||g.src||g.getAttribute('data-src')||g.getAttribute('data-original')||g.getAttribute('data-lazy-src')||'';var w=g.naturalWidth||0,h=g.naturalHeight||0;"
+                        + "if(!s||s.indexOf('data:')==0||seen[s])continue;if(w&&w<350&&h<350)continue;seen[s]=1;I.push({s:s,w:w,h:h,a:(g.alt||'').slice(0,80)});}}catch(e){}"
+                        + "return JSON.stringify({t:document.title,u:location.href,x:(document.body?document.body.innerText:'').slice(0,150000),links:L,imgs:I});})()";
+                w.evaluateJavascript(js, new ValueCallback<String>() {
                     public void onReceiveValue(String v) {
                         if (done[0]) return;
                         done[0] = true;
@@ -184,13 +191,16 @@ public class MainActivity extends Activity {
             public void run() {
                 if (done[0]) return;
                 final long el = android.os.SystemClock.uptimeMillis() - t0;
-                w.evaluateJavascript("(function(){try{window.scrollTo(0,document.body.scrollHeight)}catch(e){}return document.body?document.body.innerText.length:0})()", new ValueCallback<String>() {
+                /* 一段一段往下捲，讓延遲載入的品項和圖片都出現；到底而且文字不再變多才算載完 */
+                w.evaluateJavascript("(function(){try{var b=document.scrollingElement||document.body;window.scrollBy(0,innerHeight*1.6);return (document.body?document.body.innerText.length:0)*10+((b.scrollTop+innerHeight>=b.scrollHeight-8)?1:0)}catch(e){return 0}})()", new ValueCallback<String>() {
                     public void onReceiveValue(String v) {
-                        int n = 0;
-                        try { n = Integer.parseInt(v == null ? "0" : v.replaceAll("[^0-9]", "")); } catch (Exception e) { }
-                        if (n > 150 && n == last[0]) stable[0]++; else stable[0] = 0;
+                        long raw = 0;
+                        try { raw = Long.parseLong(v == null ? "0" : v.replaceAll("[^0-9]", "")); } catch (Exception e) { }
+                        int n = (int) (raw / 10);
+                        boolean bottom = raw % 10 == 1;
+                        if (n > 150 && n == last[0] && bottom) stable[0]++; else stable[0] = 0;
                         last[0] = n;
-                        if ((stable[0] >= 2 && el > 5000) || el > 40000) extract.run(); else h.postDelayed(poll[0], 1200);
+                        if ((stable[0] >= 2 && el > 5000) || el > (full ? 45000 : 40000)) extract.run(); else h.postDelayed(poll[0], 1000);
                     }
                 });
             }
@@ -525,7 +535,13 @@ public class MainActivity extends Activity {
         /* ---------- 讀取點餐網頁 ---------- */
         @JavascriptInterface
         public void pageText(final String id, final String url) {
-            runOnUiThread(new Runnable() { public void run() { startPageRead(id, url); } });
+            runOnUiThread(new Runnable() { public void run() { startPageRead(id, url, false); } });
+        }
+
+        /** 同 pageText，另外載入圖片並回傳網頁裡的連結與大張圖片（搜尋菜單用） */
+        @JavascriptInterface
+        public void pageRead(final String id, final String url, final boolean full) {
+            runOnUiThread(new Runnable() { public void run() { startPageRead(id, url, full); } });
         }
 
         /* ---------- 分享進來的圖片 ---------- */
@@ -562,13 +578,15 @@ public class MainActivity extends Activity {
                     try {
                         Uri u = Uri.parse(url);
                         String h = u.getHost() == null ? "" : u.getHost();
-                        if (!"https".equals(u.getScheme()) || !(h.endsWith(".googleusercontent.com") || h.endsWith(".ggpht.com") || h.endsWith(".googleapis.com"))) throw new Exception("host");
+                        boolean g = h.endsWith(".googleusercontent.com") || h.endsWith(".ggpht.com") || h.endsWith(".googleapis.com");
+                        if (!("https".equals(u.getScheme()) || "http".equals(u.getScheme()))) throw new Exception("scheme");
                         c = (java.net.HttpURLConnection) new java.net.URL(url).openConnection();
                         c.setConnectTimeout(20000);
                         c.setReadTimeout(40000);
                         c.setInstanceFollowRedirects(true);
                         if (c.getResponseCode() != 200) throw new Exception("HTTP " + c.getResponseCode());
                         if (c.getContentType() != null) mime = c.getContentType().split(";")[0];
+                        if (!g && !mime.startsWith("image/")) throw new Exception("not image");   /* 其他網站只允許下載圖片 */
                         InputStream in = c.getInputStream();
                         java.io.ByteArrayOutputStream bo = new java.io.ByteArrayOutputStream();
                         byte[] buf = new byte[32768];
