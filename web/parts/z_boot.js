@@ -14,5 +14,6 @@
   await initMap();
   if (!S.onboard) welcome();
   Upd.boot();
+  Share.check(); document.addEventListener('visibilitychange', () => { if (!document.hidden) setTimeout(() => Share.check(), 300); });
   window.__ready = true;
 })();

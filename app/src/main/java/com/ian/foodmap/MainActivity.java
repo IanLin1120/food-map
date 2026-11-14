@@ -77,11 +77,73 @@ public class MainActivity extends Activity {
         web.setWebViewClient(new Client());
         web.setWebChromeClient(new Chrome());
         web.loadUrl("https://" + HOST + "/index.html");
+        handleShare(getIntent());
     }
 
     @Override
     protected void onSaveInstanceState(Bundle out) {
         super.onSaveInstanceState(out);
+    }
+
+    /* ---------- 接收分享的圖片：複製到 cache/shared/，網頁用 https://app.local/shared/<名稱> 讀取 ---------- */
+    final java.util.ArrayList<String> sharedPending = new java.util.ArrayList<String>();
+
+    @Override
+    protected void onNewIntent(Intent i) {
+        super.onNewIntent(i);
+        setIntent(i);
+        handleShare(i);
+    }
+
+    java.io.File sharedDir() {
+        java.io.File d = new java.io.File(getCacheDir(), "shared");
+        if (!d.exists()) d.mkdirs();
+        return d;
+    }
+
+    void handleShare(Intent i) {
+        if (i == null) return;
+        String act = i.getAction();
+        if (!Intent.ACTION_SEND.equals(act) && !Intent.ACTION_SEND_MULTIPLE.equals(act)) return;
+        final java.util.ArrayList<Uri> uris = new java.util.ArrayList<Uri>();
+        try {
+            if (Intent.ACTION_SEND.equals(act)) {
+                Uri u = i.getParcelableExtra(Intent.EXTRA_STREAM);
+                if (u != null) uris.add(u);
+            } else {
+                java.util.ArrayList<Uri> l = i.getParcelableArrayListExtra(Intent.EXTRA_STREAM);
+                if (l != null) uris.addAll(l);
+            }
+            if (uris.isEmpty() && i.getClipData() != null) {
+                ClipData cd = i.getClipData();
+                for (int k = 0; k < cd.getItemCount(); k++) if (cd.getItemAt(k).getUri() != null) uris.add(cd.getItemAt(k).getUri());
+            }
+        } catch (Throwable t) { }
+        i.setAction(null);   /* 避免轉螢幕重建時重複收一次 */
+        if (uris.isEmpty()) return;
+        new Thread(new Runnable() {
+            public void run() {
+                int n = 0;
+                for (Uri u : uris) {
+                    if (n >= 20) break;
+                    try {
+                        String name = "s" + System.currentTimeMillis() + "_" + n + ".img";
+                        InputStream in = getContentResolver().openInputStream(u);
+                        if (in == null) continue;
+                        java.io.FileOutputStream out = new java.io.FileOutputStream(new java.io.File(sharedDir(), name));
+                        byte[] buf = new byte[65536];
+                        int r;
+                        long tot = 0;
+                        while ((r = in.read(buf)) > 0) { out.write(buf, 0, r); tot += r; if (tot > 40000000) break; }
+                        out.close();
+                        in.close();
+                        synchronized (sharedPending) { sharedPending.add(name); }
+                        n++;
+                    } catch (Throwable t) { }
+                }
+                if (n > 0) emit("share", "{}");
+            }
+        }).start();
     }
 
     /* ---------- 原生定位：同時用 GPS、網路、整合定位，並立刻回報最後已知位置 ---------- */
@@ -165,7 +227,7 @@ public class MainActivity extends Activity {
     static void emit(String type, final String json) {
         final MainActivity a = cur;
         if (a == null) return;
-        final String fn = "apk".equals(type) ? "window.Upd&&Upd.onApk(" : "off".equals(type) ? "window.Off&&Off.onNative(" : "loc".equals(type) ? "window.Loc&&Loc.onNative(" : null;
+        final String fn = "apk".equals(type) ? "window.Upd&&Upd.onApk(" : "off".equals(type) ? "window.Off&&Off.onNative(" : "loc".equals(type) ? "window.Loc&&Loc.onNative(" : "share".equals(type) ? "window.Share&&Share.onNative(" : null;
         if (fn == null) return;
         a.runOnUiThread(new Runnable() {
             public void run() {
@@ -223,6 +285,14 @@ public class MainActivity extends Activity {
             String p = u.getPath();
             if (p == null || p.equals("/") || p.isEmpty()) p = "/index.html";
             /* 離線地圖：/vt/z/x/y＝已下載的圖磚，/oc?u=網址＝已快取的字型與圖示；沒有就回 404，網頁端會改上網抓 */
+            if (p.startsWith("/shared/")) {
+                String n = p.substring(8);
+                java.io.File f = new java.io.File(sharedDir(), n);
+                if (n.matches("s[0-9]+_[0-9]+\\.img") && f.exists()) {
+                    try { return new WebResourceResponse("image/jpeg", null, new java.io.FileInputStream(f)); } catch (Throwable t) { }
+                }
+                return new WebResourceResponse("text/plain", "utf-8", 404, "Not Found", null, new java.io.ByteArrayInputStream(new byte[0]));
+            }
             if (p.startsWith("/vt/") || p.equals("/oc")) {
                 try {
                     if (p.equals("/oc")) {
@@ -380,6 +450,19 @@ public class MainActivity extends Activity {
                 if (amp > 255) amp = 255;
                 if (Build.VERSION.SDK_INT >= 26) v.vibrate(VibrationEffect.createOneShot(ms, v.hasAmplitudeControl() ? amp : VibrationEffect.DEFAULT_AMPLITUDE)); else v.vibrate(ms);
             } catch (Exception e) { }
+        }
+
+        /* ---------- 分享進來的圖片 ---------- */
+        @JavascriptInterface
+        public String sharedTake() {
+            org.json.JSONArray a = new org.json.JSONArray();
+            synchronized (sharedPending) { for (String n : sharedPending) a.put(n); sharedPending.clear(); }
+            return a.toString();
+        }
+
+        @JavascriptInterface
+        public void sharedDone(String n) {
+            if (n != null && n.matches("s[0-9]+_[0-9]+\\.img")) new java.io.File(sharedDir(), n).delete();
         }
 
         /* ---------- 定位 ---------- */
