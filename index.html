@@ -4,7 +4,7 @@
 <script>/* 線上更新開機程式：手機上若已下載比 APK 內建更新的介面版本，就改用新版（存在 IndexedDB）。
    新版連續兩次沒有正常開啟 → 自動退回 APK 內建版本。網址加上 #builtin 也會強制使用內建版本。 */
 (function () {
-  var B = '1.6.0'; if (!window.__OTA) window.APP_BUILTIN = B;
+  var B = '1.7.0'; if (!window.__OTA) window.APP_BUILTIN = B;
   if (window.__OTA || location.hash.indexOf('builtin') >= 0) return;
   var v = null; try { v = JSON.parse(localStorage.getItem('fm.ota') || 'null'); } catch (e) {}
   function gt(a, b) { a = String(a).split('.').map(Number); b = String(b).split('.').map(Number); for (var i = 0; i < Math.max(a.length, b.length); i++) { var p = a[i] || 0, q = b[i] || 0; if (p !== q) return p > q; } return false; }
@@ -449,6 +449,7 @@ h1,h2,h3{margin:0;line-height:1.25;text-wrap:balance}
 .gp.on{border-color:var(--accent)}
 .gp.on i{background:var(--accent);color:#fff}
 .gp small{position:absolute;left:0;right:0;bottom:0;padding:.15rem .4rem;background:linear-gradient(transparent,rgba(0,0,0,.6));color:#fff;font-size:.62rem;text-align:left;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.gp .gpRg{position:absolute;top:.35rem;left:.35rem;padding:.1rem .45rem;border-radius:.6rem;background:var(--acc,#b5651d);color:#fff;font-size:.66rem;font-style:normal;font-weight:700;box-shadow:0 1px 3px rgba(0,0,0,.3)}
 /* AI 用量 */
 .quota{margin:.1rem 0 .3rem}
 .quota .prog{margin-top:.3rem}
@@ -625,7 +626,7 @@ return maplibregl$1;
 /* ============================================================
    食光地圖 — 核心：工具、資料儲存、主題、面板、拖曳排序、圖片
    ============================================================ */
-const APP_VERSION = '1.6.0';
+const APP_VERSION = '1.7.0';
 const APP_VER = APP_VERSION;
 /* 線上更新來源（GitHub Pages）：IanLin1120/food-map */
 const GH = {repo: 'https://github.com/IanLin1120/food-map', pages: 'https://ianlin1120.github.io/food-map/'};
@@ -1386,8 +1387,13 @@ B. 組合式（自選）菜單：顧客依步驟挑選，例如「1 主食（選
 6. 菜單分成左右好幾欄時，先把同一欄（同一個區塊）由上到下全部列完，再換下一個區塊，不要左右交錯。
 7. 不要列出：店名、電話、地址、營業時間、公休日、外帶/內用、桌號、數量欄、勾選框、合計欄、QR code。
 8. 不可遺漏，也不可以自己編造。文字照抄菜單原文（繁體中文）。
-9. 只輸出品項行，不要標題列、不要編號、不要說明文字、不要 markdown。`;
+9. 只輸出品項行，不要標題列、不要編號、不要說明文字、不要 markdown。
+10. 加購用價格分組時（例如「+$10：波霸、椰果」「+$20：芝芝」），每個品項各寫一行，品名不要加括號或價格，例如：加購|添加口感|波霸|10。
+11. 如果一張圖片裡並排了好幾份「不同地區或分店」的菜單（例如角落分別標示「北部」「大葉高島屋」「澎湖、金門」），價格常常不同：請分開辨識，每一行最後多加第五欄寫那一份菜單標示的地區名稱，例如：品項|果粒茶系列|香橙果粒茶 (L)|85|北部。圖片裡只有一份菜單時不要加第五欄。`;
 const SZ = /\s*[（(]([^()（）]{1,8})[)）]\s*$/;
+/* 尺寸由小到大：S → M → L → XL → 瓶 */
+const SZ_ORDER = ['XS', 'S', '小', '小杯', '小碗', '小份', '薄', '薄片', '單', 'M', '中', '中杯', '中碗', '一般', '一般量', '正常', 'L', '大', '大杯', '大碗', '大份', '厚', '厚片', '雙', 'XL', '特大', '特大杯', '加大', '超大', 'XXL', '瓶', '瓶裝', '罐', '桶'];
+const szRank = s => { const k = String(s || '').trim().toUpperCase().replace(/杯型$/, ''); const i = SZ_ORDER.indexOf(k); return i < 0 ? (/瓶|罐|桶/.test(k) ? 90 : 50) : i; };
 const baseName = n => n.replace(SZ, '').trim();
 const REGIONS = ['北部', '中部', '南部', '東部', '離島'];
 const MT = {品項: 'item', 選項: 'opt', 加購: 'add', item: 'item', opt: 'opt', add: 'add'};
@@ -1396,11 +1402,13 @@ function parseMenu(t) {
   const out = []; String(t || '').split(/\r?\n/).forEach(l => { l = l.replace(/^[\s>*\-•`]+/, '').trim(); if (!l || /^```/.test(l)) return;
     let f = l.split(/\s*[|｜]\s*/); if (f.length < 2) return; let ty = 'item';
     if (MT[f[0]]) { ty = MT[f[0]]; f = f.slice(1); } else if (/^(類型|type)$/i.test(f[0])) return;
+    let rg = ''; if (f.length >= 4 && /^[\d$＄.,\-—–/／\s]*$/.test(f[f.length - 2]) && !/^[\d$＄.,\-—–/／\s]*$/.test(f[f.length - 1]) && f[f.length - 1].length <= 12) { rg = f[f.length - 1].trim(); f = f.slice(0, -1); }
     let c, n, pr; if (f.length >= 3) { c = f[0]; n = f.slice(1, f.length - 1).join(' '); pr = f[f.length - 1]; } else if (f.length === 2) { if (ty === 'opt') { c = f[0]; n = f[1]; pr = ''; } else { c = '其他'; n = f[0]; pr = f[1]; } } else return;
     if (/^(分類|類別|category)$/i.test(c) && /^(品名|名稱|name)$/i.test(n)) return; n = (n || '').trim(); if (!n) return;
     c = normCat(c); if (ty === 'item' && /^(加購|加價|加點|單點加購)/.test(c)) ty = 'add';
     const pp = ty === 'opt' && !/\d/.test(pr || '') ? '' : normPrice(pr); if (/^[-—–/／xX✕]+$/.test(pp)) return;
-    out.push({t: ty, c, n, p: pp}); });
+    const nm = n.match(SZ); if (nm && /^[+＋]?[$＄]?[+＋]?\d+元?$/.test(nm[1].trim())) n = baseName(n);   /* 「波霸 (10)」這種是價格不是尺寸 */
+    const row = {t: ty, c, n, p: pp}; if (rg) row.g = rg.replace(/\s+/g, ''); out.push(row); });
   /* 「瓶」「M」這類沒有價格的尺寸：同一品項有其他尺寸有價格時就不要列出來 */
   const priced = new Set(out.filter(r => r.p && SZ.test(r.n)).map(r => r.c + '|' + baseName(r.n)));
   return groupMenu(out.filter(r => r.p || !SZ.test(r.n) || !priced.has(r.c + '|' + baseName(r.n))));
@@ -1457,7 +1465,7 @@ async function aiMenu(p, prefer, albums) {
         {prefer, keepPartial: true, onText: t => { cnt[k] = parseMenu(t).length; show(); }, onWait: s => AIJ.msg(p.id, `Google 限制每分鐘次數，${s} 秒後自動繼續…`), onModel: (m, n) => { if (n) AIJ.msg(p.id, `${aiShort(m)} 重試中…`); }});
       const rows = parseMenu(r.text); models.add(r.model); if (r.finish === 'MAX_TOKENS' || r.finish === 'IDLE') partial = true;
       if (!rows.length) throw Object.assign(new Error('這張圖片沒有辨識到品項（可能太模糊或不是菜單）'), {model: r.model});
-      rows.forEach(x => { if (imgs[k].g) x.g = imgs[k].g; }); res[k] = rows; okN++; AILOG.add({kind: '菜單辨識', place: p.name, model: r.model, ms: r.ms, ok: true, n: rows.length, note: (imgs[k].g ? imgs[k].g + ' ' : '') + (partial ? '結果可能不完整' : '')}); }
+      rows.forEach(x => { if (!x.g && imgs[k].g) x.g = imgs[k].g; }); res[k] = rows; okN++; AILOG.add({kind: '菜單辨識', place: p.name, model: r.model, ms: r.ms, ok: true, n: rows.length, note: (imgs[k].g ? imgs[k].g + ' ' : '') + (partial ? '結果可能不完整' : '')}); }
     catch (e) { fail = aiErrText(e); AILOG.add({kind: '菜單辨識', place: p.name, model: e.model || '', ms: Date.now() - t0, ok: false, err: fail + (e.raw && e.raw !== fail ? '（' + e.raw.slice(0, 160) + '）' : '')}); if (e.fatal || e.message === 'NOKEY' || (e.code === 429 && e.perDay)) { i = imgs.length; } }
     show(); } };
   await Promise.all(imgs.length > 1 ? [worker(), worker()] : [worker()]);
@@ -1465,8 +1473,10 @@ async function aiMenu(p, prefer, albums) {
   const seen = new Set(), rows = res.filter(Boolean).flat().filter(r => { const k = [r.g || '', r.t, r.c, r.n.replace(/\s+/g, ''), r.p].join('|'); if (seen.has(k)) return false; seen.add(k); return true; }); AIJ.set(p.id, null);
   if (!DB.places.includes(p)) return;
   if (!rows.length) { menuDone(p, '❌ 菜單辨識失敗：' + (fail || '沒有辨識到任何品項')); return; }
+  /* 一張圖裡有好幾區時，AI 會自己標地區；取代範圍包含這些新出現的地區 */
+  const got = new Set(rows.map(r => r.g || '')); if (got.size && !got.has('')) regs.delete(''); got.forEach(g => regs.add(g));
   p.menu = groupMenu(replace ? (p.menu || []).filter(r => !regs.has(r.g || '')).concat(rows) : (p.menu || []).concat(rows));
-  if (regs.size === 1 && [...regs][0]) p.rgSel = [...regs][0];
+  const rs = [...regs].filter(Boolean); if (rs.length && !rs.includes(p.rgSel)) p.rgSel = rs[0];
   p.menuSrc = {kind: 'ai', t: Date.now(), ver: albums.map(a => a.name).join('、'), model: [...models].join('、'), partial};
   await savePlace(p);
   menuDone(p, `✅「${p.name}」辨識完成：${rows.length} 個品項${hasReg ? '（' + regTxt + '）' : ''}，用時 ${Math.round((Date.now() - t0) / 1000)} 秒${fail ? '（有圖片失敗：' + fail + '）' : partial ? '（結果可能不完整，請核對）' : ''}`);
@@ -1516,6 +1526,20 @@ function brandName(n) { n = String(n || '').trim().replace(/[（(][^()（）]*(�
   /* 「清心福全頭份尚順店」這種沒有空格的：從台灣的鄉鎮市區名稱切開 */
   if (/(店|門市)$/.test(n) && TW.init()) { let cut = -1; for (const t of TW.towns) { const k = t.name.replace(/[市區鄉鎮]$/, ''); if (k.length < 2) continue; const i = n.indexOf(k, 2); if (i > 0 && (cut < 0 || i < cut)) cut = i; } if (cut > 1) return n.slice(0, cut); }
   return n; }
+/* 搜尋結果的跳轉連結 → 真正的網址（Google 手機版是 /url?url=…，有時是 q=…；DuckDuckGo 是 /l/?uddg=…） */
+function realUrl(h) { try { const u = new URL(h, 'https://www.google.com/');
+    if (/(^|\.)(google\.[a-z.]+|duckduckgo\.com)$/.test(u.hostname) && /^\/(url|l\/?|imgres)/.test(u.pathname)) { for (const k of ['url', 'q', 'uddg', 'imgurl']) { const v = u.searchParams.get(k); if (v && /^https?:\/\//i.test(v)) return v; } }
+    return u.href; } catch (e) { return h; } }
+const SEARCH_JUNK = /^https?:\/\/([^/]*\.)?(google\.[a-z.]+|gstatic\.|googleusercontent\.|youtube\.|youtu\.be|accounts\.|duckduckgo\.com|bing\.com|maps\.app\.goo|goo\.gl|policies\.google|support\.google)/i;
+function searchResults(links) { const seen = new Set();
+  return links.map(l => ({h: realUrl(l.h), t: String(l.t || '')})).filter(l => /^https?:/i.test(l.h) && !SEARCH_JUNK.test(l.h))
+    .map(l => { const d = l.h.replace(/^https?:\/\//, '').split('/')[0]; return {h: l.h, d, t: l.t.split(/\s+https?:\/\//)[0].replace(new RegExp('\\s*' + d.replace(/\./g, '\\.') + '.*$'), '').slice(0, 90) || d}; })
+    .filter(l => { const k = l.h.split('#')[0].replace(/\/$/, ''); if (seen.has(k) || l.t.length < 4) return false; seen.add(k); return true; }).slice(0, 15); }
+/* 從連結文字或檔名猜地區：「北部菜單」、menu_N.jpg… */
+function guessRegion(t, h) { t = String(t || ''); for (const r of REGIONS) if (t.includes(r) || t.includes(r[0] + '區')) return r;
+  if (/澎湖|金門|馬祖|綠島|蘭嶼|小琉球/.test(t)) return '離島'; if (/花蓮|台東|臺東|宜蘭/.test(t)) return '東部';
+  const m = String(h || '').split(/[?#]/)[0].match(/[_\-]([NMCSEIO])\.(jpe?g|png|webp|gif)$/i); return m ? ({N: '北部', M: '中部', C: '中部', S: '南部', E: '東部', I: '離島', O: '離島'})[m[1].toUpperCase()] : ''; }
+const isImgUrl = h => /\.(jpe?g|png|webp|gif)(\?|#|$)/i.test(h);
 /* ---------- 在背景用瀏覽器搜尋網路上的最新菜單 ---------- */
 function netMenuSearch(p) {
   const sh = sheet({title: '搜尋最新菜單', full: true}); let q = brandName(p.name) + ' 菜單 ' + new Date().getFullYear(), results = [], page = null, sel = new Set(), rg = '';
@@ -1525,34 +1549,50 @@ function netMenuSearch(p) {
     sh.body.innerHTML = head() + (msg || (results.length ? `<div class="small muted" style="margin-bottom:.5rem">點一個結果，App 會在背景打開它，抓出裡面的菜單圖片或文字。官方網站的「菜單」頁通常最新。</div>` + results.map((r, i) => `<button class="res" data-a="open" data-i="${i}"><span class="rIc">${/官方|官網|official/i.test(r.t) ? '⭐' : '🌐'}</span><span class="grow"><b>${esc(r.t)}</b><small>${esc(r.d)}</small></span></button>`).join('') : '<div class="empty">輸入關鍵字後按「搜尋」</div>'));
     if (!(IS_APP && NB.pageRead)) sh.body.insertAdjacentHTML('beforeend', `<div class="callout warn small">${IS_APP ? '需要安裝 APK v1.6.0 以上才能在背景搜尋。' : '網頁版沒辦法在背景開啟其他網站，請在 Android App 裡使用。'}</div>`); };
   const search = async () => { q = ($('#nq', sh.body) || {}).value || q; viewResults('<div class="empty"><div class="spin"></div>在背景用 Google 搜尋中…</div>');
-    try { const pg = await readPage('https://www.google.com/search?hl=zh-TW&num=20&q=' + encodeURIComponent(q), true); if (sh.closed || page) return; const seen = new Set();
-      results = pg.links.map(l => { let h = l.h; const m = h.match(/[?&]q=(https?[^&]+)/); if (/google\.[^/]+\/url/.test(h) && m) h = decodeURIComponent(m[1]); return {h, t: l.t}; })
-        .filter(l => /^https?:/.test(l.h) && !/(^https?:\/\/([^/]*\.)?(google\.|gstatic\.|googleusercontent\.|youtube\.|accounts\.|support\.google|policies\.google|maps\.app\.goo))/.test(l.h))
-        .map(l => { const d = l.h.replace(/^https?:\/\//, '').split('/')[0]; return {h: l.h, d, t: l.t.split(/\s+https?:\/\//)[0].replace(new RegExp('\\s*' + d.replace(/\./g, '\\.') + '.*$'), '').slice(0, 90) || d}; })
-        .filter(l => { const k = l.h.split('#')[0]; if (seen.has(k) || l.t.length < 4) return false; seen.add(k); return true; }).slice(0, 15);
+    try { let pg = null, gErr = ''; results = [];
+      try { pg = await readPage('https://www.google.com/search?hl=zh-TW&num=20&q=' + encodeURIComponent(q), true); results = searchResults(pg.links); } catch (er) { gErr = er.message; }
+      if (sh.closed || page) return;
+      if (!results.length) { viewResults('<div class="empty"><div class="spin"></div>Google 沒有回應結果，改用 DuckDuckGo 搜尋中…</div>');
+        try { const d = await readPage('https://html.duckduckgo.com/html/?kl=tw-tzh&q=' + encodeURIComponent(q)); results = searchResults(d.links); if (!pg) pg = d; } catch (er) { if (!pg) throw new Error(gErr || er.message); }
+        if (sh.closed || page) return; }
       if (!results.length) viewResults('<div class="empty">沒有找到搜尋結果' + (/unusual|recaptcha|驗證/i.test(pg.text) ? '（Google 要求驗證，請稍後再試或改用瀏覽器搜尋）' : '') + `<br><button class="btn sm" data-a="ext" style="margin-top:.6rem">用瀏覽器搜尋 ↗</button></div>`); else viewResults(); }
     catch (e) { if (!sh.closed) viewResults(`<div class="empty">⚠️ ${esc(e.message)}<br><button class="btn sm" data-a="ext" style="margin-top:.6rem">用瀏覽器搜尋 ↗</button></div>`); } };
+  const MENU_RE = /菜單|menu|價目|飲品|飲料|drink|餐點/i, stack = [];
   const viewPage = () => { const P = page; sh.title(P.d);
-    const imgs = P.imgs.slice().sort((a, b) => (/菜單|menu|價目|飲品|drink/i.test(b.a + b.s) - /菜單|menu|價目|飲品|drink/i.test(a.a + a.s)) || (b.w * b.h - a.w * a.h)).slice(0, 30); P.list = imgs;
-    sh.body.innerHTML = `<button class="btn sm ghost" data-a="back" style="margin-bottom:.5rem">‹ 搜尋結果</button><div class="small muted" style="margin-bottom:.6rem;word-break:break-all">${esc(P.title || P.d)}<br>${esc(P.url)}</div>
-      ${imgs.length ? `<div class="small" style="margin-bottom:.4rem"><b>點選是菜單的圖片（可多選）</b></div><div class="gpGrid">${imgs.map((x, i) => `<button class="gp ${sel.has(i) ? 'on' : ''}" data-a="pick" data-i="${i}"><img src="${esc(x.s)}" alt="" loading="lazy" referrerpolicy="no-referrer"><i>✓</i>${x.w ? `<small>${x.w}×${x.h}</small>` : ''}</button>`).join('')}</div>` : '<div class="empty" style="padding:1rem">這個網頁沒有找到大張圖片</div>'}
-      <div class="field" style="margin-top:.8rem"><label>存成哪個區域的菜單（連鎖店北中南價格不同時選）</label><div class="rgPick">${['', ...REGIONS, ...regsKnown.filter(r => !REGIONS.includes(r))].map(r => `<button data-a="rg" data-v="${esc(r)}" class="${rg === r ? 'on' : ''}">${r ? esc(r) : '不分區'}</button>`).join('')}</div></div>
+    /* 1) 連到圖片的「北部菜單」這類連結（常收在漢堡選單裡） 2) 網頁上的大張圖片 */
+    const seenS = new Set(), linkImgs = [], pageLinks = [];
+    P.links.forEach(l => { const h = l.h.split('#')[0]; if (isImgUrl(h)) { if (!seenS.has(h)) { seenS.add(h); linkImgs.push({s: h, w: 0, h: 0, a: l.t, lk: true, rg: guessRegion(l.t, h)}); } }
+      else if (MENU_RE.test(l.t + ' ' + h) && /^https?:/i.test(h) && h !== P.url.split('#')[0] && !SEARCH_JUNK.test(h) && !pageLinks.some(x => x.h === h)) pageLinks.push({h, t: l.t}); });
+    const imgs = linkImgs.concat(P.imgs.filter(x => !seenS.has(x.s)).map(x => Object.assign({rg: guessRegion(x.a, x.s)}, x)).sort((a, b) => (MENU_RE.test(b.a + b.s) - MENU_RE.test(a.a + a.s)) || (b.w * b.h - a.w * a.h))).slice(0, 40); P.list = imgs; P.plinks = pageLinks.slice(0, 12);
+    const hasRg = imgs.some(x => x.rg);
+    sh.body.innerHTML = `<button class="btn sm ghost" data-a="back" style="margin-bottom:.5rem">‹ ${stack.length ? '上一頁' : '搜尋結果'}</button><div class="small muted" style="margin-bottom:.6rem;word-break:break-all">${esc(P.title || P.d)}<br>${esc(P.url)}</div>
+      ${imgs.length ? `<div class="small" style="margin-bottom:.4rem"><b>點選是菜單的圖片（可多選）</b>${hasRg ? '<br><span class="muted">標了地區的圖片，存檔時會自動分成各地區的菜單版本</span>' : ''}</div><div class="gpGrid">${imgs.map((x, i) => `<button class="gp ${sel.has(i) ? 'on' : ''}" data-a="pick" data-i="${i}"><img src="${esc(x.s)}" alt="" loading="lazy" referrerpolicy="no-referrer"><i>✓</i>${x.rg ? `<em class="gpRg">${esc(x.rg)}</em>` : ''}${x.lk && x.a ? `<small>${esc(x.a.slice(0, 14))}</small>` : x.w ? `<small>${x.w}×${x.h}</small>` : ''}</button>`).join('')}</div>` : '<div class="empty" style="padding:1rem">這個網頁沒有找到大張圖片</div>'}
+      ${P.plinks.length ? `<div class="small" style="margin:.8rem 0 .3rem"><b>相關菜單網頁</b><span class="muted">（點了在背景打開）</span></div>${P.plinks.map((l, i) => `<button class="res" data-a="sub" data-i="${i}"><span class="rIc">📄</span><span class="grow"><b>${esc(l.t || l.h)}</b><small>${esc(l.h.replace(/^https?:\/\//, '').slice(0, 70))}</small></span></button>`).join('')}` : ''}
+      <div class="field" style="margin-top:.8rem"><label>${hasRg ? '沒有標地區的圖片要存成哪一區' : '存成哪個區域的菜單（連鎖店北中南價格不同時選）'}</label><div class="rgPick">${['', ...REGIONS, ...regsKnown.filter(r => !REGIONS.includes(r))].map(r => `<button data-a="rg" data-v="${esc(r)}" class="${rg === r ? 'on' : ''}">${r ? esc(r) : '不分區'}</button>`).join('')}</div></div>
       <div class="row wrap" style="gap:.5rem"><button class="btn pri" data-a="saveImg" ${sel.size ? '' : 'disabled'}>存成菜單版本${sel.size ? `（${sel.size} 張）` : ''}</button>${P.text.replace(/\s+/g, '').length > 300 ? '<button class="btn olive" data-a="useText">用網頁文字整理成表格</button>' : ''}<button class="btn" data-a="extp">用瀏覽器打開 ↗</button></div>`; };
   sh.body.addEventListener('keydown', e => { if (e.target.id === 'nq' && e.key === 'Enter' && !e.isComposing) { e.preventDefault(); search(); } });
   sh.body.addEventListener('click', async e => { const b = e.target.closest('[data-a]'); if (!b) return; const a = b.dataset.a;
-    if (a === 's') search(); else if (a === 'ext') openUrl('https://www.google.com/search?q=' + encodeURIComponent(q)); else if (a === 'back') viewResults();
-    else if (a === 'open') { const r = results[+b.dataset.i]; sel = new Set(); sh.body.innerHTML = '<div class="empty"><div class="spin"></div>在背景打開網頁、讀取菜單圖片與文字…<br><span class="small muted">' + esc(r.d) + '</span></div>';
+    if (a === 's') search(); else if (a === 'ext') openUrl('https://www.google.com/search?q=' + encodeURIComponent(q)); else if (a === 'back') { if (stack.length) { page = stack.pop(); sel = new Set(); viewPage(); } else { page = null; viewResults(); } }
+    else if (a === 'sub') { const l = page.plinks[+b.dataset.i], prev = page; sel = new Set(); sh.body.innerHTML = '<div class="empty"><div class="spin"></div>在背景打開「' + esc(l.t || '菜單') + '」…</div>';
+      try { const P = await readPage(l.h, true); if (sh.closed) return; stack.push(prev); page = Object.assign(P, {d: l.t || prev.d}); viewPage(); } catch (er) { if (!sh.closed) { page = prev; viewPage(); toast('⚠️ ' + er.message, 3500); } } }
+    else if (a === 'open') { const r = results[+b.dataset.i]; sel = new Set(); stack.length = 0; sh.body.innerHTML = '<div class="empty"><div class="spin"></div>在背景打開網頁、讀取菜單圖片與文字…<br><span class="small muted">' + esc(r.d) + '</span></div>';
       try { const P = await readPage(r.h, true); if (sh.closed) return; page = Object.assign(P, {d: r.d}); viewPage(); } catch (er) { if (!sh.closed) viewResults(`<div class="empty">⚠️ ${esc(er.message)}<br><button class="btn sm" data-a="back" style="margin-top:.6rem">‹ 搜尋結果</button></div>`); } }
     else if (a === 'pick') { const i = +b.dataset.i; if (sel.has(i)) sel.delete(i); else sel.add(i); b.classList.toggle('on', sel.has(i)); const sb = $('[data-a="saveImg"]', sh.body); sb.disabled = !sel.size; sb.textContent = '存成菜單版本' + (sel.size ? `（${sel.size} 張）` : ''); }
     else if (a === 'rg') { rg = b.dataset.v; $$('.rgPick button', sh.body).forEach(x => x.classList.toggle('on', x.dataset.v === rg)); }
     else if (a === 'extp') openUrl(page.url);
     else if (a === 'useText') { sh.close(); urlMenu(p, page.url); }
-    else if (a === 'saveImg') { const L = [...sel].sort((x, y) => x - y).map(i => page.list[i]), al = {id: 'a' + uid(), name: page.d + ' ' + dateName(), t: Date.now(), imgs: [], src: 'web', rg};
-      busy('下載圖片中…'); let err = ''; for (const x of L) { try { al.imgs.push(await imgStore(await fetchImgBlob(x.s))); } catch (er) { err = er.message; } } busy(false);
-      if (!al.imgs.length) { toast('❌ 圖片下載失敗：' + (err || '未知原因'), 4000); return; }
-      p.albums = p.albums || []; p.albums.push(al); await savePlace(p); sh.close(); refreshAll(); document.dispatchEvent(new CustomEvent('fm:job', {detail: p.id}));
-      toast(`已存成菜單版本（${al.imgs.length} 張${rg ? '・' + rg : ''}）`, 3000);
-      if (S.aikey && await ask('要現在用 AI 把這些菜單圖片辨識成表格嗎？（在背景執行）', '開始辨識')) aiMenu(p, undefined, [al]); } });
+    else if (a === 'saveImg') { const L = [...sel].sort((x, y) => x - y).map(i => page.list[i]), groups = new Map(), t0 = Date.now();
+      L.forEach(x => { const g = x.rg || rg; if (!groups.has(g)) groups.set(g, []); groups.get(g).push(x); });
+      busy('下載圖片中…'); let err = '', n = 0; const made = [];
+      for (const [g, xs] of groups) { const al = {id: 'a' + uid(), name: page.d + (g ? ' ' + g : '') + ' ' + dateName(), t: t0, imgs: [], src: 'web', rg: g};
+        for (const x of xs) { try { al.imgs.push(await imgStore(await fetchImgBlob(x.s))); n++; } catch (er) { err = er.message; } }
+        if (al.imgs.length) made.push(al); }
+      busy(false);
+      if (!made.length) { toast('❌ 圖片下載失敗：' + (err || '未知原因'), 4000); return; }
+      p.albums = p.albums || []; p.albums.push(...made); await savePlace(p); sh.close(); refreshAll(); document.dispatchEvent(new CustomEvent('fm:job', {detail: p.id}));
+      const rgs = made.map(x => x.rg).filter(Boolean);
+      toast(`已存成 ${made.length} 個菜單版本（${n} 張${rgs.length ? '・' + rgs.join('、') : ''}）${err ? '，有部分圖片下載失敗' : ''}`, 3500);
+      if (S.aikey && await ask(`要現在用 AI 把這些菜單圖片辨識成表格嗎？${made.length > 1 ? '\n各地區會分開辨識，表格上方可以切換地區。' : ''}（在背景執行）`, '開始辨識')) aiMenu(p, undefined, made); } });
   viewResults(); if (IS_APP && NB.pageRead) search();
 }
 window.__nbPage = (id, ok, val) => { const f = NBCB[id]; if (f) { delete NBCB[id]; f({status: ok ? 200 : 0, text: typeof val === 'string' ? val : JSON.stringify(val || '')}); } };
@@ -1740,7 +1780,8 @@ function openPlace(id, toMenu) {
     /* 分類標題獨佔一列，下面再列品名與價格，分類名稱很長也不會把品名擠成一直條 */
     /* 同一品項的不同尺寸（L、瓶、中、大…）合併成一行，沒有價格的尺寸不顯示 */
     const merge = L => { const out = [], idx = {}; L.forEach(r => { const m = r.n.match(SZ), b = m ? baseName(r.n) : r.n, k = r.c + '|' + b;
-      if (m && idx[k] != null) { out[idx[k]].v.push({s: m[1], p: r.p}); return; } if (m) idx[k] = out.length; out.push({c: r.c, n: b, multi: !!m, v: [{s: m ? m[1] : '', p: r.p}]}); }); return out; };
+      if (m && idx[k] != null) { const v = out[idx[k]].v; if (!v.some(x => x.s === m[1] && x.p === r.p)) v.push({s: m[1], p: r.p}); return; } if (m) idx[k] = out.length; out.push({c: r.c, n: b, multi: !!m, v: [{s: m ? m[1] : '', p: r.p}]}); });
+      out.forEach(o => o.v.sort((a, b) => szRank(a.s) - szRank(b.s))); return out; };
     const catRows = (L0, pre) => { const L = merge(L0); let last = null; return L.map(r => { const g = r.c !== last; last = r.c; const vs = r.v.filter(x => x.p !== '' && x.p != null);
       const pc = r.multi ? vs.map(x => `<span class="szp"><i>${esc(x.s)}</i>${pre}${price(x.p)}</span>`).join('') : (vs[0] ? pre + price(vs[0].p) : '');
       return (g ? `<tr class="cat"><td colspan="2">${esc(r.c)} <span>${L.filter(x => x.c === r.c).length}</span></td></tr>` : '') + `<tr><td>${esc(r.n)}</td><td class="p${r.multi && vs.length > 1 ? ' multi' : ''}">${pc}</td></tr>`; }).join(''); };
