@@ -407,6 +407,7 @@ h1,h2,h3{margin:0;line-height:1.25;text-wrap:balance}
 .gp.on{border-color:var(--accent)}
 .gp.on i{background:var(--accent);color:#fff}
 .gp small{position:absolute;left:0;right:0;bottom:0;padding:.15rem .4rem;background:linear-gradient(transparent,rgba(0,0,0,.6));color:#fff;font-size:.62rem;text-align:left;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.gp .gpRg{position:absolute;top:.35rem;left:.35rem;padding:.1rem .45rem;border-radius:.6rem;background:var(--acc,#b5651d);color:#fff;font-size:.66rem;font-style:normal;font-weight:700;box-shadow:0 1px 3px rgba(0,0,0,.3)}
 /* AI 用量 */
 .quota{margin:.1rem 0 .3rem}
 .quota .prog{margin-top:.3rem}
