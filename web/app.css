@@ -118,7 +118,6 @@ h1,h2,h3{margin:0;line-height:1.25;text-wrap:balance}
 #mCard h3{font-size:1.08rem}
 #mCard .acts{display:flex;gap:.45rem;margin-top:.65rem;flex-wrap:wrap}
 #mCard .acts .btn{flex:1}
-.mapAttr{position:absolute;left:.4rem;bottom:.2rem;font-size:.6rem;color:rgba(60,50,40,.7);z-index:1;pointer-events:none}
 .mapHint{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:3;padding:.6rem 1rem;border-radius:var(--r-sm);font-size:.85rem;text-align:center;max-width:80%}
 
 /* 旗子圖釘 */
@@ -141,7 +140,7 @@ h1,h2,h3{margin:0;line-height:1.25;text-wrap:balance}
 .secHead .ico{font-size:1.4rem}
 .secHead b{font-size:1.05rem}
 .secHead .cnt{font-size:.78rem;color:var(--muted);font-weight:600}
-.grip{width:2.2rem;height:2.4rem;display:flex;align-items:center;justify-content:center;color:var(--muted);flex:none;touch-action:none;cursor:grab}
+.grip{width:2.2rem;height:2.4rem;display:flex;align-items:center;justify-content:center;color:var(--muted);flex:none;cursor:grab}
 .grip::before{content:"☰";font-size:1.05rem}
 .secList{padding:.2rem .55rem .55rem}
 .sec.fold .secList{display:none}
@@ -394,3 +393,28 @@ h1,h2,h3{margin:0;line-height:1.25;text-wrap:balance}
 .pgrid span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pgrid input{padding:.4rem .55rem}
 #rType{width:100%}
+
+/* 按住準備拖曳的提示 */
+.holding{transition:transform .28s ease,box-shadow .28s ease;transform:scale(.97);box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 45%,transparent)!important}
+.pl,.rrow,.secHead,.catRow,.chip{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+/* 全部展開／收合 */
+.foldAll{white-space:nowrap}
+/* Google 地圖相片挑選 */
+.gpGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(8.5rem,1fr));gap:.5rem}
+.gp{position:relative;aspect-ratio:1;border-radius:var(--r-sm);overflow:hidden;background:var(--surface-2);border:3px solid transparent;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:.8rem}
+.gp img{width:100%;height:100%;object-fit:cover;display:block}
+.gp i{position:absolute;top:.35rem;right:.35rem;width:1.6rem;height:1.6rem;border-radius:50%;background:rgba(0,0,0,.45);color:transparent;font-style:normal;display:flex;align-items:center;justify-content:center;font-weight:800;border:2px solid #fff}
+.gp.on{border-color:var(--accent)}
+.gp.on i{background:var(--accent);color:#fff}
+.gp small{position:absolute;left:0;right:0;bottom:0;padding:.15rem .4rem;background:linear-gradient(transparent,rgba(0,0,0,.6));color:#fff;font-size:.62rem;text-align:left;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+/* AI 用量 */
+.quota{margin:.1rem 0 .3rem}
+.quota .prog{margin-top:.3rem}
+.aiLog{font-size:.78rem;line-height:1.5;max-height:18rem;overflow-y:auto;border-top:1px solid var(--border-soft);padding-top:.4rem}
+.aiLog>div{padding:.4rem 0;border-bottom:1px solid var(--border-soft);word-break:break-word}
+.aiLog .bad b{color:var(--danger)}
+/* 定位中 */
+.fab.locating svg{animation:spin 1.2s linear infinite}
+.fab.locating{color:var(--accent)}
+.meWrap{position:relative;width:18px;height:18px}
+.meAcc{position:absolute;left:50%;top:50%;border-radius:50%;background:rgba(47,111,214,.14);border:1px solid rgba(47,111,214,.35);transform:translate(-50%,-50%);pointer-events:none}

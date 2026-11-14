@@ -66,7 +66,7 @@ async function initMap() {
     cv.addEventListener('touchmove', e => { const t = e.touches[0]; if (!t || e.touches.length > 1 || Math.hypot(t.clientX - sx, t.clientY - sy) > 10) clearTimeout(lt); }, {passive: true});
     ['touchend', 'touchcancel'].forEach(ev => cv.addEventListener(ev, () => clearTimeout(lt), {passive: true})); }
   syncMarkers();
-  if (!S.view) locateMe(true);
+  locWarm(); if (!S.view) { Loc.start(); Loc.want = 1; }
 }
 function mapResize() { if (M.map) setTimeout(() => M.map.resize(), 30); }
 function flyTo(lat, lon, z) { if (!M.map) return; M.map.flyTo({center: [lon, lat], zoom: Math.max(M.map.getZoom(), z || 16), pitch: S.map3d ? Math.max(M.map.getPitch(), 50) : M.map.getPitch(), duration: 900, essential: true}); }
@@ -164,14 +164,50 @@ async function addDraft(d) {
   editPlace(p, true);
 }
 
-/* ---------- 我的位置 ---------- */
+/* ---------- 我的位置 ----------
+   以前每次按都重新等 GPS（冷啟動可能 5～15 秒，逾時就要再按一次）。
+   現在：App 開著時持續接收位置（新版 APK 用手機原生定位，同時用 GPS 與網路定位），
+   按下按鈕立刻飛到最後一次的位置，再隨著更精準的定位自動修正。 */
+var Loc = {last: null, on: false, wid: null, want: 0, err: '', native() { return !!(IS_APP && NB.locStart); },
+  start() { if (this.on) return; this.on = true; this.err = '';
+    if (this.native()) { try { NB.locStart(); } catch (e) {} return; }
+    if (!navigator.geolocation) { this.err = '這個裝置不支援定位'; return; }
+    /* 先要一個快速的大概位置（網路定位，通常 1 秒內），同時持續接收精準的 GPS 位置 */
+    navigator.geolocation.getCurrentPosition(p => this.web(p), () => {}, {enableHighAccuracy: false, timeout: 5000, maximumAge: 600000});
+    this.wid = navigator.geolocation.watchPosition(p => this.web(p), e => this.fail(e.code === 1 ? 'denied' : e.code === 3 ? 'timeout' : 'unavail'), {enableHighAccuracy: true, maximumAge: 3000, timeout: 30000}); },
+  stop() { if (!this.on) return; this.on = false; if (this.native()) { try { NB.locStop(); } catch (e) {} } if (this.wid != null) { navigator.geolocation.clearWatch(this.wid); this.wid = null; } },
+  web(p) { this.fix(p.coords.latitude, p.coords.longitude, p.coords.accuracy, p.timestamp || Date.now(), 'web'); },
+  onNative(d) { try { d = typeof d === 'string' ? JSON.parse(d) : d; } catch (e) { return; } if (d.err) { this.fail(d.err); return; } this.fix(d.lat, d.lon, d.acc, d.t, d.p); },
+  fix(lat, lon, acc, t, src) {
+    const L = this.last; if (L && t < L.t - 1000) return;                       /* 舊資料不要蓋掉新的 */
+    if (L && Date.now() - L.t < 10000 && acc > L.acc * 2.5 && L.acc < 80) return; /* 剛有精準 GPS 時，不要被粗略的網路定位拉走 */
+    this.last = {lat, lon, acc: acc || 0, t: t || Date.now(), src}; this.err = ''; M.meLL = [lat, lon]; this.draw();
+    if (this.want) { const fresh = Date.now() - this.last.t < 30000;
+      if (this.want === 1 || (fresh && acc < 120)) { this.fly(this.want === 1); this.want = fresh && acc < 60 ? 0 : 2; if (!this.want) this.busy(false); } }
+  },
+  fail(code) { this.err = code; if (this.want && !this.last) { this.want = 0; this.busy(false);
+    toast(code === 'denied' ? '請允許定位權限才能顯示你的位置' : code === 'off' ? '手機的定位功能是關閉的，請到系統設定開啟「位置」' : '暫時抓不到位置，請到室外或確認已開啟定位', 3500); } },
+  draw() { if (!M.map || !this.last) return; const L = this.last;
+    if (!M.me) { const e = el('<div class="meWrap"><div class="meAcc"></div><div class="meDot"></div></div>'); M.me = new maplibregl.Marker({element: e}).setLngLat([L.lon, L.lat]).addTo(M.map); M.map.on('zoom', () => this.acc()); }
+    else M.me.setLngLat([L.lon, L.lat]); this.acc(); },
+  acc() { if (!M.me || !this.last) return; const z = M.map.getZoom(), mpp = 156543.03 * Math.cos(this.last.lat * Math.PI / 180) / Math.pow(2, z), px = Math.min(400, Math.max(0, this.last.acc / mpp * 2));
+    const a = M.me.getElement().querySelector('.meAcc'); a.style.width = a.style.height = px + 'px'; a.style.display = px > 22 ? '' : 'none'; },
+  fly(first) { if (!M.map || !this.last) return; const c = [this.last.lon, this.last.lat];
+    if (first) M.map.flyTo({center: c, zoom: Math.max(M.map.getZoom(), 16), duration: 700, essential: true}); else M.map.easeTo({center: c, duration: 500}); },
+  busy(b) { const f = $('#fbMe'); if (f) f.classList.toggle('locating', !!b); clearTimeout(this.bt); if (b) this.bt = setTimeout(() => { if (this.want) { this.want = 0; this.busy(false); if (!this.last) toast('暫時抓不到位置，請到室外或確認已開啟定位', 3500); } }, 25000); }
+};
 function locateMe(quiet) {
-  if (!navigator.geolocation) { if (!quiet) toast('這個裝置不支援定位'); return; }
-  const ok = pos => { M.meLL = [pos.coords.latitude, pos.coords.longitude]; if (!M.map) return;
-    if (!M.me) M.me = new maplibregl.Marker({element: el('<div class="meDot"></div>')}).setLngLat([M.meLL[1], M.meLL[0]]).addTo(M.map); else M.me.setLngLat([M.meLL[1], M.meLL[0]]); };
-  navigator.geolocation.getCurrentPosition(pos => { ok(pos); if (M.map) M.map.flyTo({center: [M.meLL[1], M.meLL[0]], zoom: Math.max(M.map.getZoom(), 15.5), duration: 900});
-    if (M.watch == null) M.watch = navigator.geolocation.watchPosition(ok, () => {}, {enableHighAccuracy: true, maximumAge: 10000}); },
-  e => { if (!quiet) toast(e.code === 1 ? '請允許定位權限才能顯示你的位置' : '暫時無法取得位置，請確認已開啟定位'); }, {enableHighAccuracy: true, timeout: 12000, maximumAge: 30000});
+  Loc.start(); if (quiet) return;
+  const L = Loc.last, age = L ? Date.now() - L.t : 1e9;
+  if (L) { Loc.fly(true); if (age < 15000 && L.acc < 60) { Loc.want = 0; Loc.busy(false); return; } Loc.want = 2; Loc.busy(true); return; }   /* 先飛到最後的位置，再等更準的定位 */
+  if (Loc.err === 'denied' || Loc.err === 'off') { const c = Loc.err; Loc.stop(); Loc.start(); Loc.err = c; }
+  Loc.want = 1; Loc.busy(true);
+}
+/* 有權限就一打開 App 就開始暖機定位，按按鈕時就不用等；App 切到背景時暫停省電 */
+async function locWarm() {
+  let ok = false; try { if (Loc.native()) ok = !!(NB.locHasPerm && NB.locHasPerm()); else if (navigator.permissions) ok = (await navigator.permissions.query({name: 'geolocation'})).state === 'granted'; } catch (e) {}
+  if (ok || S.locOn) Loc.start();
+  document.addEventListener('visibilitychange', () => { if (document.hidden) { Loc.wasOn = Loc.on; Loc.stop(); } else if (Loc.wasOn) Loc.start(); });
 }
 
 /* ---------- 搜尋：Google Places API (New)，與行跡導航相同；沒有金鑰時改用 OpenStreetMap ---------- */

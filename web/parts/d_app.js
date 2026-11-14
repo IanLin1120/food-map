@@ -5,6 +5,12 @@ let curTab = 'Map';
 function showTab(t) { curTab = t; $$('.page').forEach(p => p.classList.toggle('on', p.id === 'pg' + t)); $$('#tabbar button').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
   if (t === 'Map') mapResize(); else if (t === 'Fav') renderFav(); else if (t === 'Rec') renderRec(); else renderSet(); updCounts(); }
 
+/* ---------- 全部展開／收合（收藏、食譜共用） ---------- */
+const FOLD = {fav: ['#favList', '#favFold', 'fold'], rec: ['#recList', '#recFold', 'rfold']};
+function foldBtn(k) { const [l, b] = FOLD[k], secs = $$('.sec', $(l)), btn = $(b); if (!btn) return; btn.classList.toggle('hide', secs.length < 2);
+  btn.textContent = secs.some(x => !x.classList.contains('fold')) ? '⊟ 全部收合' : '⊞ 全部展開'; }
+function foldAll(k) { const [l, , key] = FOLD[k], secs = $$('.sec', $(l)); if (!secs.length) return; const close = secs.some(x => !x.classList.contains('fold'));
+  S[key] = S[key] || {}; secs.forEach(x => { S[key][x.dataset.cat] = close; x.classList.toggle('fold', close); }); saveS(); foldBtn(k); }
 /* ---------- 食譜 ----------
    兩種模板：
    std   一般食譜：份數 + 食材表（食材／數量）+ 步驟
@@ -21,12 +27,12 @@ async function renderRec() {
     return `<div class="sec rsec ${S.rfold[c.id] && !q ? 'fold' : ''}" data-cat="${c.id}" ${srt && !q ? 'data-srt' : ''} style="--c:${c.color}"><div class="secHead">${srt && !q ? '<span class="grip secGrip"></span>' : ''}<span class="ico">${esc(c.icon)}</span><b class="grow" data-a="fold">${esc(c.name)} <span class="cnt">${rs.length} 道</span></b><button class="ic chev" data-a="fold" aria-label="收合">▾</button></div>
       ${rs.length ? `<div class="secList">${rs.map(row).join('')}</div>` : ''}</div>`; }).join('');
   box.innerHTML = html || `<div class="empty"><span class="big">📖</span>${q ? '找不到符合的食譜' : '還沒有食譜<br><span class="small">按右上角「＋ 新增」，或用「✨ 圖片匯入」把食譜截圖變成表格</span>'}</div>`;
-  box.dataset.q = q;
+  box.dataset.q = q; foldBtn('rec');
 }
 function initRec() {
-  const box = $('#recList'); $('#recQ').addEventListener('input', debounce(renderRec, 150)); $('#recAdd').onclick = () => newRecipe(); $('#recAI').onclick = aiRecipe; $('#recCats').onclick = () => openCats('recipe');
-  box.addEventListener('click', e => { const f = e.target.closest('[data-a="fold"]'); if (f) { const s = f.closest('.sec'), id = s.dataset.cat; S.rfold[id] = !S.rfold[id]; saveS(); s.classList.toggle('fold', !!S.rfold[id]); return; } const b = e.target.closest('.rrow'); if (b) viewRecipe(b.dataset.id); });
-  sortable(box, {item: '.rsec[data-srt]', handle: '.secGrip', handleOnly: true, scroller: '.pgBody', onSort(from, to) { moveItem(DB.rcats, from, to); saveRcats(); renderRec(); }});
+  const box = $('#recList'); $('#recQ').addEventListener('input', debounce(renderRec, 150)); $('#recAdd').onclick = () => newRecipe(); $('#recAI').onclick = aiRecipe; $('#recCats').onclick = () => openCats('recipe'); $('#recFold').onclick = () => foldAll('rec');
+  box.addEventListener('click', e => { const f = e.target.closest('[data-a="fold"]'); if (f) { const s = f.closest('.sec'), id = s.dataset.cat; S.rfold[id] = !S.rfold[id]; saveS(); s.classList.toggle('fold', !!S.rfold[id]); foldBtn('rec'); return; } const b = e.target.closest('.rrow'); if (b) viewRecipe(b.dataset.id); });
+  sortable(box, {item: '.rsec[data-srt]', start: '.secHead', scroller: '.pgBody', onSort(from, to) { moveItem(DB.rcats, from, to); saveRcats(); renderRec(); }});
   /* 食譜可以在資料夾內排序，也可以拖到別的資料夾 */
   sortable(box, {item: '.rrow', handle: '.rGrip', groups: '.rsec', scroller: '.pgBody', onSort(from, to, gFrom, gTo) { if (box.dataset.q) return; const cf = gFrom.dataset.cat, ct = gTo.dataset.cat, src = DB.recipes.filter(r => rcatKey(r) === cf)[from]; if (!src) return;
     src.cat = ct; DB.recipes.splice(DB.recipes.indexOf(src), 1); const T = DB.recipes.filter(r => rcatKey(r) === ct);
@@ -150,7 +156,8 @@ function renderSet() {
     <div class="setR col"><div class="t"><small>用來把菜單照片、食譜截圖轉成表格。金鑰可在 Google AI Studio 免費申請。</small></div>
       <div class="keyBox"><input id="sA" type="password" value="${esc(S.aikey)}" placeholder="貼上 Gemini API 金鑰" autocomplete="off"><button class="btn sm" data-a="eyeA">顯示</button></div>
       <div class="row wrap"><button class="btn sm pri" data-a="tutA">📘 圖文教學</button><button class="btn sm" data-a="getA">申請金鑰 ↗</button><button class="btn sm olive" data-a="testA">測試金鑰</button></div><div class="testOut" id="outA"></div></div>
-    <div class="setR"><div class="t"><b>AI 模型</b><small>一般保持「自動」即可${S.aiAuto ? '（目前：' + esc(S.aiAuto) + '）' : ''}</small></div><select id="sM"><option value="auto">自動選擇</option>${S.aimodel && S.aimodel !== 'auto' ? `<option selected>${esc(S.aimodel)}</option>` : ''}</select></div></div></div>
+    <div class="setR"><div class="t"><b>辨識模型</b><small>自動＝先用 Flash-Lite（快、每天約 500 次），額度用完自動換 Flash（較準、每天約 20 次）</small></div><select id="sM"><option value="auto" ${!S.aimodel || S.aimodel === 'auto' ? 'selected' : ''}>自動</option><option value="lite" ${S.aimodel === 'lite' ? 'selected' : ''}>Flash-Lite（快）</option><option value="flash" ${S.aimodel === 'flash' ? 'selected' : ''}>Flash（較準）</option>${S.aimodel && !['auto', 'lite', 'flash'].includes(S.aimodel) ? `<option selected>${esc(S.aimodel)}</option>` : ''}</select></div>
+    ${aiUsageCard()}</div>
   <div class="setG"><h3>分類</h3><div class="setC"><button class="setR" data-a="cats" style="width:100%;text-align:left"><div class="t"><b>管理收藏分類</b><small>自訂名稱、圖示、旗子顏色與排序（共 ${DB.cats.length} 個）</small></div><span class="muted">›</span></button>
     <button class="setR" data-a="rcats" style="width:100%;text-align:left"><div class="t"><b>管理食譜分類</b><small>煎、炒、電鍋、湯…自訂名稱、圖示與排序（共 ${DB.rcats.length} 個）</small></div><span class="muted">›</span></button></div></div>
   <div class="setG"><h3>資料備份</h3><div class="setC">
@@ -166,8 +173,6 @@ function initSet() {
   box.addEventListener('change', e => { const t = e.target; if (t.id === 'sNav') { S.navApp = t.value; saveS(); } else if (t.id === 'sM') { S.aimodel = t.value; saveS(); }
     else if (t.id === 'sG') { S.gkey = t.value.trim(); GPC.clear(); saveS(); } else if (t.id === 'sA') { S.aikey = t.value.trim(); saveS(); } });
   box.addEventListener('input', e => { const t = e.target; if (t.id === 'sG') { S.gkey = t.value.trim(); saveS(); } else if (t.id === 'sA') { S.aikey = t.value.trim(); saveS(); } });
-  box.addEventListener('focusin', async e => { if (e.target.id !== 'sM' || e.target.dataset.l || !S.aikey) return; e.target.dataset.l = 1; try { const l = (await aiListModels()).filter(n => /^gemini/.test(n)); const cur = S.aimodel;
-    e.target.innerHTML = '<option value="auto">自動選擇</option>' + l.map(n => `<option ${n === cur ? 'selected' : ''}>${esc(n)}</option>`).join(''); } catch (er) {} });
   box.addEventListener('click', async e => {
     const sg = e.target.closest('.seg button'); if (sg) { const k = sg.parentNode.dataset.seg; S[k] = k === 'scale' || k === 'hapLv' ? +sg.dataset.v : sg.dataset.v; if (k === 'hapLv') { S.haptic = S.hapLv > 0; buzzAt = 0; buzz(40); } saveS(); applyTheme(); renderSet(); mapResize(); return; }
     const pal = e.target.closest('[data-pal]'); if (pal) { S.palette = pal.dataset.pal; saveS(); applyTheme(); renderSet(); return; }
@@ -179,6 +184,7 @@ function initSet() {
     else if (a === 'getG') openUrl('https://console.cloud.google.com/google/maps-apis/credentials'); else if (a === 'getA') openUrl('https://aistudio.google.com/apikey');
     else if (a === 'testG') { $('#outG').innerHTML = '測試中…'; $('#outG').innerHTML = await testG(); } else if (a === 'testA') { $('#outA').innerHTML = '測試中…'; $('#outA').innerHTML = await testA(); renderSetKeep(); }
     else if (a === 'updChk') Upd.check(true); else if (a === 'updApk') Upd.releases(); else if (a === 'updBack') Upd.restore(); else if (a === 'updShare') Upd.share(); else if (a === 'updWeb') openUrl(GH.pages);
+    else if (a === 'aiStudio') openUrl('https://aistudio.google.com/rate-limit?timeRange=last-28-days'); else if (a === 'aiLog') { const o = $('#aiLogBox'); o.classList.toggle('hide'); b.textContent = o.classList.contains('hide') ? '查看最近 AI 紀錄' : '收起紀錄'; }
     else if (a === 'cats') openCats('place'); else if (a === 'rcats') openCats('recipe'); else if (a.indexOf('off') === 0) Off.act(a); else if (a === 'exp') exportBackup(); else if (a === 'imp') importBackup(); else if (a === 'welcome') welcome();
     else if (a === 'wipe') { if (await ask('確定要清除「所有」收藏、菜單、食譜與設定嗎？\n這個動作無法復原，建議先匯出備份。', '全部清除', true) && await ask('再確認一次：真的要全部清除嗎？', '清除', true)) { for (const s of ['kv', 'places', 'recipes', 'imgs']) await IDB.clear(s).catch(() => {}); try { localStorage.clear(); } catch (er) {} location.reload(); } } });
 }
@@ -188,8 +194,17 @@ async function testG() { if (!S.gkey) return '<span class="no">請先貼上金�
     if (j.error) { const h = gErrHint((j.error.message || '') + JSON.stringify(j.error.details || ''), j.error.status); return `<span class="no">✘ 無法使用</span><br>${esc(j.error.message || j.error.status)}${h ? '<br>👉 ' + esc(h) : ''}`; }
     const p = (j.places || [])[0]; return `<span class="ok">✔ 金鑰可以使用</span>${p ? '（測試搜尋：' + esc(p.displayName && p.displayName.text || '') + '）' : ''}`; } catch (e) { return '<span class="no">✘ ' + esc(e.message) + '</span>'; } }
 async function testA() { if (!S.aikey) return '<span class="no">請先貼上金鑰</span>';
-  try { const l = await aiListModels(), m = aiPick(l); if (!m) return '<span class="no">✘ 這把金鑰找不到可用的 Gemini 模型</span>'; if (!S.aimodel || S.aimodel === 'auto') { S.aiAuto = m; saveS(); }
-    return `<span class="ok">✔ 金鑰可以使用</span>（將使用模型：${esc(S.aimodel && S.aimodel !== 'auto' ? S.aimodel : m)}）`; } catch (e) { return '<span class="no">✘ ' + esc(e.message) + '</span>'; } }
+  try { const m = await aiModels(true); if (!m.lite && !m.flash) return '<span class="no">✘ 這把金鑰找不到可用的 Gemini 模型</span>';
+    return `<span class="ok">✔ 金鑰可以使用</span><br>Flash-Lite：${esc(m.lite || '（沒有）')}<br>Flash：${esc(m.flash || '（沒有）')}`; } catch (e) { return '<span class="no">✘ ' + esc(aiErrText(e)) + '</span>'; } }
+/* AI 用量（今天）：Google 不提供剩餘額度查詢，這裡是這支手機的使用次數 */
+function aiUsageCard() {
+  if (!S.aikey) return ''; const m = S.aiM || {}, rows = [['Flash-Lite', m.lite], ['Flash', m.flash]].filter(x => x[1]);
+  const log = AILOG.list();
+  return `<div class="setR col"><div class="t"><b>今天的 AI 用量</b><small>每天 ${AIQ.resetAt()} 重置（太平洋時間午夜）。Google 沒有提供查詢剩餘額度的方式，這裡是這支手機自己記錄的次數；上限是免費版的常見額度，碰到 Google 的額度錯誤時會改用 Google 回報的數字。同一個 Gemini 專案在其他地方用掉的次數不會算進來。</small></div>
+    ${rows.length ? rows.map(([n, id]) => { const l = AIQ.lim(id), u = Math.min(AIQ.used(id), l), bl = AIQ.blocked(id), pct = Math.min(100, Math.round((bl ? l : u) / l * 100)); return `<div class="quota"><div class="row"><b class="grow">${n}</b><span class="small">${bl ? '<span style="color:var(--danger)">今天已用完</span>' : `已用 ${u} / ${AIQ.limKnown(id) ? '' : '約 '}${l} 次・剩 ${AIQ.left(id)}`}</span></div><div class="prog"><i style="width:${pct}%;${bl || pct > 85 ? 'background:var(--danger)' : ''}"></i></div></div>`; }).join('') : '<div class="small muted">按上方「測試金鑰」後會顯示可用的模型。</div>'}
+    <div class="row wrap"><button class="btn sm" data-a="aiStudio">在 AI Studio 看正式用量 ↗</button>${log.length ? '<button class="btn sm" data-a="aiLog">查看最近 AI 紀錄</button>' : ''}</div>
+    <div id="aiLogBox" class="hide aiLog">${log.map(x => `<div class="${x.ok ? '' : 'bad'}"><b>${x.ok ? '✔' : '✘'} ${esc(x.kind)}</b>${x.place ? '・' + esc(x.place) : ''}<br><span class="muted">${new Date(x.t).toLocaleString('zh-TW', {hour12: false}).slice(5, -3)}・${esc(x.model ? aiShort(x.model) : '')}・${Math.round((x.ms || 0) / 1000)} 秒${x.ok ? '・' + (x.n || 0) + ' 項' : ''}</span>${x.err ? '<br>' + esc(x.err) : ''}${x.note ? '<br>' + esc(x.note) : ''}</div>`).join('')}</div></div>`;
+}
 
 /* ---------- 金鑰圖文教學 ---------- */
 const mock = (url, inner, g) => `<div class="mock"><div class="bar ${g ? 'g' : ''}"><i></i><i></i><i></i><span class="url">${url}</span></div><div class="bd">${inner}</div></div>`;

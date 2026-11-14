@@ -29,7 +29,7 @@ var Area = {cache: new Map(), hideList: false,
     $('#arX').onclick = () => this.set(null);
     $('#arMe').onclick = () => { const go = (lon, lat) => { const tw = TW.townAt(lon, lat); if (!tw) { toast('這個位置不在台灣的行政區範圍內'); return; } this.set({c: tw.county, t: tw.name}, true); };
       if (M.meLL) { go(M.meLL[1], M.meLL[0]); return; } if (!navigator.geolocation) { if (M.map) { const k = M.map.getCenter(); go(k.lng, k.lat); } return; }
-      toast('定位中…'); navigator.geolocation.getCurrentPosition(p => go(p.coords.longitude, p.coords.latitude), () => { if (M.map) { const k = M.map.getCenter(); go(k.lng, k.lat); toast('無法定位，改用地圖中心所在的區域'); } }, {enableHighAccuracy: true, timeout: 8000, maximumAge: 60000}); };
+      Loc.start(); toast('定位中…'); let n = 0; const iv = setInterval(() => { if (M.meLL) { clearInterval(iv); go(M.meLL[1], M.meLL[0]); } else if (++n > 16) { clearInterval(iv); if (M.map) { const k = M.map.getCenter(); go(k.lng, k.lat); toast('無法定位，改用地圖中心所在的區域'); } } }, 500); };
     this.ui();
   },
   ui() { const a = S.area, c = $('#arC'), t = $('#arT'); c.value = a ? a.c : ''; t.innerHTML = '<option value="">' + (a ? '全部鄉鎮市區' : '鄉鎮市區') + '</option>' + (a ? TW.counties[a.c].towns.map(x => `<option>${x.name}</option>`).join('') : ''); t.value = a ? a.t || '' : ''; t.disabled = !a;

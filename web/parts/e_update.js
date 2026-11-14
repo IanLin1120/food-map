@@ -4,8 +4,6 @@
    - apks.json：所有 APK 版本清單，可下載任一版
    - index.html：最新介面；App 下載後存在 IndexedDB（fm-ota），下次開啟由開機程式套用
    ============================================================ */
-const lsGet = (k, d) => { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } };
-const lsSet = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
 function dialog(title, html, btns) {
   const w = el('<div class="shWrap center"><div class="shBg"></div><div class="dlg"><h3 class="dlgT"></h3><div class="dlgB"></div><div class="dlgBtns"></div></div></div>');
   $('.dlgT', w).textContent = title; $('.dlgB', w).innerHTML = html;
