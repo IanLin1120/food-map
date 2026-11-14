@@ -477,3 +477,7 @@ table.piv td.dup{color:var(--danger);font-size:.8rem;line-height:1.25}
 .mcard.add td.s{color:var(--accent-2);font-weight:700}
 .regHint{font-size:.7rem;color:var(--muted);margin:-.3rem 0 .5rem 4.3rem}
 .regBar .seg button.dragSrc{opacity:.35}
+.album .aGrip{cursor:grab;color:var(--muted);font-size:1.15rem;padding:.2rem .35rem .2rem 0;touch-action:none;user-select:none}
+.album .ic.sm{width:1.9rem;height:1.9rem;font-size:.72rem;color:var(--text-2)}
+.album .ic.sm:disabled{opacity:.3}
+.album.dragSrc{opacity:.35}

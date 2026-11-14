@@ -82,7 +82,8 @@ async function loadAll() {
 }
 const dateName = t => { const d = new Date(t || Date.now()); return d.getFullYear() + '/' + String(d.getMonth() + 1).padStart(2, '0') + '/' + String(d.getDate()).padStart(2, '0'); };
 /* 菜單圖檔：albums 由新到舊；allImgs 依序攤平（最新版本在最前面） */
-const albumsOf = p => (p.albums || []).slice().sort((a, b) => (b.t || 0) - (a.t || 0));
+/* 版本順序：使用者排過的照自訂順序（o），之後新加的版本放最上面；沒排過的新到舊 */
+const albumsOf = p => (p.albums || []).slice().sort((a, b) => ((a.o != null) - (b.o != null)) || (a.o != null ? a.o - b.o : (b.t || 0) - (a.t || 0)));
 const imgCount = p => (p.albums || []).reduce((n, a) => n + (a.imgs || []).length, 0);
 
 /* ---------- 震動、提示 ---------- */
