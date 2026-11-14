@@ -167,13 +167,38 @@ B. 組合式（自選）菜單：顧客依步驟挑選，例如「1 主食（選
 8. 不可遺漏，也不可以自己編造。文字照抄菜單原文（繁體中文）。
 9. 只輸出品項行，不要標題列、不要編號、不要說明文字、不要 markdown。
 10. 加購用價格分組時（例如「+$10：波霸、椰果」「+$20：芝芝」），每個品項各寫一行，品名不要加括號或價格，例如：加購|添加口感|波霸|10。
-11. 如果一張圖片裡並排了好幾份「不同地區或分店」的菜單（例如角落分別標示「北部」「大葉高島屋」「澎湖、金門」），價格常常不同：請分開辨識，每一行最後多加第五欄寫那一份菜單標示的地區名稱，例如：品項|果粒茶系列|香橙果粒茶 (L)|85|北部。圖片裡只有一份菜單時不要加第五欄。`;
+11. 如果一張圖片裡並排了好幾份「不同地區或分店」的菜單（例如角落分別標示「北部」「大葉高島屋」「澎湖、金門」），價格常常不同：請分開辨識，每一行最後多加第五欄，照抄那一份菜單角落標示的文字，例如：品項|果粒茶系列|香橙果粒茶 (L)|85|北部。圖片裡只有一份菜單時不要加第五欄。
+12. 同一份菜單裡，同一個品項的同一個尺寸只會有一個價格，不要重複。`;
 const SZ = /\s*[（(]([^()（）]{1,8})[)）]\s*$/;
 /* 尺寸由小到大：S → M → L → XL → 瓶 */
 const SZ_ORDER = ['XS', 'S', '小', '小杯', '小碗', '小份', '薄', '薄片', '單', 'M', '中', '中杯', '中碗', '一般', '一般量', '正常', 'L', '大', '大杯', '大碗', '大份', '厚', '厚片', '雙', 'XL', '特大', '特大杯', '加大', '超大', 'XXL', '瓶', '瓶裝', '罐', '桶'];
 const szRank = s => { const k = String(s || '').trim().toUpperCase().replace(/杯型$/, ''); const i = SZ_ORDER.indexOf(k); return i < 0 ? (/瓶|罐|桶/.test(k) ? 90 : 50) : i; };
-const baseName = n => n.replace(SZ, '').trim();
+/* 品名最後括號裡是不是「尺寸」：M、L、瓶、大杯、小份、6入…（「附薯條」「期間限定」這種是說明，不是尺寸） */
+const szOf = n => { const m = String(n || '').match(SZ); if (!m) return ''; const z = m[1].trim(); if (!z || /售完|限定|推薦|新品|招牌|必點|附|含|送|擇一|任選/.test(z)) return '';
+  return SZ_ORDER.includes(z.toUpperCase()) || z.length <= 3 || (z.length <= 5 && /杯|份|碗|瓶|罐|盒|入|吋|寸|片|個|顆|隻|串|oz|ml|cc|斤|兩|人|大|中|小|單|雙/i.test(z)) ? z : ''; };
+const baseName = n => szOf(n) ? n.replace(SZ, '').trim() : String(n || '').trim();
 const REGIONS = ['北部', '中部', '南部', '東部', '離島'];
+/* 菜單上的地區文字 → 北部／中部／南部／東部／離島（「澎湖、金門」→ 離島；百貨專櫃這類對不到的回傳空字串） */
+const RG_MAP = [['離島', /離島|澎湖|金門|馬祖|連江|小琉球|琉球|綠島|蘭嶼|外島/], ['東部', /東部|東區|花蓮|台東|臺東|宜蘭/], ['北部', /北部|北區|台北|臺北|新北|基隆|桃園|新竹/], ['中部', /中部|中區|苗栗|台中|臺中|彰化|南投|雲林/], ['南部', /南部|南區|嘉義|台南|臺南|高雄|屏東/]];
+const normRegion = s => { s = String(s || ''); for (const [r, re] of RG_MAP) if (re.test(s)) return r; return ''; };
+/* 使用者自訂的區域順序（可拖曳） */
+const rgSorted = L => { const o = (S.rgOrd || []).concat(REGIONS.filter(r => !(S.rgOrd || []).includes(r))); return L.slice().sort((a, b) => { const i = o.indexOf(a), j = o.indexOf(b); return (i < 0 ? 99 : i) - (j < 0 ? 99 : j); }); };
+/* 一張圖片裡 AI 標出好幾個地區時：只留下這個版本所屬地區那一份，其他（例如百貨專櫃版）不要 */
+function pickRegionRows(rows, A) {
+  const labs = []; rows.forEach(r => { if (r.g && !labs.includes(r.g)) labs.push(r.g); });
+  if (!labs.length) { if (A) rows.forEach(r => { r.g = A; }); return {rows, dropped: []}; }
+  if (A) { const ch = labs.find(l => l === A || normRegion(l) === A) || labs[0]; return {rows: rows.filter(r => !r.g || r.g === ch).map(r => Object.assign(r, {g: A})), dropped: labs.filter(l => l !== ch)}; }
+  const win = {}; labs.forEach(l => { const n = normRegion(l); if (n && !win[n]) win[n] = l; }); const first = Object.keys(win)[0];
+  if (!first) { const ch = labs[0]; return {rows: rows.filter(r => !r.g || r.g === ch).map(r => { delete r.g; return r; }), dropped: labs.slice(1)}; }
+  const keep = new Set(Object.values(win));
+  return {rows: rows.filter(r => !r.g || keep.has(r.g)).map(r => Object.assign(r, {g: r.g ? normRegion(r.g) : first})), dropped: labs.filter(l => !keep.has(l))};
+}
+/* 舊資料：把 AI 自己取的地區名稱整理成五區，同一區重複的版本只留一份 */
+function fixRegions(menu) {
+  const raw = []; (menu || []).forEach(r => { if (r.g && !raw.includes(r.g)) raw.push(r.g); }); if (raw.every(g => REGIONS.includes(g))) return menu;
+  const win = {}; raw.forEach(l => { const n = normRegion(l); if (n && (!win[n] || l === n)) win[n] = l; }); const any = Object.keys(win).length;
+  return menu.filter(r => { if (!r.g) return true; const n = normRegion(r.g); return n ? win[n] === r.g : !any; }).map(r => { if (r.g && normRegion(r.g)) r.g = normRegion(r.g); return r; });
+}
 const MT = {品項: 'item', 選項: 'opt', 加購: 'add', item: 'item', opt: 'opt', add: 'add'};
 const normCat = c => String(c || '').replace(/\s+/g, '').replace(/[:：]+$/, '').replace(/\(/g, '（').replace(/\)/g, '）') || '其他';
 function parseMenu(t) {
@@ -185,11 +210,11 @@ function parseMenu(t) {
     if (/^(分類|類別|category)$/i.test(c) && /^(品名|名稱|name)$/i.test(n)) return; n = (n || '').trim(); if (!n) return;
     c = normCat(c); if (ty === 'item' && /^(加購|加價|加點|單點加購)/.test(c)) ty = 'add';
     const pp = ty === 'opt' && !/\d/.test(pr || '') ? '' : normPrice(pr); if (/^[-—–/／xX✕]+$/.test(pp)) return;
-    const nm = n.match(SZ); if (nm && /^[+＋]?[$＄]?[+＋]?\d+元?$/.test(nm[1].trim())) n = baseName(n);   /* 「波霸 (10)」這種是價格不是尺寸 */
+    const nm = n.match(SZ); if (nm && /^[+＋]?[$＄]?[+＋]?\d+元?$/.test(nm[1].trim())) n = n.replace(SZ, '').trim();   /* 「波霸 (10)」這種是價格不是尺寸 */
     const row = {t: ty, c, n, p: pp}; if (rg) row.g = rg.replace(/\s+/g, ''); out.push(row); });
   /* 「瓶」「M」這類沒有價格的尺寸：同一品項有其他尺寸有價格時就不要列出來 */
-  const priced = new Set(out.filter(r => r.p && SZ.test(r.n)).map(r => r.c + '|' + baseName(r.n)));
-  return groupMenu(out.filter(r => r.p || !SZ.test(r.n) || !priced.has(r.c + '|' + baseName(r.n))));
+  const priced = new Set(out.filter(r => r.p && szOf(r.n)).map(r => r.c + '|' + baseName(r.n)));
+  return groupMenu(out.filter(r => r.p || !szOf(r.n) || !priced.has(r.c + '|' + baseName(r.n))));
 }
 /* 把同一個分類的品項排在一起（照第一次出現的順序），品項 → 選項 → 加購 */
 function groupMenu(rows) {
@@ -234,7 +259,7 @@ async function aiMenu(p, prefer, albums) {
   const regs = new Set(albums.map(a => a.rg || '')), regTxt = [...regs].map(r => r || '不分區').join('、'), hasReg = (p.menu || []).some(r => r.g) || [...regs].some(Boolean);
   const old = (p.menu || []).filter(r => regs.has(r.g || ''));
   let replace = true; if (old.length) { replace = await ask(`目前表格${hasReg ? '「' + regTxt + '」' : ''}已有 ${old.length} 個品項。\n按「刪掉舊的、換成新的」＝${hasReg ? '這些區域的' : '整份'}表格換成這次的辨識結果${hasReg ? '（其他區域不受影響）' : ''}。\n按「取消」＝保留舊表格，把新結果加在後面。`, '刪掉舊的、換成新的'); }
-  const imgs = albums.flatMap(a => a.imgs.map(id => ({id, g: a.rg || ''}))), res = []; let fail = '', okN = 0, partial = false, models = new Set(); const t0 = Date.now(), cnt = {};
+  const imgs = albums.flatMap(a => a.imgs.map(id => ({id, g: a.rg || ''}))), res = []; let fail = '', okN = 0, partial = false, models = new Set(); const t0 = Date.now(), cnt = {}, dropped = new Set();
   const show = () => { const n = Object.values(cnt).reduce((a, b) => a + b, 0); AIJ.msg(p.id, `辨識中${imgs.length > 1 ? `（${okN}/${imgs.length} 張）` : ''}… 已讀到 ${n} 項`); };
   AIJ.set(p.id, {kind: 'img', msg: '準備圖片…'}); toast('已在背景開始辨識，完成後會自動帶入表格，可以先做別的事', 3000);
   let i = 0; const worker = async () => { while (i < imgs.length) { const k = i++;
@@ -243,7 +268,7 @@ async function aiMenu(p, prefer, albums) {
         {prefer, keepPartial: true, onText: t => { cnt[k] = parseMenu(t).length; show(); }, onWait: s => AIJ.msg(p.id, `Google 限制每分鐘次數，${s} 秒後自動繼續…`), onModel: (m, n) => { if (n) AIJ.msg(p.id, `${aiShort(m)} 重試中…`); }});
       const rows = parseMenu(r.text); models.add(r.model); if (r.finish === 'MAX_TOKENS' || r.finish === 'IDLE') partial = true;
       if (!rows.length) throw Object.assign(new Error('這張圖片沒有辨識到品項（可能太模糊或不是菜單）'), {model: r.model});
-      rows.forEach(x => { if (!x.g && imgs[k].g) x.g = imgs[k].g; }); res[k] = rows; okN++; AILOG.add({kind: '菜單辨識', place: p.name, model: r.model, ms: r.ms, ok: true, n: rows.length, note: (imgs[k].g ? imgs[k].g + ' ' : '') + (partial ? '結果可能不完整' : '')}); }
+      const pk = pickRegionRows(rows, imgs[k].g); pk.dropped.forEach(d => dropped.add(d)); res[k] = pk.rows; okN++; AILOG.add({kind: '菜單辨識', place: p.name, model: r.model, ms: r.ms, ok: true, n: rows.length, note: (imgs[k].g ? imgs[k].g + ' ' : '') + (partial ? '結果可能不完整' : '')}); }
     catch (e) { fail = aiErrText(e); AILOG.add({kind: '菜單辨識', place: p.name, model: e.model || '', ms: Date.now() - t0, ok: false, err: fail + (e.raw && e.raw !== fail ? '（' + e.raw.slice(0, 160) + '）' : '')}); if (e.fatal || e.message === 'NOKEY' || (e.code === 429 && e.perDay)) { i = imgs.length; } }
     show(); } };
   await Promise.all(imgs.length > 1 ? [worker(), worker()] : [worker()]);
@@ -257,7 +282,7 @@ async function aiMenu(p, prefer, albums) {
   const rs = [...regs].filter(Boolean); if (rs.length && !rs.includes(p.rgSel)) p.rgSel = rs[0];
   p.menuSrc = {kind: 'ai', t: Date.now(), ver: albums.map(a => a.name).join('、'), model: [...models].join('、'), partial};
   await savePlace(p);
-  menuDone(p, `✅「${p.name}」辨識完成：${rows.length} 個品項${hasReg ? '（' + regTxt + '）' : ''}，用時 ${Math.round((Date.now() - t0) / 1000)} 秒${fail ? '（有圖片失敗：' + fail + '）' : partial ? '（結果可能不完整，請核對）' : ''}`);
+  menuDone(p, `✅「${p.name}」辨識完成：${rows.length} 個品項${hasReg ? '（' + regTxt + '）' : ''}，用時 ${Math.round((Date.now() - t0) / 1000)} 秒${fail ? '（有圖片失敗：' + fail + '）' : partial ? '（結果可能不完整，請核對）' : ''}${dropped.size ? `\n同一張圖裡的「${[...dropped].join('、')}」版本沒有放進表格` : ''}`);
 }
 
 /* ---------- 上網找菜單 ----------
@@ -314,14 +339,13 @@ function searchResults(links) { const seen = new Set();
     .map(l => { const d = l.h.replace(/^https?:\/\//, '').split('/')[0]; return {h: l.h, d, t: l.t.split(/\s+https?:\/\//)[0].replace(new RegExp('\\s*' + d.replace(/\./g, '\\.') + '.*$'), '').slice(0, 90) || d}; })
     .filter(l => { const k = l.h.split('#')[0].replace(/\/$/, ''); if (seen.has(k) || l.t.length < 4) return false; seen.add(k); return true; }).slice(0, 15); }
 /* 從連結文字或檔名猜地區：「北部菜單」、menu_N.jpg… */
-function guessRegion(t, h) { t = String(t || ''); for (const r of REGIONS) if (t.includes(r) || t.includes(r[0] + '區')) return r;
-  if (/澎湖|金門|馬祖|綠島|蘭嶼|小琉球/.test(t)) return '離島'; if (/花蓮|台東|臺東|宜蘭/.test(t)) return '東部';
+function guessRegion(t, h) { const n = normRegion(t); if (n) return n;
   const m = String(h || '').split(/[?#]/)[0].match(/[_\-]([NMCSEIO])\.(jpe?g|png|webp|gif)$/i); return m ? ({N: '北部', M: '中部', C: '中部', S: '南部', E: '東部', I: '離島', O: '離島'})[m[1].toUpperCase()] : ''; }
 const isImgUrl = h => /\.(jpe?g|png|webp|gif)(\?|#|$)/i.test(h);
 /* ---------- 在背景用瀏覽器搜尋網路上的最新菜單 ---------- */
 function netMenuSearch(p) {
   const sh = sheet({title: '搜尋最新菜單', full: true}); let q = brandName(p.name) + ' 菜單 ' + new Date().getFullYear(), results = [], page = null, sel = new Set(), rg = '';
-  const regsKnown = [...new Set((p.albums || []).map(a => a.rg).filter(Boolean))];
+  const regsKnown = rgSorted([...new Set((p.albums || []).map(a => a.rg).filter(Boolean))]);
   const head = () => `<div class="keyBox" style="margin-bottom:.7rem"><input id="nq" value="${esc(q)}" placeholder="例如：麻古 菜單" enterkeyhint="search"><button class="btn sm pri" data-a="s">搜尋</button></div>`;
   const viewResults = (msg) => { page = null; sh.title('搜尋最新菜單');
     sh.body.innerHTML = head() + (msg || (results.length ? `<div class="small muted" style="margin-bottom:.5rem">點一個結果，App 會在背景打開它，抓出裡面的菜單圖片或文字。官方網站的「菜單」頁通常最新。</div>` + results.map((r, i) => `<button class="res" data-a="open" data-i="${i}"><span class="rIc">${/官方|官網|official/i.test(r.t) ? '⭐' : '🌐'}</span><span class="grow"><b>${esc(r.t)}</b><small>${esc(r.d)}</small></span></button>`).join('') : '<div class="empty">輸入關鍵字後按「搜尋」</div>'));
@@ -346,7 +370,7 @@ function netMenuSearch(p) {
     sh.body.innerHTML = `<button class="btn sm ghost" data-a="back" style="margin-bottom:.5rem">‹ ${stack.length ? '上一頁' : '搜尋結果'}</button><div class="small muted" style="margin-bottom:.6rem;word-break:break-all">${esc(P.title || P.d)}<br>${esc(P.url)}</div>
       ${imgs.length ? `<div class="small" style="margin-bottom:.4rem"><b>點選是菜單的圖片（可多選）</b>${hasRg ? '<br><span class="muted">標了地區的圖片，存檔時會自動分成各地區的菜單版本</span>' : ''}</div><div class="gpGrid">${imgs.map((x, i) => `<button class="gp ${sel.has(i) ? 'on' : ''}" data-a="pick" data-i="${i}"><img src="${esc(x.s)}" alt="" loading="lazy" referrerpolicy="no-referrer"><i>✓</i>${x.rg ? `<em class="gpRg">${esc(x.rg)}</em>` : ''}${x.lk && x.a ? `<small>${esc(x.a.slice(0, 14))}</small>` : x.w ? `<small>${x.w}×${x.h}</small>` : ''}</button>`).join('')}</div>` : '<div class="empty" style="padding:1rem">這個網頁沒有找到大張圖片</div>'}
       ${P.plinks.length ? `<div class="small" style="margin:.8rem 0 .3rem"><b>相關菜單網頁</b><span class="muted">（點了在背景打開）</span></div>${P.plinks.map((l, i) => `<button class="res" data-a="sub" data-i="${i}"><span class="rIc">📄</span><span class="grow"><b>${esc(l.t || l.h)}</b><small>${esc(l.h.replace(/^https?:\/\//, '').slice(0, 70))}</small></span></button>`).join('')}` : ''}
-      <div class="field" style="margin-top:.8rem"><label>${hasRg ? '沒有標地區的圖片要存成哪一區' : '存成哪個區域的菜單（連鎖店北中南價格不同時選）'}</label><div class="rgPick">${['', ...REGIONS, ...regsKnown.filter(r => !REGIONS.includes(r))].map(r => `<button data-a="rg" data-v="${esc(r)}" class="${rg === r ? 'on' : ''}">${r ? esc(r) : '不分區'}</button>`).join('')}</div></div>
+      <div class="field" style="margin-top:.8rem"><label>${hasRg ? '沒有標地區的圖片要存成哪一區' : '存成哪個區域的菜單（連鎖店北中南價格不同時選）'}</label><div class="rgPick">${['', ...rgSorted(REGIONS), ...regsKnown.filter(r => !REGIONS.includes(r))].map(r => `<button data-a="rg" data-v="${esc(r)}" class="${rg === r ? 'on' : ''}">${r ? esc(r) : '不分區'}</button>`).join('')}</div></div>
       <div class="row wrap" style="gap:.5rem"><button class="btn pri" data-a="saveImg" ${sel.size ? '' : 'disabled'}>存成菜單版本${sel.size ? `（${sel.size} 張）` : ''}</button>${P.text.replace(/\s+/g, '').length > 300 ? '<button class="btn olive" data-a="useText">用網頁文字整理成表格</button>' : ''}<button class="btn" data-a="extp">用瀏覽器打開 ↗</button></div>`; };
   sh.body.addEventListener('keydown', e => { if (e.target.id === 'nq' && e.key === 'Enter' && !e.isComposing) { e.preventDefault(); search(); } });
   sh.body.addEventListener('click', async e => { const b = e.target.closest('[data-a]'); if (!b) return; const a = b.dataset.a;
@@ -518,7 +542,7 @@ function openAlbums(p, onChange) {
     sh.body.innerHTML = `<div class="small muted" style="margin-bottom:.7rem">每次菜單改版就「新增版本」，舊菜單會保留。連鎖店北中南價格不同時，把各區菜單分成不同版本並設定「區域」，表格就能切換區域。打開菜單圖檔時先顯示最新版本，往左滑是較舊的版本。版本名稱可以自己改（例如 2026 春季、第 3 版）。</div>` +
       (L.map((a, i) => `<div class="album" data-id="${a.id}"><div class="row"><span class="vTag" style="background:${i ? '#8a7a66' : '#5f9a5a'}">${i ? '舊' : '最新'}</span><input class="grow" data-k="name" value="${esc(a.name)}" maxlength="24" aria-label="版本名稱"><button class="ic" data-a="del" style="color:var(--danger)" aria-label="刪除這個版本">🗑</button></div>
         <div class="small muted" style="margin:.25rem 0 .4rem">建立於 ${dateName(a.t)} · ${a.imgs.length} 張</div>
-        <div class="rgPick"><span>區域</span>${['', ...REGIONS, ...new Set((p.albums || []).map(x => x.rg).filter(r => r && !REGIONS.includes(r)))].map(r => `<button data-a="rg" data-v="${esc(r)}" class="${(a.rg || '') === r ? 'on' : ''}">${r ? esc(r) : '不分區'}</button>`).join('')}<button data-a="rgC">＋ 自訂</button></div>
+        <div class="rgPick"><span>區域</span>${['', ...rgSorted(REGIONS), ...(a.rg && !REGIONS.includes(a.rg) ? [a.rg] : [])].map(r => `<button data-a="rg" data-v="${esc(r)}" class="${(a.rg || '') === r ? 'on' : ''}">${r ? esc(r) : '不分區'}</button>`).join('')}</div>
         <div class="thumbs">${a.imgs.map((im, k) => `<div class="th"><img src="${th[i][k]}" data-a="view" data-i="${k}" alt=""><button class="rm" data-a="rm" data-i="${k}" aria-label="移除">✕</button></div>`).join('')}<button class="th addTh" data-a="add">＋<small>加圖片</small></button></div></div>`).join('') || '<div class="empty"><span class="big">🖼️</span>還沒有菜單圖片<br><span class="small">按下方「新增版本」從相簿選擇或拍照</span></div>'); };
   render();
   sh.body.addEventListener('change', e => { const t = e.target; if (t.dataset.k !== 'name') return; const a = p.albums.find(x => x.id === t.closest('.album').dataset.id); if (a) { a.name = t.value.trim() || dateName(a.t); savePlace(p); } });
@@ -539,9 +563,11 @@ function openMenuImgs(p) { const items = []; albumsOf(p).forEach((a, i) => a.img
 function openPlace(id, toMenu) {
   const p = DB.places.find(x => x.id === id); if (!p) return; let editT = false, mq = '', mc = '';
   /* 區域：目前選的區域＋不分區的列 */
-  const regsOf = () => { const r = []; (p.menu || []).forEach(x => { if (x.g && !r.includes(x.g)) r.push(x.g); }); return r; };
+  if ((p.menu || []).some(r => r.g)) { const f = fixRegions(p.menu); if (f !== p.menu) { p.menu = f; savePlace(p); } }
+  const regsOf = () => { const r = []; (p.menu || []).forEach(x => { if (x.g && !r.includes(x.g)) r.push(x.g); }); return rgSorted(r); };
   const curReg = () => { const r = regsOf(); if (!r.length) return ''; return r.includes(p.rgSel) ? p.rgSel : r[0]; };
-  const inReg = x => { const c = curReg(); return !c || !x.g || x.g === c; };
+  /* 不分區的舊列：這個區域已經有同名品項時就不要再顯示（避免同一品項出現兩組價格） */
+  const inReg = x => { const c = curReg(); if (!c || x.g === c) return true; if (x.g) return false; const b = baseName(x.n); return !(p.menu || []).some(y => y.g === c && (y.t || 'item') === (x.t || 'item') && baseName(y.n) === b); };
   const onJob = e => { if (e.detail === p.id && !editT) render(); };
   const sh = sheet({title: p.name, full: true, onClose() { document.removeEventListener('fm:job', onJob); }}); sh.tools.innerHTML = '<button class="btn sm" data-a="edit">✎ 編輯</button>';
   document.addEventListener('fm:job', onJob);
@@ -555,18 +581,24 @@ function openPlace(id, toMenu) {
     const q = mq.trim().toLowerCase(), hit = r => inReg(r) && (!q || (r.c + ' ' + r.n).toLowerCase().includes(q)), all = (p.menu || []).filter(hit);
     const showItem = mc === '' || (mc !== '🧩' && mc !== '➕'), items = all.filter(r => TY(r) === 'item' && (mc === '' || r.c === mc)), opts = all.filter(r => TY(r) === 'opt'), adds = all.filter(r => TY(r) === 'add');
     let html = '';
-    /* 分類標題獨佔一列，下面再列品名與價格，分類名稱很長也不會把品名擠成一直條 */
-    /* 同一品項的不同尺寸（L、瓶、中、大…）合併成一行，沒有價格的尺寸不顯示 */
-    const merge = L => { const out = [], idx = {}; L.forEach(r => { const m = r.n.match(SZ), b = m ? baseName(r.n) : r.n, k = r.c + '|' + b;
+    /* 同一品項的不同尺寸（M、L、瓶…）合併成一行 */
+    const merge = L => { const out = [], idx = {}; L.forEach(r => { const z = szOf(r.n), m = z ? [0, z] : null, b = m ? baseName(r.n) : r.n, k = r.c + '|' + b;
       if (m && idx[k] != null) { const v = out[idx[k]].v; if (!v.some(x => x.s === m[1] && x.p === r.p)) v.push({s: m[1], p: r.p}); return; } if (m) idx[k] = out.length; out.push({c: r.c, n: b, multi: !!m, v: [{s: m ? m[1] : '', p: r.p}]}); });
-      out.forEach(o => o.v.sort((a, b) => szRank(a.s) - szRank(b.s))); return out; };
-    const catRows = (L0, pre) => { const L = merge(L0); let last = null; return L.map(r => { const g = r.c !== last; last = r.c; const vs = r.v.filter(x => x.p !== '' && x.p != null);
-      const pc = r.multi ? vs.map(x => `<span class="szp"><i>${esc(x.s)}</i>${pre}${price(x.p)}</span>`).join('') : (vs[0] ? pre + price(vs[0].p) : '');
-      return (g ? `<tr class="cat"><td colspan="2">${esc(r.c)} <span>${L.filter(x => x.c === r.c).length}</span></td></tr>` : '') + `<tr><td>${esc(r.n)}</td><td class="p${r.multi && vs.length > 1 ? ' multi' : ''}">${pc}</td></tr>`; }).join(''); };
-    if (showItem && items.length) html += `<table class="mtable list"><thead><tr><th>品名</th><th class="p">價格</th></tr></thead><tbody>${catRows(items, '')}</tbody></table>`;
+      return out; };
+    /* 每個分類一張卡片：分類名稱 → 「品名｜S｜M｜L｜瓶」標題列（只列這個分類有的尺寸，由小到大）→ 品項，沒有的尺寸寫「-」 */
+    const cards = (L0, pre, cls) => { const L = merge(L0), cs = [], by = {}; L.forEach(r => { if (!by[r.c]) { by[r.c] = []; cs.push(r.c); } by[r.c].push(r); });
+      const has = x => x.p !== '' && x.p != null, pr = v => pre + price(v);
+      return cs.map(c => { const rs = by[c], szs = [];
+        rs.forEach(r => { if (r.multi) r.v.forEach(x => { if (has(x) && !szs.includes(x.s)) szs.push(x.s); }); }); szs.sort((a, b) => szRank(a) - szRank(b));
+        const nc = szs.length || 1, head = `<tr class="sh"><th class="n">品名</th>${szs.length ? szs.map(z => `<th class="s">${esc(z)}</th>`).join('') : '<th class="s pr">價格</th>'}</tr>`;
+        const body = rs.map(r => { const vs = r.v.filter(has);
+          if (!szs.length || !r.multi) { const ps = [...new Set(vs.map(x => x.p))]; return `<tr><td class="n">${esc(r.n)}</td><td class="s pr${ps.length ? '' : ' na'}"${nc > 1 ? ` colspan="${nc}"` : ''}>${ps.length ? ps.map(pr).join(' / ') : '-'}</td></tr>`; }
+          return `<tr><td class="n">${esc(r.n)}</td>${szs.map(z => { const ps = [...new Set(vs.filter(x => x.s === z).map(x => x.p))]; return `<td class="s${ps.length ? '' : ' na'}${ps.length > 1 ? ' dup' : ''}">${ps.length ? ps.map(pr).join('<br>') : '-'}</td>`; }).join('')}</tr>`; }).join('');
+        return `<div class="mcard ${cls || ''}"><div class="mcH">${esc(c)}<span>${rs.length}</span></div><div class="mcB"><table class="piv ${nc >= 4 ? 'many' : ''}">${head}${body}</table></div></div>`; }).join(''); };
+    if (showItem && items.length) html += cards(items, '');
     if ((mc === '' || mc === '🧩') && opts.length) { const gs = []; opts.forEach(r => { let g = gs.find(x => x.c === r.c); if (!g) gs.push(g = {c: r.c, L: []}); g.L.push(r); });
       html += `<div class="mSec">🧩 組合選項<small>依步驟挑選，已含在主餐價格內</small></div>` + gs.map(g => { const m = g.c.match(/^(.*?)（(.+?)）$/); return `<div class="optG"><div class="optH"><b>${esc(m ? m[1] : g.c)}</b>${m ? `<span class="tag">${esc(m[2])}</span>` : ''}</div><div class="optL">${g.L.map(r => `<span>${esc(r.n)}${r.p ? ' <em>+' + esc(r.p) + '</em>' : ''}</span>`).join('')}</div></div>`; }).join(''); }
-    if ((mc === '' || mc === '➕') && adds.length) html += `<div class="mSec">➕ 加購・加價</div><table class="mtable list add"><tbody>${catRows(adds, '+')}</tbody></table>`;
+    if ((mc === '' || mc === '➕') && adds.length) html += `<div class="mSec">➕ 加購・加價</div>` + cards(adds, '+', 'add');
     return html || '<div class="empty" style="padding:1rem">找不到符合的品項</div>';
   }
   function tableHtml() {
@@ -576,7 +608,7 @@ function openPlace(id, toMenu) {
       <div class="row wrap" style="margin-top:.6rem"><button class="btn sm" data-a="tAdd">＋ 新增一列</button><button class="btn sm danger" data-a="tClear">清空表格</button><span class="grow"></span><button class="btn sm pri" data-a="tEdit">完成</button></div>`;
     const RR = rows.filter(inReg), cs = cats(), nO = RR.filter(r => TY(r) === 'opt').length, nA = RR.filter(r => TY(r) === 'add').length, regs = regsOf(), cr = curReg();
     if (mc && !cs.includes(mc) && !(mc === '🧩' && nO) && !(mc === '➕' && nA)) mc = ''; const src = p.menuSrc;
-    return `${regs.length ? `<div class="regBar"><span>📍 區域</span><div class="seg">${regs.map(r => `<button data-a="mr" data-r="${esc(r)}" class="${r === cr ? 'on' : ''}">${esc(r)}</button>`).join('')}</div></div>` : ''}<div class="mcats noSel"><button class="chip ${mc ? '' : 'on'}" data-a="mc" data-c="">全部 <span class="n">${RR.length}</span></button>${cs.map(c => `<button class="chip ${mc === c ? 'on' : ''}" data-a="mc" data-c="${esc(c)}">${esc(c)} <span class="n">${RR.filter(r => TY(r) === 'item' && r.c === c).length}</span></button>`).join('')}${nO ? `<button class="chip ${mc === '🧩' ? 'on' : ''}" data-a="mc" data-c="🧩">🧩 組合選項 <span class="n">${nO}</span></button>` : ''}${nA ? `<button class="chip ${mc === '➕' ? 'on' : ''}" data-a="mc" data-c="➕">➕ 加購 <span class="n">${nA}</span></button>` : ''}</div>
+    return `${regs.length ? `<div class="regBar"><span>📍 區域</span><div class="seg">${regs.map(r => `<button data-a="mr" data-r="${esc(r)}" class="${r === cr ? 'on' : ''}">${esc(r)}</button>`).join('')}</div></div>${regs.length > 1 ? '<div class="regHint">長按區域可以拖曳調整順序</div>' : ''}` : ''}<div class="mcats noSel"><button class="chip ${mc ? '' : 'on'}" data-a="mc" data-c="">全部 <span class="n">${RR.length}</span></button>${cs.map(c => `<button class="chip ${mc === c ? 'on' : ''}" data-a="mc" data-c="${esc(c)}">${esc(c)} <span class="n">${RR.filter(r => TY(r) === 'item' && r.c === c).length}</span></button>`).join('')}${nO ? `<button class="chip ${mc === '🧩' ? 'on' : ''}" data-a="mc" data-c="🧩">🧩 組合選項 <span class="n">${nO}</span></button>` : ''}${nA ? `<button class="chip ${mc === '➕' ? 'on' : ''}" data-a="mc" data-c="➕">➕ 加購 <span class="n">${nA}</span></button>` : ''}</div>
       <div class="row" style="margin-bottom:.55rem"><div class="searchBox grow"><input id="mq" type="search" placeholder="搜尋品名…" value="${esc(mq)}"></div><button class="btn sm" data-a="tEdit">✎ 編輯表格</button></div>
       <div id="mBody">${rowsHtml()}</div>
       ${src && src.kind === 'url' ? `<div class="small muted" style="margin-top:.5rem">🔗 ${dateName(src.t)} 從點餐網頁整理${src.title ? '（' + esc(src.title.slice(0, 40)) + '）' : ''}，請核對價格。<br><button class="btn sm" data-a="urlRe" style="margin-top:.4rem">🔄 重新讀取最新菜單</button> <button class="btn sm" data-a="urlOpen" style="margin-top:.4rem">打開網頁 ↗</button></div>` : ''}
@@ -619,6 +651,8 @@ function openPlace(id, toMenu) {
     else if (a === 'tAdd') { const l = p.menu[p.menu.length - 1]; p.menu.push(Object.assign({t: l ? TY(l) : 'item', c: l ? l.c : '', n: '', p: ''}, curReg() ? {g: curReg()} : {})); $('#mtWrap', sh.body).innerHTML = tableHtml(); const ins = $$('#mtWrap input[data-k="n"]', sh.body); ins[ins.length - 1].focus(); }
     else if (a === 'tDel') { p.menu.splice(i, 1); save(); $('#mtWrap', sh.body).innerHTML = tableHtml(); }
     else if (a === 'tClear') { if (await ask('確定要清空整個菜單表格嗎？（圖片不會被刪除）', '清空', true)) { p.menu = []; delete p.menuSrc; editT = false; await savePlace(p); render(); refreshAll(); } } });
+  sortable(sh.body, {item: '.regBar .seg button', axis: 'x', get scroller() { return $('.regBar .seg', sh.body) || sh.body; }, onSort(from, to) {
+    const L = regsOf(); moveItem(L, from, to); const O = rgSorted([...new Set(REGIONS.concat(S.rgOrd || []))]); S.rgOrd = L.concat(O.filter(r => !L.includes(r))); saveS(); $('#mtWrap', sh.body).innerHTML = tableHtml(); }});
   render(); if (toMenu) { const t = $('#menuTop', sh.body); if (t) setTimeout(() => { sh.body.scrollTop = t.offsetTop - 8; }, 50); }
 }
 
