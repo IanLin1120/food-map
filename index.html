@@ -4,7 +4,7 @@
 <script>/* 線上更新開機程式：手機上若已下載比 APK 內建更新的介面版本，就改用新版（存在 IndexedDB）。
    新版連續兩次沒有正常開啟 → 自動退回 APK 內建版本。網址加上 #builtin 也會強制使用內建版本。 */
 (function () {
-  var B = '1.8.0'; if (!window.__OTA) window.APP_BUILTIN = B;
+  var B = '1.9.0'; if (!window.__OTA) window.APP_BUILTIN = B;
   if (window.__OTA || location.hash.indexOf('builtin') >= 0) return;
   var v = null; try { v = JSON.parse(localStorage.getItem('fm.ota') || 'null'); } catch (e) {}
   function gt(a, b) { a = String(a).split('.').map(Number); b = String(b).split('.').map(Number); for (var i = 0; i < Math.max(a.length, b.length); i++) { var p = a[i] || 0, q = b[i] || 0; if (p !== q) return p > q; } return false; }
@@ -519,6 +519,10 @@ table.piv td.dup{color:var(--danger);font-size:.8rem;line-height:1.25}
 .mcard.add td.s{color:var(--accent-2);font-weight:700}
 .regHint{font-size:.7rem;color:var(--muted);margin:-.3rem 0 .5rem 4.3rem}
 .regBar .seg button.dragSrc{opacity:.35}
+.album .aGrip{cursor:grab;color:var(--muted);font-size:1.15rem;padding:.2rem .35rem .2rem 0;touch-action:none;user-select:none}
+.album .ic.sm{width:1.9rem;height:1.9rem;font-size:.72rem;color:var(--text-2)}
+.album .ic.sm:disabled{opacity:.3}
+.album.dragSrc{opacity:.35}
 </style>
 </head>
 <body>
@@ -646,7 +650,7 @@ return maplibregl$1;
 /* ============================================================
    食光地圖 — 核心：工具、資料儲存、主題、面板、拖曳排序、圖片
    ============================================================ */
-const APP_VERSION = '1.8.0';
+const APP_VERSION = '1.9.0';
 const APP_VER = APP_VERSION;
 /* 線上更新來源（GitHub Pages）：IanLin1120/food-map */
 const GH = {repo: 'https://github.com/IanLin1120/food-map', pages: 'https://ianlin1120.github.io/food-map/'};
@@ -726,7 +730,8 @@ async function loadAll() {
 }
 const dateName = t => { const d = new Date(t || Date.now()); return d.getFullYear() + '/' + String(d.getMonth() + 1).padStart(2, '0') + '/' + String(d.getDate()).padStart(2, '0'); };
 /* 菜單圖檔：albums 由新到舊；allImgs 依序攤平（最新版本在最前面） */
-const albumsOf = p => (p.albums || []).slice().sort((a, b) => (b.t || 0) - (a.t || 0));
+/* 版本順序：使用者排過的照自訂順序（o），之後新加的版本放最上面；沒排過的新到舊 */
+const albumsOf = p => (p.albums || []).slice().sort((a, b) => ((a.o != null) - (b.o != null)) || (a.o != null ? a.o - b.o : (b.t || 0) - (a.t || 0)));
 const imgCount = p => (p.albums || []).reduce((n, a) => n + (a.imgs || []).length, 0);
 
 /* ---------- 震動、提示 ---------- */
@@ -1416,7 +1421,7 @@ const SZ = /\s*[（(]([^()（）]{1,8})[)）]\s*$/;
 const SZ_ORDER = ['XS', 'S', '小', '小杯', '小碗', '小份', '薄', '薄片', '單', 'M', '中', '中杯', '中碗', '一般', '一般量', '正常', 'L', '大', '大杯', '大碗', '大份', '厚', '厚片', '雙', 'XL', '特大', '特大杯', '加大', '超大', 'XXL', '瓶', '瓶裝', '罐', '桶'];
 const szRank = s => { const k = String(s || '').trim().toUpperCase().replace(/杯型$/, ''); const i = SZ_ORDER.indexOf(k); return i < 0 ? (/瓶|罐|桶/.test(k) ? 90 : 50) : i; };
 /* 品名最後括號裡是不是「尺寸」：M、L、瓶、大杯、小份、6入…（「附薯條」「期間限定」這種是說明，不是尺寸） */
-const szOf = n => { const m = String(n || '').match(SZ); if (!m) return ''; const z = m[1].trim(); if (!z || /售完|限定|推薦|新品|招牌|必點|附|含|送|擇一|任選/.test(z)) return '';
+const szOf = n => { const m = String(n || '').match(SZ); if (!m) return ''; const z = m[1].trim(); if (!z || /售完|限定|推薦|新品|招牌|必點|附|含|送|擇一|任選/.test(z) || /^[+＋]?[$＄]?[+＋]?\d+(\.\d+)?元?$/.test(z)) return '';
   return SZ_ORDER.includes(z.toUpperCase()) || z.length <= 3 || (z.length <= 5 && /杯|份|碗|瓶|罐|盒|入|吋|寸|片|個|顆|隻|串|oz|ml|cc|斤|兩|人|大|中|小|單|雙/i.test(z)) ? z : ''; };
 const baseName = n => szOf(n) ? n.replace(SZ, '').trim() : String(n || '').trim();
 const REGIONS = ['北部', '中部', '南部', '東部', '離島'];
@@ -1506,7 +1511,8 @@ async function aiMenu(p, prefer, albums) {
   AIJ.set(p.id, {kind: 'img', msg: '準備圖片…'}); toast('已在背景開始辨識，完成後會自動帶入表格，可以先做別的事', 3000);
   let i = 0; const worker = async () => { while (i < imgs.length) { const k = i++;
     try { const b = await imgBlob(imgs[k].id); if (!b) continue; cnt[k] = 0; show();
-      const r = await aiRun({contents: [{role: 'user', parts: [{text: MENU_PROMPT}, await imgPart(b)]}], generationConfig: {temperature: 0, maxOutputTokens: 16384}, _hiRes: true},
+      const hint = imgs[k].g ? `\n\n補充：這張是「${imgs[k].g}」的菜單。如果圖片裡並排了好幾份不同地區或分店的菜單，只辨識角落標示「${imgs[k].g}」（或屬於${imgs[k].g}的縣市）的那一份，其他份完全不要輸出；找不到標示時只辨識最左邊那一份。` : '';
+      const r = await aiRun({contents: [{role: 'user', parts: [{text: MENU_PROMPT + hint}, await imgPart(b)]}], generationConfig: {temperature: 0, maxOutputTokens: 16384}, _hiRes: true},
         {prefer, keepPartial: true, onText: t => { cnt[k] = parseMenu(t).length; show(); }, onWait: s => AIJ.msg(p.id, `Google 限制每分鐘次數，${s} 秒後自動繼續…`), onModel: (m, n) => { if (n) AIJ.msg(p.id, `${aiShort(m)} 重試中…`); }});
       const rows = parseMenu(r.text); models.add(r.model); if (r.finish === 'MAX_TOKENS' || r.finish === 'IDLE') partial = true;
       if (!rows.length) throw Object.assign(new Error('這張圖片沒有辨識到品項（可能太模糊或不是菜單）'), {model: r.model});
@@ -1515,7 +1521,8 @@ async function aiMenu(p, prefer, albums) {
     show(); } };
   await Promise.all(imgs.length > 1 ? [worker(), worker()] : [worker()]);
   /* 同一份菜單分好幾張截圖時，重疊的部分會重複出現 → 同一區域裡一模一樣的列只留一筆 */
-  const seen = new Set(), rows = res.filter(Boolean).flat().filter(r => { const k = [r.g || '', r.t, r.c, r.n.replace(/\s+/g, ''), r.p].join('|'); if (seen.has(k)) return false; seen.add(k); return true; }); AIJ.set(p.id, null);
+  /* 同一區域裡「同一品項＋同一尺寸」只能有一個價格：AI 把旁邊另一份菜單也讀進來時，留第一個（左邊那份） */
+  const seen = new Set(), rows = res.filter(Boolean).flat().filter(r => { const k = [r.g || '', r.t, r.c, r.n.replace(/\s+/g, '')].join('|') + (r.t === 'opt' ? '|' + r.p : ''); if (seen.has(k)) return false; seen.add(k); return true; }); AIJ.set(p.id, null);
   if (!DB.places.includes(p)) return;
   if (!rows.length) { menuDone(p, '❌ 菜單辨識失敗：' + (fail || '沒有辨識到任何品項')); return; }
   /* 一張圖裡有好幾區時，AI 會自己標地區；取代範圍包含這些新出現的地區 */
@@ -1781,15 +1788,18 @@ function openAlbums(p, onChange) {
   const sh = sheet({title: '菜單圖檔 · ' + p.name, full: true, foot: '<button class="btn pri" data-a="new">＋ 新增版本（新菜單）</button>', onClose() { onChange && onChange(); }});
   const add = async (al) => { const fs = await pickImages(true); if (!fs.length) return false; busy('處理圖片中…'); try { for (const f of fs) al.imgs.push(await imgStore(f)); } catch (e) { toast('❌ ' + e.message); } busy(false); return true; };
   const render = async () => { const L = albumsOf(p); const th = await Promise.all(L.map(a => Promise.all(a.imgs.map(imgURL))));
-    sh.body.innerHTML = `<div class="small muted" style="margin-bottom:.7rem">每次菜單改版就「新增版本」，舊菜單會保留。連鎖店北中南價格不同時，把各區菜單分成不同版本並設定「區域」，表格就能切換區域。打開菜單圖檔時先顯示最新版本，往左滑是較舊的版本。版本名稱可以自己改（例如 2026 春季、第 3 版）。</div>` +
-      (L.map((a, i) => `<div class="album" data-id="${a.id}"><div class="row"><span class="vTag" style="background:${i ? '#8a7a66' : '#5f9a5a'}">${i ? '舊' : '最新'}</span><input class="grow" data-k="name" value="${esc(a.name)}" maxlength="24" aria-label="版本名稱"><button class="ic" data-a="del" style="color:var(--danger)" aria-label="刪除這個版本">🗑</button></div>
+    sh.body.innerHTML = `<div class="small muted" style="margin-bottom:.7rem">每次菜單改版就「新增版本」，舊菜單會保留。按住左邊 ⠿ 拖曳，或按 ▲▼，可以自訂版本順序（最上面＝最新版本）。連鎖店北中南價格不同時，把各區菜單分成不同版本並設定「區域」，表格就能切換區域。打開菜單圖檔時先顯示最新版本，往左滑是較舊的版本。版本名稱可以自己改（例如 2026 春季、第 3 版）。</div>` +
+      (L.map((a, i) => `<div class="album" data-id="${a.id}"><div class="row"><span class="aGrip" aria-label="拖曳排序">⠿</span><span class="vTag" style="background:${i ? '#8a7a66' : '#5f9a5a'}">${i ? '舊' : '最新'}</span><input class="grow" data-k="name" value="${esc(a.name)}" maxlength="24" aria-label="版本名稱"><button class="ic sm" data-a="up" ${i ? '' : 'disabled'} aria-label="往上">▲</button><button class="ic sm" data-a="dn" ${i < L.length - 1 ? '' : 'disabled'} aria-label="往下">▼</button><button class="ic" data-a="del" style="color:var(--danger)" aria-label="刪除這個版本">🗑</button></div>
         <div class="small muted" style="margin:.25rem 0 .4rem">建立於 ${dateName(a.t)} · ${a.imgs.length} 張</div>
         <div class="rgPick"><span>區域</span>${['', ...rgSorted(REGIONS), ...(a.rg && !REGIONS.includes(a.rg) ? [a.rg] : [])].map(r => `<button data-a="rg" data-v="${esc(r)}" class="${(a.rg || '') === r ? 'on' : ''}">${r ? esc(r) : '不分區'}</button>`).join('')}</div>
         <div class="thumbs">${a.imgs.map((im, k) => `<div class="th"><img src="${th[i][k]}" data-a="view" data-i="${k}" alt=""><button class="rm" data-a="rm" data-i="${k}" aria-label="移除">✕</button></div>`).join('')}<button class="th addTh" data-a="add">＋<small>加圖片</small></button></div></div>`).join('') || '<div class="empty"><span class="big">🖼️</span>還沒有菜單圖片<br><span class="small">按下方「新增版本」從相簿選擇或拍照</span></div>'); };
+  const reorder = async (from, to) => { const L = albumsOf(p); moveItem(L, from, to); L.forEach((a, k) => { a.o = k; }); await savePlace(p); render(); };
+  sortable(sh.body, {item: '.album', handle: '.aGrip', scroller: sh.body, onSort: reorder});
   render();
   sh.body.addEventListener('change', e => { const t = e.target; if (t.dataset.k !== 'name') return; const a = p.albums.find(x => x.id === t.closest('.album').dataset.id); if (a) { a.name = t.value.trim() || dateName(a.t); savePlace(p); } });
   sh.body.addEventListener('click', async e => { const b = e.target.closest('[data-a]'); if (!b) return; const a = p.albums.find(x => x.id === b.closest('.album').dataset.id), i = +b.dataset.i; if (!a) return;
     if (b.dataset.a === 'add') { if (await add(a)) { await savePlace(p); render(); } }
+    else if (b.dataset.a === 'up' || b.dataset.a === 'dn') { const k = albumsOf(p).indexOf(a), t = k + (b.dataset.a === 'up' ? -1 : 1); if (t >= 0 && t < p.albums.length) { buzz(15); reorder(k, t); } }
     else if (b.dataset.a === 'rg') { a.rg = b.dataset.v; await savePlace(p); render(); }
     else if (b.dataset.a === 'rgC') { const v = ((await askText('自訂區域名稱', a.rg && !REGIONS.includes(a.rg) ? a.rg : '', '例如：大葉高島屋、桃竹苗')) || '').trim().slice(0, 10); if (v) { a.rg = v; await savePlace(p); render(); } }
     else if (b.dataset.a === 'view') Viewer.open(a.imgs.map((id, k) => ({id, label: a.name + ' · 第 ' + (k + 1) + ' 張'})), i, p.name);
@@ -1824,7 +1834,10 @@ function openPlace(id, toMenu) {
     const showItem = mc === '' || (mc !== '🧩' && mc !== '➕'), items = all.filter(r => TY(r) === 'item' && (mc === '' || r.c === mc)), opts = all.filter(r => TY(r) === 'opt'), adds = all.filter(r => TY(r) === 'add');
     let html = '';
     /* 同一品項的不同尺寸（M、L、瓶…）合併成一行 */
-    const merge = L => { const out = [], idx = {}; L.forEach(r => { const z = szOf(r.n), m = z ? [0, z] : null, b = m ? baseName(r.n) : r.n, k = r.c + '|' + b;
+    /* 只有一種份量、而且不是 S/M/L/瓶 這類尺寸的（日式炸蝦 (4隻)、滷豆干 (3片)）＝這個品項本身的份量，留在品名裡 */
+    const merge = L => { const out = [], idx = {}, nv = {}; L.forEach(r => { const z = szOf(r.n); if (z) { const k = r.c + '|' + baseName(r.n); nv[k] = (nv[k] || 0) + 1; } });
+      const realSz = (z, r) => z && (nv[r.c + '|' + baseName(r.n)] > 1 || SZ_ORDER.includes(z.toUpperCase()) || /杯|瓶|罐|碗/.test(z));
+      L.forEach(r => { const z0 = szOf(r.n), z = realSz(z0, r) ? z0 : '', m = z ? [0, z] : null, b = m ? baseName(r.n) : r.n.replace(/\s*[（(][+＋]?[$＄]?[+＋]?\d+元?[)）]\s*$/, ''), k = r.c + '|' + b;
       if (m && idx[k] != null) { const v = out[idx[k]].v; if (!v.some(x => x.s === m[1] && x.p === r.p)) v.push({s: m[1], p: r.p}); return; } if (m) idx[k] = out.length; out.push({c: r.c, n: b, multi: !!m, v: [{s: m ? m[1] : '', p: r.p}]}); });
       return out; };
     /* 每個分類一張卡片：分類名稱 → 「品名｜S｜M｜L｜瓶」標題列（只列這個分類有的尺寸，由小到大）→ 品項，沒有的尺寸寫「-」 */
