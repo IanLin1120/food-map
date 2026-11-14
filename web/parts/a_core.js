@@ -13,6 +13,8 @@ const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 
 const IS_APP = typeof window.NB === 'object' && !!window.NB; const NB = window.NB || {};
 const IS_IOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const sleep = ms => new Promise(r => setTimeout(r, ms));
+const lsGet = (k, d) => { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } };
+const lsSet = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
 const debounce = (f, ms) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => f(...a), ms); }; };
 
 /* ---------- IndexedDB ---------- */
@@ -161,14 +163,16 @@ function sortable(root, o) {
     const it = e.target.closest(o.item); if (!it || !root.contains(it)) return;
     const viaH = o.handle && e.target.closest(o.handle);
     if (o.handle && o.handleOnly && !viaH) return;
+    if (o.start && !e.target.closest(o.start)) return;
     if (!viaH && e.target.closest('input,textarea,select')) return;
     const p = pt(e);
     st = {it, x0: p.clientX, y0: p.clientY, x: p.clientX, y: p.clientY, on: false, scope: o.scope ? it.closest(o.scope) : null, gFrom: o.groups ? it.closest(o.groups) : null, touch: !!e.touches};
-    if (viaH) { if (e.cancelable) e.preventDefault(); begin(); } else st.timer = setTimeout(begin, 380);
+    /* 一律要按住 0.4 秒才開始拖曳（手指一動就當成捲動），避免滑動畫面時誤拖 */
+    st.timer = setTimeout(begin, o.hold || 400); st.hl = setTimeout(() => { if (st && !st.on) st.it.classList.add('holding'); }, 120);
     if (!st.touch) { window.addEventListener('mousemove', move); window.addEventListener('mouseup', up); }
   }
   function begin() {
-    if (!st) return; st.on = true; buzz(35);
+    if (!st) return; st.on = true; st.it.classList.remove('holding'); buzz(35);
     const r = st.it.getBoundingClientRect(); st.dx = st.x - r.left; st.dy = st.y - r.top;
     const g = st.it.cloneNode(true); g.classList.add('dragGhost'); g.style.width = r.width + 'px'; g.style.height = r.height + 'px'; g.style.left = r.left + 'px'; g.style.top = r.top + 'px';
     document.body.append(g); st.ghost = g; st.it.classList.add('dragSrc');
@@ -206,7 +210,7 @@ function sortable(root, o) {
     if (!st.on) { if (Math.hypot(st.x - st.x0, st.y - st.y0) > 9) cancel(); return; }
     if (e.cancelable) e.preventDefault(); place();
   }
-  function cancel() { if (!st) return; clearTimeout(st.timer); cancelAnimationFrame(st.raf); if (st.ghost) st.ghost.remove(); if (st.line) st.line.remove(); st.it.classList.remove('dragSrc'); document.body.classList.remove('noSel'); if (o.groups) $$(o.groups, root).forEach(e => e.classList.remove('dropOn'));
+  function cancel() { if (!st) return; clearTimeout(st.timer); clearTimeout(st.hl); st.it.classList.remove('holding'); cancelAnimationFrame(st.raf); if (st.ghost) st.ghost.remove(); if (st.line) st.line.remove(); st.it.classList.remove('dragSrc'); document.body.classList.remove('noSel'); if (o.groups) $$(o.groups, root).forEach(e => e.classList.remove('dropOn'));
     window.removeEventListener('mousemove', move); window.removeEventListener('mouseup', up); st = null; }
   function up() {
     if (!st) return; const was = st.on, from = st.from, ins = st.ins, scope = st.scope, gFrom = st.gFrom, gTo = st.gTo; cancel();

@@ -39,7 +39,7 @@ import java.util.ArrayList;
 /** 食光地圖：把 assets/index.html 以 https://app.local/ 載入 WebView，並提供少量原生功能（震動、導航、選圖／拍照、定位、存檔）。 */
 public class MainActivity extends Activity {
     static final String HOST = "app.local";
-    static final int REQ_FILE = 11, REQ_GEO = 12;
+    static final int REQ_FILE = 11, REQ_GEO = 12, REQ_LOC = 13;
     static MainActivity cur;
     WebView web;
     ValueCallback<Uri[]> fileCb;
@@ -84,6 +84,77 @@ public class MainActivity extends Activity {
         super.onSaveInstanceState(out);
     }
 
+    /* ---------- 原生定位：同時用 GPS、網路、整合定位，並立刻回報最後已知位置 ---------- */
+    android.location.LocationManager lm;
+    android.location.LocationListener locL;
+    boolean locWant;
+
+    boolean hasLocPerm() {
+        return checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+                || checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED;
+    }
+
+    void sendLoc(android.location.Location l) {
+        try {
+            long age = (android.os.SystemClock.elapsedRealtimeNanos() - l.getElapsedRealtimeNanos()) / 1000000L;
+            org.json.JSONObject o = new org.json.JSONObject();
+            o.put("lat", l.getLatitude()).put("lon", l.getLongitude()).put("acc", l.hasAccuracy() ? l.getAccuracy() : 999)
+                    .put("t", System.currentTimeMillis() - Math.max(0, age)).put("p", l.getProvider());
+            emit("loc", o.toString());
+        } catch (Throwable t) { }
+    }
+
+    void sendLocErr(String code) {
+        emit("loc", "{\"err\":\"" + code + "\"}");
+    }
+
+    void locBegin() {
+        if (!hasLocPerm()) {
+            requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION}, REQ_LOC);
+            return;
+        }
+        try {
+            if (lm == null) lm = (android.location.LocationManager) getSystemService(Context.LOCATION_SERVICE);
+            if (lm == null) { sendLocErr("unavail"); return; }
+            if (Build.VERSION.SDK_INT >= 28 && !lm.isLocationEnabled()) sendLocErr("off");
+            if (locL == null) locL = new android.location.LocationListener() {
+                @Override public void onLocationChanged(android.location.Location l) { sendLoc(l); }
+                @Override public void onStatusChanged(String p, int st, Bundle b) { }
+                @Override public void onProviderEnabled(String p) { }
+                @Override public void onProviderDisabled(String p) { }
+            };
+            lm.removeUpdates(locL);
+            android.location.Location best = null;
+            for (String p : lm.getProviders(true)) {
+                try {
+                    android.location.Location l = lm.getLastKnownLocation(p);
+                    if (l != null && (best == null || l.getElapsedRealtimeNanos() > best.getElapsedRealtimeNanos())) best = l;
+                } catch (Throwable t) { }
+                if ("passive".equals(p)) continue;
+                try { lm.requestLocationUpdates(p, 1000L, 0f, locL, android.os.Looper.getMainLooper()); } catch (Throwable t) { }
+            }
+            if (best != null) sendLoc(best);
+        } catch (Throwable t) {
+            sendLocErr("unavail");
+        }
+    }
+
+    void locEnd() {
+        try { if (lm != null && locL != null) lm.removeUpdates(locL); } catch (Throwable t) { }
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        if (locWant) locEnd();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (locWant && hasLocPerm()) locBegin();
+    }
+
     @Override
     protected void onDestroy() {
         if (cur == this) cur = null;
@@ -94,7 +165,7 @@ public class MainActivity extends Activity {
     static void emit(String type, final String json) {
         final MainActivity a = cur;
         if (a == null) return;
-        final String fn = "apk".equals(type) ? "window.Upd&&Upd.onApk(" : "off".equals(type) ? "window.Off&&Off.onNative(" : null;
+        final String fn = "apk".equals(type) ? "window.Upd&&Upd.onApk(" : "off".equals(type) ? "window.Off&&Off.onNative(" : "loc".equals(type) ? "window.Loc&&Loc.onNative(" : null;
         if (fn == null) return;
         a.runOnUiThread(new Runnable() {
             public void run() {
@@ -251,6 +322,12 @@ public class MainActivity extends Activity {
 
     @Override
     public void onRequestPermissionsResult(int req, String[] perms, int[] res) {
+        if (req == REQ_LOC) {
+            boolean ok = false;
+            for (int r : res) if (r == PackageManager.PERMISSION_GRANTED) ok = true;
+            if (ok && locWant) locBegin(); else if (!ok) sendLocErr("denied");
+            return;
+        }
         if (req == REQ_GEO && geoCb != null) {
             boolean ok = false;
             for (int r : res) if (r == PackageManager.PERMISSION_GRANTED) ok = true;
@@ -303,6 +380,53 @@ public class MainActivity extends Activity {
                 if (amp > 255) amp = 255;
                 if (Build.VERSION.SDK_INT >= 26) v.vibrate(VibrationEffect.createOneShot(ms, v.hasAmplitudeControl() ? amp : VibrationEffect.DEFAULT_AMPLITUDE)); else v.vibrate(ms);
             } catch (Exception e) { }
+        }
+
+        /* ---------- 定位 ---------- */
+        @JavascriptInterface
+        public void locStart() { runOnUiThread(new Runnable() { public void run() { locWant = true; locBegin(); } }); }
+
+        @JavascriptInterface
+        public void locStop() { runOnUiThread(new Runnable() { public void run() { locWant = false; locEnd(); } }); }
+
+        @JavascriptInterface
+        public boolean locHasPerm() { return hasLocPerm(); }
+
+        /** 下載 Google 地圖相片（瀏覽器跨網域限制讀不到時用），完成後呼叫 window.__nbB64(id, ok, mime, base64) */
+        @JavascriptInterface
+        public void fetchB64(final String id, final String url) {
+            new Thread(new Runnable() {
+                public void run() {
+                    boolean ok = false;
+                    String mime = "image/jpeg", b64 = "";
+                    java.net.HttpURLConnection c = null;
+                    try {
+                        Uri u = Uri.parse(url);
+                        String h = u.getHost() == null ? "" : u.getHost();
+                        if (!"https".equals(u.getScheme()) || !(h.endsWith(".googleusercontent.com") || h.endsWith(".ggpht.com") || h.endsWith(".googleapis.com"))) throw new Exception("host");
+                        c = (java.net.HttpURLConnection) new java.net.URL(url).openConnection();
+                        c.setConnectTimeout(20000);
+                        c.setReadTimeout(40000);
+                        c.setInstanceFollowRedirects(true);
+                        if (c.getResponseCode() != 200) throw new Exception("HTTP " + c.getResponseCode());
+                        if (c.getContentType() != null) mime = c.getContentType().split(";")[0];
+                        InputStream in = c.getInputStream();
+                        java.io.ByteArrayOutputStream bo = new java.io.ByteArrayOutputStream();
+                        byte[] buf = new byte[32768];
+                        int n;
+                        while ((n = in.read(buf)) > 0) { bo.write(buf, 0, n); if (bo.size() > 20000000) throw new Exception("too big"); }
+                        in.close();
+                        b64 = Base64.encodeToString(bo.toByteArray(), Base64.NO_WRAP);
+                        ok = true;
+                    } catch (Exception e) {
+                        ok = false;
+                    } finally {
+                        if (c != null) c.disconnect();
+                    }
+                    final String js = "window.__nbB64&&window.__nbB64(" + org.json.JSONObject.quote(id) + "," + ok + "," + org.json.JSONObject.quote(mime) + "," + org.json.JSONObject.quote(b64) + ")";
+                    runOnUiThread(new Runnable() { public void run() { web.evaluateJavascript(js, null); } });
+                }
+            }).start();
         }
 
         /* ---------- 離線地圖 ---------- */
