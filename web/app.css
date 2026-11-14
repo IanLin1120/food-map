@@ -435,3 +435,10 @@ h1,h2,h3{margin:0;line-height:1.25;text-wrap:balance}
 .steps>div>b{flex:none;width:1.7rem;height:1.7rem;border-radius:50%;background:var(--accent);color:var(--accent-fg);display:flex;align-items:center;justify-content:center;font-size:.85rem}
 .shList{max-height:40vh;overflow-y:auto;border:1px solid var(--border-soft);border-radius:var(--r-sm);background:var(--surface)}
 .shList .res.on{background:color-mix(in srgb,var(--accent) 12%,var(--surface))}
+
+/* 菜單表：分類標題一列、品名價格一列 */
+.mtable.list td{padding:.5rem .75rem}
+.mtable.list tr.cat td{background:color-mix(in srgb,var(--accent) 11%,var(--surface-2));color:var(--accent-2);font-weight:800;border-top:2px solid var(--border);padding:.45rem .75rem;line-height:1.35}
+.mtable.list tr.cat td span{font-weight:600;color:var(--muted);font-size:.78rem;margin-left:.25rem}
+.mtable.list tr.cat:first-child td{border-top:0}
+.mtable.list td.p{width:5.5rem}

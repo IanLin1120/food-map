@@ -146,6 +146,76 @@ public class MainActivity extends Activity {
         }).start();
     }
 
+    /* ---------- 讀取線上點餐網頁：在主畫面後面開一個看不見的 WebView，等內容載完後讀出全部文字 ---------- */
+    void pageDone(String id, boolean ok, String jsLiteral) {
+        web.evaluateJavascript("window.__nbPage&&window.__nbPage(" + org.json.JSONObject.quote(id) + "," + ok + "," + jsLiteral + ")", null);
+    }
+
+    void startPageRead(final String id, final String url) {
+        if (url == null || !(url.startsWith("https://") || url.startsWith("http://"))) { pageDone(id, false, org.json.JSONObject.quote("網址不正確")); return; }
+        final android.widget.FrameLayout host = (android.widget.FrameLayout) findViewById(android.R.id.content);
+        final WebView w = new WebView(this);
+        WebSettings ws = w.getSettings();
+        ws.setJavaScriptEnabled(true);
+        ws.setDomStorageEnabled(true);
+        ws.setBlockNetworkImage(true);
+        ws.setAllowFileAccess(false);
+        host.addView(w, 0, new android.widget.FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        final android.os.Handler h = new android.os.Handler(android.os.Looper.getMainLooper());
+        final long t0 = android.os.SystemClock.uptimeMillis();
+        final int[] last = {-1}, stable = {0};
+        final boolean[] done = {false};
+        final Runnable cleanup = new Runnable() { public void run() { try { host.removeView(w); w.stopLoading(); w.destroy(); } catch (Throwable t) { } } };
+        final Runnable extract = new Runnable() {
+            public void run() {
+                if (done[0]) return;
+                w.evaluateJavascript("JSON.stringify({t:document.title,u:location.href,x:(document.body?document.body.innerText:'').slice(0,150000)})", new ValueCallback<String>() {
+                    public void onReceiveValue(String v) {
+                        if (done[0]) return;
+                        done[0] = true;
+                        pageDone(id, v != null && !"null".equals(v), v == null || "null".equals(v) ? org.json.JSONObject.quote("讀不到網頁內容") : v);
+                        h.post(cleanup);
+                    }
+                });
+            }
+        };
+        final Runnable[] poll = new Runnable[1];
+        poll[0] = new Runnable() {
+            public void run() {
+                if (done[0]) return;
+                final long el = android.os.SystemClock.uptimeMillis() - t0;
+                w.evaluateJavascript("(function(){try{window.scrollTo(0,document.body.scrollHeight)}catch(e){}return document.body?document.body.innerText.length:0})()", new ValueCallback<String>() {
+                    public void onReceiveValue(String v) {
+                        int n = 0;
+                        try { n = Integer.parseInt(v == null ? "0" : v.replaceAll("[^0-9]", "")); } catch (Exception e) { }
+                        if (n > 150 && n == last[0]) stable[0]++; else stable[0] = 0;
+                        last[0] = n;
+                        if ((stable[0] >= 2 && el > 5000) || el > 40000) extract.run(); else h.postDelayed(poll[0], 1200);
+                    }
+                });
+            }
+        };
+        w.setWebViewClient(new WebViewClient() {
+            @Override
+            public boolean shouldOverrideUrlLoading(WebView v, WebResourceRequest r) {
+                String sc = r.getUrl().getScheme();
+                return !("http".equals(sc) || "https".equals(sc));   /* 不跳到 LINE、Google Play 等其他 App */
+            }
+
+            @Override
+            public void onReceivedError(WebView v, WebResourceRequest r, android.webkit.WebResourceError e) {
+                if (r.isForMainFrame() && !done[0]) {
+                    done[0] = true;
+                    pageDone(id, false, org.json.JSONObject.quote("網頁打不開（" + e.getDescription() + "）"));
+                    h.post(cleanup);
+                }
+            }
+        });
+        w.loadUrl(url);
+        h.postDelayed(poll[0], 2500);
+        h.postDelayed(new Runnable() { public void run() { if (!done[0]) extract.run(); } }, 50000);
+    }
+
     /* ---------- 原生定位：同時用 GPS、網路、整合定位，並立刻回報最後已知位置 ---------- */
     android.location.LocationManager lm;
     android.location.LocationListener locL;
@@ -450,6 +520,12 @@ public class MainActivity extends Activity {
                 if (amp > 255) amp = 255;
                 if (Build.VERSION.SDK_INT >= 26) v.vibrate(VibrationEffect.createOneShot(ms, v.hasAmplitudeControl() ? amp : VibrationEffect.DEFAULT_AMPLITUDE)); else v.vibrate(ms);
             } catch (Exception e) { }
+        }
+
+        /* ---------- 讀取點餐網頁 ---------- */
+        @JavascriptInterface
+        public void pageText(final String id, final String url) {
+            runOnUiThread(new Runnable() { public void run() { startPageRead(id, url); } });
         }
 
         /* ---------- 分享進來的圖片 ---------- */
