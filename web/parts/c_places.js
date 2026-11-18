@@ -169,7 +169,9 @@ B. 組合式（自選）菜單：顧客依步驟挑選，例如「1 主食（選
 10. 加購用價格分組時（例如「+$10：波霸、椰果」「+$20：芝芝」），每個品項各寫一行，品名不要加括號或價格，例如：加購|添加口感|波霸|10。
 11. 如果一張圖片裡並排了好幾份「不同地區或分店」的菜單（例如角落分別標示「北部」「大葉高島屋」「澎湖、金門」），價格常常不同：請分開辨識，每一行最後多加第五欄，照抄那一份菜單角落標示的文字，例如：品項|果粒茶系列|香橙果粒茶 (L)|85|北部。圖片裡只有一份菜單時不要加第五欄。
 12. 同一份菜單裡，同一個品項的同一個尺寸只會有一個價格，不要重複。
-13. 同一個品項分「乾／湯」或不同口味、內餡（例如 南投意麵 乾45 湯50、麻辣湯餃(高麗菜)、麻辣湯餃(韭菜)）時，每一種各寫一行，品名後面用括號寫清楚，例如：品項|飯麵類|南投意麵 (乾)|45、品項|飯麵類|南投意麵 (湯)|50。價格一定要對應到同一行旁邊的那個數字。`;
+13. 同一個品項分「乾／湯」或不同口味、內餡（例如 南投意麵 乾45 湯50、麻辣湯餃(高麗菜)、麻辣湯餃(韭菜)）時，每一種各寫一行，品名後面用括號寫清楚，例如：品項|飯麵類|南投意麵 (乾)|45、品項|飯麵類|南投意麵 (湯)|50。價格一定要對應到同一行旁邊的那個數字。
+14. 一整個系列共用的選擇（例如經典系列每個品項都可以選 吐司／漢堡／脆皮+$15／乾酪+$15／起司+$10，或鐵板麵可以選 蘑菇／黑胡椒／蔥燒／沙茶），寫成「選項」，分類用「系列名稱・選項名稱（選一）」，例如：選項|經典系列・麵包（選一）|脆皮|15、選項|美味小點・醬料（選一）|蘑菇|。
+15. 飲料或咖啡可以選冰或熱、價格一樣時，不要把熱的另外寫成一個品項，只寫尺寸和價格，再加兩行選項：選項|咖啡系列・溫度（選一）|冰|、選項|咖啡系列・溫度（選一）|熱|。`;
 const SZ = /\s*[（(]([^()（）]{1,8})[)）]\s*$/;
 /* 尺寸由小到大：S → M → L → XL → 瓶 */
 const SZ_ORDER = ['XS', 'S', '小', '小杯', '小碗', '小份', '薄', '薄片', '單', 'M', '中', '中杯', '中碗', '一般', '一般量', '正常', 'L', '大', '大杯', '大碗', '大份', '厚', '厚片', '雙', 'XL', '特大', '特大杯', '加大', '超大', 'XXL', '瓶', '瓶裝', '罐', '桶'];
@@ -179,6 +181,22 @@ const szOf = n => { const m = String(n || '').match(SZ); if (!m) return ''; cons
   return SZ_ORDER.includes(z.toUpperCase()) || z.length <= 3 || (z.length <= 5 && /杯|份|碗|瓶|罐|盒|入|吋|寸|片|個|顆|隻|串|oz|ml|cc|斤|兩|人|大|中|小|單|雙/i.test(z)) ? z : ''; };
 /* 真正的「尺寸」才分欄：S/M/L、大中小、杯／瓶／碗／份…；乾／湯、高麗菜／韭菜這種是不同品項，留在品名裡各自一行 */
 const isSizeWord = (z, multi) => !!z && (SZ_ORDER.includes(z.toUpperCase()) || /杯|瓶|罐|碗|份|盒|吋|寸|oz|ml|cc|公克|克|斤|兩/i.test(z) || (multi && /^\d+\s*(片|隻|顆|個|入|塊|串|粒|條|支|尾|人)$/.test(z)));
+/* 選項群組：「經典系列・麵包（選一）」→ 屬於「經典系列」、名稱「麵包」、標籤「選一」 */
+function optGroups(rows) { const gs = []; rows.forEach(r => { let g = gs.find(x => x.c === r.c); if (!g) gs.push(g = {c: r.c, L: []}); g.L.push(r); });
+  gs.forEach(g => { const m = String(g.c || '').match(/^(.*?)[（(]([^()（）]+)[)）]$/), nm = (m ? m[1] : g.c || '').trim(), parts = nm.split(/\s*[・·‧．\-－:：]\s*/).filter(Boolean);
+    g.tag = m ? m[2] : ''; g.owner = parts.length > 1 ? parts[0] : ''; g.label = parts.length > 1 ? parts.slice(1).join('・') : nm; g.multi = /多選|可複選|複選|任選\s*[2-9二三四五]/.test(g.tag); });
+  return gs; }
+const ownsGroup = (c, g) => !!g.owner && (g.owner === c || String(c).includes(g.owner) || g.owner.includes(String(c).replace(/(系列|類|區)$/, '')));
+/* 冰／熱：「拿鐵咖啡 (熱)」、尺寸「12oz冰」→ 同一品項，溫度另外列成選項 */
+const TEMP_RE = /^(熱|冰|溫|常溫|去冰|少冰|熱飲|冰飲)$/;
+function splitTemp(n, z) { let t = ''; n = String(n).replace(/\s*[（(]\s*(熱|冰|溫|常溫|熱飲|冰飲)\s*[)）]/, (a, b) => { t = b.replace('飲', ''); return ''; });
+  if (z && /^(.+?)\s*(冰|熱)$|^(冰|熱)\s*(.+)$/.test(z) && !TEMP_RE.test(z)) { const m = z.match(/^(.+?)\s*(冰|熱)$/) || z.match(/^(冰|熱)\s*(.+)$/); if (m[2] === '冰' || m[2] === '熱') { t = t || m[2]; z = m[1]; } else { t = t || m[1]; z = m[2]; } }
+  if (z && TEMP_RE.test(z)) { t = t || z.replace('飲', ''); z = ''; }
+  return {n: n.trim(), z, t}; }
+/* 點餐時的完整品名：蛋餅系列的「哈辣雞腿」→「哈辣雞腿蛋餅」（品名本來就有就不重複） */
+const FOOD_NOUN = /(蛋餅|漢堡|吐司|厚片|薄片|鐵板麵|義大利麵|炒飯|炒麵|燴飯|拉麵|捲餅|燒餅|三明治|潛艇堡|總匯|貝果|可頌|鬆餅|帕尼尼|咖哩飯|丼飯|飯糰|河粉|燉飯|披薩|鍋燒|水餃|煎餃|湯包)/;
+function fullName(c, n) { const core = String(c || '').replace(/[（(].*?[)）]/g, '').replace(/(系列|類|區|專區)$/, ''), m = core.match(FOOD_NOUN); if (!m) return n;
+  const w = m[1], b = String(n); return b.includes(w) || (/堡$/.test(w) && b.endsWith('堡')) ? b : b + w; }
 const baseName = n => szOf(n) ? n.replace(SZ, '').trim() : String(n || '').trim();
 const REGIONS = ['北部', '中部', '南部', '東部', '離島'];
 /* 菜單上的地區文字 → 北部／中部／南部／東部／離島（「澎湖、金門」→ 離島；百貨專櫃這類對不到的回傳空字串） */
@@ -593,22 +611,33 @@ function openPlace(id, toMenu) {
     /* 只有一種份量、而且不是 S/M/L/瓶 這類尺寸的（日式炸蝦 (4隻)、滷豆干 (3片)）＝這個品項本身的份量，留在品名裡 */
     const merge = L => { const out = [], idx = {}, nv = {}; L.forEach(r => { const z = szOf(r.n); if (z) { const k = r.c + '|' + baseName(r.n); nv[k] = (nv[k] || 0) + 1; } });
       const realSz = (z, r) => isSizeWord(z, nv[r.c + '|' + baseName(r.n)] > 1);
-      L.forEach(r => { const z0 = szOf(r.n), z = realSz(z0, r) ? z0 : '', m = z ? [0, z] : null, b = m ? baseName(r.n) : r.n.replace(/\s*[（(][+＋]?[$＄]?[+＋]?\d+元?[)）]\s*$/, ''), k = r.c + '|' + b;
-      if (m && idx[k] != null) { const v = out[idx[k]].v; if (!v.some(x => x.s === m[1] && x.p === r.p)) v.push({s: m[1], p: r.p}); return; } if (m) idx[k] = out.length; out.push({c: r.c, n: b, multi: !!m, v: [{s: m ? m[1] : '', p: r.p}]}); });
+      L.forEach(r => { const z0 = szOf(r.n), z1 = realSz(z0, r) || /冰|熱/.test(z0) ? z0 : '', b0 = z1 ? baseName(r.n) : r.n.replace(/\s*[（(][+＋]?[$＄]?[+＋]?\d+元?[)）]\s*$/, ''), T = splitTemp(b0, z1), z = T.z, m = z ? [0, z] : null, b = T.n, k = r.c + '|' + b;
+      if (T.t) (temps[r.c] = temps[r.c] || new Set()).add(T.t);
+      if (idx[k] != null && (m || T.t)) { const o = out[idx[k]];
+        if (!m) { if (!o.v.some(x => x.p === r.p)) o.v.push({s: o.multi ? T.t : '', p: r.p}); return; }
+        if (!o.multi) { const keep = o.v.filter(x => x.s); o.multi = true; o.v = keep; } if (!o.v.some(x => x.s === m[1] && x.p === r.p)) o.v.push({s: m[1], p: r.p}); return; }
+      if (m || T.t || L.some(y => y !== r && y.c === r.c && /[（(]\s*(熱|冰)/.test(y.n))) idx[k] = out.length; out.push({c: r.c, n: b, multi: !!m, v: [{s: m ? m[1] : '', p: r.p}]}); });
       return out; };
+    const temps = {}, ogs = optGroups(opts), used = new Set();
+    /* 卡片上方：這個系列可以選的東西（麵包、口味、醬料、冰／熱） */
+    const optStrip = c => { const gs = ogs.filter(g => ownsGroup(c, g)); gs.forEach(g => used.add(g.c)); const tp = temps[c] ? [...temps[c]] : [];
+      if (!gs.length && tp.length < 2) return '';
+      return `<div class="mcO">${gs.map(g => `<div class="mcOR"><b>${esc(g.label)}</b>${g.tag ? `<span class="tag">${esc(g.tag)}</span>` : ''}<span class="mcOL">${g.L.map(r => `<span>${esc(r.n)}${r.p ? `<em>+$${esc(r.p)}</em>` : ''}</span>`).join('')}</span></div>`).join('')}${tp.length > 1 ? `<div class="mcOR"><b>溫度</b><span class="mcOL">${tp.map(t => `<span>${esc(t)}</span>`).join('')}</span></div>` : ''}</div>`; };
     /* 每個分類一張卡片：分類名稱 → 「品名｜S｜M｜L｜瓶」標題列（只列這個分類有的尺寸，由小到大）→ 品項，沒有的尺寸寫「-」 */
     const cards = (L0, pre, cls) => { const L = merge(L0), cs = [], by = {}; L.forEach(r => { if (!by[r.c]) { by[r.c] = []; cs.push(r.c); } by[r.c].push(r); });
       const has = x => x.p !== '' && x.p != null, pr = v => pre + price(v);
       return cs.map(c => { const rs = by[c], szs = [];
-        rs.forEach(r => { if (r.multi) r.v.forEach(x => { if (has(x) && !szs.includes(x.s)) szs.push(x.s); }); }); szs.sort((a, b) => szRank(a) - szRank(b));
+        rs.forEach(r => { if (r.multi) r.v.forEach(x => { if (has(x) && !szs.includes(x.s) && !TEMP_RE.test(x.s)) szs.push(x.s); }); }); szs.sort((a, b) => szRank(a) - szRank(b));
+        /* 只標「熱」沒寫尺寸的價格：剛好缺一個尺寸時就放進那一欄，否則另外開一欄 */
+        rs.forEach(r => r.v.forEach(x => { if (!TEMP_RE.test(x.s)) return; const miss = szs.filter(z => !r.v.some(y => y.s === z && has(y))); if (miss.length === 1) x.s = miss[0]; else if (!szs.includes(x.s)) szs.push(x.s); }));
         const nc = szs.length || 1, head = `<tr class="sh"><th class="n">品名</th>${szs.length ? szs.map(z => `<th class="s">${esc(z)}</th>`).join('') : '<th class="s pr">價格</th>'}</tr>`;
         const body = rs.map(r => { const vs = r.v.filter(has);
           if (!szs.length || !r.multi) { const ps = [...new Set(vs.map(x => x.p))]; return `<tr><td class="n">${esc(r.n)}</td><td class="s pr${ps.length ? '' : ' na'}${nc > 1 ? ' one' : ''}"${nc > 1 ? ` colspan="${nc}"` : ''}>${ps.length ? ps.map(pr).join(' / ') : '-'}</td></tr>`; }
           return `<tr><td class="n">${esc(r.n)}</td>${szs.map(z => { const ps = [...new Set(vs.filter(x => x.s === z).map(x => x.p))]; return `<td class="s${ps.length ? '' : ' na'}${ps.length > 1 ? ' dup' : ''}">${ps.length ? ps.map(pr).join('<br>') : '-'}</td>`; }).join('')}</tr>`; }).join('');
-        return `<div class="mcard ${cls || ''}"><div class="mcH">${esc(c)}<span>${rs.length}</span></div><div class="mcB"><table class="piv ${nc >= 4 ? 'many' : ''}">${head}${body}</table></div></div>`; }).join(''); };
+        return `<div class="mcard ${cls || ''}"><div class="mcH">${esc(c)}<span>${rs.length}</span></div>${pre ? '' : optStrip(c)}<div class="mcB"><table class="piv ${nc >= 4 ? 'many' : ''}">${head}${body}</table></div></div>`; }).join(''); };
     if (showItem && items.length) html += cards(items, '');
-    if ((mc === '' || mc === '🧩') && opts.length) { const gs = []; opts.forEach(r => { let g = gs.find(x => x.c === r.c); if (!g) gs.push(g = {c: r.c, L: []}); g.L.push(r); });
-      html += `<div class="mSec">🧩 組合選項<small>依步驟挑選，已含在主餐價格內</small></div>` + gs.map(g => { const m = g.c.match(/^(.*?)（(.+?)）$/); return `<div class="optG"><div class="optH"><b>${esc(m ? m[1] : g.c)}</b>${m ? `<span class="tag">${esc(m[2])}</span>` : ''}</div><div class="optL">${g.L.map(r => `<span>${esc(r.n)}${r.p ? ' <em>+' + esc(r.p) + '</em>' : ''}</span>`).join('')}</div></div>`; }).join(''); }
+    const gsLeft = ogs.filter(g => !used.has(g.c) && (mc === '' || mc === '🧩' || ownsGroup(mc, g) === false && mc === '🧩'));
+    if ((mc === '' || mc === '🧩') && gsLeft.length) html += `<div class="mSec">🧩 組合選項<small>依步驟挑選，已含在主餐價格內</small></div>` + gsLeft.map(g => `<div class="optG"><div class="optH"><b>${esc(g.owner ? g.owner + '・' + g.label : g.label)}</b>${g.tag ? `<span class="tag">${esc(g.tag)}</span>` : ''}</div><div class="optL">${g.L.map(r => `<span>${esc(r.n)}${r.p ? ' <em>+' + esc(r.p) + '</em>' : ''}</span>`).join('')}</div></div>`).join('');
     if ((mc === '' || mc === '➕') && adds.length) html += `<div class="mSec">➕ 加購・加價</div>` + cards(adds, '+', 'add');
     return html || '<div class="empty" style="padding:1rem">找不到符合的品項</div>';
   }
