@@ -3,7 +3,7 @@
    ============================================================ */
 let curTab = 'Map';
 function showTab(t) { curTab = t; $$('.page').forEach(p => p.classList.toggle('on', p.id === 'pg' + t)); $$('#tabbar button').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
-  if (t === 'Map') mapResize(); else if (t === 'Fav') renderFav(); else if (t === 'Rec') renderRec(); else renderSet(); updCounts(); }
+  if (t === 'Map') mapResize(); else if (t === 'Fav') renderFav(); else if (t === 'Rec') renderRec(); else if (t === 'Meal') renderMeal(); else renderSet(); updCounts(); }
 
 /* ---------- 全部展開／收合（收藏、食譜共用） ---------- */
 const FOLD = {fav: ['#favList', '#favFold', 'fold'], rec: ['#recList', '#recFold', 'rfold']};
@@ -270,7 +270,7 @@ async function saveFile(name, blob) {
 }
 async function exportBackup() {
   busy('整理備份資料…'); try { const Sx = Object.assign({}, S); delete Sx.gkey; delete Sx.aikey;
-    const parts = [`{"app":"shiguang-foodmap","v":1,"t":${Date.now()},"S":${JSON.stringify(Sx)},"cats":${JSON.stringify(DB.cats)},"rcats":${JSON.stringify(DB.rcats)},"places":${JSON.stringify(DB.places)},"recipes":${JSON.stringify(DB.recipes)},"imgs":{`];
+    const parts = [`{"app":"shiguang-foodmap","v":1,"t":${Date.now()},"S":${JSON.stringify(Sx)},"cats":${JSON.stringify(DB.cats)},"rcats":${JSON.stringify(DB.rcats)},"places":${JSON.stringify(DB.places)},"recipes":${JSON.stringify(DB.recipes)},"mcfg":${JSON.stringify(DB.mcfg || null)},"days":${JSON.stringify(DB.days || {})},"imgs":{`];
     const keys = await IDB.keys('imgs'); let n = 0; for (const k of keys) { const r = await IDB.get('imgs', k); if (!r) continue; parts.push((n++ ? ',' : '') + JSON.stringify(k) + ':' + JSON.stringify({type: r.type, w: r.w, h: r.h, d: await blobB64(new Blob([r.buf]))})); }
     parts.push('}}'); const d = new Date(), nm = `食光地圖備份_${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}.json`;
     const p = await saveFile(nm, new Blob(parts, {type: 'application/json'})); busy(false); toast(IS_APP ? '已匯出到「下載」資料夾：' + p : '已下載備份檔 ' + nm, 4000);
@@ -283,6 +283,6 @@ function importBackup() { const f = $('#jsonPick'); f.value = ''; f.onchange = a
     const b64buf = s => { const bin = atob(s), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return u.buffer; };
     for (const k in j.imgs || {}) { const r = j.imgs[k]; await IDB.put('imgs', k, {buf: b64buf(r.d), type: r.type || 'image/jpeg', w: r.w, h: r.h}); }
     for (const p of j.places) await IDB.put('places', p.id, p); for (const r of j.recipes || []) await IDB.put('recipes', r.id, r);
-    await IDB.put('kv', 'cats', j.cats || []); if (j.rcats) await IDB.put('kv', 'rcats', j.rcats); await IDB.put('kv', 'S', Object.assign({}, S_DEF, j.S || {}, {gkey: S.gkey, aikey: S.aikey, onboard: true})); location.reload();
+    await IDB.put('kv', 'cats', j.cats || []); if (j.rcats) await IDB.put('kv', 'rcats', j.rcats); if (j.mcfg) await IDB.put('kv', 'mcfg', j.mcfg); await IDB.put('kv', 'days', j.days || {}); await IDB.put('kv', 'S', Object.assign({}, S_DEF, j.S || {}, {gkey: S.gkey, aikey: S.aikey, onboard: true})); location.reload();
   } catch (e) { busy(false); toast('❌ 匯入失敗：' + (e instanceof SyntaxError ? '檔案格式不正確' : e.message), 4500); } }; f.click(); }
 

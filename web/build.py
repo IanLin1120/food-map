@@ -6,7 +6,7 @@ root = os.path.join(here, '..')
 ver = os.environ.get('VER') or open(os.path.join(root, 'VERSION')).read().strip()
 R = lambda *p: open(os.path.join(here, *p), encoding='utf-8').read()
 
-order = ['a_core', 'b_map', 'c_places', 'd_app', 'e_update', 'f_area', 'z_boot']
+order = ['a_core', 'b_map', 'c_places', 'd_app', 'e_update', 'f_area', 'g_meal', 'z_boot']
 app = '\n'.join(R('parts', n + '.js') for n in order).replace('__VER__', ver)
 assert '</script' not in app.lower()
 assert "const APP_VERSION = '" + ver + "'" in app          # 線上更新靠這一行確認下載到的版本
