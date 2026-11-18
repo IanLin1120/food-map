@@ -168,7 +168,8 @@ B. 組合式（自選）菜單：顧客依步驟挑選，例如「1 主食（選
 9. 只輸出品項行，不要標題列、不要編號、不要說明文字、不要 markdown。
 10. 加購用價格分組時（例如「+$10：波霸、椰果」「+$20：芝芝」），每個品項各寫一行，品名不要加括號或價格，例如：加購|添加口感|波霸|10。
 11. 如果一張圖片裡並排了好幾份「不同地區或分店」的菜單（例如角落分別標示「北部」「大葉高島屋」「澎湖、金門」），價格常常不同：請分開辨識，每一行最後多加第五欄，照抄那一份菜單角落標示的文字，例如：品項|果粒茶系列|香橙果粒茶 (L)|85|北部。圖片裡只有一份菜單時不要加第五欄。
-12. 同一份菜單裡，同一個品項的同一個尺寸只會有一個價格，不要重複。`;
+12. 同一份菜單裡，同一個品項的同一個尺寸只會有一個價格，不要重複。
+13. 同一個品項分「乾／湯」或不同口味、內餡（例如 南投意麵 乾45 湯50、麻辣湯餃(高麗菜)、麻辣湯餃(韭菜)）時，每一種各寫一行，品名後面用括號寫清楚，例如：品項|飯麵類|南投意麵 (乾)|45、品項|飯麵類|南投意麵 (湯)|50。價格一定要對應到同一行旁邊的那個數字。`;
 const SZ = /\s*[（(]([^()（）]{1,8})[)）]\s*$/;
 /* 尺寸由小到大：S → M → L → XL → 瓶 */
 const SZ_ORDER = ['XS', 'S', '小', '小杯', '小碗', '小份', '薄', '薄片', '單', 'M', '中', '中杯', '中碗', '一般', '一般量', '正常', 'L', '大', '大杯', '大碗', '大份', '厚', '厚片', '雙', 'XL', '特大', '特大杯', '加大', '超大', 'XXL', '瓶', '瓶裝', '罐', '桶'];
@@ -176,6 +177,8 @@ const szRank = s => { const k = String(s || '').trim().toUpperCase().replace(/�
 /* 品名最後括號裡是不是「尺寸」：M、L、瓶、大杯、小份、6入…（「附薯條」「期間限定」這種是說明，不是尺寸） */
 const szOf = n => { const m = String(n || '').match(SZ); if (!m) return ''; const z = m[1].trim(); if (!z || /售完|限定|推薦|新品|招牌|必點|附|含|送|擇一|任選/.test(z) || /^[+＋]?[$＄]?[+＋]?\d+(\.\d+)?元?$/.test(z)) return '';
   return SZ_ORDER.includes(z.toUpperCase()) || z.length <= 3 || (z.length <= 5 && /杯|份|碗|瓶|罐|盒|入|吋|寸|片|個|顆|隻|串|oz|ml|cc|斤|兩|人|大|中|小|單|雙/i.test(z)) ? z : ''; };
+/* 真正的「尺寸」才分欄：S/M/L、大中小、杯／瓶／碗／份…；乾／湯、高麗菜／韭菜這種是不同品項，留在品名裡各自一行 */
+const isSizeWord = (z, multi) => !!z && (SZ_ORDER.includes(z.toUpperCase()) || /杯|瓶|罐|碗|份|盒|吋|寸|oz|ml|cc|公克|克|斤|兩/i.test(z) || (multi && /^\d+\s*(片|隻|顆|個|入|塊|串|粒|條|支|尾|人)$/.test(z)));
 const baseName = n => szOf(n) ? n.replace(SZ, '').trim() : String(n || '').trim();
 const REGIONS = ['北部', '中部', '南部', '東部', '離島'];
 /* 菜單上的地區文字 → 北部／中部／南部／東部／離島（「澎湖、金門」→ 離島；百貨專櫃這類對不到的回傳空字串） */
@@ -589,7 +592,7 @@ function openPlace(id, toMenu) {
     /* 同一品項的不同尺寸（M、L、瓶…）合併成一行 */
     /* 只有一種份量、而且不是 S/M/L/瓶 這類尺寸的（日式炸蝦 (4隻)、滷豆干 (3片)）＝這個品項本身的份量，留在品名裡 */
     const merge = L => { const out = [], idx = {}, nv = {}; L.forEach(r => { const z = szOf(r.n); if (z) { const k = r.c + '|' + baseName(r.n); nv[k] = (nv[k] || 0) + 1; } });
-      const realSz = (z, r) => z && (nv[r.c + '|' + baseName(r.n)] > 1 || SZ_ORDER.includes(z.toUpperCase()) || /杯|瓶|罐|碗/.test(z));
+      const realSz = (z, r) => isSizeWord(z, nv[r.c + '|' + baseName(r.n)] > 1);
       L.forEach(r => { const z0 = szOf(r.n), z = realSz(z0, r) ? z0 : '', m = z ? [0, z] : null, b = m ? baseName(r.n) : r.n.replace(/\s*[（(][+＋]?[$＄]?[+＋]?\d+元?[)）]\s*$/, ''), k = r.c + '|' + b;
       if (m && idx[k] != null) { const v = out[idx[k]].v; if (!v.some(x => x.s === m[1] && x.p === r.p)) v.push({s: m[1], p: r.p}); return; } if (m) idx[k] = out.length; out.push({c: r.c, n: b, multi: !!m, v: [{s: m ? m[1] : '', p: r.p}]}); });
       return out; };
@@ -600,7 +603,7 @@ function openPlace(id, toMenu) {
         rs.forEach(r => { if (r.multi) r.v.forEach(x => { if (has(x) && !szs.includes(x.s)) szs.push(x.s); }); }); szs.sort((a, b) => szRank(a) - szRank(b));
         const nc = szs.length || 1, head = `<tr class="sh"><th class="n">品名</th>${szs.length ? szs.map(z => `<th class="s">${esc(z)}</th>`).join('') : '<th class="s pr">價格</th>'}</tr>`;
         const body = rs.map(r => { const vs = r.v.filter(has);
-          if (!szs.length || !r.multi) { const ps = [...new Set(vs.map(x => x.p))]; return `<tr><td class="n">${esc(r.n)}</td><td class="s pr${ps.length ? '' : ' na'}"${nc > 1 ? ` colspan="${nc}"` : ''}>${ps.length ? ps.map(pr).join(' / ') : '-'}</td></tr>`; }
+          if (!szs.length || !r.multi) { const ps = [...new Set(vs.map(x => x.p))]; return `<tr><td class="n">${esc(r.n)}</td><td class="s pr${ps.length ? '' : ' na'}${nc > 1 ? ' one' : ''}"${nc > 1 ? ` colspan="${nc}"` : ''}>${ps.length ? ps.map(pr).join(' / ') : '-'}</td></tr>`; }
           return `<tr><td class="n">${esc(r.n)}</td>${szs.map(z => { const ps = [...new Set(vs.filter(x => x.s === z).map(x => x.p))]; return `<td class="s${ps.length ? '' : ' na'}${ps.length > 1 ? ' dup' : ''}">${ps.length ? ps.map(pr).join('<br>') : '-'}</td>`; }).join('')}</tr>`; }).join('');
         return `<div class="mcard ${cls || ''}"><div class="mcH">${esc(c)}<span>${rs.length}</span></div><div class="mcB"><table class="piv ${nc >= 4 ? 'many' : ''}">${head}${body}</table></div></div>`; }).join(''); };
     if (showItem && items.length) html += cards(items, '');

@@ -573,3 +573,17 @@ table.piv td.dup{color:var(--danger);font-size:.8rem;line-height:1.25}
 .msI{font-size:1.3rem}
 .msG{font-size:.78rem;font-weight:800;color:var(--text-2);margin:.5rem 0 .3rem}
 .msR.dragSrc{opacity:.35}
+table.piv .s.pr.one{text-align:center;padding-right:.5rem}
+.cd .dot{display:block;width:.5rem;height:.5rem;border-radius:50%;background:#d94a3a;margin-top:.3rem;box-shadow:0 0 0 2px color-mix(in srgb,#d94a3a 25%,transparent)}
+.cd.sel .dot{background:#fff;box-shadow:none}
+.cd{min-height:3rem}
+.srS{margin-bottom:1rem}
+.srH{display:flex;align-items:center;gap:.5rem;padding:.45rem .6rem;background:var(--surface-2);border-radius:6px;margin-bottom:.35rem;font-size:.92rem}
+.srD{display:block;width:100%;text-align:left;padding:.55rem .7rem;border-radius:6px;background:var(--surface-3);border:1px solid var(--border-soft);margin-bottom:.35rem}
+.srD .row b{font-size:.88rem}
+.srA{font-weight:800;color:var(--accent)}
+.srL{font-size:.84rem;color:var(--text-2);margin-top:.2rem;line-height:1.4}
+.chk{display:flex;align-items:center;gap:.5rem;font-size:.88rem;font-weight:700}
+.chk input{width:1.15rem;height:1.15rem;accent-color:var(--accent)}
+.exT{font-size:.92rem;line-height:1.55;white-space:pre-wrap;font-family:inherit;resize:vertical}
+.dayHead .btn{border-radius:6px}
