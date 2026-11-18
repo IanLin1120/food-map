@@ -587,3 +587,6 @@ table.piv .s.pr.one{text-align:center;padding-right:.5rem}
 .chk input{width:1.15rem;height:1.15rem;accent-color:var(--accent)}
 .exT{font-size:.92rem;line-height:1.55;white-space:pre-wrap;font-family:inherit;resize:vertical}
 .dayHead .btn{border-radius:6px}
+.mlH{padding-left:.9rem}
+.mlTel{flex:none;width:2.4rem;height:2.4rem;border-radius:6px;background:var(--surface-3);border:1px solid var(--border);font-size:1.1rem}
+.mlTel.none{opacity:.5}
