@@ -188,7 +188,11 @@ function optGroups(rows) { const gs = []; rows.forEach(r => { let g = gs.find(x 
   return gs; }
 const ownsGroup = (c, g) => !!g.owner && (g.owner === c || String(c).includes(g.owner) || g.owner.includes(String(c).replace(/(系列|類|區)$/, '')));
 /* 選項群組是不是專屬某一個品項：標題裡有品名（「拿鐵咖啡溫度」「厚厚好食口味」）就只屬於那個品項 */
-function groupItem(g, names) { let best = ''; names.forEach(n => { n = String(n || ''); if (n.length >= 2 && g.label.includes(n) && n.length > best.length) best = n; }); return best; }
+const lcsStr = (a, b) => { let best = ''; for (let i = 0; i < a.length; i++) for (let j = i + best.length + 1; j <= a.length; j++) { const t = a.slice(i, j); if (b.includes(t)) best = t; else break; } return best; };
+function groupItem(g, names) { let best = ''; names.forEach(n => { n = String(n || ''); if (n.length >= 2 && g.label.includes(n) && n.length > best.length) best = n; }); if (best) return best;
+  /* 標題只寫了品名的一部分（「厚片抹醬」→ 吐司厚片、「鐵板麵醬料」→ 鐵板麵加蛋）：只有一個品項最像、而且像得夠多才算 */
+  const sc = names.map(n => ({n: String(n || ''), k: lcsStr(g.label, String(n || '')).length})).sort((a, b) => b.k - a.k);
+  return sc[0] && sc[0].k >= 2 && (!sc[1] || sc[1].k < sc[0].k) && sc[0].k * 2 >= g.label.length ? sc[0].n : ''; }
 const shortLabel = (g, item) => (item ? g.label.replace(item, '').replace(/^[・\s的:：\-]+/, '').trim() : g.label) || g.label;
 /* 某個品項可以選的群組：系列共用的＋專屬這個品項的（別的品項專屬的不算） */
 function groupsFor(c, name, names, ogs) { return ogs.filter(g => { const gi = groupItem(g, names); return ownsGroup(c, g) ? !gi || gi === name : !g.owner && !!gi && gi === name; })
@@ -629,10 +633,13 @@ function openPlace(id, toMenu) {
     const gRow = g => `<div class="mcOR"><b>${esc(g.label)}</b>${g.tag ? `<span class="tag">${esc(g.tag)}</span>` : ''}<span class="mcOL">${g.L.map(r => `<span>${esc(r.n)}${r.p ? `<em>+$${esc(r.p)}</em>` : ''}</span>`).join('')}</span></div>`;
     const gSig = g => g.label + '|' + g.L.map(r => r.n + r.p).join(',');
     /* 卡片上方：整個系列共用的選擇；每個品項都有一模一樣的專屬選項（例如每杯咖啡都能選冰／熱）也合併到上方，其餘的放在各品項下面 */
+    /* 所有選項都統一放在卡片上方：共用的寫選項名稱；專屬某個品項的寫出是哪個品項（例如「厚厚好食口味」「厚片抹醬」）；每個品項都一模一樣的（例如每杯都能選冰／熱）合併成一行 */
     const optPlan = (c, rs) => { const names = rs.map(r => r.n), per = rs.map(r => groupsFor(c, r.n, names, ogs)); per.flat().forEach(g => used.add(g.c));
-      const top = (per[0] || []).filter(g => per.every(L => L.some(x => gSig(x) === gSig(g)))), sig = new Set(top.map(gSig));
+      const same = (per[0] || []).filter(g => per.length > 1 && per.every(L => L.some(x => gSig(x) === gSig(g)))), sig = new Set(same.map(gSig)), top = same.slice(), seen = new Set();
+      per.forEach((L, i) => L.forEach(g => { if (sig.has(gSig(g)) || seen.has(g.c)) return; seen.add(g.c); const orig = ogs.find(x => x.c === g.c), gi = groupItem(orig, names);
+        top.push(Object.assign({}, g, {label: gi ? (orig.label.includes(gi) || lcsStr(orig.label, gi).length >= 2 ? orig.label : gi + '・' + orig.label) : g.label})); }));
       const tp = temps[c] ? [...temps[c]] : []; if (tp.length > 1 && !top.some(g => /溫度/.test(g.label))) top.push({label: '溫度', tag: '', L: tp.map(n => ({n, p: ''}))});
-      return {strip: top.length ? `<div class="mcO">${top.map(gRow).join('')}</div>` : '', under: per.map(L => L.filter(g => !sig.has(gSig(g))))}; };
+      return {strip: top.length ? `<div class="mcO">${top.map(gRow).join('')}</div>` : '', under: []}; };
     /* 每個分類一張卡片：分類名稱 → 「品名｜S｜M｜L｜瓶」標題列（只列這個分類有的尺寸，由小到大）→ 品項，沒有的尺寸寫「-」 */
     const cards = (L0, pre, cls) => { const L = merge(L0), cs = [], by = {}; L.forEach(r => { if (!by[r.c]) { by[r.c] = []; cs.push(r.c); } by[r.c].push(r); });
       const has = x => x.p !== '' && x.p != null, pr = v => pre + price(v);

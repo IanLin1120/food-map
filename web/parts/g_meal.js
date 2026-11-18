@@ -131,6 +131,9 @@ function menuChoices(p, rg) {
     const z0 = szOf(r.n), b0 = z0 ? baseName(r.n) : r.n.replace(/\s*[（(][+＋]?[$＄]?[+＋]?\d+元?[)）]\s*$/, ''), T = splitTemp(b0, z0), z = T.z, b = T.n, k = t + '|' + r.c + '|' + b;
     if (idx[k] == null) { idx[k] = out.length; out.push({t, rc: r.c, c: t === 'add' ? '➕ ' + (r.c || '加購') : r.c || '其他', n: b, full: t === 'item' ? fullName(r.c, b) : b, v: [], og: [], temps: new Set()}); }
     const o = out[idx[k]]; if (T.t) o.temps.add(T.t); if (!o.v.some(x => x.s === z && x.p === r.p) && !(T.t && !z && o.v.some(x => x.p === r.p))) o.v.push({s: z, p: r.p}); });
+  /* 同一個品名出現在好幾個系列（好呷系列、帕瑪森系列都有「德式香腸」）：紀錄的品名加上系列，才分得出來 */
+  const nm = {}; out.forEach(o => { if (o.t === 'item') (nm[o.n] = nm[o.n] || new Set()).add(o.rc); });
+  out.forEach(o => { if (o.t === 'item' && nm[o.n].size > 1 && o.full === o.n) { const core = String(o.rc || '').replace(/[（(].*?[)）]/g, '').replace(/(系列|類|區|專區)$/, '').trim(); if (core && !o.full.includes(core)) o.full = core + o.full; } });
   /* 每個品項只拿「系列共用」和「專屬自己」的選項群組 */
   const cn = {}; out.forEach(o => { if (o.t === 'item') (cn[o.rc] = cn[o.rc] || []).push(o.n); });
   out.forEach(o => { if (o.t !== 'item') return; o.og = groupsFor(o.rc, o.n, cn[o.rc], ogs); o.og.forEach(g => owned.add(g.c)); });
