@@ -52,7 +52,7 @@ function mealCard(m) {
     <div class="mlH"><div class="grow"><b>${esc(T.name)}</b><div class="mlS" data-a="store">${m.place || m.pname ? '🏪 ' + esc(P ? P.name : m.pname || '') : '<span class="muted">未選店家</span>'}</div></div>${m.place || m.pname ? `<button class="ic mlTel ${mealPhone(m) ? '' : 'none'}" data-a="tel" aria-label="打電話">📞</button>` : ''}<button class="btn sm pri" data-a="order">＋ 點餐</button><button class="ic" data-a="mMore" aria-label="更多">⋯</button></div>
     ${groups.length ? groups.map(id => { const u = mWho(id), xs = m.items.filter(x => x.who === id), st = xs.reduce((s, x) => s + numP(x.p) * (x.q || 0), 0);
       return `<div class="mlP"><div class="mlPH"><span>${esc(u.icon)}</span><b class="grow">${esc(u.name)}</b><span class="mlPT">${money(st)}</span></div>
-        <table class="mlT"><tr><th class="n">品項</th><th>單價</th><th>數量</th><th>小計</th></tr>${xs.map(x => `<tr data-i="${x.id}"><td class="n" data-a="editItem">${esc(x.n)}${x.s ? ` <span class="szT">${esc(x.s)}</span>` : ''}</td><td class="r">${money(x.p)}</td><td class="qc"><span class="q"><button data-a="qm">−</button><b>${x.q}</b><button data-a="qp">＋</button></span></td><td class="r b">${money(numP(x.p) * x.q)}</td></tr>`).join('')}</table></div>`; }).join('')
+        <table class="mlT"><tr><th class="n">品項</th><th>單價</th><th>數量</th><th>小計</th></tr>${xs.map(x => `<tr data-i="${x.id}"><td class="n" data-a="editItem">${esc(x.n)}${xTags(x)}</td><td class="r">${money(x.p)}</td><td class="qc"><span class="q"><button data-a="qm">−</button><b>${x.q}</b><button data-a="qp">＋</button></span></td><td class="r b">${money(numP(x.p) * x.q)}</td></tr>`).join('')}</table></div>`; }).join('')
       : `<div class="mlNone">還沒有點餐，按「＋ 點餐」選誰要吃什麼</div>`}
     ${groups.length ? `<div class="mlF"><span class="grow">${esc(T.name)}合計 · ${m.items.reduce((s, x) => s + (x.q || 0), 0)} 份</span><b>${money(mealTotal(m))}</b></div>` : ''}</div>`;
 }
@@ -123,37 +123,58 @@ function pickStore(cur) {
 
 /* ---------- 點餐：選人 → 從菜單點品項 ---------- */
 function menuChoices(p, rg) {
-  const rows = (p.menu || []).filter(r => (r.t || 'item') !== 'opt' || r.p);
-  const regs = [...new Set(rows.map(r => r.g).filter(Boolean))]; const cur = regs.includes(rg) ? rg : regs.includes(p.rgSel) ? p.rgSel : regs[0] || '';
-  const inR = r => !cur || r.g === cur || (!r.g && !rows.some(y => y.g === cur && (y.t || 'item') === (r.t || 'item') && baseName(y.n) === baseName(r.n)));
-  const out = [], idx = {};
-  rows.filter(inR).forEach(r => { const t = r.t || 'item', z = szOf(r.n), b = z ? baseName(r.n) : r.n.replace(/\s*[（(][+＋]?[$＄]?[+＋]?\d+元?[)）]\s*$/, ''), k = t + '|' + r.c + '|' + b;
-    if (idx[k] == null) { idx[k] = out.length; out.push({t, c: t === 'add' ? '➕ ' + (r.c || '加購') : t === 'opt' ? '🧩 ' + (r.c || '選項') : r.c || '其他', n: b, v: []}); }
-    const v = out[idx[k]].v; if (!v.some(x => x.s === z && x.p === r.p)) v.push({s: z, p: r.p}); });
-  /* 只有一種份量、又不是 S/M/L/瓶 這類尺寸的（日式炸蝦 (4隻)），份量留在品名裡 */
-  /* 乾／湯、高麗菜／韭菜、4隻 這種不是尺寸：拆成各自一個品項，括號留在品名裡 */
-  const fin = []; out.forEach(o => { const multi = o.v.length > 1, keep = o.v.filter(v => !v.s || isSizeWord(v.s, multi));
+  const all = p.menu || [], regs = [...new Set(all.map(r => r.g).filter(Boolean))]; const cur = regs.includes(rg) ? rg : regs.includes(p.rgSel) ? p.rgSel : regs[0] || '';
+  const inR = r => !cur || r.g === cur || (!r.g && !all.some(y => y.g === cur && (y.t || 'item') === (r.t || 'item') && baseName(y.n) === baseName(r.n)));
+  const R = all.filter(inR), ogs = optGroups(R.filter(r => r.t === 'opt'));
+  const out = [], idx = {}, owned = new Set();
+  R.forEach(r => { const t = r.t || 'item'; if (t === 'opt') return;
+    const z0 = szOf(r.n), b0 = z0 ? baseName(r.n) : r.n.replace(/\s*[（(][+＋]?[$＄]?[+＋]?\d+元?[)）]\s*$/, ''), T = splitTemp(b0, z0), z = T.z, b = T.n, k = t + '|' + r.c + '|' + b;
+    if (idx[k] == null) { idx[k] = out.length; const og = t === 'item' ? ogs.filter(g => ownsGroup(r.c, g)) : []; og.forEach(g => owned.add(g.c));
+      out.push({t, rc: r.c, c: t === 'add' ? '➕ ' + (r.c || '加購') : r.c || '其他', n: b, full: t === 'item' ? fullName(r.c, b) : b, v: [], og, temps: new Set()}); }
+    const o = out[idx[k]]; if (T.t) o.temps.add(T.t); if (!o.v.some(x => x.s === z && x.p === r.p) && !(T.t && !z && o.v.some(x => x.p === r.p))) o.v.push({s: z, p: r.p}); });
+  /* 沒有歸屬到系列、但有價格的選項，當成一般品項 */
+  ogs.filter(g => !owned.has(g.c)).forEach(g => g.L.forEach(r => { if (r.p) out.push({t: 'opt', rc: g.c, c: '🧩 ' + (g.owner ? g.owner + '・' + g.label : g.label), n: r.n, full: r.n, v: [{s: '', p: r.p}], og: [], temps: new Set()}); }));
+  const csz = {}; out.forEach(o => o.v.forEach(v => { if (v.s) (csz[o.rc] = csz[o.rc] || new Set()).add(v.s); }));
+  out.forEach(o => { if (!o.temps.size || !o.v.some(v => v.s)) return; o.v.forEach(v => { if (v.s) return; const miss = [...(csz[o.rc] || [])].filter(z => !o.v.some(y => y.s === z)); if (miss.length === 1) v.s = miss[0]; }); });
+  const ct = {}; out.forEach(o => o.temps.forEach(t => (ct[o.rc] = ct[o.rc] || new Set()).add(t)));
+  const fin = []; out.forEach(o => { const tp = ct[o.rc]; if (tp && tp.size > 1 && o.t === 'item' && !o.og.some(g => /溫度/.test(g.label))) o.og = o.og.concat([{label: '溫度', tag: '選一', L: [...tp].map(n => ({n, p: ''}))}]);
+    const multi = o.v.length > 1, keep = o.v.filter(v => !v.s || isSizeWord(v.s, multi));
     if (keep.length) fin.push(Object.assign({}, o, {v: keep.sort((a, b) => szRank(a.s) - szRank(b.s))}));
-    o.v.filter(v => v.s && !isSizeWord(v.s, multi)).forEach(v => fin.push({t: o.t, c: o.c, n: o.n + ' (' + v.s + ')', v: [{s: '', p: v.p}]})); });
+    o.v.filter(v => v.s && !isSizeWord(v.s, multi)).forEach(v => { const n = o.n + ' (' + v.s + ')'; fin.push(Object.assign({}, o, {n, full: o.t === 'item' ? fullName(o.rc, n) : n, v: [{s: '', p: v.p}]})); }); });
   return {list: fin, regs: rgSorted(regs), cur};
 }
+/* 點的品項有系列選項（麵包、醬料、冰／熱）時，先選選項，加價會算進單價 */
+function pickOpts(o, v) {
+  return new Promise(res => { let done = false; const ch = o.og.map(g => g.multi ? [] : [g.L.length && /溫度/.test(g.label) ? 0 : -1]);
+    const sh = sheet({title: o.full + (v.s ? ` (${v.s})` : ''), foot: '<div class="grow ordTot" id="poT"></div><button class="btn pri" data-a="ok" style="flex:0 0 auto">加入</button>', onClose() { if (!done) res(null); }});
+    const calc = () => { let add = 0; const names = []; o.og.forEach((g, gi) => ch[gi].filter(i => i >= 0).forEach(i => { add += numP(g.L[i].p); names.push(g.L[i].n); })); return {add, names}; };
+    const draw = () => { sh.body.innerHTML = o.og.map((g, gi) => `<div class="poG"><div class="lbl">${esc(g.label)}${g.tag ? ` <span class="tag">${esc(g.tag)}</span>` : ''}</div><div class="whoRow">${g.multi ? '' : `<button data-g="${gi}" data-i="-1" class="${ch[gi][0] === -1 ? 'on' : ''}">不選</button>`}${g.L.map((r, i) => `<button data-g="${gi}" data-i="${i}" class="${ch[gi].includes(i) ? 'on' : ''}">${esc(r.n)}${numP(r.p) ? ` <small>+$${numP(r.p)}</small>` : ''}</button>`).join('')}</div></div>`).join('');
+      const c = calc(); $('#poT', sh.foot).innerHTML = `單價 <b>${money(numP(v.p) + c.add)}</b>${c.names.length ? ' · ' + esc(c.names.join('、')) : ''}`; };
+    draw();
+    sh.body.onclick = e => { const b = e.target.closest('[data-g]'); if (!b) return; const gi = +b.dataset.g, i = +b.dataset.i, g = o.og[gi]; buzz(8);
+      if (g.multi) { const k = ch[gi].indexOf(i); if (k < 0) ch[gi].push(i); else ch[gi].splice(k, 1); } else ch[gi] = [i]; draw(); };
+    sh.foot.onclick = e => { if (!e.target.closest('[data-a="ok"]')) return; const c = calc(); done = true; sh.close(); res({o: c.names.join('、'), add: c.add}); }; });
+}
+const xTags = x => `${x.s ? ` <span class="szT">${esc(x.s)}</span>` : ''}${x.o ? ` <span class="opT">${esc(x.o)}</span>` : ''}`;
+const xParen = x => { const a = [x.s, x.o].filter(Boolean); return a.length ? '(' + a.join('、') + ')' : ''; };
 function openOrder(m) {
   const P = DB.places.find(x => x.id === m.place), T = mType(m.type);
   let who = m.lastWho && DB.mcfg.people.some(u => u.id === m.lastWho) ? m.lastWho : (DB.mcfg.people[0] || {}).id, q = '', cat = '', rg = P ? P.rgSel : '';
   const sh = sheet({title: `${T.icon} ${T.name}${P || m.pname ? ' · ' + (P ? P.name : m.pname) : ''}`, full: true, foot: '<div class="grow ordTot" id="oTot"></div><button class="btn pri" data-a="done" style="flex:0 0 auto">完成</button>', onClose() { renderMeal(); }});
-  const cnt = (n, s, p) => m.items.filter(x => x.who === who && x.n === n && (x.s || '') === (s || '') && String(x.p) === String(numP(p))).reduce((a, x) => a + x.q, 0);
-  const add = (n, s, p) => { if (!who) { toast('請先新增要點餐的人'); return; } const pv = numP(p), x = m.items.find(i => i.who === who && i.n === n && (i.s || '') === (s || '') && numP(i.p) === pv);
-    if (x) x.q++; else m.items.push({id: 'i' + uid(), who, n, s: s || '', p: pv, q: 1}); m.lastWho = who; buzz(12); saveDays(); draw(); };
+  let LIST = [];
+  const cnt = (n, s) => m.items.filter(x => x.who === who && x.n === n && (x.s || '') === (s || '')).reduce((a, x) => a + x.q, 0);
+  const add = (n, s, p, o) => { if (!who) { toast('請先新增要點餐的人'); return; } const pv = numP(p), x = m.items.find(i => i.who === who && i.n === n && (i.s || '') === (s || '') && (i.o || '') === (o || '') && numP(i.p) === pv);
+    if (x) x.q++; else m.items.push(Object.assign({id: 'i' + uid(), who, n, s: s || '', p: pv, q: 1}, o ? {o} : {})); m.lastWho = who; buzz(12); saveDays(); draw(); };
   const draw = () => { const C = P ? menuChoices(P, rg) : {list: [], regs: [], cur: ''}; rg = C.cur;
-    const cus = DB.mcfg.custom.filter(c => (m.place ? c.place === m.place : c.pname === m.pname)).map(c => ({t: 'cus', c: '⭐ 自訂品項', n: c.n, v: [{s: '', p: c.p}], cid: c.id}));
+    const cus = DB.mcfg.custom.filter(c => (m.place ? c.place === m.place : c.pname === m.pname)).map(c => ({t: 'cus', c: '⭐ 自訂品項', n: c.n, full: c.n, og: [], v: [{s: '', p: c.p}], cid: c.id}));
     const all = cus.concat(C.list), cats = [...new Set(all.map(o => o.c))], hit = o => (!q || o.n.toLowerCase().includes(q)) && (!cat || o.c === cat);
-    const L = all.filter(hit), mine = m.items.filter(x => x.who === who), tot = mealTotal(m);
+    const L = all.filter(hit); LIST = L; const mine = m.items.filter(x => x.who === who), tot = mealTotal(m);
     sh.body.innerHTML = `<div class="ordWho"><span class="lbl">誰要吃</span><div class="whoRow">${DB.mcfg.people.map(u => { const n = m.items.filter(x => x.who === u.id).reduce((a, x) => a + x.q, 0); return `<button data-who="${u.id}" class="${u.id === who ? 'on' : ''}"><span>${esc(u.icon)}</span>${esc(u.name)}${n ? `<i>${n}</i>` : ''}</button>`; }).join('')}<button data-a="newWho" class="add">＋ 新增人名</button></div></div>
-      ${mine.length ? `<div class="ordMine"><div class="omH">${esc(mWho(who).icon)} ${esc(mWho(who).name)} 已點 <b>${money(mine.reduce((s, x) => s + numP(x.p) * x.q, 0))}</b></div>${mine.map(x => `<div class="omR" data-i="${x.id}"><span class="grow">${esc(x.n)}${x.s ? ' <span class="szT">' + esc(x.s) + '</span>' : ''}</span><span class="muted">${money(x.p)}</span><span class="q"><button data-a="om">−</button><b>${x.q}</b><button data-a="op">＋</button></span></div>`).join('')}</div>` : ''}
+      ${mine.length ? `<div class="ordMine"><div class="omH">${esc(mWho(who).icon)} ${esc(mWho(who).name)} 已點 <b>${money(mine.reduce((s, x) => s + numP(x.p) * x.q, 0))}</b></div>${mine.map(x => `<div class="omR" data-i="${x.id}"><span class="grow">${esc(x.n)}${xTags(x)}</span><span class="muted">${money(x.p)}</span><span class="q"><button data-a="om">−</button><b>${x.q}</b><button data-a="op">＋</button></span></div>`).join('')}</div>` : ''}
       ${C.regs.length > 1 ? `<div class="regBar"><span>📍 區域</span><div class="seg">${C.regs.map(r => `<button data-rg="${esc(r)}" class="${r === rg ? 'on' : ''}">${esc(r)}</button>`).join('')}</div></div>` : ''}
       ${all.length ? `<div class="searchBox" style="margin:.2rem 0 .5rem"><input id="oQ" type="search" placeholder="搜尋品項…" value="${esc(q)}"></div>${cats.length > 1 ? `<div class="chipRow ordCats"><button class="chip ${cat ? '' : 'on'}" data-cat="">全部</button>${cats.map(c => `<button class="chip ${c === cat ? 'on' : ''}" data-cat="${esc(c)}">${esc(c)}</button>`).join('')}</div>` : ''}` : ''}
       <div class="ordList">${L.length ? (() => { let lc = ''; return L.map(o => { const h = o.c !== lc ? `<div class="olC">${esc(o.c)}</div>` : ''; lc = o.c;
-          return h + `<div class="olR"><div class="grow olN">${esc(o.n)}</div><div class="olV">${o.v.map(v => { const k = cnt(o.n, v.s, v.p); return `<button data-n="${esc(o.n)}" data-s="${esc(v.s)}" data-p="${esc(v.p)}" class="${k ? 'on' : ''}">${v.s ? `<small>${esc(v.s)}</small>` : ''}${o.t === 'add' ? '+' : ''}${numP(v.p) || v.p === '0' ? money(v.p) : esc(v.p || '價格?')}${k ? `<i>${k}</i>` : ''}</button>`; }).join('')}</div></div>`; }).join(''); })()
+          const oi = L.indexOf(o); return h + `<div class="olR"><div class="grow olN">${esc(o.n)}${o.og && o.og.length ? `<small class="olO">可選：${esc(o.og.map(g => g.label).join('、'))}</small>` : ''}</div><div class="olV">${o.v.map((v, vi) => { const k = cnt(o.full || o.n, v.s); return `<button data-oi="${oi}" data-vi="${vi}" class="${k ? 'on' : ''}">${v.s ? `<small>${esc(v.s)}</small>` : ''}${o.t === 'add' ? '+' : ''}${numP(v.p) || v.p === '0' ? money(v.p) : esc(v.p || '價格?')}${k ? `<i>${k}</i>` : ''}</button>`; }).join('')}</div></div>`; }).join(''); })()
         : `<div class="empty" style="padding:1.2rem">${!P ? (m.pname ? '這家店不在收藏裡，可以用下面的「自訂品項」輸入' : '還沒有選店家，可以用下面的「自訂品項」輸入') : !(P.menu || []).length ? '這家店還沒有菜單表格<br><span class="small">到收藏打開店家，用「AI 辨識成表格」建立菜單；或用下面的「自訂品項」</span>' : '找不到符合的品項'}</div>`}</div>
       <div class="ordCus"><div class="lbl">自訂品項（菜單沒有的，會記住下次可以直接點）</div><div class="row" style="gap:.4rem"><input id="cN" placeholder="品名" maxlength="30" class="grow"><input id="cP" placeholder="單價" inputmode="decimal" style="width:5.5rem"><button class="btn sm pri" data-a="cusAdd">加入</button></div></div>`;
     $('#oTot', sh.foot).innerHTML = `這餐 ${m.items.reduce((s, x) => s + x.q, 0)} 份 · <b>${money(tot)}</b>`;
@@ -163,7 +184,8 @@ function openOrder(m) {
     if (b.dataset.who) { who = b.dataset.who; draw(); }
     else if (b.dataset.rg != null) { rg = b.dataset.rg; draw(); }
     else if (b.dataset.cat != null) { cat = b.dataset.cat; draw(); }
-    else if (b.dataset.n != null) add(b.dataset.n, b.dataset.s, b.dataset.p);
+    else if (b.dataset.oi != null) { const o = LIST[+b.dataset.oi], v = o && o.v[+b.dataset.vi]; if (!v) return;
+      if (o.og && o.og.length) { const r = await pickOpts(o, v); if (!r) return; add(o.full || o.n, v.s, numP(v.p) + r.add, r.o); } else add(o.full || o.n, v.s, v.p); }
     else if (b.dataset.a === 'newWho') editMealCfg('people', null, u => { if (u) who = u.id; draw(); });
     else if (b.dataset.a === 'om' || b.dataset.a === 'op') { const x = m.items.find(i => i.id === b.closest('.omR').dataset.i); if (!x) return; buzz(10); if (b.dataset.a === 'op') x.q++; else if (--x.q <= 0) m.items.splice(m.items.indexOf(x), 1); saveDays(); draw(); }
     else if (b.dataset.a === 'cusAdd') { const n = $('#cN', sh.body).value.trim(), p = numP($('#cP', sh.body).value); if (!n) { toast('請輸入品名'); return; }
@@ -176,11 +198,12 @@ function editMealItem(m, x) {
   const sh = sheet({title: '編輯品項', foot: '<button class="btn danger" data-a="del" style="flex:0 0 auto">刪除</button><button class="btn pri" data-a="ok">儲存</button>'});
   sh.body.innerHTML = `<div class="field"><label>品名</label><input id="eN" value="${esc(x.n)}" maxlength="40"></div>
     <div class="row" style="gap:.6rem"><div class="field grow"><label>尺寸／備註</label><input id="eS" value="${esc(x.s || '')}" maxlength="12" placeholder="例如 L、大碗、去冰"></div><div class="field" style="width:6rem"><label>單價</label><input id="eP" value="${esc(x.p)}" inputmode="decimal"></div><div class="field" style="width:5rem"><label>數量</label><input id="eQ" value="${x.q}" inputmode="numeric"></div></div>
+    <div class="field"><label>選項</label><input id="eO" value="${esc(x.o || '')}" maxlength="40" placeholder="例如 漢堡、辣味、熱"></div>
     <div class="field"><label>誰要吃</label><div class="whoRow">${DB.mcfg.people.map(u => `<button data-who="${u.id}" class="${u.id === x.who ? 'on' : ''}"><span>${esc(u.icon)}</span>${esc(u.name)}</button>`).join('')}</div></div>`;
   let who = x.who; sh.body.onclick = e => { const b = e.target.closest('[data-who]'); if (!b) return; who = b.dataset.who; $$('[data-who]', sh.body).forEach(k => k.classList.toggle('on', k === b)); };
   sh.foot.onclick = async e => { const b = e.target.closest('[data-a]'); if (!b) return;
     if (b.dataset.a === 'del') { if (!await ask(`要刪除「${x.n}」嗎？`, '刪除', true)) return; m.items.splice(m.items.indexOf(x), 1); }
-    else { const n = $('#eN', sh.body).value.trim(); if (!n) { toast('請輸入品名'); return; } Object.assign(x, {n, s: $('#eS', sh.body).value.trim(), p: numP($('#eP', sh.body).value), q: Math.max(1, parseInt($('#eQ', sh.body).value) || 1), who}); }
+    else { const n = $('#eN', sh.body).value.trim(); if (!n) { toast('請輸入品名'); return; } const ov = $('#eO', sh.body).value.trim(); if (ov) x.o = ov; else delete x.o; Object.assign(x, {n, s: $('#eS', sh.body).value.trim(), p: numP($('#eP', sh.body).value), q: Math.max(1, parseInt($('#eQ', sh.body).value) || 1), who}); }
     sh.close(); mealChanged(); };
 }
 
@@ -225,13 +248,13 @@ function editMealCfg(k, it, done) {
 const mealPhone = m => { const P = DB.places.find(x => x.id === m.place); return (P ? P.phone : m.phone) || ''; };
 const storeName = m => { const P = DB.places.find(x => x.id === m.place); return P ? P.name : m.pname || ''; };
 const dayLabel = k => { const d = ymdDate(k); return `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}（${MWD[d.getDay()]}）`; };
-const itemTxt = x => `${x.n}${x.s ? '(' + x.s + ')' : ''}×${x.q}`;
+const itemTxt = x => `${x.n}${xParen(x)}×${x.q}`;
 function personLines(m, amt) { const ids = []; DB.mcfg.people.map(u => u.id).concat((m.items || []).map(x => x.who)).forEach(id => { if (!ids.includes(id) && m.items.some(x => x.who === id)) ids.push(id); });
   return ids.map(id => { const xs = m.items.filter(x => x.who === id); return `${mWho(id).name}：${xs.map(itemTxt).join('、')}${amt ? `（${money(xs.reduce((s, x) => s + numP(x.p) * x.q, 0))}）` : ''}`; }); }
 /* 模板二：人名一行，下面每個品項一行「品名[NT$ 單價]×數量」，人和人之間空一行 */
 const ntd = v => 'NT$ ' + (Math.round((+v || 0) * 100) / 100).toLocaleString('en-US');
 function personBlock(m, amt) { const ids = [], out = []; DB.mcfg.people.map(u => u.id).concat((m.items || []).map(x => x.who)).forEach(id => { if (!ids.includes(id) && m.items.some(x => x.who === id)) ids.push(id); });
-  ids.forEach((id, i) => { const xs = m.items.filter(x => x.who === id); if (i) out.push(''); out.push(mWho(id).name + '：'); xs.forEach(x => out.push(`${x.n}${x.s ? '(' + x.s + ')' : ''}[${ntd(x.p)}]×${x.q}`)); if (amt) out.push(`小計：${ntd(xs.reduce((s, x) => s + numP(x.p) * x.q, 0))}`); });
+  ids.forEach((id, i) => { const xs = m.items.filter(x => x.who === id); out.push(mWho(id).name + '：'); xs.forEach(x => out.push(`${x.n}${xParen(x)}[${ntd(x.p)}]×${x.q}`)); if (amt) out.push(`小計：${ntd(xs.reduce((s, x) => s + numP(x.p) * x.q, 0))}`); });
   return out; }
 function openMealSearch() {
   let q = ''; const sh = sheet({title: '🔍 搜尋吃過的店家', full: true});
@@ -270,11 +293,11 @@ function openExport(k, mid) {
 }
 /* 產生 .xlsx（不用外部程式庫：手寫 OOXML + 不壓縮的 zip） */
 function mealXlsx(k, L) {
-  const rows = [[{v: '食光地圖 點餐紀錄　' + dayLabel(k), s: 2}], [], ['日期', '餐別', '店家', '人名', '品項', '尺寸', '單價', '數量', '小計'].map(v => ({v, s: 1}))];
+  const rows = [[{v: '食光地圖 點餐紀錄　' + dayLabel(k), s: 2}], [], ['日期', '餐別', '店家', '人名', '品項', '尺寸／選項', '單價', '數量', '小計'].map(v => ({v, s: 1}))];
   const per = {};
   L.forEach(m => { const T = mType(m.type), nm = storeName(m); personLines(m, false);
     const ids = []; DB.mcfg.people.map(u => u.id).concat(m.items.map(x => x.who)).forEach(id => { if (!ids.includes(id) && m.items.some(x => x.who === id)) ids.push(id); });
-    ids.forEach(id => m.items.filter(x => x.who === id).forEach(x => { const st = numP(x.p) * x.q; per[id] = (per[id] || 0) + st; rows.push([k, T.name, nm, mWho(id).name, x.n, x.s || '', numP(x.p), x.q, st]); }));
+    ids.forEach(id => m.items.filter(x => x.who === id).forEach(x => { const st = numP(x.p) * x.q; per[id] = (per[id] || 0) + st; rows.push([k, T.name, nm, mWho(id).name, x.n, [x.s, x.o].filter(Boolean).join('、'), numP(x.p), x.q, st]); }));
     rows.push(['', '', '', '', {v: T.name + '合計', s: 1}, '', '', m.items.reduce((s, x) => s + x.q, 0), {v: mealTotal(m), s: 1}]); });
   rows.push([], [{v: '每人總計', s: 1}]); Object.keys(per).sort((x, y) => DB.mcfg.people.findIndex(u => u.id === x) - DB.mcfg.people.findIndex(u => u.id === y)).forEach(id => rows.push([mWho(id).name, per[id]])); rows.push([{v: '全部合計', s: 1}, {v: L.reduce((s, m) => s + mealTotal(m), 0), s: 1}]);
   rows.push([], [{v: '統整文字', s: 1}]); L.forEach(m => { rows.push([`【${mType(m.type).name}】${storeName(m)}`]); personLines(m, false).forEach(t => rows.push([t])); });

@@ -590,3 +590,16 @@ table.piv .s.pr.one{text-align:center;padding-right:.5rem}
 .mlH{padding-left:.9rem}
 .mlTel{flex:none;width:2.4rem;height:2.4rem;border-radius:6px;background:var(--surface-3);border:1px solid var(--border);font-size:1.1rem}
 .mlTel.none{opacity:.5}
+/* 系列共用選項（麵包、醬料、冰／熱） */
+.mcO{padding:.5rem .8rem .55rem;background:color-mix(in srgb,var(--accent) 7%,var(--surface-3));border-bottom:1px solid var(--border-soft);display:flex;flex-direction:column;gap:.35rem}
+.mcOR{display:flex;align-items:flex-start;gap:.4rem;font-size:.8rem;line-height:1.5}
+.mcOR>b{flex:none;color:var(--accent-2);min-width:2.6rem}
+.mcOR .tag{flex:none;font-size:.66rem;padding:0 .35rem}
+.mcOL{display:flex;flex-wrap:wrap;gap:.25rem .3rem}
+.mcOL span{padding:0 .45rem;border-radius:4px;background:var(--surface);border:1px solid var(--border-soft);white-space:nowrap}
+.mcOL em{font-style:normal;color:var(--danger,#c0392b);font-weight:700;margin-left:.15rem;font-size:.74rem}
+.opT{display:inline-block;font-size:.7rem;font-weight:700;padding:0 .3rem;border-radius:4px;background:var(--surface-2);border:1px solid var(--border-soft);color:var(--text-2);vertical-align:1px}
+.olO{display:block;font-size:.7rem;color:var(--muted);margin-top:.1rem}
+.poG{margin-bottom:.9rem}
+.poG .whoRow button small{color:var(--danger,#c0392b);font-weight:800}
+.poG .whoRow button.on small{color:inherit}
