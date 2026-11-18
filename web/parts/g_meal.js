@@ -30,9 +30,9 @@ function renderMeal() {
   const yrs = []; for (let y = Math.min(yNow - 5, Y); y <= Math.max(yNow + 2, Y); y++) yrs.push(y);
   let cells = ''; for (let i = 0; i < first.getDay(); i++) cells += '<span class="cd emp"></span>';
   for (let d = 1; d <= nd; d++) { const k = ymd(new Date(Y, Mo, d)), ms = DB.days[k] || [], t = dayTotal(k), dow = (first.getDay() + d - 1) % 7;
-    cells += `<button class="cd ${k === Meal.sel ? 'sel' : ''} ${k === today ? 'tdy' : ''} ${dow === 0 || dow === 6 ? 'we' : ''}" data-d="${k}"><b>${d}</b>${ms.length ? `<i>${ms.slice(0, 4).map(m => esc(mType(m.type).icon)).join('')}</i>${t ? `<small>${money(t)}</small>` : ''}` : ''}</button>`; }
+    cells += `<button class="cd ${k === Meal.sel ? 'sel' : ''} ${k === today ? 'tdy' : ''} ${dow === 0 || dow === 6 ? 'we' : ''}" data-d="${k}"><b>${d}</b>${ms.length ? '<em class="dot"></em>' : ''}</button>`; }
   const ms = DB.days[Meal.sel] || [];
-  $('#mealSub').textContent = `${sel.getMonth() + 1}月${sel.getDate()}日（${MWD[sel.getDay()]}）${ms.length ? ' · ' + ms.length + ' 餐 · ' + money(dayTotal(Meal.sel)) : ''}`;
+  $('#mealSub').textContent = `${sel.getMonth() + 1}月${sel.getDate()}日（${MWD[sel.getDay()]}）${ms.length ? ' · ' + ms.length + ' 餐' : ''}`;
   /* 每個人今天的總金額 */
   const per = {}; ms.forEach(m => (m.items || []).forEach(x => { per[x.who] = (per[x.who] || 0) + numP(x.p) * (x.q || 0); }));
   const order = DB.mcfg.people.map(u => u.id).concat(Object.keys(per).filter(id => !DB.mcfg.people.some(u => u.id === id))).filter(id => per[id] != null);
@@ -40,7 +40,7 @@ function renderMeal() {
       <div class="calTop"><button class="ic" data-a="pm" aria-label="上個月">‹</button><select id="calY" aria-label="年">${yrs.map(y => `<option value="${y}" ${y === Y ? 'selected' : ''}>${y} 年</option>`).join('')}</select><select id="calM" aria-label="月">${Array.from({length: 12}, (_, i) => `<option value="${i}" ${i === Mo ? 'selected' : ''}>${i + 1} 月</option>`).join('')}</select><button class="ic" data-a="nm" aria-label="下個月">›</button></div>
       <div class="calWd">${MWD.map((w, i) => `<span class="${i === 0 || i === 6 ? 'we' : ''}">${w}</span>`).join('')}</div>
       <div class="calG">${cells}</div></div>
-    <div class="dayHead"><b>${sel.getMonth() + 1}月${sel.getDate()}日 星期${MWD[sel.getDay()]}</b>${Meal.sel === today ? '<span class="tag">今天</span>' : ''}<span class="grow"></span>${ms.length ? `<span class="dayTot">${money(dayTotal(Meal.sel))}</span>` : ''}</div>
+    <div class="dayHead"><b>${sel.getMonth() + 1}月${sel.getDate()}日 星期${MWD[sel.getDay()]}</b>${Meal.sel === today ? '<span class="tag">今天</span>' : ''}<span class="grow"></span>${ms.length ? `<span class="dayTot">${money(dayTotal(Meal.sel))}</span><button class="btn sm" data-a="export">📤 匯出</button>` : ''}</div>
     ${ms.map(mealCard).join('') || '<div class="empty mealEmpty"><span class="big">🍽️</span>這天還沒有安排要吃什麼<br><span class="small">按下面的「新增餐點」選餐別和店家</span></div>'}
     <button class="btn pri mealAdd" data-a="addMeal">＋ 新增餐點</button>
     ${order.length ? `<div class="perSum card"><div class="psH">👥 每個人這天的總金額</div>${order.map(id => { const u = mWho(id); return `<div class="psR"><span class="psI">${esc(u.icon)}</span><b class="grow">${esc(u.name)}</b><span>${money(per[id])}</span></div>`; }).join('')}<div class="psR tot"><b class="grow">合計</b><span>${money(dayTotal(Meal.sel))}</span></div></div>` : ''}`;
@@ -62,7 +62,7 @@ function mealChanged() { const L = DB.days[Meal.sel]; if (L && !L.length) delete
 function initMeal() {
   const box = $('#mealBody');
   $('#mealToday').onclick = () => { const d = new Date(); Meal.sel = ymd(d); Meal.ym = [d.getFullYear(), d.getMonth()]; renderMeal(); };
-  $('#mealSet').onclick = () => openMealSettings();
+  $('#mealSet').onclick = () => openMealSettings(); $('#mealFind').onclick = () => openMealSearch();
   box.addEventListener('change', e => { if (e.target.id === 'calY') Meal.ym[0] = +e.target.value; else if (e.target.id === 'calM') Meal.ym[1] = +e.target.value; else return;
     const nd = new Date(Meal.ym[0], Meal.ym[1] + 1, 0).getDate(), d = Math.min(ymdDate(Meal.sel).getDate(), nd); Meal.sel = ymd(new Date(Meal.ym[0], Meal.ym[1], d)); renderMeal(); });
   box.addEventListener('click', async e => { const b = e.target.closest('[data-a],[data-d]'); if (!b) return;
@@ -71,6 +71,7 @@ function initMeal() {
     if (a === 'pm' || a === 'nm') { const d = new Date(Meal.ym[0], Meal.ym[1] + (a === 'pm' ? -1 : 1), 1); Meal.ym = [d.getFullYear(), d.getMonth()]; const nd = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate(); Meal.sel = ymd(new Date(d.getFullYear(), d.getMonth(), Math.min(ymdDate(Meal.sel).getDate(), nd))); renderMeal(); }
     else if (a === 'addMeal') { const t = await pickMealType(); if (!t) return; const st = await pickStore(); if (st === undefined) return;
       const nm = {id: 'm' + uid(), type: t.id, place: st ? st.id || '' : '', pname: st ? st.name : '', items: []}; (DB.days[Meal.sel] = DB.days[Meal.sel] || []).push(nm); mealChanged(); openOrder(nm); }
+    else if (a === 'export') openExport(Meal.sel);
     else if (!m) return;
     else if (a === 'order') openOrder(m);
     else if (a === 'store') { const st = await pickStore(m.place); if (st === undefined) return; m.place = st ? st.id || '' : ''; m.pname = st ? st.name : ''; mealChanged(); }
@@ -82,11 +83,12 @@ function initMeal() {
 async function mealMore(m) {
   const T = mType(m.type), sh = sheet({title: T.icon + ' ' + T.name, html: `<div class="actList">
     <button data-a="type">🔁 改成其他餐別</button><button data-a="store">🏪 更換店家</button>${DB.places.some(p => p.id === m.place) ? '<button data-a="open">📋 打開店家與菜單</button>' : ''}
-    <button data-a="copy">📅 複製到其他日期</button><button data-a="del" class="dng">🗑 刪除這一餐</button></div>`});
+    <button data-a="exp">📤 匯出這一餐（文字／Excel）</button><button data-a="copy">📅 複製到其他日期</button><button data-a="del" class="dng">🗑 刪除這一餐</button></div>`});
   sh.body.onclick = async e => { const b = e.target.closest('[data-a]'); if (!b) return; const a = b.dataset.a; sh.close();
     if (a === 'type') { const t = await pickMealType(m.type); if (t) { m.type = t.id; mealChanged(); } }
     else if (a === 'store') { const st = await pickStore(m.place); if (st !== undefined) { m.place = st ? st.id || '' : ''; m.pname = st ? st.name : ''; mealChanged(); } }
     else if (a === 'open') openPlace(m.place, true);
+    else if (a === 'exp') openExport(Meal.sel, m.id);
     else if (a === 'copy') { const v = await askText('複製到哪一天？（年-月-日）', ymd(new Date(ymdDate(Meal.sel).getTime() + 864e5)), '例如 2026-11-20'); if (!v) return; const k = v.trim().replace(/[/.]/g, '-'); const d = new Date(k + 'T00:00');
       if (isNaN(d)) { toast('日期格式不正確'); return; } const c = JSON.parse(JSON.stringify(m)); c.id = 'm' + uid(); c.items.forEach(x => { x.id = 'i' + uid(); }); (DB.days[ymd(d)] = DB.days[ymd(d)] || []).push(c); saveDays(); renderMeal(); toast(`已複製到 ${ymd(d)}`); }
     else if (a === 'del') { if (!await ask(`確定要刪除這一餐（${T.name}${m.pname ? '・' + m.pname : ''}）嗎？`, '刪除', true)) return; const L = DB.days[Meal.sel]; L.splice(L.indexOf(m), 1); mealChanged(); } };
@@ -126,8 +128,11 @@ function menuChoices(p, rg) {
     if (idx[k] == null) { idx[k] = out.length; out.push({t, c: t === 'add' ? '➕ ' + (r.c || '加購') : t === 'opt' ? '🧩 ' + (r.c || '選項') : r.c || '其他', n: b, v: []}); }
     const v = out[idx[k]].v; if (!v.some(x => x.s === z && x.p === r.p)) v.push({s: z, p: r.p}); });
   /* 只有一種份量、又不是 S/M/L/瓶 這類尺寸的（日式炸蝦 (4隻)），份量留在品名裡 */
-  out.forEach(o => { if (o.v.length === 1 && o.v[0].s && !SZ_ORDER.includes(o.v[0].s.toUpperCase()) && !/杯|瓶|罐|碗/.test(o.v[0].s)) { o.n += ' (' + o.v[0].s + ')'; o.v[0].s = ''; } o.v.sort((a, b) => szRank(a.s) - szRank(b.s)); });
-  return {list: out, regs: rgSorted(regs), cur};
+  /* 乾／湯、高麗菜／韭菜、4隻 這種不是尺寸：拆成各自一個品項，括號留在品名裡 */
+  const fin = []; out.forEach(o => { const multi = o.v.length > 1, keep = o.v.filter(v => !v.s || isSizeWord(v.s, multi));
+    if (keep.length) fin.push(Object.assign({}, o, {v: keep.sort((a, b) => szRank(a.s) - szRank(b.s))}));
+    o.v.filter(v => v.s && !isSizeWord(v.s, multi)).forEach(v => fin.push({t: o.t, c: o.c, n: o.n + ' (' + v.s + ')', v: [{s: '', p: v.p}]})); });
+  return {list: fin, regs: rgSorted(regs), cur};
 }
 function openOrder(m) {
   const P = DB.places.find(x => x.id === m.place), T = mType(m.type);
@@ -211,4 +216,78 @@ function editMealCfg(k, it, done) {
     if (b.dataset.a === 'del') { if (!await ask(`確定要刪除${K.title}「${it.name}」嗎？${K.used(it.id) ? '\n已經有紀錄用到它，紀錄會保留，但會顯示成「已刪除」。' : ''}`, '刪除', true)) return; L.splice(L.indexOf(it), 1); saveMcfg(); sh.close(); done && done(null); return; }
     if (!d.name) { toast('請輸入名稱'); $('#eN', sh.body).focus(); return; }
     let out; if (isNew) { d.id = (k === 'types' ? 't' : 'u') + uid(); L.push(d); out = d; } else { Object.assign(it, d); out = it; } saveMcfg(); sh.close(); done && done(out); };
+}
+
+/* ---------- 搜尋：吃過哪家店、哪幾天、吃了什麼、多少錢 ---------- */
+const storeName = m => { const P = DB.places.find(x => x.id === m.place); return P ? P.name : m.pname || ''; };
+const dayLabel = k => { const d = ymdDate(k); return `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}（${MWD[d.getDay()]}）`; };
+const itemTxt = x => `${x.n}${x.s ? '(' + x.s + ')' : ''}×${x.q}`;
+function personLines(m, amt) { const ids = []; DB.mcfg.people.map(u => u.id).concat((m.items || []).map(x => x.who)).forEach(id => { if (!ids.includes(id) && m.items.some(x => x.who === id)) ids.push(id); });
+  return ids.map(id => { const xs = m.items.filter(x => x.who === id); return `${mWho(id).name}：${xs.map(itemTxt).join('、')}${amt ? `（${money(xs.reduce((s, x) => s + numP(x.p) * x.q, 0))}）` : ''}`; }); }
+function openMealSearch() {
+  let q = ''; const sh = sheet({title: '🔍 搜尋吃過的店家', full: true});
+  sh.body.innerHTML = `<div class="searchBox" style="margin-bottom:.8rem"><input id="msQ" type="search" placeholder="輸入店名或品項，例如：鴨香飯"></div><div id="msR"></div>`;
+  const draw = () => { const by = {};
+    Object.keys(DB.days).sort().reverse().forEach(k => DB.days[k].forEach(m => { const nm = storeName(m) || '未選店家', hit = !q || nm.toLowerCase().includes(q) || m.items.some(x => x.n.toLowerCase().includes(q)); if (!hit) return;
+      const key = m.place || 'n:' + nm; (by[key] = by[key] || {nm, place: m.place, rows: []}).rows.push({k, m}); }));
+    const G = Object.values(by);
+    $('#msR', sh.body).innerHTML = G.length ? `<div class="small muted" style="margin-bottom:.6rem">${q ? '找到' : '吃過'} ${G.length} 家店</div>` + G.map(g => { const tot = g.rows.reduce((s, r) => s + mealTotal(r.m), 0);
+      return `<div class="srS"><div class="srH"><b class="grow">🏪 ${esc(g.nm)}</b><span class="muted">${new Set(g.rows.map(r => r.k)).size} 天 · ${money(tot)}</span></div>${g.rows.map(r => { const T = mType(r.m.type);
+        return `<button class="srD" data-k="${r.k}"><div class="row"><b class="grow">${dayLabel(r.k)} ${esc(T.icon)} ${esc(T.name)}</b><span class="srA">${money(mealTotal(r.m))}</span></div>${r.m.items.length ? personLines(r.m, true).map(t => `<div class="srL">${esc(t)}</div>`).join('') : '<div class="srL muted">（沒有點餐內容）</div>'}</button>`; }).join('')}</div>`; }).join('')
+      : `<div class="empty">${Object.keys(DB.days).length ? '找不到符合的店家或品項' : '還沒有任何點餐紀錄'}</div>`; };
+  draw(); $('#msQ', sh.body).oninput = debounce(e => { q = e.target.value.trim().toLowerCase(); draw(); }, 200);
+  sh.body.addEventListener('click', e => { const b = e.target.closest('[data-k]'); if (!b) return; const d = ymdDate(b.dataset.k); Meal.sel = b.dataset.k; Meal.ym = [d.getFullYear(), d.getMonth()]; sh.close(); renderMeal(); $('#pgMeal .pgBody').scrollTop = 0; });
+}
+
+/* ---------- 匯出：統整文字（可複製）或 Excel，選一餐或整天 ---------- */
+function openExport(k, mid) {
+  const ms = DB.days[k] || []; if (!ms.length) { toast('這天沒有點餐紀錄'); return; }
+  let sel = mid || 'all', amt = false; const sh = sheet({title: '📤 匯出點餐', full: true, foot: '<button class="btn" data-a="xlsx">📊 匯出 Excel</button><button class="btn pri" data-a="copy">📋 複製文字</button>'});
+  const pick = () => sel === 'all' ? ms : ms.filter(m => m.id === sel);
+  const text = () => { const L = pick(), out = [dayLabel(k)];
+    L.forEach((m, i) => { const T = mType(m.type), nm = storeName(m); out.push((i || L.length > 1 ? '' : '') + `【${T.name}】${nm}`); out.push(...(m.items.length ? personLines(m, amt) : ['（沒有點餐內容）'])); if (amt) out.push(`${T.name}合計：${money(mealTotal(m))}`); if (i < L.length - 1) out.push(''); });
+    if (amt && L.length > 1) { const per = {}; L.forEach(m => m.items.forEach(x => { per[x.who] = (per[x.who] || 0) + numP(x.p) * x.q; })); out.push('', '【每人總計】', ...Object.keys(per).sort((x, y) => DB.mcfg.people.findIndex(u => u.id === x) - DB.mcfg.people.findIndex(u => u.id === y)).map(id => `${mWho(id).name}：${money(per[id])}`), `全部合計：${money(L.reduce((s, m) => s + mealTotal(m), 0))}`); }
+    return out.join('\n'); };
+  const draw = () => { sh.body.innerHTML = `<div class="lbl">要匯出哪一餐</div><div class="whoRow" style="margin-bottom:.7rem"><button data-s="all" class="${sel === 'all' ? 'on' : ''}">📅 整天全部</button>${ms.map(m => { const T = mType(m.type); return `<button data-s="${m.id}" class="${sel === m.id ? 'on' : ''}"><span>${esc(T.icon)}</span>${esc(T.name)}${storeName(m) ? '・' + esc(storeName(m).slice(0, 8)) : ''}</button>`; }).join('')}</div>
+      <label class="chk"><input type="checkbox" id="exAmt" ${amt ? 'checked' : ''}> 加上金額（每人小計、合計）</label>
+      <div class="lbl" style="margin-top:.7rem">統整文字（可以直接複製貼到 LINE）</div><textarea id="exT" class="exT" rows="12">${esc(text())}</textarea>`;
+    $('#exAmt', sh.body).onchange = e => { amt = e.target.checked; draw(); }; };
+  draw();
+  sh.body.addEventListener('click', e => { const b = e.target.closest('[data-s]'); if (b) { sel = b.dataset.s; draw(); } });
+  sh.foot.addEventListener('click', async e => { const b = e.target.closest('[data-a]'); if (!b) return;
+    if (b.dataset.a === 'copy') copyText($('#exT', sh.body).value);
+    else { try { const L = pick(), d = ymdDate(k), nm = `點餐_${k.replace(/-/g, '')}${sel === 'all' ? '' : '_' + mType(L[0].type).name}.xlsx`; const p = await saveFile(nm, mealXlsx(k, L)); toast(IS_APP ? '已匯出到「下載」資料夾：' + p : '已下載 ' + nm, 4000); void d; } catch (er) { toast('❌ 匯出失敗：' + er.message, 4000); } } });
+}
+/* 產生 .xlsx（不用外部程式庫：手寫 OOXML + 不壓縮的 zip） */
+function mealXlsx(k, L) {
+  const rows = [[{v: '食光地圖 點餐紀錄　' + dayLabel(k), s: 2}], [], ['日期', '餐別', '店家', '人名', '品項', '尺寸', '單價', '數量', '小計'].map(v => ({v, s: 1}))];
+  const per = {};
+  L.forEach(m => { const T = mType(m.type), nm = storeName(m); personLines(m, false);
+    const ids = []; DB.mcfg.people.map(u => u.id).concat(m.items.map(x => x.who)).forEach(id => { if (!ids.includes(id) && m.items.some(x => x.who === id)) ids.push(id); });
+    ids.forEach(id => m.items.filter(x => x.who === id).forEach(x => { const st = numP(x.p) * x.q; per[id] = (per[id] || 0) + st; rows.push([k, T.name, nm, mWho(id).name, x.n, x.s || '', numP(x.p), x.q, st]); }));
+    rows.push(['', '', '', '', {v: T.name + '合計', s: 1}, '', '', m.items.reduce((s, x) => s + x.q, 0), {v: mealTotal(m), s: 1}]); });
+  rows.push([], [{v: '每人總計', s: 1}]); Object.keys(per).sort((x, y) => DB.mcfg.people.findIndex(u => u.id === x) - DB.mcfg.people.findIndex(u => u.id === y)).forEach(id => rows.push([mWho(id).name, per[id]])); rows.push([{v: '全部合計', s: 1}, {v: L.reduce((s, m) => s + mealTotal(m), 0), s: 1}]);
+  rows.push([], [{v: '統整文字', s: 1}]); L.forEach(m => { rows.push([`【${mType(m.type).name}】${storeName(m)}`]); personLines(m, false).forEach(t => rows.push([t])); });
+  const X = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  const col = i => String.fromCharCode(65 + i);
+  const sheetXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><cols><col min="1" max="1" width="12" customWidth="1"/><col min="2" max="2" width="8" customWidth="1"/><col min="3" max="3" width="22" customWidth="1"/><col min="4" max="4" width="10" customWidth="1"/><col min="5" max="5" width="22" customWidth="1"/><col min="6" max="9" width="8" customWidth="1"/></cols><sheetData>${rows.map((r, i) => `<row r="${i + 1}">${r.map((c, j) => { const o = c && typeof c === 'object' ? c : {v: c}, ref = col(j) + (i + 1), st = o.s ? ` s="${o.s}"` : '';
+      return o.v === '' || o.v == null ? '' : typeof o.v === 'number' ? `<c r="${ref}"${st}><v>${o.v}</v></c>` : `<c r="${ref}" t="inlineStr"${st}><is><t xml:space="preserve">${X(o.v)}</t></is></c>`; }).join('')}</row>`).join('')}</sheetData></worksheet>`;
+  return zipStore([
+    {name: '[Content_Types].xml', data: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>'},
+    {name: '_rels/.rels', data: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>'},
+    {name: 'xl/workbook.xml', data: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="點餐" sheetId="1" r:id="rId1"/></sheets></workbook>'},
+    {name: 'xl/_rels/workbook.xml.rels', data: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>'},
+    {name: 'xl/styles.xml', data: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="3"><font><sz val="11"/><name val="Microsoft JhengHei"/></font><font><b/><sz val="11"/><name val="Microsoft JhengHei"/></font><font><b/><sz val="14"/><name val="Microsoft JhengHei"/></font></fonts><fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FFEBDFC8"/></patternFill></fill></fills><borders count="1"><border/></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="3"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/><xf numFmtId="0" fontId="2" fillId="0" borderId="0" xfId="0" applyFont="1"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>'},
+    {name: 'xl/worksheets/sheet1.xml', data: sheetXml}]);
+}
+function crc32(u) { const t = crc32.t || (crc32.t = Array.from({length: 256}, (_, n) => { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; return c >>> 0; })); let c = -1; for (let i = 0; i < u.length; i++) c = (c >>> 8) ^ t[(c ^ u[i]) & 255]; return (c ^ -1) >>> 0; }
+function zipStore(files) {
+  const enc = new TextEncoder(), parts = [], cen = []; let off = 0;
+  files.forEach(f => { const nm = enc.encode(f.name), d = enc.encode(f.data), crc = crc32(d), h = new DataView(new ArrayBuffer(30)), c = new DataView(new ArrayBuffer(46));
+    [[0, 0x04034b50, 4], [4, 20, 2], [6, 0x0800, 2], [8, 0, 2], [10, 0, 2], [12, 0x21, 2], [14, crc, 4], [18, d.length, 4], [22, d.length, 4], [26, nm.length, 2], [28, 0, 2]].forEach(([o, v, n]) => n === 4 ? h.setUint32(o, v, true) : h.setUint16(o, v, true));
+    [[0, 0x02014b50, 4], [4, 20, 2], [6, 20, 2], [8, 0x0800, 2], [10, 0, 2], [12, 0, 2], [14, 0x21, 2], [16, crc, 4], [20, d.length, 4], [24, d.length, 4], [28, nm.length, 2], [30, 0, 2], [32, 0, 2], [34, 0, 2], [36, 0, 2], [38, 0, 4], [42, off, 4]].forEach(([o, v, n]) => n === 4 ? c.setUint32(o, v, true) : c.setUint16(o, v, true));
+    parts.push(h.buffer, nm, d); cen.push(c.buffer, nm); off += 30 + nm.length + d.length; });
+  const cs = cen.reduce((s, b) => s + b.byteLength, 0), e = new DataView(new ArrayBuffer(22));
+  e.setUint32(0, 0x06054b50, true); e.setUint16(8, files.length, true); e.setUint16(10, files.length, true); e.setUint32(12, cs, true); e.setUint32(16, off, true);
+  return new Blob([...parts, ...cen, e.buffer], {type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
 }
