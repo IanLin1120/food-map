@@ -4,7 +4,7 @@
 <script>/* 線上更新開機程式：手機上若已下載比 APK 內建更新的介面版本，就改用新版（存在 IndexedDB）。
    新版連續兩次沒有正常開啟 → 自動退回 APK 內建版本。網址加上 #builtin 也會強制使用內建版本。 */
 (function () {
-  var B = '2.3.1'; if (!window.__OTA) window.APP_BUILTIN = B;
+  var B = '2.3.2'; if (!window.__OTA) window.APP_BUILTIN = B;
   if (window.__OTA || location.hash.indexOf('builtin') >= 0) return;
   var v = null; try { v = JSON.parse(localStorage.getItem('fm.ota') || 'null'); } catch (e) {}
   function gt(a, b) { a = String(a).split('.').map(Number); b = String(b).split('.').map(Number); for (var i = 0; i < Math.max(a.length, b.length); i++) { var p = a[i] || 0, q = b[i] || 0; if (p !== q) return p > q; } return false; }
@@ -782,7 +782,7 @@ return maplibregl$1;
 /* ============================================================
    食光地圖 — 核心：工具、資料儲存、主題、面板、拖曳排序、圖片
    ============================================================ */
-const APP_VERSION = '2.3.1';
+const APP_VERSION = '2.3.2';
 const APP_VER = APP_VERSION;
 /* 線上更新來源（GitHub Pages）：IanLin1120/food-map */
 const GH = {repo: 'https://github.com/IanLin1120/food-map', pages: 'https://ianlin1120.github.io/food-map/'};
@@ -1568,7 +1568,11 @@ function optGroups(rows) { const gs = []; rows.forEach(r => { let g = gs.find(x 
   return gs; }
 const ownsGroup = (c, g) => !!g.owner && (g.owner === c || String(c).includes(g.owner) || g.owner.includes(String(c).replace(/(系列|類|區)$/, '')));
 /* 選項群組是不是專屬某一個品項：標題裡有品名（「拿鐵咖啡溫度」「厚厚好食口味」）就只屬於那個品項 */
-function groupItem(g, names) { let best = ''; names.forEach(n => { n = String(n || ''); if (n.length >= 2 && g.label.includes(n) && n.length > best.length) best = n; }); return best; }
+const lcsStr = (a, b) => { let best = ''; for (let i = 0; i < a.length; i++) for (let j = i + best.length + 1; j <= a.length; j++) { const t = a.slice(i, j); if (b.includes(t)) best = t; else break; } return best; };
+function groupItem(g, names) { let best = ''; names.forEach(n => { n = String(n || ''); if (n.length >= 2 && g.label.includes(n) && n.length > best.length) best = n; }); if (best) return best;
+  /* 標題只寫了品名的一部分（「厚片抹醬」→ 吐司厚片、「鐵板麵醬料」→ 鐵板麵加蛋）：只有一個品項最像、而且像得夠多才算 */
+  const sc = names.map(n => ({n: String(n || ''), k: lcsStr(g.label, String(n || '')).length})).sort((a, b) => b.k - a.k);
+  return sc[0] && sc[0].k >= 2 && (!sc[1] || sc[1].k < sc[0].k) && sc[0].k * 2 >= g.label.length ? sc[0].n : ''; }
 const shortLabel = (g, item) => (item ? g.label.replace(item, '').replace(/^[・\s的:：\-]+/, '').trim() : g.label) || g.label;
 /* 某個品項可以選的群組：系列共用的＋專屬這個品項的（別的品項專屬的不算） */
 function groupsFor(c, name, names, ogs) { return ogs.filter(g => { const gi = groupItem(g, names); return ownsGroup(c, g) ? !gi || gi === name : !g.owner && !!gi && gi === name; })
@@ -2009,10 +2013,13 @@ function openPlace(id, toMenu) {
     const gRow = g => `<div class="mcOR"><b>${esc(g.label)}</b>${g.tag ? `<span class="tag">${esc(g.tag)}</span>` : ''}<span class="mcOL">${g.L.map(r => `<span>${esc(r.n)}${r.p ? `<em>+$${esc(r.p)}</em>` : ''}</span>`).join('')}</span></div>`;
     const gSig = g => g.label + '|' + g.L.map(r => r.n + r.p).join(',');
     /* 卡片上方：整個系列共用的選擇；每個品項都有一模一樣的專屬選項（例如每杯咖啡都能選冰／熱）也合併到上方，其餘的放在各品項下面 */
+    /* 所有選項都統一放在卡片上方：共用的寫選項名稱；專屬某個品項的寫出是哪個品項（例如「厚厚好食口味」「厚片抹醬」）；每個品項都一模一樣的（例如每杯都能選冰／熱）合併成一行 */
     const optPlan = (c, rs) => { const names = rs.map(r => r.n), per = rs.map(r => groupsFor(c, r.n, names, ogs)); per.flat().forEach(g => used.add(g.c));
-      const top = (per[0] || []).filter(g => per.every(L => L.some(x => gSig(x) === gSig(g)))), sig = new Set(top.map(gSig));
+      const same = (per[0] || []).filter(g => per.length > 1 && per.every(L => L.some(x => gSig(x) === gSig(g)))), sig = new Set(same.map(gSig)), top = same.slice(), seen = new Set();
+      per.forEach((L, i) => L.forEach(g => { if (sig.has(gSig(g)) || seen.has(g.c)) return; seen.add(g.c); const orig = ogs.find(x => x.c === g.c), gi = groupItem(orig, names);
+        top.push(Object.assign({}, g, {label: gi ? (orig.label.includes(gi) || lcsStr(orig.label, gi).length >= 2 ? orig.label : gi + '・' + orig.label) : g.label})); }));
       const tp = temps[c] ? [...temps[c]] : []; if (tp.length > 1 && !top.some(g => /溫度/.test(g.label))) top.push({label: '溫度', tag: '', L: tp.map(n => ({n, p: ''}))});
-      return {strip: top.length ? `<div class="mcO">${top.map(gRow).join('')}</div>` : '', under: per.map(L => L.filter(g => !sig.has(gSig(g))))}; };
+      return {strip: top.length ? `<div class="mcO">${top.map(gRow).join('')}</div>` : '', under: []}; };
     /* 每個分類一張卡片：分類名稱 → 「品名｜S｜M｜L｜瓶」標題列（只列這個分類有的尺寸，由小到大）→ 品項，沒有的尺寸寫「-」 */
     const cards = (L0, pre, cls) => { const L = merge(L0), cs = [], by = {}; L.forEach(r => { if (!by[r.c]) { by[r.c] = []; cs.push(r.c); } by[r.c].push(r); });
       const has = x => x.p !== '' && x.p != null, pr = v => pre + price(v);
@@ -2830,6 +2837,9 @@ function menuChoices(p, rg) {
     const z0 = szOf(r.n), b0 = z0 ? baseName(r.n) : r.n.replace(/\s*[（(][+＋]?[$＄]?[+＋]?\d+元?[)）]\s*$/, ''), T = splitTemp(b0, z0), z = T.z, b = T.n, k = t + '|' + r.c + '|' + b;
     if (idx[k] == null) { idx[k] = out.length; out.push({t, rc: r.c, c: t === 'add' ? '➕ ' + (r.c || '加購') : r.c || '其他', n: b, full: t === 'item' ? fullName(r.c, b) : b, v: [], og: [], temps: new Set()}); }
     const o = out[idx[k]]; if (T.t) o.temps.add(T.t); if (!o.v.some(x => x.s === z && x.p === r.p) && !(T.t && !z && o.v.some(x => x.p === r.p))) o.v.push({s: z, p: r.p}); });
+  /* 同一個品名出現在好幾個系列（好呷系列、帕瑪森系列都有「德式香腸」）：紀錄的品名加上系列，才分得出來 */
+  const nm = {}; out.forEach(o => { if (o.t === 'item') (nm[o.n] = nm[o.n] || new Set()).add(o.rc); });
+  out.forEach(o => { if (o.t === 'item' && nm[o.n].size > 1 && o.full === o.n) { const core = String(o.rc || '').replace(/[（(].*?[)）]/g, '').replace(/(系列|類|區|專區)$/, '').trim(); if (core && !o.full.includes(core)) o.full = core + o.full; } });
   /* 每個品項只拿「系列共用」和「專屬自己」的選項群組 */
   const cn = {}; out.forEach(o => { if (o.t === 'item') (cn[o.rc] = cn[o.rc] || []).push(o.n); });
   out.forEach(o => { if (o.t !== 'item') return; o.og = groupsFor(o.rc, o.n, cn[o.rc], ogs); o.og.forEach(g => owned.add(g.c)); });
