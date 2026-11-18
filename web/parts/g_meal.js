@@ -129,9 +129,11 @@ function menuChoices(p, rg) {
   const out = [], idx = {}, owned = new Set();
   R.forEach(r => { const t = r.t || 'item'; if (t === 'opt') return;
     const z0 = szOf(r.n), b0 = z0 ? baseName(r.n) : r.n.replace(/\s*[（(][+＋]?[$＄]?[+＋]?\d+元?[)）]\s*$/, ''), T = splitTemp(b0, z0), z = T.z, b = T.n, k = t + '|' + r.c + '|' + b;
-    if (idx[k] == null) { idx[k] = out.length; const og = t === 'item' ? ogs.filter(g => ownsGroup(r.c, g)) : []; og.forEach(g => owned.add(g.c));
-      out.push({t, rc: r.c, c: t === 'add' ? '➕ ' + (r.c || '加購') : r.c || '其他', n: b, full: t === 'item' ? fullName(r.c, b) : b, v: [], og, temps: new Set()}); }
+    if (idx[k] == null) { idx[k] = out.length; out.push({t, rc: r.c, c: t === 'add' ? '➕ ' + (r.c || '加購') : r.c || '其他', n: b, full: t === 'item' ? fullName(r.c, b) : b, v: [], og: [], temps: new Set()}); }
     const o = out[idx[k]]; if (T.t) o.temps.add(T.t); if (!o.v.some(x => x.s === z && x.p === r.p) && !(T.t && !z && o.v.some(x => x.p === r.p))) o.v.push({s: z, p: r.p}); });
+  /* 每個品項只拿「系列共用」和「專屬自己」的選項群組 */
+  const cn = {}; out.forEach(o => { if (o.t === 'item') (cn[o.rc] = cn[o.rc] || []).push(o.n); });
+  out.forEach(o => { if (o.t !== 'item') return; o.og = groupsFor(o.rc, o.n, cn[o.rc], ogs); o.og.forEach(g => owned.add(g.c)); });
   /* 沒有歸屬到系列、但有價格的選項，當成一般品項 */
   ogs.filter(g => !owned.has(g.c)).forEach(g => g.L.forEach(r => { if (r.p) out.push({t: 'opt', rc: g.c, c: '🧩 ' + (g.owner ? g.owner + '・' + g.label : g.label), n: r.n, full: r.n, v: [{s: '', p: r.p}], og: [], temps: new Set()}); }));
   const csz = {}; out.forEach(o => o.v.forEach(v => { if (v.s) (csz[o.rc] = csz[o.rc] || new Set()).add(v.s); }));
@@ -145,7 +147,7 @@ function menuChoices(p, rg) {
 }
 /* 點的品項有系列選項（麵包、醬料、冰／熱）時，先選選項，加價會算進單價 */
 function pickOpts(o, v) {
-  return new Promise(res => { let done = false; const ch = o.og.map(g => g.multi ? [] : [g.L.length && /溫度/.test(g.label) ? 0 : -1]);
+  return new Promise(res => { let done = false; const ch = o.og.map(g => g.multi ? [] : [-1]);
     const sh = sheet({title: o.full + (v.s ? ` (${v.s})` : ''), foot: '<div class="grow ordTot" id="poT"></div><button class="btn pri" data-a="ok" style="flex:0 0 auto">加入</button>', onClose() { if (!done) res(null); }});
     const calc = () => { let add = 0; const names = []; o.og.forEach((g, gi) => ch[gi].filter(i => i >= 0).forEach(i => { add += numP(g.L[i].p); names.push(g.L[i].n); })); return {add, names}; };
     const draw = () => { sh.body.innerHTML = o.og.map((g, gi) => `<div class="poG"><div class="lbl">${esc(g.label)}${g.tag ? ` <span class="tag">${esc(g.tag)}</span>` : ''}</div><div class="whoRow">${g.multi ? '' : `<button data-g="${gi}" data-i="-1" class="${ch[gi][0] === -1 ? 'on' : ''}">不選</button>`}${g.L.map((r, i) => `<button data-g="${gi}" data-i="${i}" class="${ch[gi].includes(i) ? 'on' : ''}">${esc(r.n)}${numP(r.p) ? ` <small>+$${numP(r.p)}</small>` : ''}</button>`).join('')}</div></div>`).join('');

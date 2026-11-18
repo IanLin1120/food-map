@@ -603,3 +603,7 @@ table.piv .s.pr.one{text-align:center;padding-right:.5rem}
 .poG{margin-bottom:.9rem}
 .poG .whoRow button small{color:var(--danger,#c0392b);font-weight:800}
 .poG .whoRow button.on small{color:inherit}
+.mcIO{display:flex;flex-direction:column;gap:.1rem;margin-top:.2rem}
+.mcIO span{font-size:.72rem;color:var(--text-2);line-height:1.4}
+.mcIO b{color:var(--accent-2);margin-right:.3rem}
+.mcIO em{font-style:normal;color:var(--danger,#c0392b);font-weight:700}
