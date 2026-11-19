@@ -607,3 +607,10 @@ table.piv .s.pr.one{text-align:center;padding-right:.5rem}
 .mcIO span{font-size:.72rem;color:var(--text-2);line-height:1.4}
 .mcIO b{color:var(--accent-2);margin-right:.3rem}
 .mcIO em{font-style:normal;color:var(--danger,#c0392b);font-weight:700}
+/* 一起吃 */
+.mlPT small{display:block;font-size:.66rem;font-weight:700;color:var(--muted);text-align:right;line-height:1.1}
+.mlP.share{background:color-mix(in srgb,var(--accent) 6%,transparent);border-top:1px dashed var(--border)}
+.mlShN{font-size:.74rem;color:var(--text-2);margin:.35rem .1rem 0}
+.shareRow{margin-top:.45rem}
+.whoRow button.share{border-style:solid;border-color:color-mix(in srgb,var(--accent) 45%,var(--border))}
+.shareHint{font-size:.8rem;padding:.45rem .6rem;border-radius:6px;background:color-mix(in srgb,var(--accent) 12%,var(--surface-3));margin:-.2rem 0 .7rem;color:var(--text-2)}

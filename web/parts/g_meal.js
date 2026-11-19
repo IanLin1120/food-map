@@ -18,6 +18,20 @@ async function loadMeal() {
 }
 const mType = id => DB.mcfg.types.find(t => t.id === id) || {id, name: '（已刪除的餐別）', icon: '🍴'};
 const mWho = id => DB.mcfg.people.find(u => u.id === id) || {id, name: '（已刪除）', icon: '👤'};
+/* 一起吃：x.who = '*'、x.share = [人id…]，金額平均分攤 */
+const SHARE = '*';
+const isShare = x => x.who === SHARE && Array.isArray(x.share) && x.share.length > 1;
+const pOrd = id => { const i = DB.mcfg.people.findIndex(u => u.id === id); return i < 0 ? 999 : i; };
+const sortIds = ids => [...new Set(ids)].sort((a, b) => pOrd(a) - pOrd(b));
+const wkey = x => isShare(x) ? 'S:' + sortIds(x.share).join(',') : x.who;
+const keyIds = k => String(k || '').startsWith('S:') ? k.slice(2).split(',') : [k];
+const shareNames = ids => ids.map(id => mWho(id).name).join('、');
+const xAmt = x => numP(x.p) * (x.q || 0);
+function perOf(m) { const per = {}; (m.items || []).forEach(x => { const t = xAmt(x); if (isShare(x)) x.share.forEach(id => { per[id] = (per[id] || 0) + t / x.share.length; }); else per[x.who] = (per[x.who] || 0) + t; }); return per; }
+function shareOf(m) { const per = {}; (m.items || []).filter(isShare).forEach(x => x.share.forEach(id => { per[id] = (per[id] || 0) + xAmt(x) / x.share.length; })); return per; }
+const ownIds = m => sortIds((m.items || []).filter(x => !isShare(x)).map(x => x.who));
+const allIds = m => sortIds((m.items || []).flatMap(x => isShare(x) ? x.share : [x.who]));
+function shareSets(m) { const L = []; (m.items || []).filter(isShare).forEach(x => { const k = wkey(x); let g = L.find(y => y.key === k); if (!g) L.push(g = {key: k, ids: keyIds(k), xs: []}); g.xs.push(x); }); return L; }
 const mealTotal = m => (m.items || []).reduce((s, x) => s + numP(x.p) * (x.q || 0), 0);
 const dayTotal = k => (DB.days[k] || []).reduce((s, m) => s + mealTotal(m), 0);
 
@@ -34,7 +48,7 @@ function renderMeal() {
   const ms = DB.days[Meal.sel] || [];
   $('#mealSub').textContent = `${sel.getMonth() + 1}月${sel.getDate()}日（${MWD[sel.getDay()]}）${ms.length ? ' · ' + ms.length + ' 餐' : ''}`;
   /* 每個人今天的總金額 */
-  const per = {}; ms.forEach(m => (m.items || []).forEach(x => { per[x.who] = (per[x.who] || 0) + numP(x.p) * (x.q || 0); }));
+  const per = {}; ms.forEach(m => { const pm = perOf(m); Object.keys(pm).forEach(id => { per[id] = (per[id] || 0) + pm[id]; }); });
   const order = DB.mcfg.people.map(u => u.id).concat(Object.keys(per).filter(id => !DB.mcfg.people.some(u => u.id === id))).filter(id => per[id] != null);
   box.innerHTML = `<div class="cal card">
       <div class="calTop"><button class="ic" data-a="pm" aria-label="上個月">‹</button><select id="calY" aria-label="年">${yrs.map(y => `<option value="${y}" ${y === Y ? 'selected' : ''}>${y} 年</option>`).join('')}</select><select id="calM" aria-label="月">${Array.from({length: 12}, (_, i) => `<option value="${i}" ${i === Mo ? 'selected' : ''}>${i + 1} 月</option>`).join('')}</select><button class="ic" data-a="nm" aria-label="下個月">›</button></div>
@@ -46,15 +60,16 @@ function renderMeal() {
     ${order.length ? `<div class="perSum card"><div class="psH">👥 每個人這天的總金額</div>${order.map(id => { const u = mWho(id); return `<div class="psR"><span class="psI">${esc(u.icon)}</span><b class="grow">${esc(u.name)}</b><span>${money(per[id])}</span></div>`; }).join('')}<div class="psR tot"><b class="grow">合計</b><span>${money(dayTotal(Meal.sel))}</span></div></div>` : ''}`;
 }
 function mealCard(m) {
-  const T = mType(m.type), P = DB.places.find(x => x.id === m.place), groups = [];
-  DB.mcfg.people.map(u => u.id).concat((m.items || []).map(x => x.who)).forEach(id => { if (!groups.includes(id) && (m.items || []).some(x => x.who === id)) groups.push(id); });
+  const T = mType(m.type), P = DB.places.find(x => x.id === m.place), groups = ownIds(m), shs = shareSets(m), per = perOf(m), sha = shareOf(m), any = (m.items || []).length;
+  const tbl = xs => `<table class="mlT"><tr><th class="n">品項</th><th>單價</th><th>數量</th><th>小計</th></tr>${xs.map(x => `<tr data-i="${x.id}"><td class="n" data-a="editItem">${esc(x.n)}${xTags(x)}</td><td class="r">${money(x.p)}</td><td class="qc"><span class="q"><button data-a="qm">−</button><b>${x.q}</b><button data-a="qp">＋</button></span></td><td class="r b">${money(xAmt(x))}</td></tr>`).join('')}</table>`;
   return `<div class="meal card" data-m="${m.id}">
     <div class="mlH"><div class="grow"><b>${esc(T.name)}</b><div class="mlS" data-a="store">${m.place || m.pname ? '🏪 ' + esc(P ? P.name : m.pname || '') : '<span class="muted">未選店家</span>'}</div></div>${m.place || m.pname ? `<button class="ic mlTel ${mealPhone(m) ? '' : 'none'}" data-a="tel" aria-label="打電話">📞</button>` : ''}<button class="btn sm pri" data-a="order">＋ 點餐</button><button class="ic" data-a="mMore" aria-label="更多">⋯</button></div>
-    ${groups.length ? groups.map(id => { const u = mWho(id), xs = m.items.filter(x => x.who === id), st = xs.reduce((s, x) => s + numP(x.p) * (x.q || 0), 0);
-      return `<div class="mlP"><div class="mlPH"><span>${esc(u.icon)}</span><b class="grow">${esc(u.name)}</b><span class="mlPT">${money(st)}</span></div>
-        <table class="mlT"><tr><th class="n">品項</th><th>單價</th><th>數量</th><th>小計</th></tr>${xs.map(x => `<tr data-i="${x.id}"><td class="n" data-a="editItem">${esc(x.n)}${xTags(x)}</td><td class="r">${money(x.p)}</td><td class="qc"><span class="q"><button data-a="qm">−</button><b>${x.q}</b><button data-a="qp">＋</button></span></td><td class="r b">${money(numP(x.p) * x.q)}</td></tr>`).join('')}</table></div>`; }).join('')
+    ${any ? groups.map(id => { const u = mWho(id), xs = m.items.filter(x => !isShare(x) && x.who === id);
+      return `<div class="mlP"><div class="mlPH"><span>${esc(u.icon)}</span><b class="grow">${esc(u.name)}</b><span class="mlPT">${money(per[id])}${sha[id] ? `<small>含一起吃 ${money(sha[id])}</small>` : ''}</span></div>${tbl(xs)}</div>`; }).join('')
+      + shs.map(g => { const st = g.xs.reduce((a, x) => a + xAmt(x), 0);
+        return `<div class="mlP share"><div class="mlPH"><span>👥</span><b class="grow">一起吃・${esc(shareNames(g.ids))}</b><span class="mlPT">${money(st)}<small>每人 ${money(st / g.ids.length)}</small></span></div>${tbl(g.xs)}${g.ids.filter(id => !groups.includes(id)).length ? `<div class="mlShN">${g.ids.filter(id => !groups.includes(id)).map(id => `${esc(mWho(id).name)} 這餐 ${money(per[id])}`).join('・')}</div>` : ''}</div>`; }).join('')
       : `<div class="mlNone">還沒有點餐，按「＋ 點餐」選誰要吃什麼</div>`}
-    ${groups.length ? `<div class="mlF"><span class="grow">${esc(T.name)}合計 · ${m.items.reduce((s, x) => s + (x.q || 0), 0)} 份</span><b>${money(mealTotal(m))}</b></div>` : ''}</div>`;
+    ${any ? `<div class="mlF"><span class="grow">${esc(T.name)}合計 · ${m.items.reduce((s, x) => s + (x.q || 0), 0)} 份</span><b>${money(mealTotal(m))}</b></div>` : ''}</div>`;
 }
 const curMeal = id => (DB.days[Meal.sel] || []).find(m => m.id === id);
 function mealChanged() { const L = DB.days[Meal.sel]; if (L && !L.length) delete DB.days[Meal.sel]; saveDays(); renderMeal(); }
@@ -164,18 +179,22 @@ const xTags = x => `${x.s ? ` <span class="szT">${esc(x.s)}</span>` : ''}${x.o ?
 const xParen = x => { const a = [x.s, x.o].filter(Boolean); return a.length ? '(' + a.join('、') + ')' : ''; };
 function openOrder(m) {
   const P = DB.places.find(x => x.id === m.place), T = mType(m.type);
-  let who = m.lastWho && DB.mcfg.people.some(u => u.id === m.lastWho) ? m.lastWho : (DB.mcfg.people[0] || {}).id, q = '', cat = '', rg = P ? P.rgSel : '';
+  let who = m.lastWho && keyIds(m.lastWho).every(id => DB.mcfg.people.some(u => u.id === id)) ? m.lastWho : (DB.mcfg.people[0] || {}).id, q = '', cat = '', rg = P ? P.rgSel : '';
   const sh = sheet({title: `${T.icon} ${T.name}${P || m.pname ? ' · ' + (P ? P.name : m.pname) : ''}`, full: true, foot: '<div class="grow ordTot" id="oTot"></div><button class="btn pri" data-a="done" style="flex:0 0 auto">完成</button>', onClose() { renderMeal(); }});
   let LIST = [];
-  const cnt = (n, s) => m.items.filter(x => x.who === who && x.n === n && (x.s || '') === (s || '')).reduce((a, x) => a + x.q, 0);
-  const add = (n, s, p, o) => { if (!who) { toast('請先新增要點餐的人'); return; } const pv = numP(p), x = m.items.find(i => i.who === who && i.n === n && (i.s || '') === (s || '') && (i.o || '') === (o || '') && numP(i.p) === pv);
-    if (x) x.q++; else m.items.push(Object.assign({id: 'i' + uid(), who, n, s: s || '', p: pv, q: 1}, o ? {o} : {})); m.lastWho = who; buzz(12); saveDays(); draw(); };
+  const cnt = (n, s) => m.items.filter(x => wkey(x) === who && x.n === n && (x.s || '') === (s || '')).reduce((a, x) => a + x.q, 0);
+  const add = (n, s, p, o) => { if (!who) { toast('請先新增要點餐的人'); return; } const pv = numP(p), x = m.items.find(i => wkey(i) === who && i.n === n && (i.s || '') === (s || '') && (i.o || '') === (o || '') && numP(i.p) === pv);
+    const sh0 = who.startsWith('S:') ? {who: SHARE, share: keyIds(who)} : {who};
+    if (x) x.q++; else m.items.push(Object.assign({id: 'i' + uid(), n, s: s || '', p: pv, q: 1}, sh0, o ? {o} : {})); m.lastWho = who; buzz(12); saveDays(); draw(); };
   const draw = () => { const C = P ? menuChoices(P, rg) : {list: [], regs: [], cur: ''}; rg = C.cur;
     const cus = DB.mcfg.custom.filter(c => (m.place ? c.place === m.place : c.pname === m.pname)).map(c => ({t: 'cus', c: '⭐ 自訂品項', n: c.n, full: c.n, og: [], v: [{s: '', p: c.p}], cid: c.id}));
     const all = cus.concat(C.list), cats = [...new Set(all.map(o => o.c))], hit = o => (!q || o.n.toLowerCase().includes(q)) && (!cat || o.c === cat);
-    const L = all.filter(hit); LIST = L; const mine = m.items.filter(x => x.who === who), tot = mealTotal(m);
-    sh.body.innerHTML = `<div class="ordWho"><span class="lbl">誰要吃</span><div class="whoRow">${DB.mcfg.people.map(u => { const n = m.items.filter(x => x.who === u.id).reduce((a, x) => a + x.q, 0); return `<button data-who="${u.id}" class="${u.id === who ? 'on' : ''}"><span>${esc(u.icon)}</span>${esc(u.name)}${n ? `<i>${n}</i>` : ''}</button>`; }).join('')}<button data-a="newWho" class="add">＋ 新增人名</button></div></div>
-      ${mine.length ? `<div class="ordMine"><div class="omH">${esc(mWho(who).icon)} ${esc(mWho(who).name)} 已點 <b>${money(mine.reduce((s, x) => s + numP(x.p) * x.q, 0))}</b></div>${mine.map(x => `<div class="omR" data-i="${x.id}"><span class="grow">${esc(x.n)}${xTags(x)}</span><span class="muted">${money(x.p)}</span><span class="q"><button data-a="om">−</button><b>${x.q}</b><button data-a="op">＋</button></span></div>`).join('')}</div>` : ''}
+    const L = all.filter(hit); LIST = L; const mine = m.items.filter(x => wkey(x) === who), tot = mealTotal(m), isS = who.startsWith('S:'), sIds = keyIds(who), mt = mine.reduce((s, x) => s + xAmt(x), 0);
+    const sets = shareSets(m).map(g => g.key); if (isS && !sets.includes(who)) sets.push(who);
+    sh.body.innerHTML = `<div class="ordWho"><span class="lbl">誰要吃</span><div class="whoRow">${DB.mcfg.people.map(u => { const n = m.items.filter(x => !isShare(x) && x.who === u.id).reduce((a, x) => a + x.q, 0); return `<button data-who="${u.id}" class="${u.id === who ? 'on' : ''}"><span>${esc(u.icon)}</span>${esc(u.name)}${n ? `<i>${n}</i>` : ''}</button>`; }).join('')}<button data-a="newWho" class="add">＋ 新增人名</button></div>
+      <div class="whoRow shareRow">${sets.map(k => { const n = m.items.filter(x => wkey(x) === k).reduce((a, x) => a + x.q, 0); return `<button data-who="${esc(k)}" class="share ${k === who ? 'on' : ''}"><span>👥</span>${esc(shareNames(keyIds(k)))}${n ? `<i>${n}</i>` : ''}</button>`; }).join('')}<button data-a="share" class="add">👥 一起吃（分攤）</button></div></div>
+      ${isS ? `<div class="shareHint">現在點的品項由 <b>${esc(shareNames(sIds))}</b> ${sIds.length} 人一起吃，金額平均分攤</div>` : ''}
+      ${mine.length ? `<div class="ordMine"><div class="omH">${isS ? `👥 一起吃・${esc(shareNames(sIds))} 已點 <b>${money(mt)}</b>（每人 ${money(mt / sIds.length)}）` : `${esc(mWho(who).icon)} ${esc(mWho(who).name)} 已點 <b>${money(mt)}</b>`}</div>${mine.map(x => `<div class="omR" data-i="${x.id}"><span class="grow">${esc(x.n)}${xTags(x)}</span><span class="muted">${money(x.p)}</span><span class="q"><button data-a="om">−</button><b>${x.q}</b><button data-a="op">＋</button></span></div>`).join('')}</div>` : ''}
       ${C.regs.length > 1 ? `<div class="regBar"><span>📍 區域</span><div class="seg">${C.regs.map(r => `<button data-rg="${esc(r)}" class="${r === rg ? 'on' : ''}">${esc(r)}</button>`).join('')}</div></div>` : ''}
       ${all.length ? `<div class="searchBox" style="margin:.2rem 0 .5rem"><input id="oQ" type="search" placeholder="搜尋品項…" value="${esc(q)}"></div>${cats.length > 1 ? `<div class="chipRow ordCats"><button class="chip ${cat ? '' : 'on'}" data-cat="">全部</button>${cats.map(c => `<button class="chip ${c === cat ? 'on' : ''}" data-cat="${esc(c)}">${esc(c)}</button>`).join('')}</div>` : ''}` : ''}
       <div class="ordList">${L.length ? (() => { let lc = ''; return L.map(o => { const h = o.c !== lc ? `<div class="olC">${esc(o.c)}</div>` : ''; lc = o.c;
@@ -192,6 +211,7 @@ function openOrder(m) {
     else if (b.dataset.oi != null) { const o = LIST[+b.dataset.oi], v = o && o.v[+b.dataset.vi]; if (!v) return;
       if (o.og && o.og.length) { const r = await pickOpts(o, v); if (!r) return; add(o.full || o.n, v.s, numP(v.p) + r.add, r.o); } else add(o.full || o.n, v.s, v.p); }
     else if (b.dataset.a === 'newWho') editMealCfg('people', null, u => { if (u) who = u.id; draw(); });
+    else if (b.dataset.a === 'share') { const ids = await pickShare(who.startsWith('S:') ? keyIds(who) : [who].filter(Boolean)); if (ids) { who = 'S:' + sortIds(ids).join(','); draw(); } }
     else if (b.dataset.a === 'om' || b.dataset.a === 'op') { const x = m.items.find(i => i.id === b.closest('.omR').dataset.i); if (!x) return; buzz(10); if (b.dataset.a === 'op') x.q++; else if (--x.q <= 0) m.items.splice(m.items.indexOf(x), 1); saveDays(); draw(); }
     else if (b.dataset.a === 'cusAdd') { const n = $('#cN', sh.body).value.trim(), p = numP($('#cP', sh.body).value); if (!n) { toast('請輸入品名'); return; }
       if (!DB.mcfg.custom.some(c => c.n === n && (m.place ? c.place === m.place : c.pname === m.pname))) { DB.mcfg.custom.push({id: 'k' + uid(), place: m.place || '', pname: m.pname || (P ? P.name : ''), n, p}); saveMcfg(); }
@@ -199,22 +219,31 @@ function openOrder(m) {
       add(n, '', p); } });
   sh.foot.addEventListener('click', e => { if (e.target.closest('[data-a="done"]')) sh.close(); });
 }
+/* 選誰跟誰一起吃（至少 2 人） */
+function pickShare(cur) {
+  return new Promise(res => { let done = false; const sel = new Set(cur || []);
+    const sh = sheet({title: '👥 一起吃：選要分攤的人', foot: '<div class="grow ordTot" id="psT"></div><button class="btn pri" data-a="ok" style="flex:0 0 auto">確定</button>', onClose() { if (!done) res(null); }});
+    const draw = () => { sh.body.innerHTML = `<div class="small muted" style="margin-bottom:.7rem">選 2 個人以上，之後點的品項金額會平均分給這些人</div><div class="whoRow">${DB.mcfg.people.map(u => `<button data-id="${u.id}" class="${sel.has(u.id) ? 'on' : ''}"><span>${esc(u.icon)}</span>${esc(u.name)}</button>`).join('')}</div>`;
+      $('#psT', sh.foot).innerHTML = sel.size ? `${sel.size} 人：${esc(shareNames(sortIds([...sel])))}` : '還沒選人'; };
+    draw(); sh.body.onclick = e => { const b = e.target.closest('[data-id]'); if (!b) return; buzz(8); if (sel.has(b.dataset.id)) sel.delete(b.dataset.id); else sel.add(b.dataset.id); draw(); };
+    sh.foot.onclick = e => { if (!e.target.closest('[data-a="ok"]')) return; if (sel.size < 2) { toast('一起吃要選 2 個人以上'); return; } done = true; sh.close(); res(sortIds([...sel])); }; });
+}
 function editMealItem(m, x) {
   const sh = sheet({title: '編輯品項', foot: '<button class="btn danger" data-a="del" style="flex:0 0 auto">刪除</button><button class="btn pri" data-a="ok">儲存</button>'});
   sh.body.innerHTML = `<div class="field"><label>品名</label><input id="eN" value="${esc(x.n)}" maxlength="40"></div>
     <div class="row" style="gap:.6rem"><div class="field grow"><label>尺寸／備註</label><input id="eS" value="${esc(x.s || '')}" maxlength="12" placeholder="例如 L、大碗、去冰"></div><div class="field" style="width:6rem"><label>單價</label><input id="eP" value="${esc(x.p)}" inputmode="decimal"></div><div class="field" style="width:5rem"><label>數量</label><input id="eQ" value="${x.q}" inputmode="numeric"></div></div>
     <div class="field"><label>選項</label><input id="eO" value="${esc(x.o || '')}" maxlength="40" placeholder="例如 漢堡、辣味、熱"></div>
-    <div class="field"><label>誰要吃</label><div class="whoRow">${DB.mcfg.people.map(u => `<button data-who="${u.id}" class="${u.id === x.who ? 'on' : ''}"><span>${esc(u.icon)}</span>${esc(u.name)}</button>`).join('')}</div></div>`;
-  let who = x.who; sh.body.onclick = e => { const b = e.target.closest('[data-who]'); if (!b) return; who = b.dataset.who; $$('[data-who]', sh.body).forEach(k => k.classList.toggle('on', k === b)); };
+    <div class="field"><label>誰要吃（選 2 人以上＝一起吃，金額平均分攤）</label><div class="whoRow">${DB.mcfg.people.map(u => `<button data-who="${u.id}" class="${(isShare(x) ? x.share.includes(u.id) : u.id === x.who) ? 'on' : ''}"><span>${esc(u.icon)}</span>${esc(u.name)}</button>`).join('')}</div></div>`;
+  const ws = new Set(isShare(x) ? x.share : [x.who]); sh.body.onclick = e => { const b = e.target.closest('[data-who]'); if (!b) return; buzz(8); const id = b.dataset.who; if (ws.has(id)) { if (ws.size > 1) ws.delete(id); } else ws.add(id); $$('[data-who]', sh.body).forEach(k => k.classList.toggle('on', ws.has(k.dataset.who))); };
   sh.foot.onclick = async e => { const b = e.target.closest('[data-a]'); if (!b) return;
     if (b.dataset.a === 'del') { if (!await ask(`要刪除「${x.n}」嗎？`, '刪除', true)) return; m.items.splice(m.items.indexOf(x), 1); }
-    else { const n = $('#eN', sh.body).value.trim(); if (!n) { toast('請輸入品名'); return; } const ov = $('#eO', sh.body).value.trim(); if (ov) x.o = ov; else delete x.o; Object.assign(x, {n, s: $('#eS', sh.body).value.trim(), p: numP($('#eP', sh.body).value), q: Math.max(1, parseInt($('#eQ', sh.body).value) || 1), who}); }
+    else { const n = $('#eN', sh.body).value.trim(); if (!n) { toast('請輸入品名'); return; } const ov = $('#eO', sh.body).value.trim(); if (ov) x.o = ov; else delete x.o; Object.assign(x, {n, s: $('#eS', sh.body).value.trim(), p: numP($('#eP', sh.body).value), q: Math.max(1, parseInt($('#eQ', sh.body).value) || 1)}); const ids = sortIds([...ws]); if (ids.length > 1) { x.who = SHARE; x.share = ids; } else { x.who = ids[0]; delete x.share; } }
     sh.close(); mealChanged(); };
 }
 
 /* ---------- 設定：餐別、人名、自訂品項（全部可改、可拖曳排序） ---------- */
 const MK = {types: {title: '餐別', unit: '個', emoji: CAT_EMOJI, ph: '例如：早餐、下午茶、宵夜', def: '🍴', used: id => Object.values(DB.days).some(L => L.some(m => m.type === id))},
-  people: {title: '人名', unit: '位', emoji: PERSON_EMOJI, ph: '例如：我、老婆、小明', def: '🙂', used: id => Object.values(DB.days).some(L => L.some(m => m.items.some(x => x.who === id)))}};
+  people: {title: '人名', unit: '位', emoji: PERSON_EMOJI, ph: '例如：我、老婆、小明', def: '🙂', used: id => Object.values(DB.days).some(L => L.some(m => m.items.some(x => x.who === id || (isShare(x) && x.share.includes(id)))))}};
 function openMealSettings(after) {
   const sh = sheet({title: '⚙️ 點餐設定', full: true, onClose() { renderMeal(); after && after(); }});
   const draw = () => { const cus = {}; DB.mcfg.custom.forEach(c => { const k = c.place && DB.places.find(p => p.id === c.place) ? DB.places.find(p => p.id === c.place).name : c.pname || '未指定店家'; (cus[k] = cus[k] || []).push(c); });
@@ -254,12 +283,16 @@ const mealPhone = m => { const P = DB.places.find(x => x.id === m.place); return
 const storeName = m => { const P = DB.places.find(x => x.id === m.place); return P ? P.name : m.pname || ''; };
 const dayLabel = k => { const d = ymdDate(k); return `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}（${MWD[d.getDay()]}）`; };
 const itemTxt = x => `${x.n}${xParen(x)}×${x.q}`;
-function personLines(m, amt) { const ids = []; DB.mcfg.people.map(u => u.id).concat((m.items || []).map(x => x.who)).forEach(id => { if (!ids.includes(id) && m.items.some(x => x.who === id)) ids.push(id); });
-  return ids.map(id => { const xs = m.items.filter(x => x.who === id); return `${mWho(id).name}：${xs.map(itemTxt).join('、')}${amt ? `（${money(xs.reduce((s, x) => s + numP(x.p) * x.q, 0))}）` : ''}`; }); }
+/* 模板一：一人一行；一起吃的放最下面；加金額時每個人的總額＝自己的＋一起吃的分攤 */
+function personLines(m, amt, fm) { fm = fm || money; const per = perOf(m), sha = shareOf(m), own = ownIds(m), out = [];
+  (amt ? allIds(m) : own).forEach(id => { const xs = m.items.filter(x => !isShare(x) && x.who === id); out.push(xs.length ? `${mWho(id).name}：${xs.map(itemTxt).join('、')}${amt ? `（${fm(per[id])}${sha[id] ? '，含一起吃 ' + fm(sha[id]) : ''}）` : ''}` : `${mWho(id).name}：一起吃分攤 ${fm(per[id])}`); });
+  shareSets(m).forEach(g => { const st = g.xs.reduce((a, x) => a + xAmt(x), 0); out.push(`一起吃（${shareNames(g.ids)}）：${g.xs.map(itemTxt).join('、')}${amt ? `（共 ${fm(st)}，每人 ${fm(st / g.ids.length)}）` : ''}`); });
+  return out; }
 /* 模板二：人名一行，下面每個品項一行「品名[NT$ 單價]×數量」，人和人之間空一行 */
 const ntd = v => 'NT$ ' + (Math.round((+v || 0) * 100) / 100).toLocaleString('en-US');
-function personBlock(m, amt) { const ids = [], out = []; DB.mcfg.people.map(u => u.id).concat((m.items || []).map(x => x.who)).forEach(id => { if (!ids.includes(id) && m.items.some(x => x.who === id)) ids.push(id); });
-  ids.forEach((id, i) => { const xs = m.items.filter(x => x.who === id); out.push(mWho(id).name + '：'); xs.forEach(x => out.push(`${x.n}${xParen(x)}[${ntd(x.p)}]×${x.q}`)); if (amt) out.push(`小計：${ntd(xs.reduce((s, x) => s + numP(x.p) * x.q, 0))}`); });
+function personBlock(m, amt) { const per = perOf(m), sha = shareOf(m), out = [];
+  (amt ? allIds(m) : ownIds(m)).forEach(id => { const xs = m.items.filter(x => !isShare(x) && x.who === id); out.push(mWho(id).name + '：'); xs.forEach(x => out.push(`${x.n}${xParen(x)}[${ntd(x.p)}]×${x.q}`)); if (!xs.length) out.push(`一起吃分攤：${ntd(per[id])}`); else if (amt) out.push(`小計：${ntd(per[id])}${sha[id] ? `（含一起吃 ${ntd(sha[id])}）` : ''}`); });
+  shareSets(m).forEach(g => { const st = g.xs.reduce((a, x) => a + xAmt(x), 0); out.push(`一起吃（${shareNames(g.ids)}）：`); g.xs.forEach(x => out.push(`${x.n}${xParen(x)}[${ntd(x.p)}]×${x.q}`)); if (amt) out.push(`共 ${ntd(st)}，每人分攤 ${ntd(st / g.ids.length)}`); });
   return out; }
 function openMealSearch() {
   let q = ''; const sh = sheet({title: '🔍 搜尋吃過的店家', full: true});
@@ -282,8 +315,8 @@ function openExport(k, mid) {
   let sel = mid || 'all', amt = false, tpl = S.exTpl === 2 ? 2 : 1; const sh = sheet({title: '📤 匯出點餐', full: true, foot: '<button class="btn" data-a="xlsx">📊 匯出 Excel</button><button class="btn pri" data-a="copy">📋 複製文字</button>'});
   const pick = () => sel === 'all' ? ms : ms.filter(m => m.id === sel);
   const text = () => { const fm = tpl === 2 ? ntd : money; const L = pick(), out = [dayLabel(k)];
-    L.forEach((m, i) => { const T = mType(m.type), nm = storeName(m); out.push((i || L.length > 1 ? '' : '') + `【${T.name}】${nm}`); out.push(...(m.items.length ? (tpl === 2 ? personBlock(m, amt) : personLines(m, amt)) : ['（沒有點餐內容）'])); if (amt) out.push(`${T.name}合計：${fm(mealTotal(m))}`); if (i < L.length - 1) out.push(''); });
-    if (amt && L.length > 1) { const per = {}; L.forEach(m => m.items.forEach(x => { per[x.who] = (per[x.who] || 0) + numP(x.p) * x.q; })); out.push('', '【每人總計】', ...Object.keys(per).sort((x, y) => DB.mcfg.people.findIndex(u => u.id === x) - DB.mcfg.people.findIndex(u => u.id === y)).map(id => `${mWho(id).name}：${fm(per[id])}`), `全部合計：${fm(L.reduce((s, m) => s + mealTotal(m), 0))}`); }
+    L.forEach((m, i) => { const T = mType(m.type), nm = storeName(m); out.push((i || L.length > 1 ? '' : '') + `【${T.name}】${nm}`); out.push(...(m.items.length ? (tpl === 2 ? personBlock(m, amt) : personLines(m, amt, fm)) : ['（沒有點餐內容）'])); if (amt) out.push(`${T.name}合計：${fm(mealTotal(m))}`); if (i < L.length - 1) out.push(''); });
+    if (amt && L.length > 1) { const per = {}; L.forEach(m => { const pm = perOf(m); Object.keys(pm).forEach(id => { per[id] = (per[id] || 0) + pm[id]; }); }); out.push('', '【每人總計】', ...Object.keys(per).sort((x, y) => DB.mcfg.people.findIndex(u => u.id === x) - DB.mcfg.people.findIndex(u => u.id === y)).map(id => `${mWho(id).name}：${fm(per[id])}`), `全部合計：${fm(L.reduce((s, m) => s + mealTotal(m), 0))}`); }
     return out.join('\n'); };
   const draw = () => { sh.body.innerHTML = `<div class="lbl">要匯出哪一餐</div><div class="whoRow" style="margin-bottom:.7rem"><button data-s="all" class="${sel === 'all' ? 'on' : ''}">📅 整天全部</button>${ms.map(m => { const T = mType(m.type); return `<button data-s="${m.id}" class="${sel === m.id ? 'on' : ''}"><span>${esc(T.icon)}</span>${esc(T.name)}${storeName(m) ? '・' + esc(storeName(m).slice(0, 8)) : ''}</button>`; }).join('')}</div>
       <div class="lbl">格式</div><div class="whoRow" style="margin-bottom:.6rem"><button data-tpl="1" class="${tpl === 1 ? 'on' : ''}">模板一：一人一行</button><button data-tpl="2" class="${tpl === 2 ? 'on' : ''}">模板二：逐項含價格</button></div>
@@ -301,8 +334,9 @@ function mealXlsx(k, L) {
   const rows = [[{v: '食光地圖 點餐紀錄　' + dayLabel(k), s: 2}], [], ['日期', '餐別', '店家', '人名', '品項', '尺寸／選項', '單價', '數量', '小計'].map(v => ({v, s: 1}))];
   const per = {};
   L.forEach(m => { const T = mType(m.type), nm = storeName(m); personLines(m, false);
-    const ids = []; DB.mcfg.people.map(u => u.id).concat(m.items.map(x => x.who)).forEach(id => { if (!ids.includes(id) && m.items.some(x => x.who === id)) ids.push(id); });
-    ids.forEach(id => m.items.filter(x => x.who === id).forEach(x => { const st = numP(x.p) * x.q; per[id] = (per[id] || 0) + st; rows.push([k, T.name, nm, mWho(id).name, x.n, [x.s, x.o].filter(Boolean).join('、'), numP(x.p), x.q, st]); }));
+    ownIds(m).forEach(id => m.items.filter(x => !isShare(x) && x.who === id).forEach(x => rows.push([k, T.name, nm, mWho(id).name, x.n, [x.s, x.o].filter(Boolean).join('、'), numP(x.p), x.q, xAmt(x)])));
+    shareSets(m).forEach(g => g.xs.forEach(x => rows.push([k, T.name, nm, `${shareNames(g.ids)}（一起吃，每人 ${Math.round(xAmt(x) / g.ids.length * 100) / 100}）`, x.n, [x.s, x.o].filter(Boolean).join('、'), numP(x.p), x.q, xAmt(x)])));
+    const pm = perOf(m); Object.keys(pm).forEach(id => { per[id] = (per[id] || 0) + pm[id]; });
     rows.push(['', '', '', '', {v: T.name + '合計', s: 1}, '', '', m.items.reduce((s, x) => s + x.q, 0), {v: mealTotal(m), s: 1}]); });
   rows.push([], [{v: '每人總計', s: 1}]); Object.keys(per).sort((x, y) => DB.mcfg.people.findIndex(u => u.id === x) - DB.mcfg.people.findIndex(u => u.id === y)).forEach(id => rows.push([mWho(id).name, per[id]])); rows.push([{v: '全部合計', s: 1}, {v: L.reduce((s, m) => s + mealTotal(m), 0), s: 1}]);
   rows.push([], [{v: '統整文字', s: 1}]); L.forEach(m => { rows.push([`【${mType(m.type).name}】${storeName(m)}`]); personLines(m, false).forEach(t => rows.push([t])); });
