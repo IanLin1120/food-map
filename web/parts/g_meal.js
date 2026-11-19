@@ -54,7 +54,7 @@ function renderMeal() {
       <div class="calTop"><button class="ic" data-a="pm" aria-label="上個月">‹</button><select id="calY" aria-label="年">${yrs.map(y => `<option value="${y}" ${y === Y ? 'selected' : ''}>${y} 年</option>`).join('')}</select><select id="calM" aria-label="月">${Array.from({length: 12}, (_, i) => `<option value="${i}" ${i === Mo ? 'selected' : ''}>${i + 1} 月</option>`).join('')}</select><button class="ic" data-a="nm" aria-label="下個月">›</button></div>
       <div class="calWd">${MWD.map((w, i) => `<span class="${i === 0 || i === 6 ? 'we' : ''}">${w}</span>`).join('')}</div>
       <div class="calG">${cells}</div></div>
-    <div class="dayHead"><b>${sel.getMonth() + 1}月${sel.getDate()}日 星期${MWD[sel.getDay()]}</b>${Meal.sel === today ? '<span class="tag">今天</span>' : ''}<span class="grow"></span>${ms.length ? `<span class="dayTot">${money(dayTotal(Meal.sel))}</span><button class="btn sm" data-a="export">📤 匯出</button>` : ''}</div>
+    <div class="dayHead"><b class="dhD">${sel.getMonth() + 1}月${sel.getDate()}日 星期${MWD[sel.getDay()]}</b><span class="grow"></span>${ms.length ? `<span class="dayTot">${money(dayTotal(Meal.sel))}</span><button class="btn sm" data-a="export">📤 匯出</button>` : ''}</div>
     ${ms.map(mealCard).join('') || '<div class="empty mealEmpty"><span class="big">🍽️</span>這天還沒有安排要吃什麼<br><span class="small">按下面的「新增餐點」選餐別和店家</span></div>'}
     <button class="btn pri mealAdd" data-a="addMeal">＋ 新增餐點</button>
     ${order.length ? `<div class="perSum card"><div class="psH">👥 每個人這天的總金額</div>${order.map(id => { const u = mWho(id); return `<div class="psR"><span class="psI">${esc(u.icon)}</span><b class="grow">${esc(u.name)}</b><span>${money(per[id])}</span></div>`; }).join('')}<div class="psR tot"><b class="grow">合計</b><span>${money(dayTotal(Meal.sel))}</span></div></div>` : ''}`;
@@ -281,18 +281,23 @@ function editMealCfg(k, it, done) {
 /* ---------- 搜尋：吃過哪家店、哪幾天、吃了什麼、多少錢 ---------- */
 const mealPhone = m => { const P = DB.places.find(x => x.id === m.place); return (P ? P.phone : m.phone) || ''; };
 const storeName = m => { const P = DB.places.find(x => x.id === m.place); return P ? P.name : m.pname || ''; };
-const dayLabel = k => { const d = ymdDate(k); return `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}（${MWD[d.getDay()]}）`; };
-const itemTxt = x => `${x.n}${xParen(x)}×${x.q}`;
+const dayLabel = k => { const d = ymdDate(k); return `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}(${MWD[d.getDay()]})`; };
+/* 匯出用：括號一律半形、括號前不留空白「招牌牛肉麵 (中辣)」→「招牌牛肉麵(中辣)」 */
+const tn = n => String(n || '').replace(/\s*[（(]\s*/g, '(').replace(/\s*[）)]/g, ')');
+const itemTxt = x => `${tn(x.n)}${xParen(x)}×${x.q}`;
+/* 模板三：每個品項的總數（不分人），方便跟店家點餐 */
+function itemTotals(m, amt, fm) { const agg = []; (m.items || []).forEach(x => { const t = tn(x.n) + xParen(x), k = t + (amt ? '|' + numP(x.p) : ''); let a = agg.find(y => y.k === k); if (!a) agg.push(a = {k, t, p: numP(x.p), q: 0}); a.q += x.q || 0; });
+  const out = agg.map(a => amt ? `${a.t}[${fm(a.p)}]×${a.q}` : `${a.t}×${a.q}`); out.push(`共 ${agg.reduce((s, a) => s + a.q, 0)} 份`); return out; }
 /* 模板一：一人一行；一起吃的放最下面；加金額時每個人的總額＝自己的＋一起吃的分攤 */
 function personLines(m, amt, fm) { fm = fm || money; const per = perOf(m), sha = shareOf(m), own = ownIds(m), out = [];
   (amt ? allIds(m) : own).forEach(id => { const xs = m.items.filter(x => !isShare(x) && x.who === id); out.push(xs.length ? `${mWho(id).name}：${xs.map(itemTxt).join('、')}${amt ? `（${fm(per[id])}${sha[id] ? '，含一起吃 ' + fm(sha[id]) : ''}）` : ''}` : `${mWho(id).name}：一起吃分攤 ${fm(per[id])}`); });
-  shareSets(m).forEach(g => { const st = g.xs.reduce((a, x) => a + xAmt(x), 0); out.push(`一起吃（${shareNames(g.ids)}）：${g.xs.map(itemTxt).join('、')}${amt ? `（共 ${fm(st)}，每人 ${fm(st / g.ids.length)}）` : ''}`); });
+  shareSets(m).forEach(g => { const st = g.xs.reduce((a, x) => a + xAmt(x), 0); out.push(`一起吃(${shareNames(g.ids)})：${g.xs.map(itemTxt).join('、')}${amt ? `（共 ${fm(st)}，每人 ${fm(st / g.ids.length)}）` : ''}`); });
   return out; }
 /* 模板二：人名一行，下面每個品項一行「品名[NT$ 單價]×數量」，人和人之間空一行 */
 const ntd = v => 'NT$ ' + (Math.round((+v || 0) * 100) / 100).toLocaleString('en-US');
 function personBlock(m, amt) { const per = perOf(m), sha = shareOf(m), out = [];
-  (amt ? allIds(m) : ownIds(m)).forEach(id => { const xs = m.items.filter(x => !isShare(x) && x.who === id); out.push(mWho(id).name + '：'); xs.forEach(x => out.push(`${x.n}${xParen(x)}[${ntd(x.p)}]×${x.q}`)); if (!xs.length) out.push(`一起吃分攤：${ntd(per[id])}`); else if (amt) out.push(`小計：${ntd(per[id])}${sha[id] ? `（含一起吃 ${ntd(sha[id])}）` : ''}`); });
-  shareSets(m).forEach(g => { const st = g.xs.reduce((a, x) => a + xAmt(x), 0); out.push(`一起吃（${shareNames(g.ids)}）：`); g.xs.forEach(x => out.push(`${x.n}${xParen(x)}[${ntd(x.p)}]×${x.q}`)); if (amt) out.push(`共 ${ntd(st)}，每人分攤 ${ntd(st / g.ids.length)}`); });
+  (amt ? allIds(m) : ownIds(m)).forEach(id => { const xs = m.items.filter(x => !isShare(x) && x.who === id); out.push(mWho(id).name + '：'); xs.forEach(x => out.push(`${tn(x.n)}${xParen(x)}[${ntd(x.p)}]×${x.q}`)); if (!xs.length) out.push(`一起吃分攤：${ntd(per[id])}`); else if (amt) out.push(`小計：${ntd(per[id])}${sha[id] ? `（含一起吃 ${ntd(sha[id])}）` : ''}`); });
+  shareSets(m).forEach(g => { const st = g.xs.reduce((a, x) => a + xAmt(x), 0); out.push(`一起吃(${shareNames(g.ids)})：`); g.xs.forEach(x => out.push(`${tn(x.n)}${xParen(x)}[${ntd(x.p)}]×${x.q}`)); if (amt) out.push(`共 ${ntd(st)}，每人分攤 ${ntd(st / g.ids.length)}`); });
   return out; }
 function openMealSearch() {
   let q = ''; const sh = sheet({title: '🔍 搜尋吃過的店家', full: true});
@@ -312,14 +317,14 @@ function openMealSearch() {
 /* ---------- 匯出：統整文字（可複製）或 Excel，選一餐或整天 ---------- */
 function openExport(k, mid) {
   const ms = DB.days[k] || []; if (!ms.length) { toast('這天沒有點餐紀錄'); return; }
-  let sel = mid || 'all', amt = false, tpl = S.exTpl === 2 ? 2 : 1; const sh = sheet({title: '📤 匯出點餐', full: true, foot: '<button class="btn" data-a="xlsx">📊 匯出 Excel</button><button class="btn pri" data-a="copy">📋 複製文字</button>'});
+  let sel = mid || 'all', amt = false, tpl = [1, 2, 3].includes(S.exTpl) ? S.exTpl : 1; const sh = sheet({title: '📤 匯出點餐', full: true, foot: '<button class="btn" data-a="xlsx">📊 匯出 Excel</button><button class="btn pri" data-a="copy">📋 複製文字</button>'});
   const pick = () => sel === 'all' ? ms : ms.filter(m => m.id === sel);
-  const text = () => { const fm = tpl === 2 ? ntd : money; const L = pick(), out = [dayLabel(k)];
-    L.forEach((m, i) => { const T = mType(m.type), nm = storeName(m); out.push((i || L.length > 1 ? '' : '') + `【${T.name}】${nm}`); out.push(...(m.items.length ? (tpl === 2 ? personBlock(m, amt) : personLines(m, amt, fm)) : ['（沒有點餐內容）'])); if (amt) out.push(`${T.name}合計：${fm(mealTotal(m))}`); if (i < L.length - 1) out.push(''); });
-    if (amt && L.length > 1) { const per = {}; L.forEach(m => { const pm = perOf(m); Object.keys(pm).forEach(id => { per[id] = (per[id] || 0) + pm[id]; }); }); out.push('', '【每人總計】', ...Object.keys(per).sort((x, y) => DB.mcfg.people.findIndex(u => u.id === x) - DB.mcfg.people.findIndex(u => u.id === y)).map(id => `${mWho(id).name}：${fm(per[id])}`), `全部合計：${fm(L.reduce((s, m) => s + mealTotal(m), 0))}`); }
-    return out.join('\n'); };
+  const text = () => { const fm = tpl === 1 ? money : ntd; const L = pick(), out = [dayLabel(k)];
+    L.forEach((m, i) => { const T = mType(m.type), nm = storeName(m); out.push(nm ? `${T.name}：${nm}` : T.name); out.push(...(m.items.length ? (tpl === 3 ? itemTotals(m, amt, fm) : tpl === 2 ? personBlock(m, amt) : personLines(m, amt, fm)) : ['(沒有點餐內容)'])); if (amt) out.push(`${T.name}合計：${fm(mealTotal(m))}`); if (i < L.length - 1) out.push(''); });
+    if (amt && L.length > 1) { const per = {}; L.forEach(m => { const pm = perOf(m); Object.keys(pm).forEach(id => { per[id] = (per[id] || 0) + pm[id]; }); }); if (tpl !== 3) out.push('', '每人總計：', ...Object.keys(per).sort((x, y) => DB.mcfg.people.findIndex(u => u.id === x) - DB.mcfg.people.findIndex(u => u.id === y)).map(id => `${mWho(id).name}：${fm(per[id])}`)); else out.push(''); out.push(`全部合計：${fm(L.reduce((s, m) => s + mealTotal(m), 0))}`); }
+    return out.join('\n').replace(/（/g, '(').replace(/）/g, ')'); };
   const draw = () => { sh.body.innerHTML = `<div class="lbl">要匯出哪一餐</div><div class="whoRow" style="margin-bottom:.7rem"><button data-s="all" class="${sel === 'all' ? 'on' : ''}">📅 整天全部</button>${ms.map(m => { const T = mType(m.type); return `<button data-s="${m.id}" class="${sel === m.id ? 'on' : ''}"><span>${esc(T.icon)}</span>${esc(T.name)}${storeName(m) ? '・' + esc(storeName(m).slice(0, 8)) : ''}</button>`; }).join('')}</div>
-      <div class="lbl">格式</div><div class="whoRow" style="margin-bottom:.6rem"><button data-tpl="1" class="${tpl === 1 ? 'on' : ''}">模板一：一人一行</button><button data-tpl="2" class="${tpl === 2 ? 'on' : ''}">模板二：逐項含價格</button></div>
+      <div class="lbl">格式</div><div class="tplRow">${[['模板一', '一人一行'], ['模板二', '逐項含價格'], ['模板三', '品項總數']].map(([a, b], i) => `<button data-tpl="${i + 1}" class="${tpl === i + 1 ? 'on' : ''}"><b>${a}</b><small>${b}</small></button>`).join('')}</div>
       <label class="chk"><input type="checkbox" id="exAmt" ${amt ? 'checked' : ''}> 加上金額（每人小計、合計）</label>
       <div class="lbl" style="margin-top:.7rem">統整文字（可以直接複製貼到 LINE）</div><textarea id="exT" class="exT" rows="12">${esc(text())}</textarea>`;
     $('#exAmt', sh.body).onchange = e => { amt = e.target.checked; draw(); }; };
@@ -339,7 +344,7 @@ function mealXlsx(k, L) {
     const pm = perOf(m); Object.keys(pm).forEach(id => { per[id] = (per[id] || 0) + pm[id]; });
     rows.push(['', '', '', '', {v: T.name + '合計', s: 1}, '', '', m.items.reduce((s, x) => s + x.q, 0), {v: mealTotal(m), s: 1}]); });
   rows.push([], [{v: '每人總計', s: 1}]); Object.keys(per).sort((x, y) => DB.mcfg.people.findIndex(u => u.id === x) - DB.mcfg.people.findIndex(u => u.id === y)).forEach(id => rows.push([mWho(id).name, per[id]])); rows.push([{v: '全部合計', s: 1}, {v: L.reduce((s, m) => s + mealTotal(m), 0), s: 1}]);
-  rows.push([], [{v: '統整文字', s: 1}]); L.forEach(m => { rows.push([`【${mType(m.type).name}】${storeName(m)}`]); personLines(m, false).forEach(t => rows.push([t])); });
+  rows.push([], [{v: '統整文字', s: 1}]); L.forEach(m => { rows.push([storeName(m) ? `${mType(m.type).name}：${storeName(m)}` : mType(m.type).name]); personLines(m, false).forEach(t => rows.push([t.replace(/（/g, '(').replace(/）/g, ')')])); });
   const X = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   const col = i => String.fromCharCode(65 + i);
   const sheetXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><cols><col min="1" max="1" width="12" customWidth="1"/><col min="2" max="2" width="8" customWidth="1"/><col min="3" max="3" width="22" customWidth="1"/><col min="4" max="4" width="10" customWidth="1"/><col min="5" max="5" width="22" customWidth="1"/><col min="6" max="9" width="8" customWidth="1"/></cols><sheetData>${rows.map((r, i) => `<row r="${i + 1}">${r.map((c, j) => { const o = c && typeof c === 'object' ? c : {v: c}, ref = col(j) + (i + 1), st = o.s ? ` s="${o.s}"` : '';
