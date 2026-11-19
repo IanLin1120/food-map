@@ -295,9 +295,12 @@ function personLines(m, amt, fm) { fm = fm || money; const per = perOf(m), sha =
   return out; }
 /* 模板二：人名一行，下面每個品項一行「品名[NT$ 單價]×數量」，人和人之間空一行 */
 const ntd = v => 'NT$ ' + (Math.round((+v || 0) * 100) / 100).toLocaleString('en-US');
-function personBlock(m, amt) { const per = perOf(m), sha = shareOf(m), out = [];
-  (amt ? allIds(m) : ownIds(m)).forEach(id => { const xs = m.items.filter(x => !isShare(x) && x.who === id); out.push(mWho(id).name + '：'); xs.forEach(x => out.push(`${tn(x.n)}${xParen(x)}[${ntd(x.p)}]×${x.q}`)); if (!xs.length) out.push(`一起吃分攤：${ntd(per[id])}`); else if (amt) out.push(`小計：${ntd(per[id])}${sha[id] ? `（含一起吃 ${ntd(sha[id])}）` : ''}`); });
-  shareSets(m).forEach(g => { const st = g.xs.reduce((a, x) => a + xAmt(x), 0); out.push(`一起吃(${shareNames(g.ids)})：`); g.xs.forEach(x => out.push(`${tn(x.n)}${xParen(x)}[${ntd(x.p)}]×${x.q}`)); if (amt) out.push(`共 ${ntd(st)}，每人分攤 ${ntd(st / g.ids.length)}`); });
+/* 模板二：每個人列自己點的＋一起吃的（數量＝份數÷一起吃的人數，例如 ×0.5），沒有一起吃的人不列分攤的品項 */
+const fq = v => String(Math.round(v * 100) / 100);
+function personBlock(m, amt) { const per = perOf(m), out = [];
+  allIds(m).forEach(id => { const xs = m.items.filter(x => !isShare(x) && x.who === id), ss = m.items.filter(x => isShare(x) && x.share.includes(id)); out.push(mWho(id).name + '：');
+    xs.forEach(x => out.push(`${tn(x.n)}${xParen(x)}[${ntd(x.p)}]×${x.q}`)); ss.forEach(x => out.push(`${tn(x.n)}${xParen(x)}[${ntd(x.p)}]×${fq(x.q / x.share.length)}`));
+    if (amt) out.push(`小計：${ntd(per[id])}`); });
   return out; }
 function openMealSearch() {
   let q = ''; const sh = sheet({title: '🔍 搜尋吃過的店家', full: true});
