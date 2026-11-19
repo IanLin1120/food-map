@@ -614,3 +614,12 @@ table.piv .s.pr.one{text-align:center;padding-right:.5rem}
 .shareRow{margin-top:.45rem}
 .whoRow button.share{border-style:solid;border-color:color-mix(in srgb,var(--accent) 45%,var(--border))}
 .shareHint{font-size:.8rem;padding:.45rem .6rem;border-radius:6px;background:color-mix(in srgb,var(--accent) 12%,var(--surface-3));margin:-.2rem 0 .7rem;color:var(--text-2)}
+.dayHead .dhD{white-space:nowrap;font-size:1.02rem}
+.dayHead .dayTot{white-space:nowrap}
+.dayHead .btn{white-space:nowrap;flex:none}
+.tplRow{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.45rem;margin-bottom:.7rem}
+.tplRow button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.1rem;min-height:3.6rem;padding:.45rem .3rem;border-radius:6px;background:var(--surface-3);border:1px solid var(--border);text-align:center}
+.tplRow button b{font-size:.92rem}
+.tplRow button small{font-size:.74rem;color:var(--text-2);font-weight:700}
+.tplRow button.on{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
+.tplRow button.on small{color:inherit;opacity:.9}
