@@ -67,6 +67,29 @@ function billCard(b) {
     ${w.length ? `<div class="blWarn">⚠️ ${w.map(esc).join('・')}</div>` : c.total != null ? '<div class="blOk">✅ 金額和明細一致</div>' : ''}
     ${b.items.length ? `<div class="blItems">${b.items.slice(0, 6).map(x => `<div><span class="grow">${esc(x.n)}${x.q > 1 ? ' ×' + x.q : ''}</span><span class="muted">${esc(pplNames(x.ppl)) || '—'}</span><b>${money(numP(x.amt) - (c.itemDisc[x.id] || 0))}</b></div>`).join('')}${b.items.length > 6 ? `<div class="muted small">…還有 ${b.items.length - 6} 項</div>` : ''}</div>` : ''}</div>`;
 }
+/* 時間選擇器：大地色系，上面大字顯示，下面選「時」「分」 */
+function timePick(cur) {
+  return new Promise(res => { let done = false; const m0 = String(cur || '').match(/(\d{1,2}):(\d{2})/), now = new Date();
+    let H = m0 ? +m0[1] : now.getHours(), Mi = m0 ? +m0[2] : now.getMinutes(), part = 'h';
+    const sh = sheet({title: '選擇時間', foot: '<button class="btn" data-a="clr" style="flex:0 0 auto">清除</button><button class="btn" data-a="now" style="flex:0 0 auto">現在</button><button class="btn pri" data-a="ok">確定</button>', onClose() { if (!done) res(null); }});
+    const p2 = n => String(n).padStart(2, '0'), fin = v => { done = true; sh.close(); res(v); };
+    const draw = () => { sh.body.innerHTML = `<div class="tpBig"><button class="${part === 'h' ? 'on' : ''}" data-part="h">${p2(H)}</button><i>:</i><button class="${part === 'm' ? 'on' : ''}" data-part="m">${p2(Mi)}</button></div>
+      <div class="tpLbl">${part === 'h' ? '選擇「時」' : '選擇「分」'}<span>${H < 12 ? '上午' : '下午'} ${H % 12 || 12}:${p2(Mi)}</span></div>
+      ${part === 'h' ? `<div class="tpG h">${Array.from({length: 24}, (_, i) => `<button data-h="${i}" class="${i === H ? 'on' : ''}">${p2(i)}</button>`).join('')}</div>`
+        : `<div class="tpG m">${Array.from({length: 12}, (_, i) => i * 5).map(v => `<button data-m="${v}" class="${v === Mi ? 'on' : ''}">${p2(v)}</button>`).join('')}</div><div class="tpFine"><button data-d="-1">－1 分</button><span>${p2(H)}:${p2(Mi)}</span><button data-d="1">＋1 分</button></div>`}`; };
+    draw();
+    sh.body.addEventListener('click', e => { const t = e.target.closest('button'); if (!t) return; buzz(8);
+      if (t.dataset.part) part = t.dataset.part; else if (t.dataset.h) { H = +t.dataset.h; part = 'm'; } else if (t.dataset.m) Mi = +t.dataset.m; else if (t.dataset.d) Mi = (Mi + +t.dataset.d + 60) % 60; draw(); });
+    sh.foot.addEventListener('click', e => { const t = e.target.closest('[data-a]'); if (!t) return; const a = t.dataset.a;
+      if (a === 'clr') fin(''); else if (a === 'now') { const d = new Date(); H = d.getHours(); Mi = d.getMinutes(); draw(); } else fin(p2(H) + ':' + p2(Mi)); }); });
+}
+/* 辨識中的明細：固定顯示在頁首，不用切到那一天也看得到進度 */
+function renderJobs() {
+  const box = $('#shopJobs'); if (!box) return; const L = [];
+  Object.keys(DB.bills).forEach(k => DB.bills[k].forEach(b => { if (b.aiBusy) L.push({k, b}); }));
+  box.hidden = !L.length; if (!L.length) { box.innerHTML = ''; return; }
+  box.innerHTML = L.map(({k, b}) => `<button class="sjR" data-k="${k}" data-id="${b.id}"><span class="spin"></span><span class="sjT"><b>🤖 AI 辨識中・${esc((dayLabel(k) || '').slice(5))}${billStore(b) ? '・' + esc(billStore(b)) : ''}</b><small class="rcMsg" data-b="${b.id}">${esc(b.aiMsg || '準備中…')}</small></span><span class="sjGo">查看 ›</span><i class="sjBar"></i></button>`).join('');
+}
 const billKey = b => Object.keys(DB.bills).find(k => DB.bills[k].includes(b)) || '';
 /* 日期選擇器：和月曆同樣的外觀，點一天就選好 */
 function datePick(k0) {
@@ -97,6 +120,7 @@ function shopPlaceHtml(p) {
 function initShop() {
   const box = $('#shopBody');
   $('#shopToday').onclick = () => { const d = new Date(); Shop.sel = ymd(d); Shop.ym = [d.getFullYear(), d.getMonth()]; renderShop(); };
+  document.addEventListener('fm:shop', renderJobs); $('#shopJobs').onclick = e => { const t = e.target.closest('.sjR'); if (!t) return; buzz(10); gotoBill(t.dataset.k, t.dataset.id); };
   $('#shopNewImg').onclick = () => newBillImg(); $('#shopNewMan').onclick = () => newBillManual();
   $('#shopSet').onclick = () => openShopSettings(); $('#shopFind').onclick = () => openShopSearch();
   box.addEventListener('change', e => { if (e.target.id === 'sCalY') Shop.ym[0] = +e.target.value; else if (e.target.id === 'sCalM') Shop.ym[1] = +e.target.value; else return;
@@ -336,7 +360,7 @@ function editBill(b) {
   const chips = ids => (ids || []).length ? `<span class="pplC">${ids.map(id => `<i>${esc(mWho(id).icon)}${esc(mWho(id).name)}</i>`).join('')}</span>` : '<span class="pplC none">選誰付</span>';
   const draw = () => { const c = billCalc(b), ids = pOrder(Object.keys(c.per)), top = sh.body.scrollTop;
     sh.body.innerHTML = `${b.aiBusy ? `<div class="jobBar"><span class="spin"></span><span class="grow">AI 辨識中…<small class="rcMsg" data-b="${b.id}">${esc(b.aiMsg || '')}</small></span></div>` : ''}
-      <div class="ebHead"><button class="ebF" data-a="store"><small>店家</small><b>${esc(billStore(b) || '未選店家')}</b></button><div class="ebF ebDate"><small>日期</small><div class="edRow"><button class="edGo" data-a="goDay"><b>${dayLabel(billKey(b) || Shop.sel)}</b><span>到月曆 ›</span></button><button class="edPick" data-a="pickDate">更改 ${TRI_D}</button></div></div><label class="ebF"><small>時間</small><input type="time" id="ebTime" value="${esc(b.time || '')}"></label><label class="ebF"><small>明細上的實付金額</small><input id="ebTotal" inputmode="decimal" placeholder="選填，用來驗算" value="${b.total == null ? '' : esc(b.total)}"></label></div>
+      <div class="ebHead"><button class="ebF" data-a="store"><small>店家</small><b>${esc(billStore(b) || '未選店家')}</b></button><div class="ebF ebDate"><small>日期</small><div class="edRow"><button class="edGo" data-a="goDay"><b>${dayLabel(billKey(b) || Shop.sel)}</b><span>到月曆 ›</span></button><button class="edPick" data-a="pickDate">更改 ${TRI_D}</button></div></div><button class="ebF ebTimeB" data-a="pickTime"><small>時間</small><span class="tv ${b.time ? '' : 'none'}">🕒 ${esc(b.time || '未填')}</span></button><label class="ebF"><small>明細上的實付金額</small><input id="ebTotal" inputmode="decimal" placeholder="選填，用來驗算" value="${b.total == null ? '' : esc(b.total)}"></label></div>
       ${(b.imgs || []).length ? `<div class="ebImgs">${b.imgs.map((id, i) => `<button class="ebImg" data-a="img" data-i="${i}"><img data-img="${id}" alt=""></button>`).join('')}<button class="btn sm" data-a="reAI" ${b.aiBusy ? 'disabled' : ''}>🔄 重新辨識</button></div>` : ''}
       <div class="ebSec"><div class="msH"><b class="grow">🛍️ 品項（${b.items.length}）</b><button class="btn sm" data-a="addItem">＋ 品項</button></div>
         ${b.items.length ? `<div class="ebQuick"><span>還沒選人的全部給：</span>${DB.mcfg.people.map(u => `<button data-a="qAll" data-id="${u.id}">${esc(u.icon)}${esc(u.name)}</button>`).join('')}<button data-a="qShare">👥 大家一起分</button></div>` : ''}
@@ -356,10 +380,11 @@ function editBill(b) {
     $('#ebT', sh.foot).innerHTML = billWarn(c).length ? `<span style="color:var(--danger)">⚠️ ${esc(billWarn(c)[0])}</span>` : `應付 <b>${money(c.computed)}</b>`;
     sh.body.scrollTop = top; };
   draw(); const job = () => { if (!b.aiBusy) { document.removeEventListener('fm:shop', job); } if (!sh.closed) draw(); }; document.addEventListener('fm:shop', job);
-  sh.body.addEventListener('change', e => { if (e.target.id === 'ebTime') { b.time = e.target.value; saveBills(); } else if (e.target.id === 'ebTotal') { b.total = e.target.value.trim() === '' ? '' : numP(e.target.value); saveBills(); draw(); } });
+  sh.body.addEventListener('change', e => { if (e.target.id === 'ebTotal') { b.total = e.target.value.trim() === '' ? '' : numP(e.target.value); saveBills(); draw(); } });
   sh.body.addEventListener('click', async e => { const t = e.target.closest('[data-a]'); if (!t) return; const a = t.dataset.a, row = t.closest('.ebR');
     const X = row && row.dataset.x && b.items.find(x => x.id === row.dataset.x), D = row && row.dataset.d && b.disc.find(d => d.id === row.dataset.d), O = row && row.dataset.o && b.odisc.find(d => d.id === row.dataset.o), F = row && row.dataset.f && b.fees.find(d => d.id === row.dataset.f);
     if (a === 'store') { const st = await pickShopStore(b.place); if (st === undefined) return; b.place = st ? st.id || '' : ''; b.pname = st ? st.name : ''; $('.shTitle', sh.el).textContent = '🧾 ' + (billStore(b) || '購物明細'); draw(); }
+    else if (a === 'pickTime') { const v = await timePick(b.time); if (v == null) return; b.time = v; saveBills(); shopChanged(); draw(); }
     else if (a === 'goDay') { const k = billKey(b); if (!k) return; while (sheets.length) sheets[sheets.length - 1].close(); const d = ymdDate(k); Shop.sel = k; Shop.ym = [d.getFullYear(), d.getMonth()]; showTab('Shop'); buzz(15);
       setTimeout(() => { const el = $(`.bill[data-b="${b.id}"]`); if (el) el.scrollIntoView({behavior: 'smooth', block: 'center'}); }, 80); }
     else if (a === 'pickDate') { const from = billKey(b), k = await datePick(from || Shop.sel); if (!k || k === from) return; if (from) DB.bills[from].splice(DB.bills[from].indexOf(b), 1); (DB.bills[k] = DB.bills[k] || []).push(b); shopChanged(); draw(); toast('已改到 ' + dayLabel(k)); }
