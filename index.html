@@ -4,7 +4,7 @@
 <script>/* 線上更新開機程式：手機上若已下載比 APK 內建更新的介面版本，就改用新版（存在 IndexedDB）。
    新版連續兩次沒有正常開啟 → 自動退回 APK 內建版本。網址加上 #builtin 也會強制使用內建版本。 */
 (function () {
-  var B = '3.0.6'; if (!window.__OTA) window.APP_BUILTIN = B;
+  var B = '3.0.7'; if (!window.__OTA) window.APP_BUILTIN = B;
   if (window.__OTA || location.hash.indexOf('builtin') >= 0) return;
   var v = null; try { v = JSON.parse(localStorage.getItem('fm.ota') || 'null'); } catch (e) {}
   function gt(a, b) { a = String(a).split('.').map(Number); b = String(b).split('.').map(Number); for (var i = 0; i < Math.max(a.length, b.length); i++) { var p = a[i] || 0, q = b[i] || 0; if (p !== q) return p > q; } return false; }
@@ -792,7 +792,7 @@ body.mShop #tabbar [data-tab="Meal"],body.mShop #tabbar [data-tab="Rec"]{display
 .presetRow button.on{background:var(--accent);color:#fff;border-color:transparent}
 /* 月曆年月：◀ 〔年 ▾〕〔月 ▾〕 ▶ */
 .calTop{gap:.45rem}
-.calNav{flex:none;width:2.7rem;height:2.7rem;border-radius:6px;background:var(--surface-3);border:1px solid var(--border);color:var(--accent);display:flex;align-items:center;justify-content:center;padding:0}
+.calNav{flex:none;width:1.9rem;height:2.7rem;border-radius:6px;background:var(--surface-3);border:1px solid var(--border);color:var(--accent);display:flex;align-items:center;justify-content:center;padding:0}
 .calNav svg{width:.8rem;height:.95rem;display:block}
 .calYM{flex:1;display:flex;align-items:stretch;height:2.7rem;min-width:0;padding:0;border-radius:6px;overflow:hidden;border:1px solid color-mix(in srgb,var(--accent) 28%,var(--border));background:var(--surface);color:var(--text);box-shadow:0 1px 2px rgba(0,0,0,.05)}
 .calYM .v{flex:1;display:flex;align-items:baseline;justify-content:center;gap:.3rem;padding:0 .3rem;align-self:center;white-space:nowrap;min-width:0}
@@ -817,6 +817,12 @@ body.mShop #tabbar [data-tab="Meal"],body.mShop #tabbar [data-tab="Rec"]{display
 .edPick{flex:none;display:flex;align-items:center;gap:.35rem;border:1px solid color-mix(in srgb,var(--accent) 30%,var(--border));border-radius:6px;background:color-mix(in srgb,var(--accent) 10%,var(--surface-3));color:var(--accent);font-weight:800;font-size:.86rem;padding:0 .7rem}
 .edPick svg{width:.6rem;height:.4rem}
 .dpCal{box-shadow:none;background:transparent;padding:0;margin-bottom:.7rem}
+
+.calTop .calYM[data-a="ymY"]{flex:1.4}
+.calTop .calYM[data-a="ymM"]{flex:1}
+.shopAdd.top{margin:0;gap:.45rem}
+.shopAdd.top .btn{flex-direction:row;gap:.35rem;padding:.6rem .4rem;font-size:.98rem;font-weight:800;white-space:nowrap}
+#shopBody>.cal{margin-top:.35rem}
 </style>
 </head>
 <body>
@@ -851,7 +857,7 @@ body.mShop #tabbar [data-tab="Meal"],body.mShop #tabbar [data-tab="Rec"]{display
   </section>
 
   <section class="page" id="pgShop">
-    <div class="pgHead two"><div class="phRow"><h1>購物分帳</h1><div class="sub" id="shopSub"></div></div><div class="pgTools"><button class="btn" id="shopFind" aria-label="搜尋紀錄">🔍 搜尋</button><button class="btn" id="shopToday">📅 今天</button><button class="btn" id="shopSet" aria-label="設定">⚙️ 設定</button></div></div>
+    <div class="pgHead two"><div class="phRow"><h1>購物分帳</h1><div class="sub" id="shopSub"></div></div><div class="shopAdd top"><button class="btn pri" id="shopNewImg">📷 上傳明細</button><button class="btn" id="shopNewMan">✏️ 手動輸入</button></div><div class="pgTools"><button class="btn" id="shopFind" aria-label="搜尋紀錄">🔍 搜尋</button><button class="btn" id="shopToday">📅 今天</button><button class="btn" id="shopSet" aria-label="設定">⚙️ 設定</button></div></div>
     <div class="pgBody"><div class="pgInner" id="shopBody"></div></div>
   </section>
 
@@ -956,7 +962,7 @@ return maplibregl$1;
 /* ============================================================
    食光帳本 — 核心：工具、資料儲存、主題、面板、拖曳排序、圖片
    ============================================================ */
-const APP_VERSION = '3.0.6';
+const APP_VERSION = '3.0.7';
 const APP_VER = APP_VERSION;
 /* 線上更新來源（GitHub Pages）：IanLin1120/food-map */
 const GH = {repo: 'https://github.com/IanLin1120/food-map', pages: 'https://ianlin1120.github.io/food-map/'};
@@ -3427,8 +3433,8 @@ function renderShop() {
       ${calHead(Y, Mo)}
       <div class="calWd">${MWD.map((w, i) => `<span class="${i === 0 || i === 6 ? 'we' : ''}">${w}</span>`).join('')}</div><div class="calG">${cells}</div></div>
     <div class="dayHead"><b class="dhD">${sel.getMonth() + 1}月${sel.getDate()}日 星期${MWD[sel.getDay()]}</b><span class="grow"></span>${bs.length ? `<span class="dayTot">${money(dayTot)}</span><button class="btn sm" data-a="exportDay">📤 匯出</button>` : ''}</div>
-    ${bs.map(billCard).join('') || '<div class="empty mealEmpty"><span class="big">🧾</span>這天還沒有購物明細<br><span class="small">按下面的按鈕拍照、上傳截圖或手動輸入<br>也可以在 Foodpanda、相簿裡按「分享」傳給食光帳本</span></div>'}
-    <div class="shopAdd"><button class="btn pri" data-a="newImg"><i>📷</i><b>上傳明細</b><small>AI 自動辨識</small></button><button class="btn" data-a="newMan"><i>✏️</i><b>手動輸入</b><small>自己打品項</small></button></div>
+    ${bs.map(billCard).join('') || '<div class="empty mealEmpty"><span class="big">🧾</span>這天還沒有購物明細<br><span class="small">按上面的「上傳明細」拍照或選截圖，或「手動輸入」<br>也可以在 Foodpanda、相簿裡按「分享」傳給食光帳本</span></div>'}
+    
     ${order.length ? `<div class="perSum card"><div class="psH">👥 每個人這天要付</div>${order.map(id => { const u = mWho(id); return `<div class="psR"><span class="psI">${esc(u.icon)}</span><b class="grow">${esc(u.name)}</b><span>${money(per[id])}</span></div>`; }).join('')}<div class="psR tot"><b class="grow">合計</b><span>${money(dayTot)}</span></div></div>` : ''}`;
 }
 function billCard(b) {
@@ -3469,6 +3475,7 @@ function shopPlaceHtml(p) {
 function initShop() {
   const box = $('#shopBody');
   $('#shopToday').onclick = () => { const d = new Date(); Shop.sel = ymd(d); Shop.ym = [d.getFullYear(), d.getMonth()]; renderShop(); };
+  $('#shopNewImg').onclick = () => newBillImg(); $('#shopNewMan').onclick = () => newBillManual();
   $('#shopSet').onclick = () => openShopSettings(); $('#shopFind').onclick = () => openShopSearch();
   box.addEventListener('change', e => { if (e.target.id === 'sCalY') Shop.ym[0] = +e.target.value; else if (e.target.id === 'sCalM') Shop.ym[1] = +e.target.value; else return;
     const nd = new Date(Shop.ym[0], Shop.ym[1] + 1, 0).getDate(); Shop.sel = ymd(new Date(Shop.ym[0], Shop.ym[1], Math.min(ymdDate(Shop.sel).getDate(), nd))); renderShop(); });
