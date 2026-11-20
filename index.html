@@ -4,7 +4,7 @@
 <script>/* 線上更新開機程式：手機上若已下載比 APK 內建更新的介面版本，就改用新版（存在 IndexedDB）。
    新版連續兩次沒有正常開啟 → 自動退回 APK 內建版本。網址加上 #builtin 也會強制使用內建版本。 */
 (function () {
-  var B = '3.1.0'; if (!window.__OTA) window.APP_BUILTIN = B;
+  var B = '3.2.0'; if (!window.__OTA) window.APP_BUILTIN = B;
   if (window.__OTA || location.hash.indexOf('builtin') >= 0) return;
   var v = null; try { v = JSON.parse(localStorage.getItem('fm.ota') || 'null'); } catch (e) {}
   function gt(a, b) { a = String(a).split('.').map(Number); b = String(b).split('.').map(Number); for (var i = 0; i < Math.max(a.length, b.length); i++) { var p = a[i] || 0, q = b[i] || 0; if (p !== q) return p > q; } return false; }
@@ -892,6 +892,11 @@ body.mShop #tabbar [data-tab="Meal"],body.mShop #tabbar [data-tab="Rec"]{display
 .scState{display:flex;gap:.5rem;justify-content:center;margin:.6rem 0}
 .scState .chip{font-size:.82rem;padding:.3rem .7rem}
 .scGot .invC{margin-top:.4rem}
+#invJobs{display:flex;flex-direction:column;gap:.4rem}#invJobs[hidden]{display:none}
+.accSt{font-weight:800;padding:.6rem .8rem;border-radius:6px;margin-bottom:.6rem;background:color-mix(in srgb,var(--danger) 10%,var(--surface));color:var(--danger)}
+.accSt.on{background:color-mix(in srgb,var(--success) 12%,var(--surface));color:var(--success)}
+.accBtns{font-size:.84rem;line-height:1.9;margin:.3rem 0 .2rem;color:var(--text-2)}
+.accBtns span{display:inline-block;font-weight:800;color:var(--text);background:var(--surface-3);border:1px solid var(--border);border-radius:6px;padding:0 .4rem;margin-right:.35rem}
 </style>
 </head>
 <body>
@@ -926,7 +931,7 @@ body.mShop #tabbar [data-tab="Meal"],body.mShop #tabbar [data-tab="Rec"]{display
   </section>
 
   <section class="page" id="pgInv">
-    <div class="pgHead two"><div class="phRow"><h1>發票</h1><div class="sub" id="invSub"></div></div><div class="shopAdd top"><button class="btn pri" id="invScan">📷 掃描發票</button><button class="btn" id="invWeb">🌐 載具發票</button></div><div class="pgTools"><button class="btn" id="invCsv">📄 匯入 CSV</button><button class="btn" id="invFind">🔍 搜尋</button><button class="btn" id="invSet">⚙️ 設定</button></div></div>
+    <div class="pgHead two"><div class="phRow"><h1>發票</h1><div class="sub" id="invSub"></div></div><div class="pgTools"><button class="btn pri" id="invScan">📷 掃描</button><button class="btn" id="invShot">🖼️ 截圖</button><button class="btn" id="invAcc">🤖 協助工具</button></div><div class="pgTools"><button class="btn" id="invMore">📥 其他匯入</button><button class="btn" id="invFind">🔍 搜尋</button><button class="btn" id="invSet">⚙️ 設定</button></div><div id="invJobs" hidden></div></div>
     <div class="pgBody"><div class="pgInner" id="invBody"></div></div>
   </section>
 
@@ -967,6 +972,7 @@ body.mShop #tabbar [data-tab="Meal"],body.mShop #tabbar [data-tab="Rec"]{display
 <div id="busy"><div class="box"><div class="spin"></div><div id="busyT"></div></div></div>
 <div id="toast"></div>
 <input type="file" id="filePick" accept="image/*" multiple class="hide">
+<input type="file" id="invShotPick" accept="image/*" multiple class="hide">
 <input type="file" id="csvPick" accept=".csv,.txt,text/csv,text/plain,text/comma-separated-values,application/vnd.ms-excel" class="hide">
 <input type="file" id="jsonPick" accept=".json,application/json" class="hide">
 
@@ -1039,7 +1045,7 @@ return maplibregl$1;
 /* ============================================================
    食光帳本 — 核心：工具、資料儲存、主題、面板、拖曳排序、圖片
    ============================================================ */
-const APP_VERSION = '3.1.0';
+const APP_VERSION = '3.2.0';
 const APP_VER = APP_VERSION;
 /* 線上更新來源（GitHub Pages）：IanLin1120/food-map */
 const GH = {repo: 'https://github.com/IanLin1120/food-map', pages: 'https://ianlin1120.github.io/food-map/'};
@@ -4082,7 +4088,7 @@ function invPut(v) {
   if (!o) { DB.invs[v.no] = Object.assign({items: [], add: Date.now()}, v); return 'new'; }
   ['date', 'time', 'sellerId', 'seller', 'total'].forEach(k => { if ((o[k] == null || o[k] === '') && v[k] != null && v[k] !== '') o[k] = v[k]; });
   if (v.items && v.items.length && (!o.items || !o.items.length || v.src === 'qr' && o.src !== 'qr' && v.items.length >= o.items.length)) o.items = v.items;
-  if (v.seller && !o.seller) o.seller = v.seller; return 'upd';
+  if (v.seller && (!o.seller || v.seller.length > o.seller.length && v.seller.startsWith(o.seller.replace(/…$/, '')))) o.seller = v.seller; return 'upd';
 }
 function invChanged() { saveInvs(); if (curTab === 'Inv') renderInv(); }
 
@@ -4100,7 +4106,7 @@ function renderInv() {
     <div class="cal invCal">${calHead(Y, Mo)}</div>
     <div class="invSum"><span>本月張數<b>${L.length}</b></span><span>已分帳<b>${done}</b></span><span>本月合計<b>${money(tot)}</b></span></div>
     ${L.length ? Object.keys(byDay).map(k => `<div class="invDay">${dayLabel(k)}</div>${byDay[k].map(invCard).join('')}`).join('')
-      : `<div class="empty mealEmpty"><span class="big">🧾</span>這個月還沒有發票<br><span class="small">按上面的「掃描發票」掃紙本發票的 QR Code，<br>或用「載具發票」「匯入 CSV」帶入手機條碼裡的發票</span></div>`}`;
+      : `<div class="empty mealEmpty"><span class="big">🧾</span>這個月還沒有發票<br><span class="small">「📷 掃描」紙本發票的 QR Code、「🖼️ 截圖」匯入發票大師的畫面，<br>或用「🤖 協助工具」直接讀取發票 App</span></div>`}`;
 }
 function invCard(v) {
   const b = invBill(v);
@@ -4109,7 +4115,11 @@ function invCard(v) {
 }
 function initInv() {
   const box = $('#invBody');
-  $('#invScan').onclick = () => openInvScan(); $('#invWeb').onclick = () => openInvWeb(); $('#invCsv').onclick = () => $('#csvPick').click();
+  $('#invScan').onclick = () => openInvScan(); $('#invShot').onclick = () => $('#invShotPick').click(); $('#invAcc').onclick = () => openInvAcc();
+  $('#invMore').onclick = () => { const sh = sheet({title: '📥 其他匯入方式', html: `<div class="actList"><button data-a="csv">📄 匯入財政部「載具消費明細」CSV</button><button data-a="web">🌐 App 內打開財政部網站讀取（實驗性）</button></div>`});
+    sh.body.onclick = e => { const t = e.target.closest('[data-a]'); if (!t) return; sh.close(); if (t.dataset.a === 'csv') $('#csvPick').click(); else openInvWeb(); }; };
+  $('#invShotPick').onchange = e => { const fs = [...e.target.files]; e.target.value = ''; if (fs.length) invShots(fs); };
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) setTimeout(invPullAcc, 300); }); setTimeout(invPullAcc, 1500);
   $('#invFind').onclick = () => openInvSearch(); $('#invSet').onclick = () => openInvSettings();
   $('#csvPick').onchange = async e => { const f = e.target.files[0]; e.target.value = ''; if (f) importInvCsv(f); };
   box.addEventListener('click', async e => { const t = e.target.closest('[data-a],[data-no]'); if (!t) return;
@@ -4282,7 +4292,7 @@ function openInvDetail(no) {
   const v = DB.invs[no]; if (!v) return;
   const sh = sheet({title: '🧾 發票明細', full: true, foot: '<button class="btn danger" data-a="del" style="flex:0 0 auto">刪除</button><button class="btn pri" data-a="split"></button>'});
   const draw = () => { const b = invBill(v), its = v.items || [], sum = its.reduce((s, x) => s + (+x.amt || 0), 0);
-    sh.body.innerHTML = `<div class="invHead card"><div class="ihNo">🧾 ${invNoFmt(v.no)}<span class="chip">${{qr: '紙本 QR', csv: '載具 CSV', web: '載具網站'}[v.src] || ''}</span></div>
+    sh.body.innerHTML = `<div class="invHead card"><div class="ihNo">🧾 ${invNoFmt(v.no)}<span class="chip">${{qr: '紙本 QR', csv: '載具 CSV', web: '載具網站', shot: '截圖', acc: '協助工具'}[v.src] || ''}</span></div>
         <div class="ihR"><span>發票日期</span><b>${dayLabel(v.date)}${v.time ? ' ' + esc(v.time) : ''}</b></div>
         <button class="ihR ihS" data-a="seller"><span>消費店家</span><b>${esc(invSeller(v))} ✎</b></button>
         ${v.sellerId ? `<div class="ihR"><span>店家統編</span><b>${v.sellerId}</b></div>` : ''}</div>
@@ -4336,6 +4346,110 @@ function openInvSettings() {
     if (a === 'car') { await editCarrier(); draw(); } else if (a === 'carDel') { delete DB.scfg.carrier; saveScfg(); draw(); }
     else if (a === 'sRen') { const id = t.closest('.msR').dataset.id, nv = ((await askText('店家名稱', DB.scfg.sellers[id])) || '').trim(); if (nv) { DB.scfg.sellers[id] = nv; saveScfg(); draw(); } }
     else if (a === 'wipe') { if (!await ask('確定要清除所有發票紀錄嗎？（分帳紀錄不會刪）', '全部清除', true)) return; DB.invs = {}; saveInvs(); draw(); } });
+}
+
+
+/* ---------- 匯入發票截圖（發票大師、發票存摺、財政部 App 的明細頁或列表頁） ---------- */
+const INV_PROMPT = `這是台灣電子發票 App（例如發票大師、發票存摺、財政部「統一發票兌獎」）的截圖，可能是「發票明細」頁或「發票列表」頁。
+只輸出下面格式的文字行，一行一筆，不要說明、不要 markdown：
+發票|發票號碼（2 個英文字母＋8 位數字，不要橫線）|日期 YYYY-MM-DD|時間 HH:MM|店家名稱|店家統編|消費金額
+品|發票號碼|品名|數量|小計
+規則：
+1. 列表頁：每一張發票輸出一行「發票」。年份看頁首（例如「115年11-12月」= 2026 年），看不到就用今年。
+2. 明細頁：輸出一行「發票」，再把「消費品項」表格每一列輸出成一行「品」。小計是負數（例如「鮮食促 -21」）要保留負號。
+3. 店家名稱照抄完整（換行的部分接起來）。看不清楚或不確定的欄位直接留空白，馬上處理下一行，不要猜。`;
+const InvJob = {n: 0, done: 0, msg: ''};
+function invJobs() { const box = $('#invJobs'); if (!box) return; box.hidden = !InvJob.n;
+  box.innerHTML = InvJob.n ? `<div class="sjR"><span class="spin"></span><span class="sjT"><b>🤖 AI 讀取發票截圖 ${InvJob.done}/${InvJob.n}</b><small>${esc(InvJob.msg)}</small></span><i class="sjBar"></i></div>` : ''; }
+function invParseAI(t) {
+  const out = {}, num = v => { const n = parseFloat(String(v || '').replace(/[^\d.\-]/g, '')); return isNaN(n) ? NaN : n; };
+  String(t || '').split(/\r?\n/).forEach(line => { const f = line.split(/[|｜]/).map(x => x.trim()); const k = (f[0] || '').replace(/^[-*•\s]+/, '');
+    const no = String(f[1] || '').toUpperCase().replace(/[^A-Z0-9]/g, ''); if (!/^[A-Z]{2}\d{8}$/.test(no)) return;
+    const o = out[no] = out[no] || {no, items: [], src: 'shot'};
+    if (k === '發票') { const dm = (f[2] || '').match(/(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})/); if (dm) o.date = `${dm[1]}-${dm[2].padStart(2, '0')}-${dm[3].padStart(2, '0')}`;
+      const tm = (f[3] || '').match(/(\d{1,2}):(\d{2})/); if (tm) o.time = tm[1].padStart(2, '0') + ':' + tm[2];
+      if (f[4]) o.seller = f[4]; if (/^\d{8}$/.test(f[5] || '')) o.sellerId = f[5]; const a = num(f[6]); if (!isNaN(a)) o.total = a; }
+    else if (k === '品') { const n = f[2], q = num(f[3]), a = num(f[4]); if (n && !isNaN(a)) o.items.push({n, q: isNaN(q) ? 1 : q, p: Math.round(a / (isNaN(q) || !q ? 1 : q) * 100) / 100, amt: a}); } });
+  return Object.values(out);
+}
+async function invShots(files) {
+  if (!S.aikey) { needAiKey(); return; }
+  InvJob.n = files.length; InvJob.done = 0; InvJob.msg = '準備中…'; invJobs(); let got = 0, nNew = 0, fail = 0; const t0 = Date.now();
+  for (const f of files) {
+    try { const imgs = await rcPrep([f]), parts = [{text: INV_PROMPT}, ...imgs], order = await aiOrder(); let text = '', last = null;
+      for (const m of order) { if (AIQ.blocked(m)) continue; let ti = (S.rcTh || {})[m] != null ? S.rcTh[m] : (/gemini-2\./.test(m) ? 1 : 0); const TH = [{thinkingLevel: 'minimal'}, {thinkingBudget: 0}, null];
+        while (ti < TH.length) { try { InvJob.msg = `第 ${InvJob.done + 1} 張・${aiShort(m)} 讀取中…`; invJobs();
+            text = await rcStream(m, parts, TH[ti], tx => { const n = (tx.match(/^\s*(發票|品)[|｜]/gm) || []).length; InvJob.msg = `第 ${InvJob.done + 1} 張・${aiShort(m)} 已讀到 ${n} 行…`; const el = $('#invJobs small'); if (el) el.textContent = InvJob.msg; });
+            AIQ.inc(m); break; } catch (e) { last = e; if (e.code === 400) { ti++; continue; } if (e.code === 429 && e.perDay) AIQ.block(m, e.limit); break; } }
+        if (invParseAI(text).length) break; }
+      const L = invParseAI(text); if (!L.length) { fail++; if (last) console.warn(last); }
+      L.forEach(v => { if (!v.date && !v.items.length) return; const r = invPut(v); if (r === 'new') nNew++; got++; if (v.sellerId && v.seller) { DB.scfg.sellers = DB.scfg.sellers || {}; if (!DB.scfg.sellers[v.sellerId]) DB.scfg.sellers[v.sellerId] = v.seller; } else if (v.sellerId) lookupSeller(v.sellerId); });
+      invChanged(); }
+    catch (er) { fail++; }
+    InvJob.done++; invJobs();
+  }
+  AILOG.add({kind: '發票截圖', place: '', model: '', ms: Date.now() - t0, ok: got > 0, n: got});
+  InvJob.n = 0; invJobs(); saveScfg(); buzz(40);
+  const lastD = invList().map(v => v.date).filter(Boolean).sort().pop(); if (lastD && got) { const d = ymdDate(lastD); Inv.ym = [d.getFullYear(), d.getMonth()]; renderInv(); }
+  toast(got ? `✅ 從 ${files.length} 張截圖讀到 ${got} 張發票（新增 ${nNew}）${fail ? `，${fail} 張讀不到` : ''}` : '❌ 截圖裡沒有讀到發票，請截「發票明細」或「發票列表」畫面', 5000);
+}
+
+/* ---------- 協助工具讀取（讀發票大師等 App 畫面上的文字） ---------- */
+function openInvAcc() {
+  if (!(IS_APP && NB.invAccState)) { const sh = sheet({title: '🤖 協助工具讀取'}); sh.body.innerHTML = '<p>這個功能要在 Android App 裡使用。</p>'; return; }
+  const sh = sheet({title: '🤖 協助工具讀取', full: true, foot: '<button class="btn" data-a="set">⚙️ 協助工具設定</button><button class="btn pri" data-a="go">▶ 開始</button>'});
+  const draw = () => { const on = NB.invAccState() === 'on';
+    sh.body.innerHTML = `<div class="accSt ${on ? 'on' : ''}">${on ? '✅ 協助工具已開啟' : '⚠️ 還沒開啟協助工具'}</div>
+      <ol class="invSteps">
+        <li>${on ? '<s>開啟協助工具</s>（已完成）' : '按下面的「⚙️ 協助工具設定」→ 找到「<b>食光帳本 發票讀取</b>」→ 開啟'}</li>
+        <li>按「▶ 開始」，然後切到<b>發票大師</b>（或其他發票 App）</li>
+        <li>畫面下方會出現食光帳本的小面板：
+          <div class="accBtns"><span>📥 讀取這頁</span>打開一張發票明細時按，讀這一張<br><span>⏬ 捲動讀取列表</span>在發票列表按，自動往下捲、讀出每張的日期、店家、金額<br><span>🔁 自動讀取全部明細</span>在發票列表按，會自動一張一張點開、讀取、返回（再按一次停止）<br><span>✓ 完成</span>收起面板、回到食光帳本</div></li>
+        <li>回到食光帳本，讀到的發票會自動存進發票區，同一張不會重複</li></ol>
+      <div class="gTip">🔒 只有你按下面板上的按鈕時才會讀取畫面上的文字，讀到的內容只存在這支手機裡，不會上傳。不用時可以到協助工具設定關掉。</div>`; };
+  draw();
+  sh.foot.addEventListener('click', e => { const t = e.target.closest('[data-a]'); if (!t) return;
+    if (t.dataset.a === 'set') { NB.invAccSettings(); return; }
+    if (NB.invAccState() !== 'on') { toast('請先到協助工具設定開啟「食光帳本 發票讀取」', 3500); NB.invAccSettings(); return; }
+    NB.invAccArm(true); sh.close(); toast('▶ 已開始：切到發票 App，畫面下方會出現讀取面板', 4000); });
+  const re = () => { if (!document.hidden && !sh.closed) draw(); }; document.addEventListener('visibilitychange', re);
+}
+function invPullAcc() {
+  if (!(IS_APP && NB.invInbox)) return; let raw = ''; try { raw = NB.invInbox(); } catch (e) { return; } if (!raw) return;
+  let arr; try { arr = JSON.parse(raw); } catch (e) { return; } const all = {};
+  (arr || []).forEach(rec => (rec.pages || []).forEach(lines => invParseLines(lines).forEach(v => { const o = all[v.no]; if (!o) all[v.no] = v; else { Object.keys(v).forEach(k => { if ((o[k] == null || o[k] === '') && v[k] !== '') o[k] = v[k]; }); if (v.items && v.items.length) o.items = v.items; } })));
+  const L = Object.values(all); if (!L.length) { toast('協助工具讀到的畫面裡沒有發票，請在發票明細或列表畫面按讀取', 4000); return; }
+  let nNew = 0; L.forEach(v => { if (invPut(v) === 'new') nNew++; if (v.sellerId && v.seller) { DB.scfg.sellers = DB.scfg.sellers || {}; if (!DB.scfg.sellers[v.sellerId]) DB.scfg.sellers[v.sellerId] = v.seller; } else if (v.sellerId) lookupSeller(v.sellerId); });
+  saveScfg(); invChanged(); buzz(40); const wi = L.filter(v => v.items && v.items.length).length;
+  const lastD = L.map(v => v.date).filter(Boolean).sort().pop(); if (lastD) { const d = ymdDate(lastD); Inv.ym = [d.getFullYear(), d.getMonth()]; }
+  if (S.mode === 'shop' && curTab !== 'Inv') showTab('Inv'); else renderInv();
+  toast(`✅ 協助工具讀到 ${L.length} 張發票（${wi} 張有品項），新增 ${nNew} 張`, 4500);
+}
+/* 把一頁畫面文字（每行用 tab 分欄）解析成發票：明細頁或列表頁 */
+function invParseLines(lines) {
+  const L = (lines || []).map(l => String(l)), noRe = /([A-Z]{2})-?(\d{8})/, out = [], cells = l => l.split(/\s*\t\s*/).map(x => x.trim()).filter(Boolean);
+  const money1 = s => { const m = String(s).replace(/,/g, '').match(/(-)?\s*\$\s*(-)?(\d+(\.\d+)?)/); return m ? (m[1] || m[2] ? -1 : 1) * parseFloat(m[3]) : NaN; };
+  const nos = new Set(); L.forEach(l => { const m = l.match(/[A-Z]{2}-?\d{8}/g); (m || []).forEach(x => nos.add(x.replace('-', ''))); });
+  const all = L.join('\n'), isDetail = /發票日期|消費店家|店家統編/.test(all) && nos.size <= 2;
+  if (isDetail) { const m = all.match(noRe); if (!m) return out; const v = {no: m[1] + m[2], items: [], src: 'acc'};
+    const dm = all.match(/(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})(?:\s+(\d{1,2}):(\d{2}))?/); if (dm) { v.date = `${dm[1]}-${dm[2].padStart(2, '0')}-${dm[3].padStart(2, '0')}`; if (dm[4]) v.time = dm[4].padStart(2, '0') + ':' + dm[5]; }
+    L.forEach((l, i) => { const t = l.replace(/\s*\t\s*/g, ' ');
+      let mm = t.match(/(?:消費店家|商店名稱|賣方名稱)[:：]\s*(.+)$/); if (mm) { let nm = mm[1].trim(); const nx = (L[i + 1] || '').replace(/\s*\t\s*/g, ' ').trim(); if (nx && !/[:：]/.test(nx) && !/統編|存入|隨機|開獎/.test(nx) && nx.length < 30) nm += nx; v.seller = nm; }
+      mm = t.match(/(?:店家統編|賣方統編|統一編號)[:：]\s*(\d{8})/); if (mm) v.sellerId = mm[1];
+      if (/消費金額|總計|總金額/.test(t)) { let a = money1(t); if (isNaN(a)) a = money1(L[i + 1] || ''); if (!isNaN(a) && v.total == null) v.total = a; } });
+    const hi = L.findIndex(l => /品名/.test(l) && /數量|小計|金額/.test(l));
+    if (hi >= 0) for (let i = hi + 1; i < L.length; i++) { if (/發票備註|刪除發票|編輯發票|字數限制/.test(L[i])) break; const c = cells(L[i]); if (c.length < 2) continue;
+      const ai = c.findIndex((x, k) => k > 0 && !isNaN(money1(x))), name = c[0]; if (ai < 0 || !name || /^\$/.test(name)) continue;
+      const qx = c.slice(1, ai).find(x => /^\d+(\.\d+)?$/.test(x)), q = qx ? parseFloat(qx) : 1, a = money1(c[ai]); v.items.push({n: name, q, p: Math.round(a / (q || 1) * 100) / 100, amt: a}); }
+    out.push(v); return out; }
+  /* 列表頁 */
+  const ym = all.match(/(\d{3})\s*年\s*(\d{1,2})/), baseY = ym ? +ym[1] + 1911 : new Date().getFullYear(); let pend = {};
+  L.forEach(l => { const c = cells(l), m = l.match(noRe);
+    c.forEach(x => { const d = x.match(/^(\d{1,2})\/(\d{1,2})$/); if (d) pend.date = `${baseY}-${d[1].padStart(2, '0')}-${d[2].padStart(2, '0')}`;
+      else if (!isNaN(money1(x)) && /\$/.test(x)) pend.total = money1(x);
+      else if (!noRe.test(x) && /[一-鿿A-Za-z]{2,}/.test(x) && !/^(電子|載具|手動存入|紙本|本期|我的發票|對獎專區|開獎倒數|消費分析|昨日消費累積)/.test(x) && !/\d{3}年/.test(x)) pend.seller = x.replace(/…$/, ''); });
+    if (m) { out.push({no: m[1] + m[2], date: pend.date || '', seller: pend.seller || '', total: pend.total, items: [], src: 'acc'}); pend = {}; } });
+  return out.filter(v => v.date);
 }
 
 /* ---------- 啟動 ---------- */
