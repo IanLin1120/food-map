@@ -140,11 +140,18 @@ async function aiRecipe() {
 }
 
 /* ---------- 設定 ---------- */
+/* 設定頁最上面：目前所在的功能區 */
+function areaHero() {
+  const shop = S.mode === 'shop', tabs = shop ? [['🗺️', '地圖'], ['⭐', '收藏'], ['🧾', '分帳'], ['🎫', '發票']] : [['🗺️', '地圖'], ['⭐', '收藏'], ['📒', '日常'], ['📖', '食譜']];
+  return `<div class="areaHero ${shop ? 'shop' : 'food'}"><div class="ahIc">${shop ? '🛒' : '🍽️'}</div><div class="ahT"><small>目前所在的功能區</small><b>${shop ? '購物分帳' : '美食・日常'}</b>
+    <div class="ahTabs">${tabs.map(([i, t]) => `<span>${i} ${t}</span>`).join('')}</div></div><span class="ahOn"><i></i>使用中</span></div>`;
+}
 function renderSet() {
   const seg = (id, opts, cur) => `<div class="seg" data-seg="${id}">${opts.map(([v, t]) => `<button data-v="${v}" class="${String(cur) === String(v) ? 'on' : ''}">${t}</button>`).join('')}</div>`;
   const sw = (id, on) => `<button class="sw2 ${on ? 'on' : ''}" data-sw="${id}" role="switch" aria-checked="${!!on}"></button>`;
   const dark = isDark(), navs = navApps({lat: 0, lon: 0});
   $('#setBody').innerHTML = `
+  ${areaHero()}
   <div class="setG"><h3>功能區</h3><div class="setC"><div class="setR col modeCard"><div class="t"><b>${S.mode === 'shop' ? '🍽️ 美食・日常' : '🛒 購物分帳'}</b><small>${S.mode === 'shop' ? '美食地圖、收藏店家的菜單表格、每天吃什麼的點餐分帳、食譜。' : '量販店、超商、Foodpanda 的購物明細：拍照或截圖讓 AI 讀出品項和折扣，選誰買的、誰一起分攤，自動算出每個人要付多少。'}</small></div>
       <button class="btn pri modeSw" data-a="mode">${S.mode === 'shop' ? '🍽️ 切換到美食・日常' : '🛒 切換到購物分帳'}</button></div></div></div>
   <div class="setG"><h3>使用說明</h3><div class="setC">

@@ -12,10 +12,10 @@ const pRow = (a, b, cls) => `<div class="pr ${cls || ''}"><span>${a}</span><b>${
 const tip = t => `<div class="gTip">💡 ${t}</div>`;
 const GUIDE = {
   food: {title: '🍽️ 美食・日常 使用說明', steps: [
-    {t: '歡迎使用日日帳本', h: `<div class="gHero"><div class="gIcon">${APP_ICON}</div><b>收藏愛店 × 菜單 × 點餐分帳 × 購物分帳</b></div>
-      <div class="gGrid"><div><i>🗺️</i><b>地圖</b>找店、插旗收藏</div><div><i>🔖</i><b>收藏</b>店家資料和菜單</div><div><i>📒</i><b>日常</b>餐點分帳＋購物清單</div><div><i>📖</i><b>食譜</b>記錄拿手菜</div></div>
+    {t: '歡迎使用日日帳本', h: `<div class="gHero"><div class="gIcon">${APP_ICON}</div><b>收藏愛店・菜單・記帳分帳</b></div>
+      <div class="gGrid"><div><i>🗺️</i><b>地圖</b>找店、插旗收藏</div><div><i>🔖</i><b>收藏</b>店家資料和菜單</div><div><i>📒</i><b>日常</b>記一餐、購物清單</div><div><i>📖</i><b>食譜</b>記錄拿手菜</div></div>
       <p>跟著這份說明走一遍，大約 2 分鐘。看完可以隨時到 <b>設定 → 使用說明</b> 再打開。購物分帳和發票另外有自己的說明。</p>`},
-    {t: '① 找到店家，按收藏', h: phone('🔍 搜尋店家', `<div class="pin">🔍 晨曦早午餐</div><div class="pMap"><span class="flag">🚩</span><span class="flag f2">🚩</span></div>${pc(`<b>晨曦早午餐 幸福店</b><small>早午餐・距離 350 公尺</small><div class="pBtns">${pb('導航')}${pb('⭐ 收藏', 'pri hl') + tap}</div>`)}`, '地圖') +
+    {t: '① 找到店家，按收藏', h: phone('🔍 搜尋店家', `<div class="pSrch">🔍 晨曦早午餐</div><div class="pMap"><span class="flag">🚩</span><span class="flag f2">🚩</span></div>${pc(`<b>晨曦早午餐 幸福店</b><small>早午餐・距離 350 公尺</small><div class="pBtns">${pb('導航')}${pb('⭐ 收藏', 'pri hl') + tap}</div>`)}`, '地圖') +
       `<ul><li>在地圖頁上方的搜尋框輸入店名</li><li>點選搜尋結果，按 <b>⭐ 收藏</b>，選一個分類（早餐、飲料…）</li><li>也可以<b>長按地圖</b>任何地方直接插旗</li></ul>${tip('有填 Google 金鑰的話，地址、電話、營業時間會自動帶入。')}`},
     {t: '② 拍菜單，AI 自動整理成表格', h: phone('晨曦早午餐 幸福店', `${pc('<b>📋 菜單</b><div class="pImgs"><i>🖼️</i><i>🖼️</i></div>' + pb('✨ AI 辨識成表格', 'pri hl') + tap)}<div class="pTable"><div><b>品名</b><b>小</b><b>大</b></div><div><span>玉米濃湯</span><span>35</span><span>50</span></div><div><span>雞腿蛋堡</span><span>65</span><span>-</span></div></div>`, '收藏') +
       `<ul><li>打開收藏的店家，在「菜單」加入菜單照片</li><li>按 <b>✨ AI 辨識成表格</b>，等一下就會變成價格表</li><li>大小杯、冰熱、加購選項都會自動分欄</li></ul>${tip('菜單照片也可以在 Google 地圖截圖後，用「分享」傳給日日帳本。')}`},
@@ -42,7 +42,7 @@ const GUIDE = {
       <p>適合全聯、量販店、超商一起買東西，或 Foodpanda 一起訂外送的時候。</p>`},
     {t: '① 切換到購物分帳', h: phone('設定', `${pc('<b>功能區</b><small>量販店、超商、Foodpanda 的購物明細…</small>' + pb('🛒 切換到購物分帳', 'pri wide hl') + tap)}${pc('<b>📘 使用說明</b><small>美食・日常・購物分帳・發票</small>')}`, '設定') +
       `<ul><li>到 <b>設定</b> 頁最上面的「功能區」，按 <b>🛒 切換到購物分帳</b></li><li>下面的分頁會換成 <b>地圖、收藏、分帳、發票、設定</b></li><li>想回去點餐，同一個位置按 <b>🍽️ 切換到美食・日常</b>；關掉 App 再打開會回到上次的功能區</li></ul>${tip('美食・日常和購物分帳<b>共用同一份收藏</b>，分類也是同一份（早餐、午餐、晚餐、量販店、超市、超商…）。')}`},
-    {t: '② 收藏常去的店', h: phone('🔍 搜尋', `<div class="pin">🔍 好鄰居超市</div><div class="pMap"><span class="flag">🛒</span><span class="flag f2">🍱</span></div>${pc(`<b>好鄰居超市 中央店</b><small>量販店</small><div class="pBtns">${pb('🧾 購物紀錄')}${pb('⭐ 收藏', 'pri hl') + tap}</div>`)}`, '地圖', 'shop') +
+    {t: '② 收藏常去的店', h: phone('🔍 搜尋', `<div class="pSrch">🔍 好鄰居超市</div><div class="pMap"><span class="flag">🛒</span><span class="flag f2">🍱</span></div>${pc(`<b>好鄰居超市 中央店</b><small>量販店</small><div class="pBtns">${pb('🧾 購物紀錄')}${pb('⭐ 收藏', 'pri hl') + tap}</div>`)}`, '地圖', 'shop') +
       `<ul><li>在地圖搜尋全聯、全家、常叫外送的餐廳…按收藏，選一個分類</li><li>外送的餐廳就照早餐、午餐、晚餐分類；是不是外送，改在每一筆明細選「購物方式」</li><li>店家卡片上的 <b>🧾 購物紀錄</b> 可以看這家店所有的明細</li></ul>`},
     {t: '③ 上傳明細，AI 幫你讀', h: phone('購物分帳', `<div class="pBtns">${pb('📷 上傳明細', 'pri hl') + tap}${pb('✏️ 手動輸入')}</div><div class="pc" style="border-color:var(--accent)"><b>🤖 AI 辨識中・11/08</b><small>Flash-Lite 已讀到 5 項…（12 秒）</small></div><div class="pCal">${Array.from({length: 7}, (_, i) => `<i class="${i === 3 ? 'on' : ''}">${i + 5}${i === 3 ? '<em></em>' : ''}</i>`).join('')}</div>`, '分帳', 'shop') +
       `<ul><li>按最上面的 <b>📷 上傳明細</b>，選全聯 App 明細截圖、發票照片或 Foodpanda 訂單截圖（可以一次選好幾張）</li><li>辨識進度會<b>固定顯示在頁首</b>，不管看哪一天都看得到，點一下直接打開那筆</li><li>AI 會讀出店名、日期、時間、品項、折扣、平台費，自動放到明細上的日期</li></ul>${tip('也可以在 Foodpanda 或相簿按「分享」→ 日日帳本。')}`},
