@@ -748,14 +748,17 @@ body.mShop #tabbar [data-tab="Meal"],body.mShop #tabbar [data-tab="Rec"]{display
 .iGrid{display:grid;grid-template-columns:1fr .75fr 1fr;gap:.6rem}
 .iGrid .field input{text-align:center}
 .presetRow button.on{background:var(--accent);color:#fff;border-color:transparent}
-/* 月曆年月：一顆大按鈕＋左右切換 */
-.calTop{gap:.5rem}
-.calTop .calNav,.ymY .calNav{width:2.6rem;height:2.6rem;border-radius:6px;background:var(--surface-3);border:1px solid var(--border);font-size:1.35rem;font-weight:800;color:var(--accent);display:flex;align-items:center;justify-content:center}
-.calYM{flex:1;display:flex;align-items:center;justify-content:center;gap:.35rem;height:2.6rem;min-width:0;border-radius:6px;border:1px solid color-mix(in srgb,var(--accent) 30%,var(--border));background:linear-gradient(180deg,var(--surface),color-mix(in srgb,var(--accent) 8%,var(--surface-3)));color:var(--text);box-shadow:0 1px 2px rgba(0,0,0,.05),inset 0 1px 0 rgba(255,255,255,.6);padding:0 .6rem}
-.calYM b{font-size:1.15rem;font-weight:800;color:var(--accent);font-variant-numeric:tabular-nums}
-.calYM span{font-size:.92rem;font-weight:700;color:var(--text-2)}
-.calYM .chev{width:.8rem;height:.55rem;color:var(--accent);margin-left:.15rem;flex:none;opacity:.85}
-.calYM:active,.calTop .calNav:active{transform:scale(.97)}
+/* 月曆年月：◀ 〔年 ▾〕〔月 ▾〕 ▶ */
+.calTop{gap:.45rem}
+.calNav{flex:none;width:2.7rem;height:2.7rem;border-radius:6px;background:var(--surface-3);border:1px solid var(--border);color:var(--accent);display:flex;align-items:center;justify-content:center;padding:0}
+.calNav svg{width:.8rem;height:.95rem;display:block}
+.calYM{flex:1;display:flex;align-items:stretch;height:2.7rem;min-width:0;padding:0;border-radius:6px;overflow:hidden;border:1px solid color-mix(in srgb,var(--accent) 28%,var(--border));background:var(--surface);color:var(--text);box-shadow:0 1px 2px rgba(0,0,0,.05)}
+.calYM .v{flex:1;display:flex;align-items:baseline;justify-content:center;gap:.3rem;padding:0 .3rem;align-self:center;white-space:nowrap;min-width:0}
+.calYM b{font-size:1.08rem;font-weight:800;color:var(--accent);font-variant-numeric:tabular-nums;letter-spacing:.02em}
+.calYM em{font-style:normal;font-size:.82rem;font-weight:700;color:var(--text-2)}
+.calYM .dd{flex:none;width:1.9rem;display:flex;align-items:center;justify-content:center;border-left:1px solid color-mix(in srgb,var(--accent) 22%,var(--border));background:color-mix(in srgb,var(--accent) 10%,var(--surface-3));color:var(--accent)}
+.calYM .dd svg{width:.62rem;height:.42rem;display:block}
+.calYM:active,.calNav:active{transform:scale(.97)}
 .ymP{padding:.1rem 0 .3rem}
 .ymY{display:flex;align-items:center;justify-content:space-between;margin-bottom:.8rem}
 .ymY b{font-size:1.35rem;font-weight:800;color:var(--accent);font-variant-numeric:tabular-nums}
@@ -765,3 +768,10 @@ body.mShop #tabbar [data-tab="Meal"],body.mShop #tabbar [data-tab="Rec"]{display
 .ymG button.tdy{border:2px solid var(--accent)}
 .ymG button.on{background:var(--accent);border-color:transparent;color:#fff}.ymG button.on small{color:rgba(255,255,255,.85)}
 .ymNow{border-radius:6px;justify-content:center}
+.ebDate{grid-column:1/-1}
+.edRow{display:flex;gap:.45rem;align-items:stretch}
+.edGo{flex:1;display:flex;align-items:center;justify-content:space-between;gap:.4rem;border:1px solid var(--border);border-radius:6px;background:var(--surface);padding:.4rem .6rem;text-align:left;min-width:0}
+.edGo b{font-size:1rem;font-variant-numeric:tabular-nums;white-space:nowrap}.edGo span{font-size:.78rem;font-weight:700;color:var(--accent);white-space:nowrap}
+.edPick{flex:none;display:flex;align-items:center;gap:.35rem;border:1px solid color-mix(in srgb,var(--accent) 30%,var(--border));border-radius:6px;background:color-mix(in srgb,var(--accent) 10%,var(--surface-3));color:var(--accent);font-weight:800;font-size:.86rem;padding:0 .7rem}
+.edPick svg{width:.6rem;height:.4rem}
+.dpCal{box-shadow:none;background:transparent;padding:0;margin-bottom:.7rem}
