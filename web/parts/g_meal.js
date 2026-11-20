@@ -8,7 +8,7 @@ const PERSON_EMOJI = '🙂 😀 😎 🤓 🥰 😺 🐶 🐻 🐼 🐰 👨 �
 const MWD = ['日', '一', '二', '三', '四', '五', '六'];
 const ymd = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
 const ymdDate = k => { const [y, m, d] = k.split('-').map(Number); return new Date(y, m - 1, d); };
-const money = v => '$' + (Math.round((+v || 0) * 100) / 100).toLocaleString('en-US');
+const money = v => { const n = Math.round((+v || 0) * 100) / 100; return (n < 0 ? '-$' : '$') + Math.abs(n).toLocaleString('en-US'); };
 const numP = v => { const n = parseFloat(String(v == null ? '' : v).replace(/[^\d.]/g, '')); return isNaN(n) ? 0 : n; };
 const saveMcfg = debounce(() => IDB.put('kv', 'mcfg', DB.mcfg).catch(saveErr), 200);
 const saveDays = debounce(() => IDB.put('kv', 'days', DB.days).catch(saveErr), 200);
@@ -303,7 +303,7 @@ function personLines(m, amt, fm) { fm = fm || money; const per = perOf(m), sha =
   shareSets(m).forEach(g => { const st = g.xs.reduce((a, x) => a + xAmt(x), 0); out.push(`一起吃(${shareNames(g.ids)})：${g.xs.map(itemTxt).join('、')}${amt ? `（共 ${fm(st)}，每人 ${fm(st / g.ids.length)}）` : ''}`); });
   return out; }
 /* 模板二：人名一行，下面每個品項一行「品名[NT$ 單價]×數量」，人和人之間空一行 */
-const ntd = v => 'NT$ ' + (Math.round((+v || 0) * 100) / 100).toLocaleString('en-US');
+const ntd = v => { const n = Math.round((+v || 0) * 100) / 100; return (n < 0 ? '-NT$ ' : 'NT$ ') + Math.abs(n).toLocaleString('en-US'); };
 /* 模板二：每個人列自己點的＋一起吃的（數量＝份數÷一起吃的人數，例如 ×0.5），沒有一起吃的人不列分攤的品項 */
 const fq = v => String(Math.round(v * 100) / 100);
 function personBlock(m, amt) { const per = perOf(m), out = [];

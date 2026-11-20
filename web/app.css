@@ -737,3 +737,14 @@ body.mShop #tabbar [data-tab="Meal"],body.mShop #tabbar [data-tab="Rec"]{display
 .shopAdd .btn{flex-direction:column;justify-content:center;gap:.05rem;border-radius:6px;padding:.65rem .4rem;min-width:0;white-space:normal;line-height:1.25}
 .shopAdd i{font-style:normal;font-size:1.4rem}.shopAdd b{font-size:.95rem}.shopAdd small{font-size:.74rem;opacity:.8;font-weight:600}
 .gRi{font-size:1.4rem;flex:none}
+/* 明細卡片頁首：店名一整行、下面左邊資訊右邊金額 */
+.blH{padding:.65rem .55rem .6rem .85rem;background:linear-gradient(90deg,color-mix(in srgb,var(--accent) 18%,var(--surface)),var(--surface) 80%);border-bottom:1px solid var(--border-soft)}
+.blT{display:flex;align-items:flex-start;gap:.4rem}
+.blT b{flex:1;font-size:1.02rem;line-height:1.35;word-break:break-word}
+.blT .ic{margin:-.3rem -.1rem 0 0;flex:none}
+.blB{display:flex;align-items:center;gap:.55rem;margin-top:.35rem}
+.blB .mlS{margin:0;min-width:0}
+.blB .btn{border-radius:6px;flex:none}
+.iGrid{display:grid;grid-template-columns:1fr .75fr 1fr;gap:.6rem}
+.iGrid .field input{text-align:center}
+.presetRow button.on{background:var(--accent);color:#fff;border-color:transparent}
