@@ -4,7 +4,7 @@
 <script>/* 線上更新開機程式：手機上若已下載比 APK 內建更新的介面版本，就改用新版（存在 IndexedDB）。
    新版連續兩次沒有正常開啟 → 自動退回 APK 內建版本。網址加上 #builtin 也會強制使用內建版本。 */
 (function () {
-  var B = '3.0.5'; if (!window.__OTA) window.APP_BUILTIN = B;
+  var B = '3.0.6'; if (!window.__OTA) window.APP_BUILTIN = B;
   if (window.__OTA || location.hash.indexOf('builtin') >= 0) return;
   var v = null; try { v = JSON.parse(localStorage.getItem('fm.ota') || 'null'); } catch (e) {}
   function gt(a, b) { a = String(a).split('.').map(Number); b = String(b).split('.').map(Number); for (var i = 0; i < Math.max(a.length, b.length); i++) { var p = a[i] || 0, q = b[i] || 0; if (p !== q) return p > q; } return false; }
@@ -790,14 +790,17 @@ body.mShop #tabbar [data-tab="Meal"],body.mShop #tabbar [data-tab="Rec"]{display
 .iGrid{display:grid;grid-template-columns:1fr .75fr 1fr;gap:.6rem}
 .iGrid .field input{text-align:center}
 .presetRow button.on{background:var(--accent);color:#fff;border-color:transparent}
-/* 月曆年月：一顆大按鈕＋左右切換 */
-.calTop{gap:.5rem}
-.calTop .calNav,.ymY .calNav{width:2.6rem;height:2.6rem;border-radius:6px;background:var(--surface-3);border:1px solid var(--border);font-size:1.35rem;font-weight:800;color:var(--accent);display:flex;align-items:center;justify-content:center}
-.calYM{flex:1;display:flex;align-items:center;justify-content:center;gap:.35rem;height:2.6rem;min-width:0;border-radius:6px;border:1px solid color-mix(in srgb,var(--accent) 30%,var(--border));background:linear-gradient(180deg,var(--surface),color-mix(in srgb,var(--accent) 8%,var(--surface-3)));color:var(--text);box-shadow:0 1px 2px rgba(0,0,0,.05),inset 0 1px 0 rgba(255,255,255,.6);padding:0 .6rem}
-.calYM b{font-size:1.15rem;font-weight:800;color:var(--accent);font-variant-numeric:tabular-nums}
-.calYM span{font-size:.92rem;font-weight:700;color:var(--text-2)}
-.calYM .chev{width:.8rem;height:.55rem;color:var(--accent);margin-left:.15rem;flex:none;opacity:.85}
-.calYM:active,.calTop .calNav:active{transform:scale(.97)}
+/* 月曆年月：◀ 〔年 ▾〕〔月 ▾〕 ▶ */
+.calTop{gap:.45rem}
+.calNav{flex:none;width:2.7rem;height:2.7rem;border-radius:6px;background:var(--surface-3);border:1px solid var(--border);color:var(--accent);display:flex;align-items:center;justify-content:center;padding:0}
+.calNav svg{width:.8rem;height:.95rem;display:block}
+.calYM{flex:1;display:flex;align-items:stretch;height:2.7rem;min-width:0;padding:0;border-radius:6px;overflow:hidden;border:1px solid color-mix(in srgb,var(--accent) 28%,var(--border));background:var(--surface);color:var(--text);box-shadow:0 1px 2px rgba(0,0,0,.05)}
+.calYM .v{flex:1;display:flex;align-items:baseline;justify-content:center;gap:.3rem;padding:0 .3rem;align-self:center;white-space:nowrap;min-width:0}
+.calYM b{font-size:1.08rem;font-weight:800;color:var(--accent);font-variant-numeric:tabular-nums;letter-spacing:.02em}
+.calYM em{font-style:normal;font-size:.82rem;font-weight:700;color:var(--text-2)}
+.calYM .dd{flex:none;width:1.9rem;display:flex;align-items:center;justify-content:center;border-left:1px solid color-mix(in srgb,var(--accent) 22%,var(--border));background:color-mix(in srgb,var(--accent) 10%,var(--surface-3));color:var(--accent)}
+.calYM .dd svg{width:.62rem;height:.42rem;display:block}
+.calYM:active,.calNav:active{transform:scale(.97)}
 .ymP{padding:.1rem 0 .3rem}
 .ymY{display:flex;align-items:center;justify-content:space-between;margin-bottom:.8rem}
 .ymY b{font-size:1.35rem;font-weight:800;color:var(--accent);font-variant-numeric:tabular-nums}
@@ -807,6 +810,13 @@ body.mShop #tabbar [data-tab="Meal"],body.mShop #tabbar [data-tab="Rec"]{display
 .ymG button.tdy{border:2px solid var(--accent)}
 .ymG button.on{background:var(--accent);border-color:transparent;color:#fff}.ymG button.on small{color:rgba(255,255,255,.85)}
 .ymNow{border-radius:6px;justify-content:center}
+.ebDate{grid-column:1/-1}
+.edRow{display:flex;gap:.45rem;align-items:stretch}
+.edGo{flex:1;display:flex;align-items:center;justify-content:space-between;gap:.4rem;border:1px solid var(--border);border-radius:6px;background:var(--surface);padding:.4rem .6rem;text-align:left;min-width:0}
+.edGo b{font-size:1rem;font-variant-numeric:tabular-nums;white-space:nowrap}.edGo span{font-size:.78rem;font-weight:700;color:var(--accent);white-space:nowrap}
+.edPick{flex:none;display:flex;align-items:center;gap:.35rem;border:1px solid color-mix(in srgb,var(--accent) 30%,var(--border));border-radius:6px;background:color-mix(in srgb,var(--accent) 10%,var(--surface-3));color:var(--accent);font-weight:800;font-size:.86rem;padding:0 .7rem}
+.edPick svg{width:.6rem;height:.4rem}
+.dpCal{box-shadow:none;background:transparent;padding:0;margin-bottom:.7rem}
 </style>
 </head>
 <body>
@@ -946,7 +956,7 @@ return maplibregl$1;
 /* ============================================================
    食光帳本 — 核心：工具、資料儲存、主題、面板、拖曳排序、圖片
    ============================================================ */
-const APP_VERSION = '3.0.5';
+const APP_VERSION = '3.0.6';
 const APP_VER = APP_VERSION;
 /* 線上更新來源（GitHub Pages）：IanLin1120/food-map */
 const GH = {repo: 'https://github.com/IanLin1120/food-map', pages: 'https://ianlin1120.github.io/food-map/'};
@@ -3009,7 +3019,7 @@ function renderMeal() {
   const per = {}; ms.forEach(m => { const pm = perOf(m); Object.keys(pm).forEach(id => { per[id] = (per[id] || 0) + pm[id]; }); });
   const order = DB.mcfg.people.map(u => u.id).concat(Object.keys(per).filter(id => !DB.mcfg.people.some(u => u.id === id))).filter(id => per[id] != null);
   box.innerHTML = `<div class="cal card">
-      <div class="calTop"><button class="ic calNav" data-a="pm" aria-label="上個月">‹</button><button class="calYM" data-a="ymY"><b>${Y}</b><span>年</span><svg class="chev" viewBox="0 0 12 8" aria-hidden="true"><path d="M1.5 1.5 6 6l4.5-4.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button><button class="calYM" data-a="ymM"><b>${Mo + 1}</b><span>月</span><svg class="chev" viewBox="0 0 12 8" aria-hidden="true"><path d="M1.5 1.5 6 6l4.5-4.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button><button class="ic calNav" data-a="nm" aria-label="下個月">›</button></div>
+      ${calHead(Y, Mo)}
       <div class="calWd">${MWD.map((w, i) => `<span class="${i === 0 || i === 6 ? 'we' : ''}">${w}</span>`).join('')}</div>
       <div class="calG">${cells}</div></div>
     <div class="dayHead"><b class="dhD">${sel.getMonth() + 1}月${sel.getDate()}日 星期${MWD[sel.getDay()]}</b><span class="grow"></span>${ms.length ? `<span class="dayTot">${money(dayTotal(Meal.sel))}</span><button class="btn sm" data-a="export">📤 匯出</button>` : ''}</div>
@@ -3245,13 +3255,18 @@ function editMealCfg(k, it, done) {
     let out; if (isNew) { d.id = (k === 'types' ? 't' : 'u') + uid(); L.push(d); out = d; } else { Object.assign(it, d); out = it; } saveMcfg(); sh.close(); done && done(out); };
 }
 
+/* 月曆頁首：◀ 〔2026 年 ▾〕〔11 月 ▾〕 ▶ （點餐、分帳、日期選擇共用） */
+const TRI_L = '<svg viewBox="0 0 12 14" aria-hidden="true"><path d="M9.5 1.8v10.4a.8.8 0 0 1-1.25.66L1.9 7.66a.8.8 0 0 1 0-1.32l6.35-5.2A.8.8 0 0 1 9.5 1.8z" fill="currentColor"/></svg>';
+const TRI_R = '<svg viewBox="0 0 12 14" aria-hidden="true"><path d="M2.5 1.8v10.4a.8.8 0 0 0 1.25.66l6.35-5.2a.8.8 0 0 0 0-1.32L3.75 1.14A.8.8 0 0 0 2.5 1.8z" fill="currentColor"/></svg>';
+const TRI_D = '<svg viewBox="0 0 12 8" aria-hidden="true"><path d="M1.8 1.2h8.4a.7.7 0 0 1 .55 1.13L6.55 7.1a.7.7 0 0 1-1.1 0L1.25 2.33A.7.7 0 0 1 1.8 1.2z" fill="currentColor"/></svg>';
+const calHead = (Y, Mo) => `<div class="calTop"><button class="calNav" data-a="pm" aria-label="上個月">${TRI_L}</button><button class="calYM" data-a="ymY" aria-label="選擇年份"><span class="v"><b>${Y}</b><em>年</em></span><i class="dd">${TRI_D}</i></button><button class="calYM" data-a="ymM" aria-label="選擇月份"><span class="v"><b>${Mo + 1}</b><em>月</em></span><i class="dd">${TRI_D}</i></button><button class="calNav" data-a="nm" aria-label="下個月">${TRI_R}</button></div>`;
 /* 年／月選擇器（點餐、分帳共用）：kind = 'y' 選年、'm' 選月 */
 function ymPick(Y, M, kind) {
   return new Promise(res => { const now = new Date(), isY = kind === 'y'; let base = Y - 4, done = false;
     const sh = sheet({title: isY ? '選擇年份' : `選擇月份（${Y} 年）`, onClose() { if (!done) res(null); }});
     const fin = v => { done = true; sh.close(); res(v); };
     const draw = () => { sh.body.innerHTML = isY
-      ? `<div class="ymP"><div class="ymY"><button class="ic calNav" data-p="-12" aria-label="更早">‹</button><b>${base} – ${base + 11}</b><button class="ic calNav" data-p="12" aria-label="更晚">›</button></div>
+      ? `<div class="ymP"><div class="ymY"><button class="calNav" data-p="-12" aria-label="更早">${TRI_L}</button><b>${base} – ${base + 11}</b><button class="calNav" data-p="12" aria-label="更晚">${TRI_R}</button></div>
         <div class="ymG">${Array.from({length: 12}, (_, i) => base + i).map(y => `<button data-y="${y}" class="${y === Y ? 'on' : ''} ${y === now.getFullYear() ? 'tdy' : ''}"><b>${y}</b></button>`).join('')}</div>
         <button class="btn block ymNow" data-now="1">📅 回到今年</button></div>`
       : `<div class="ymP"><div class="ymG">${Array.from({length: 12}, (_, i) => `<button data-m="${i}" class="${i === M ? 'on' : ''} ${Y === now.getFullYear() && i === now.getMonth() ? 'tdy' : ''}"><b>${i + 1}</b><small>月</small></button>`).join('')}</div>
@@ -3409,7 +3424,7 @@ function renderShop() {
   $('#shopSub').textContent = `${sel.getMonth() + 1}月${sel.getDate()}日（${MWD[sel.getDay()]}）${bs.length ? ' · ' + bs.length + ' 筆' : ''}`;
   const order = pOrder(Object.keys(per));
   box.innerHTML = `<div class="cal card">
-      <div class="calTop"><button class="ic calNav" data-a="pm" aria-label="上個月">‹</button><button class="calYM" data-a="ymY"><b>${Y}</b><span>年</span><svg class="chev" viewBox="0 0 12 8" aria-hidden="true"><path d="M1.5 1.5 6 6l4.5-4.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button><button class="calYM" data-a="ymM"><b>${Mo + 1}</b><span>月</span><svg class="chev" viewBox="0 0 12 8" aria-hidden="true"><path d="M1.5 1.5 6 6l4.5-4.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button><button class="ic calNav" data-a="nm" aria-label="下個月">›</button></div>
+      ${calHead(Y, Mo)}
       <div class="calWd">${MWD.map((w, i) => `<span class="${i === 0 || i === 6 ? 'we' : ''}">${w}</span>`).join('')}</div><div class="calG">${cells}</div></div>
     <div class="dayHead"><b class="dhD">${sel.getMonth() + 1}月${sel.getDate()}日 星期${MWD[sel.getDay()]}</b><span class="grow"></span>${bs.length ? `<span class="dayTot">${money(dayTot)}</span><button class="btn sm" data-a="exportDay">📤 匯出</button>` : ''}</div>
     ${bs.map(billCard).join('') || '<div class="empty mealEmpty"><span class="big">🧾</span>這天還沒有購物明細<br><span class="small">按下面的按鈕拍照、上傳截圖或手動輸入<br>也可以在 Foodpanda、相簿裡按「分享」傳給食光帳本</span></div>'}
@@ -3423,6 +3438,22 @@ function billCard(b) {
     ${ids.length ? `<div class="blPer">${ids.map(id => `<span><i>${esc(mWho(id).icon)}</i>${esc(mWho(id).name)} <b>${money(c.per[id])}</b></span>`).join('')}</div>` : ''}
     ${w.length ? `<div class="blWarn">⚠️ ${w.map(esc).join('・')}</div>` : c.total != null ? '<div class="blOk">✅ 金額和明細一致</div>' : ''}
     ${b.items.length ? `<div class="blItems">${b.items.slice(0, 6).map(x => `<div><span class="grow">${esc(x.n)}${x.q > 1 ? ' ×' + x.q : ''}</span><span class="muted">${esc(pplNames(x.ppl)) || '—'}</span><b>${money(numP(x.amt) - (c.itemDisc[x.id] || 0))}</b></div>`).join('')}${b.items.length > 6 ? `<div class="muted small">…還有 ${b.items.length - 6} 項</div>` : ''}</div>` : ''}</div>`;
+}
+const billKey = b => Object.keys(DB.bills).find(k => DB.bills[k].includes(b)) || '';
+/* 日期選擇器：和月曆同樣的外觀，點一天就選好 */
+function datePick(k0) {
+  return new Promise(res => { let done = false, sel = k0, d0 = ymdDate(k0), Y = d0.getFullYear(), Mo = d0.getMonth();
+    const sh = sheet({title: '選擇日期', onClose() { if (!done) res(null); }}), today = ymd(new Date());
+    const draw = () => { const first = new Date(Y, Mo, 1), nd = new Date(Y, Mo + 1, 0).getDate(); let cells = '';
+      for (let i = 0; i < first.getDay(); i++) cells += '<span class="cd emp"></span>';
+      for (let d = 1; d <= nd; d++) { const k = ymd(new Date(Y, Mo, d)), dow = (first.getDay() + d - 1) % 7; cells += `<button class="cd ${k === sel ? 'sel' : ''} ${k === today ? 'tdy' : ''} ${dow === 0 || dow === 6 ? 'we' : ''}" data-d="${k}"><b>${d}</b>${dayBills(k).length ? '<em class="dot"></em>' : ''}</button>`; }
+      sh.body.innerHTML = `<div class="cal dpCal">${calHead(Y, Mo)}<div class="calWd">${MWD.map((w, i) => `<span class="${i === 0 || i === 6 ? 'we' : ''}">${w}</span>`).join('')}</div><div class="calG">${cells}</div></div><button class="btn block ymNow" data-a="today">📅 今天</button>`; };
+    draw(); sh.body.addEventListener('click', async e => { const t = e.target.closest('[data-a],[data-d]'); if (!t) return; buzz(8);
+      const fin = v => { done = true; sh.close(); res(v); };
+      if (t.dataset.d) { fin(t.dataset.d); return; } const a = t.dataset.a;
+      if (a === 'today') fin(today);
+      else if (a === 'pm' || a === 'nm') { const d = new Date(Y, Mo + (a === 'pm' ? -1 : 1), 1); Y = d.getFullYear(); Mo = d.getMonth(); draw(); }
+      else if (a === 'ymY' || a === 'ymM') { const r = await ymPick(Y, Mo, a === 'ymY' ? 'y' : 'm'); if (r) { [Y, Mo] = r; draw(); } } }); });
 }
 const curBill = id => dayBills(Shop.sel).find(b => b.id === id);
 function shopChanged() { Object.keys(DB.bills).forEach(k => { if (!DB.bills[k].length) delete DB.bills[k]; }); saveBills(); if (curTab === 'Shop') renderShop(); document.dispatchEvent(new Event('fm:shop')); }
@@ -3492,43 +3523,30 @@ async function runReceipt(b) {
   finally { clearInterval(iv); delete b.aiBusy; delete b.aiMsg; }
 }
 /* ============================================================
-   明細辨識（獨立流程，不和菜單辨識共用）
+   明細辨識（獨立流程，不和菜單辨識共用；用精簡的文字行格式串流回傳，最快）
    1. 圖片前處理：轉成灰階 JPEG、寬度 1000px；長截圖在「空白行」切成好幾段，避免字被縮到看不清楚
    2. 一次請求、不串流，要求 Gemini 直接回傳固定格式的 JSON（responseSchema），關閉思考 → 快
    3. Flash 不行自動換 Flash-Lite；額度、忙線、逾時各自處理
    4. 回來的結果用程式再清一次：去掉商品代碼、截斷的括號、0 元贈品、紅利
    ============================================================ */
-const RC_PROMPT = `你是台灣購物明細的辨識助手。接下來的圖片是「同一筆」購物明細，依照順序排列（長截圖被切成好幾段，段與段之間是連續的，不要重複列）。
-可能是：全聯 PX Pay／量販店 App 的交易明細、紙本發票或收據照片、Foodpanda／Uber Eats 的訂單明細。
-
-請依照 JSON 格式回傳：
-- store：店名（有分店就寫，例如「全聯 頭份店」「Burger King 漢堡王 頭份中華店」）。Foodpanda 寫「訂購於」後面的餐廳名稱。
-- date：YYYY-MM-DD；time：HH:MM（24 小時制）；看不到就空字串。
-- total：明細上的「消費金額」或訂單總額（還沒扣福利扣點之前的金額，數字）；看不到就 0。
-- points：全聯「福利扣點」（付款方式裡用福利點數折抵的金額，例如「福利扣點 3」）；沒有就 0。
-- items：每一個商品一筆。
-  - name：品名照圖片上的字抄，被截斷就照截斷的抄（例如「履歷台灣香蕉(」「草本抑菌35」），不要自己補字、不要翻譯。
-    ★ 全聯品名前面的「兩位數商品代碼」不要抄，例如「68 大推水1500」→「大推水1500」、「96 台灣高麗菜」→「台灣高麗菜」。
-  - qty：數量（數字，「2x」「×2」= 2，沒寫就 1）。
-  - amount：這一行的總金額（數量 × 單價）。全聯明細右邊的金額就是整行金額。
-  - options：外送品項下面的小字（例如「燉飯, 阿薩姆奶茶, 冰」），沒有就空字串。
-- discounts：「優惠活動折扣」這類針對特定商品的折扣（例如「靠得住草本抑 任買2組229元 -138」）。amount 寫正數；itemIndex 寫套用的商品在 items 陣列的位置（從 0 開始），依品牌、品名判斷，判斷不出來就 []。
-- orderDiscounts：整筆訂單的折扣或優惠券（例如「85 折優惠 -$45」「折扣 -55」），amount 寫正數。
-- fees：平台費、外送服務費、包材費、小費、運費等實際收取的費用。
-
+const RC_PROMPT = `讀取這筆台灣購物明細（全聯／量販店 App 交易明細、發票收據、Foodpanda／Uber Eats 訂單）。圖片依序是同一筆明細的連續片段，片段之間不要重複。
+只輸出下面格式的文字行，一行一筆，不要說明、不要 markdown：
+店|店名（有分店就寫；Foodpanda 寫「訂購於」後面的餐廳名稱）
+日期|YYYY-MM-DD
+時間|HH:MM（24 小時制）
+總額|消費金額或訂單總額（數字，還沒扣福利扣點）
+福利扣點|數字
+品|品名|數量|這一行的總金額|規格或品項下面的小字
+折|折扣活動名稱|折扣金額（正數）|套用到第幾個「品」（從 1 開始，多個用逗號）
+整單|整筆訂單的折扣或優惠券名稱|金額（正數）
+費|平台費、外送服務費、包材費、小費、運費等|金額
 規則：
-1. 金額 0 元的贈品、印花、點數（例如「印花貼紙(促)」）不要列。
-2.「紅利抵現」「回饋」「儲值金」「載具」「發票」「找零」和信用卡、現金等付款方式都不要列；福利扣點只寫在 points，不要放進其他欄位。
-3. 外送平台的品項同時有劃線原價和折扣後價格時，amount 用折扣後價格；如果「小計」是原價加總、下面另外列折扣，品項用原價、折扣放 orderDiscounts。同一筆折扣只能出現一次。
-4. 免費（$0）或被劃掉的費用不要列。
-5. 不要編造看不到的內容。`;
-const RC_SCHEMA = {type: 'OBJECT', properties: {
-  store: {type: 'STRING'}, date: {type: 'STRING'}, time: {type: 'STRING'}, total: {type: 'NUMBER'}, points: {type: 'NUMBER'},
-  items: {type: 'ARRAY', items: {type: 'OBJECT', properties: {name: {type: 'STRING'}, qty: {type: 'NUMBER'}, amount: {type: 'NUMBER'}, options: {type: 'STRING'}}, required: ['name', 'amount']}},
-  discounts: {type: 'ARRAY', items: {type: 'OBJECT', properties: {name: {type: 'STRING'}, amount: {type: 'NUMBER'}, itemIndex: {type: 'ARRAY', items: {type: 'INTEGER'}}}, required: ['name', 'amount']}},
-  orderDiscounts: {type: 'ARRAY', items: {type: 'OBJECT', properties: {name: {type: 'STRING'}, amount: {type: 'NUMBER'}}, required: ['name', 'amount']}},
-  fees: {type: 'ARRAY', items: {type: 'OBJECT', properties: {name: {type: 'STRING'}, amount: {type: 'NUMBER'}}, required: ['name', 'amount']}}},
-  required: ['store', 'items']};
+1. 看不清楚或不確定的欄位直接留空白，馬上處理下一行，不要猶豫、不要猜。
+2. 品名照圖片上的字抄，被截斷就照截斷抄；品名前面的兩位數商品代碼不要寫（「68 大推水1500」→「大推水1500」）。
+3. 金額 0 元的贈品／印花、紅利抵現、付款方式（信用卡、現金）、找零、發票、載具都不要寫。
+4. 「折」的套用品項依品牌、品名判斷，判斷不出來就留空白。
+5. 外送：品項有劃線原價和折扣後價格時用折扣後價格；如果「小計」是原價加總、下面另外列折扣，品項用原價、那筆折扣寫成「整單」。免費（$0）的費用不寫。
+6. 照明細上的順序輸出。`;
 /* 圖片前處理：寬 1000、灰階、長圖在空白行切段（每段最高 1400px） */
 async function rcPrep(blobs) {
   const out = [], W = 1000, H = 1400;
@@ -3549,50 +3567,72 @@ async function rcPrep(blobs) {
   return out;
 }
 /* 思考設定：不同世代參數不同，被拒絕就換下一種 */
-/* 請求設定階梯：不同世代的模型支援的參數不一樣（思考設定、固定格式），
-   Google 回「Request contains an invalid argument」(400) 時，立刻改用下一種較保守的寫法重送（400 會馬上回應，不浪費時間），
-   成功的寫法會記住，下次直接用 */
-const RC_CFG = [{sc: 1, th: {thinkingBudget: 0}}, {sc: 1, th: {thinkingLevel: 'minimal'}}, {sc: 1, th: {thinkingLevel: 'low'}}, {sc: 1},
-  {js: 1, th: {thinkingBudget: 0}}, {js: 1, th: {thinkingLevel: 'minimal'}}, {js: 1}, {}];
-async function rcCall(m, parts, ci, ms) {
-  const c = RC_CFG[ci], gc = {temperature: 0, maxOutputTokens: 8192};
-  if (c.sc) { gc.responseMimeType = 'application/json'; gc.responseSchema = RC_SCHEMA; } else if (c.js) gc.responseMimeType = 'application/json';
-  if (c.th) gc.thinkingConfig = c.th;
-  const j = await jfetch(`${AI_BASE}/${encodeURIComponent(m)}:generateContent`, {method: 'POST', headers: aiHead(), body: JSON.stringify({contents: [{role: 'user', parts}], generationConfig: gc})}, ms || 75000);
-  if (j.error) throw aiErr(j);
-  if (j.promptFeedback && j.promptFeedback.blockReason) throw Object.assign(new Error('AI 拒絕處理這張圖片（' + j.promptFeedback.blockReason + '）'), {fatalImg: true});
-  const cd = (j.candidates || [])[0] || {}; return {text: ((cd.content && cd.content.parts) || []).map(p => p.thought ? '' : p.text || '').join(''), finish: cd.finishReason || ''};
+/* 串流請求：邊收邊解析，已經讀到的品項會即時顯示；太久沒有新資料就用已經收到的部分 */
+async function rcStream(m, parts, think, onText) {
+  const gc = {temperature: 0, maxOutputTokens: 4096}; if (think) gc.thinkingConfig = think;
+  const body = JSON.stringify({contents: [{role: 'user', parts}], generationConfig: gc}), url = `${AI_BASE}/${encodeURIComponent(m)}`;
+  const ctl = new AbortController(); let tm, text = '';
+  const arm = ms => { clearTimeout(tm); tm = setTimeout(() => ctl.abort(), ms); }; arm(50000);
+  const pick = c => ((c && c.content && c.content.parts) || []).map(p => p.thought ? '' : p.text || '').join('');
+  try {
+    let r;
+    try { r = await fetch(url + ':streamGenerateContent?alt=sse', {method: 'POST', headers: aiHead(), body, signal: ctl.signal}); }
+    catch (e) { if (e.name === 'AbortError') throw Object.assign(new Error('連線逾時'), {idle: true});
+      if (IS_APP && NB.http) { clearTimeout(tm); const j = await jfetch(url + ':generateContent', {method: 'POST', headers: aiHead(), body}, 90000); if (j.error) throw aiErr(j); text = pick((j.candidates || [])[0]); onText(text); return text; }
+      throw new Error('網路連線失敗，請確認網路'); }
+    if (!r.ok) { const t = await r.text(); let j = null; try { j = JSON.parse(t); } catch (e) {} if (Array.isArray(j)) j = j[0]; throw aiErr(j, r.status); }
+    const rd = r.body.getReader(), dec = new TextDecoder(); let buf = '';
+    for (;;) { const {value, done} = await rd.read(); if (done) break; buf += dec.decode(value, {stream: true}); arm(25000);
+      let i; while ((i = buf.indexOf('\n\n')) >= 0 || (i = buf.indexOf('\r\n\r\n')) >= 0) { const ev = buf.slice(0, i); buf = buf.slice(i + (buf[i] === '\r' ? 4 : 2));
+        const data = ev.split(/\r?\n/).filter(l => l.startsWith('data:')).map(l => l.slice(5).trim()).join(''); if (!data) continue; let j; try { j = JSON.parse(data); } catch (e) { continue; }
+        if (j.error) throw aiErr(j); if (j.promptFeedback && j.promptFeedback.blockReason) throw Object.assign(new Error('AI 拒絕處理這張圖片（' + j.promptFeedback.blockReason + '）'), {fatalImg: true});
+        const add = pick((j.candidates || [])[0]); if (add) { text += add; onText(text); } } }
+    return text;
+  } catch (e) { if (e.name === 'AbortError') { if (text) return text; throw Object.assign(new Error('AI 太久沒有回應'), {idle: true}); } throw e; }
+  finally { clearTimeout(tm); }
+}
+/* 把文字行轉成資料（欄位空白就略過，不會整筆失敗） */
+function rcParse(t) {
+  const j = {store: '', date: '', time: '', total: 0, points: 0, items: [], discounts: [], orderDiscounts: [], fees: []};
+  String(t || '').replace(/```\w*/g, '').split(/\r?\n/).forEach(line => {
+    const f = line.split(/[|｜]/).map(x => x.trim()); if (f.length < 2) return; const k = f[0].replace(/^[-*•\s]+/, ''), num = v => { const n = parseFloat(String(v || '').replace(/[^\d.\-]/g, '')); return isNaN(n) ? 0 : n; };
+    if (k === '店') j.store = f[1]; else if (k === '日期') { const m = f[1].match(/(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})/); if (m) j.date = `${m[1]}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}`; }
+    else if (k === '時間') { const m = f[1].match(/(\d{1,2}):(\d{2})/); if (m) j.time = m[1].padStart(2, '0') + ':' + m[2]; }
+    else if (k === '總額') j.total = num(f[1]); else if (k === '福利扣點') j.points = Math.abs(num(f[1]));
+    else if (k === '品') { const amt = num(f[3]); j.items.push({name: f[1] || (amt > 0 ? '（看不清楚的品項）' : ''), qty: num(f[2]) || 1, amount: amt, options: f[4] || ''}); }
+    else if (k === '折') { if (num(f[2])) j.discounts.push({name: f[1] || '折扣', amount: Math.abs(num(f[2])), itemIndex: String(f[3] || '').split(/[,，、\s]+/).map(x => parseInt(x, 10) - 1).filter(x => x >= 0)}); }
+    else if (k === '整單') { if (num(f[2])) j.orderDiscounts.push({name: f[1] || '整單折扣', amount: Math.abs(num(f[2]))}); }
+    else if (k === '費') { if (num(f[2]) > 0) j.fees.push({name: f[1] || '費用', amount: num(f[2])}); } });
+  return j;
 }
 async function receiptAI(b, onMsg) {
   if (!S.aikey) throw new Error('NOKEY'); const say = t => { if (onMsg) onMsg(t); };
   say('準備圖片…'); const blobs = []; for (const id of b.imgs) { const bl = await imgBlob(id); if (bl) blobs.push(bl); } if (!blobs.length) throw new Error('找不到明細圖片');
-  const imgs = await rcPrep(blobs), parts = [{text: RC_PROMPT}, ...imgs, {text: `以上共 ${imgs.length} 張（同一筆明細，依序排列）。請回傳 JSON。`}];
-  const ms = await aiModels(), order = [...new Set([ms.flash, ms.lite].filter(Boolean))], t0 = Date.now(); let last = null;
-  S.rcCfg = S.rcCfg || {}; const errs = [];
+  const imgs = await rcPrep(blobs), parts = [{text: RC_PROMPT}, ...imgs];
+  const order = await aiOrder(), t0 = Date.now(), errs = []; let last = null, best = null;
+  const TH = [{thinkingLevel: 'minimal'}, {thinkingBudget: 0}, null];
+  S.rcTh = S.rcTh || {};
   for (const m of order) {
     if (AIQ.blocked(m)) continue;
-    let ci = S.rcCfg[m] || 0, tries = 0;
-    while (ci < RC_CFG.length && tries < 3) {
+    let ti = S.rcTh[m] != null ? S.rcTh[m] : (/gemini-2\./.test(m) ? 1 : 0), tries = 0;
+    while (ti < TH.length && tries < 3) {
       say(`${aiShort(m)} 讀取 ${imgs.length} 張圖中…`);
-      try { const r = await rcCall(m, parts, ci, tries ? 90000 : 75000); AIQ.inc(m);
-        const j = parseLoose(r.text); if (!j || !Array.isArray(j.items)) throw new Error('AI 回傳的內容不完整');
-        if (!j.items.length && tries < 1) { tries++; last = new Error('AI 沒有讀到任何品項'); continue; }
-        if (S.rcCfg[m] !== ci) { S.rcCfg[m] = ci; saveS(); }
-        AILOG.add({kind: '明細辨識', place: j.store || b.pname || '', model: m, ms: Date.now() - t0, ok: true, n: j.items.length}); return j; }
-      catch (e) { e.model = e.model || m; last = e; errs.push(aiShort(m) + '#' + ci + '：' + (e.raw || e.message));
+      try { const text = await rcStream(m, parts, TH[ti], t => { const n = (t.match(/^\s*品[|｜]/gm) || []).length; if (n) say(`${aiShort(m)} 已讀到 ${n} 項…`); });
+        AIQ.inc(m); if (S.rcTh[m] !== ti) { S.rcTh[m] = ti; saveS(); }
+        const j = rcParse(text); if (j.items.length) { AILOG.add({kind: '明細辨識', place: j.store || b.pname || '', model: m, ms: Date.now() - t0, ok: true, n: j.items.length}); return j; }
+        best = best || j; last = new Error('AI 沒有讀到任何品項'); errs.push(aiShort(m) + '：沒有品項'); break; }
+      catch (e) { e.model = e.model || m; last = e; errs.push(aiShort(m) + '#' + ti + '：' + (e.raw || e.message));
         if (e.fatal || e.fatalImg) throw e;
-        if (e.code === 400) { ci++; continue; }                                       /* 參數不被接受 → 換下一種寫法 */
+        if (e.code === 400) { ti++; continue; }
         if (e.code === 429 && e.perDay) { AIQ.block(m, e.limit); break; }
         if (e.code === 429) { if (tries++ >= 1) break; const w = Math.min(60000, e.retryMs || 20000); say(`Google 限制每分鐘次數，${Math.ceil(w / 1000)} 秒後自動繼續…`); await sleep(w); continue; }
         if (e.gone) { S.aiM = null; saveS(); break; }
-        if (/逾時|連線/.test(e.message) || e.busy) { if (tries++ < 1) { say('連線不穩，重試中…'); await sleep(1500); continue; } break; }
-        if (/解析|不完整/.test(e.message)) { if (tries++ < 1) continue; ci++; continue; }
+        if (e.idle || e.busy || /連線/.test(e.message)) { if (tries++ < 1) { say('連線不穩，重試中…'); await sleep(1500); continue; } break; }
         break; }
     }
   }
-  console.warn('明細辨識失敗', errs);
-  if (last && last.code === 400) last = Object.assign(new Error('Google 不接受這次的請求格式（' + (last.raw || '400') + '）'), {model: last.model});
   AILOG.add({kind: '明細辨識', place: b.pname || '', model: last && last.model, ms: Date.now() - t0, ok: false, n: 0, err: errs.slice(-4).join('｜')});
+  if (last && last.code === 400) last = Object.assign(new Error('Google 不接受這次的請求（' + (last.raw || '400') + '）'), {model: last.model});
   throw last || new Error('AI 沒有回應');
 }
 /* 品名清理：商品代碼、多餘空白、沒有收尾的括號 */
@@ -3667,7 +3707,7 @@ function editBill(b) {
   const chips = ids => (ids || []).length ? `<span class="pplC">${ids.map(id => `<i>${esc(mWho(id).icon)}${esc(mWho(id).name)}</i>`).join('')}</span>` : '<span class="pplC none">選誰付</span>';
   const draw = () => { const c = billCalc(b), ids = pOrder(Object.keys(c.per)), top = sh.body.scrollTop;
     sh.body.innerHTML = `${b.aiBusy ? `<div class="jobBar"><span class="spin"></span><span class="grow">AI 辨識中…<small class="rcMsg" data-b="${b.id}">${esc(b.aiMsg || '')}</small></span></div>` : ''}
-      <div class="ebHead"><button class="ebF" data-a="store"><small>店家</small><b>${esc(billStore(b) || '未選店家')}</b></button><label class="ebF"><small>時間</small><input type="time" id="ebTime" value="${esc(b.time || '')}"></label><label class="ebF"><small>明細上的實付金額</small><input id="ebTotal" inputmode="decimal" placeholder="選填，用來驗算" value="${b.total == null ? '' : esc(b.total)}"></label></div>
+      <div class="ebHead"><button class="ebF" data-a="store"><small>店家</small><b>${esc(billStore(b) || '未選店家')}</b></button><div class="ebF ebDate"><small>日期</small><div class="edRow"><button class="edGo" data-a="goDay"><b>${dayLabel(billKey(b) || Shop.sel)}</b><span>到月曆 ›</span></button><button class="edPick" data-a="pickDate">更改 ${TRI_D}</button></div></div><label class="ebF"><small>時間</small><input type="time" id="ebTime" value="${esc(b.time || '')}"></label><label class="ebF"><small>明細上的實付金額</small><input id="ebTotal" inputmode="decimal" placeholder="選填，用來驗算" value="${b.total == null ? '' : esc(b.total)}"></label></div>
       ${(b.imgs || []).length ? `<div class="ebImgs">${b.imgs.map((id, i) => `<button class="ebImg" data-a="img" data-i="${i}"><img data-img="${id}" alt=""></button>`).join('')}<button class="btn sm" data-a="reAI" ${b.aiBusy ? 'disabled' : ''}>🔄 重新辨識</button></div>` : ''}
       <div class="ebSec"><div class="msH"><b class="grow">🛍️ 品項（${b.items.length}）</b><button class="btn sm" data-a="addItem">＋ 品項</button></div>
         ${b.items.length ? `<div class="ebQuick"><span>還沒選人的全部給：</span>${DB.mcfg.people.map(u => `<button data-a="qAll" data-id="${u.id}">${esc(u.icon)}${esc(u.name)}</button>`).join('')}<button data-a="qShare">👥 大家一起分</button></div>` : ''}
@@ -3691,6 +3731,9 @@ function editBill(b) {
   sh.body.addEventListener('click', async e => { const t = e.target.closest('[data-a]'); if (!t) return; const a = t.dataset.a, row = t.closest('.ebR');
     const X = row && row.dataset.x && b.items.find(x => x.id === row.dataset.x), D = row && row.dataset.d && b.disc.find(d => d.id === row.dataset.d), O = row && row.dataset.o && b.odisc.find(d => d.id === row.dataset.o), F = row && row.dataset.f && b.fees.find(d => d.id === row.dataset.f);
     if (a === 'store') { const st = await pickShopStore(b.place); if (st === undefined) return; b.place = st ? st.id || '' : ''; b.pname = st ? st.name : ''; $('.shTitle', sh.el).textContent = '🧾 ' + (billStore(b) || '購物明細'); draw(); }
+    else if (a === 'goDay') { const k = billKey(b); if (!k) return; while (sheets.length) sheets[sheets.length - 1].close(); const d = ymdDate(k); Shop.sel = k; Shop.ym = [d.getFullYear(), d.getMonth()]; showTab('Shop'); buzz(15);
+      setTimeout(() => { const el = $(`.bill[data-b="${b.id}"]`); if (el) el.scrollIntoView({behavior: 'smooth', block: 'center'}); }, 80); }
+    else if (a === 'pickDate') { const from = billKey(b), k = await datePick(from || Shop.sel); if (!k || k === from) return; if (from) DB.bills[from].splice(DB.bills[from].indexOf(b), 1); (DB.bills[k] = DB.bills[k] || []).push(b); shopChanged(); draw(); toast('已改到 ' + dayLabel(k)); }
     else if (a === 'img') Viewer.open(b.imgs.map((id, i) => ({id, label: `明細圖片 ${i + 1}/${b.imgs.length}`})), +t.dataset.i, billStore(b));
     else if (a === 'reAI') { if (b.items.length && !await ask('重新辨識會取代目前的品項、折扣和費用（你選的人也會清掉），確定嗎？', '重新辨識')) return; b.aiBusy = true; draw(); try { await runReceipt(b); toast('✅ 已重新辨識'); } catch (er) { toast('❌ ' + aiErrText(er), 6000); } draw(); shopChanged(); }
     else if (a === 'qAll' || a === 'qShare') { const ids = a === 'qAll' ? [t.dataset.id] : null; let L = ids; if (!L) { L = await pickPeople(DB.mcfg.people.map(u => u.id), '👥 這些品項由誰一起分？'); if (!L) return; } b.items.forEach(x => { if (!(x.ppl || []).length) x.ppl = L.slice(); }); buzz(15); draw(); }
