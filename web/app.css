@@ -855,3 +855,16 @@ body.mShop #tabbar [data-tab="Meal"],body.mShop #tabbar [data-tab="Rec"]{display
 .accSt.on{background:color-mix(in srgb,var(--success) 12%,var(--surface));color:var(--success)}
 .accBtns{font-size:.84rem;line-height:1.9;margin:.3rem 0 .2rem;color:var(--text-2)}
 .accBtns span{display:inline-block;font-weight:800;color:var(--text);background:var(--surface-3);border:1px solid var(--border);border-radius:6px;padding:0 .4rem;margin-right:.35rem}
+.invCal .calG{margin-top:.2rem}
+.cd .cdN{position:absolute;top:.15rem;right:.25rem;font-style:normal;font-size:.62rem;font-weight:800;color:var(--accent)}
+.cd.sel .cdN{color:#fff}
+.invDayBar{display:flex;align-items:center;gap:.5rem;justify-content:space-between;margin:.1rem 0 .6rem;padding:.5rem .7rem;border-radius:6px;background:color-mix(in srgb,var(--accent) 12%,var(--surface));border:1px solid color-mix(in srgb,var(--accent) 35%,var(--border))}
+.invDayBar b{font-size:.9rem}.invDayBar .btn{border-radius:6px;flex:none}
+.invCal .cd{position:relative}
+.ihNo{width:100%;text-align:left;border:0;background:none;padding:0;color:inherit}
+.ed{font-style:normal;font-size:.8em;color:var(--accent);margin-left:.15rem}
+.ihDT{display:flex;flex-wrap:wrap;gap:.35rem}.ihDT button{border:1px solid var(--border);background:var(--surface);border-radius:6px;padding:.1rem .45rem;font-weight:700;color:var(--accent);font-size:.86rem}
+.ihAmt{width:100%;text-align:left;border:1px solid var(--border-soft)}
+.ihLbl{display:flex;align-items:center;justify-content:space-between}.ihLbl .btn{border-radius:6px}
+button.ihTr{width:100%;text-align:left;border:0;border-top:1px solid var(--border-soft);background:none;color:inherit;font:inherit;font-size:.9rem}
+.invLink{align-items:center;gap:.6rem}.invLink b{flex:none}
