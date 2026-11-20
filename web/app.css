@@ -750,7 +750,7 @@ body.mShop #tabbar [data-tab="Meal"],body.mShop #tabbar [data-tab="Rec"]{display
 .presetRow button.on{background:var(--accent);color:#fff;border-color:transparent}
 /* 月曆年月：◀ 〔年 ▾〕〔月 ▾〕 ▶ */
 .calTop{gap:.45rem}
-.calNav{flex:none;width:2.7rem;height:2.7rem;border-radius:6px;background:var(--surface-3);border:1px solid var(--border);color:var(--accent);display:flex;align-items:center;justify-content:center;padding:0}
+.calNav{flex:none;width:1.9rem;height:2.7rem;border-radius:6px;background:var(--surface-3);border:1px solid var(--border);color:var(--accent);display:flex;align-items:center;justify-content:center;padding:0}
 .calNav svg{width:.8rem;height:.95rem;display:block}
 .calYM{flex:1;display:flex;align-items:stretch;height:2.7rem;min-width:0;padding:0;border-radius:6px;overflow:hidden;border:1px solid color-mix(in srgb,var(--accent) 28%,var(--border));background:var(--surface);color:var(--text);box-shadow:0 1px 2px rgba(0,0,0,.05)}
 .calYM .v{flex:1;display:flex;align-items:baseline;justify-content:center;gap:.3rem;padding:0 .3rem;align-self:center;white-space:nowrap;min-width:0}
@@ -775,3 +775,9 @@ body.mShop #tabbar [data-tab="Meal"],body.mShop #tabbar [data-tab="Rec"]{display
 .edPick{flex:none;display:flex;align-items:center;gap:.35rem;border:1px solid color-mix(in srgb,var(--accent) 30%,var(--border));border-radius:6px;background:color-mix(in srgb,var(--accent) 10%,var(--surface-3));color:var(--accent);font-weight:800;font-size:.86rem;padding:0 .7rem}
 .edPick svg{width:.6rem;height:.4rem}
 .dpCal{box-shadow:none;background:transparent;padding:0;margin-bottom:.7rem}
+
+.calTop .calYM[data-a="ymY"]{flex:1.4}
+.calTop .calYM[data-a="ymM"]{flex:1}
+.shopAdd.top{margin:0;gap:.45rem}
+.shopAdd.top .btn{flex-direction:row;gap:.35rem;padding:.6rem .4rem;font-size:.98rem;font-weight:800;white-space:nowrap}
+#shopBody>.cal{margin-top:.35rem}
