@@ -743,6 +743,18 @@ public class MainActivity extends Activity {
         public void invAccSettings() { runOnUiThread(new Runnable() { public void run() { try { startActivity(new Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS)); } catch (Exception e) { } } }); }
         @JavascriptInterface
         public String invInbox() { return InvAccessService.takeInbox(MainActivity.this); }
+        /* 找手機上名稱有「發票」的 App（給協助工具自動打開發票大師） */
+        @JavascriptInterface
+        public String invApps() {
+            try { org.json.JSONArray a = new org.json.JSONArray(); android.content.pm.PackageManager pm = getPackageManager();
+                Intent q = new Intent(Intent.ACTION_MAIN); q.addCategory(Intent.CATEGORY_LAUNCHER);
+                for (android.content.pm.ResolveInfo r : pm.queryIntentActivities(q, 0)) { String lb = String.valueOf(r.loadLabel(pm)), pk = r.activityInfo.packageName;
+                    if (pk.equals(getPackageName())) continue;
+                    if (lb.contains("發票") || lb.contains("载具") || lb.contains("載具") || lb.toLowerCase().contains("invoice")) { org.json.JSONObject o = new org.json.JSONObject(); o.put("label", lb); o.put("pkg", pk); a.put(o); } }
+                org.json.JSONObject res = new org.json.JSONObject(); res.put("apps", a); res.put("last", InvAccessService.sp(MainActivity.this).getString("lastPkg", "")); return res.toString();
+            } catch (Exception e) { return "{\"apps\":[]}"; }
+        }
+
         @JavascriptInterface
         public void openPkg(final String pkg) { runOnUiThread(new Runnable() { public void run() { try { Intent i = getPackageManager().getLaunchIntentForPackage(pkg); if (i != null) startActivity(i); } catch (Exception e) { } } }); }
 

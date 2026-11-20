@@ -9,7 +9,7 @@
    ============================================================ */
 const saveInvs = debounce(() => IDB.put('kv', 'invs', DB.invs).catch(saveErr), 200);
 async function loadInv() { DB.invs = await IDB.get('kv', 'invs').catch(() => null) || {}; }
-const Inv = {ym: null, q: ''};
+const Inv = {ym: null, q: '', day: ''};
 const invList = () => Object.values(DB.invs || {});
 const invSeller = v => v.seller || (DB.scfg.sellers || {})[v.sellerId] || (v.sellerId ? '統編 ' + v.sellerId : '未知店家');
 const invNoFmt = n => String(n || '').replace(/^([A-Z]{2})(\d{8})$/, '$1-$2');
@@ -29,17 +29,22 @@ function invChanged() { saveInvs(); if (curTab === 'Inv') renderInv(); }
 function renderInv() {
   const box = $('#invBody'); if (!box) return; const now = new Date(); if (!Inv.ym) Inv.ym = [now.getFullYear(), now.getMonth()];
   const [Y, Mo] = Inv.ym, pre = `${Y}-${String(Mo + 1).padStart(2, '0')}`;
-  const L = invList().filter(v => (v.date || '').startsWith(pre)).sort((a, b) => (b.date + (b.time || '')).localeCompare(a.date + (a.time || '')));
+  const M = invList().filter(v => (v.date || '').startsWith(pre)).sort((a, b) => (b.date + (b.time || '')).localeCompare(a.date + (a.time || '')));
+  if (Inv.day && !Inv.day.startsWith(pre)) Inv.day = ''; const L = Inv.day ? M.filter(v => v.date === Inv.day) : M, cnt = {}; M.forEach(v => { cnt[v.date] = (cnt[v.date] || 0) + 1; });
+  const first = new Date(Y, Mo, 1), nd = new Date(Y, Mo + 1, 0).getDate(), today = ymd(new Date()); let cells = '';
+  for (let i = 0; i < first.getDay(); i++) cells += '<span class="cd emp"></span>';
+  for (let d = 1; d <= nd; d++) { const k = ymd(new Date(Y, Mo, d)), dow = (first.getDay() + d - 1) % 7; cells += `<button class="cd ${k === Inv.day ? 'sel' : ''} ${k === today ? 'tdy' : ''} ${dow === 0 || dow === 6 ? 'we' : ''}" data-d="${k}"><b>${d}</b>${cnt[k] ? `<em class="dot"></em><i class="cdN">${cnt[k]}</i>` : ''}</button>`; }
   const tot = L.reduce((s, v) => s + numP(v.total), 0), done = L.filter(v => invBill(v)).length;
-  $('#invSub').textContent = `${Y}年${Mo + 1}月・${L.length} 張`;
+  $('#invSub').textContent = `${Y}年${Mo + 1}月・${M.length} 張`;
   const car = DB.scfg.carrier || '';
   const byDay = {}; L.forEach(v => { (byDay[v.date] = byDay[v.date] || []).push(v); });
   box.innerHTML = `${car ? `<button class="carCard card" data-a="carBig"><div class="carT"><b>📱 我的手機條碼</b><span>點一下放大給店員掃</span></div>${code39(car, 46)}<div class="carN">${esc(car)}</div></button>`
       : `<button class="carCard card empty" data-a="carSet"><b>📱 設定我的手機條碼</b><span>結帳時直接打開給店員掃，存進你的載具</span></button>`}
-    <div class="cal invCal">${calHead(Y, Mo)}</div>
-    <div class="invSum"><span>本月張數<b>${L.length}</b></span><span>已分帳<b>${done}</b></span><span>本月合計<b>${money(tot)}</b></span></div>
+    <div class="cal invCal">${calHead(Y, Mo)}<div class="calWd">${MWD.map((w, i) => `<span class="${i === 0 || i === 6 ? 'we' : ''}">${w}</span>`).join('')}</div><div class="calG">${cells}</div></div>
+    ${Inv.day ? `<div class="invDayBar"><b>${dayLabel(Inv.day)} 的發票（${L.length} 張）</b><button class="btn sm" data-a="allMonth">顯示整個月</button></div>` : ''}
+    <div class="invSum"><span>${Inv.day ? '這天張數' : '本月張數'}<b>${L.length}</b></span><span>已分帳<b>${done}</b></span><span>${Inv.day ? '這天合計' : '本月合計'}<b>${money(tot)}</b></span></div>
     ${L.length ? Object.keys(byDay).map(k => `<div class="invDay">${dayLabel(k)}</div>${byDay[k].map(invCard).join('')}`).join('')
-      : `<div class="empty mealEmpty"><span class="big">🧾</span>這個月還沒有發票<br><span class="small">「📷 掃描」紙本發票的 QR Code、「🖼️ 截圖」匯入發票大師的畫面，<br>或用「🤖 協助工具」直接讀取發票 App</span></div>`}`;
+      : Inv.day ? '<div class="empty" style="padding:1.2rem">這天沒有匯入的發票</div>' : `<div class="empty mealEmpty"><span class="big">🧾</span>這個月還沒有發票<br><span class="small">「📷 掃描」紙本發票的 QR Code、「🖼️ 截圖」匯入發票大師的畫面，<br>或用「🤖 協助工具」直接讀取發票 App</span></div>`}`;
 }
 function invCard(v) {
   const b = invBill(v);
@@ -55,8 +60,9 @@ function initInv() {
   document.addEventListener('visibilitychange', () => { if (!document.hidden) setTimeout(invPullAcc, 300); }); setTimeout(invPullAcc, 1500);
   $('#invFind').onclick = () => openInvSearch(); $('#invSet').onclick = () => openInvSettings();
   $('#csvPick').onchange = async e => { const f = e.target.files[0]; e.target.value = ''; if (f) importInvCsv(f); };
-  box.addEventListener('click', async e => { const t = e.target.closest('[data-a],[data-no]'); if (!t) return;
-    if (t.dataset.no) { openInvDetail(t.dataset.no); return; } const a = t.dataset.a;
+  box.addEventListener('click', async e => { const t = e.target.closest('[data-a],[data-no],[data-d]'); if (!t) return; buzz(8);
+    if (t.dataset.d) { Inv.day = Inv.day === t.dataset.d ? '' : t.dataset.d; renderInv(); return; }
+    if (t.dataset.no) { openInvDetail(t.dataset.no); return; } const a = t.dataset.a; if (a === 'allMonth') { Inv.day = ''; renderInv(); return; }
     if (a === 'pm' || a === 'nm') { const d = new Date(Inv.ym[0], Inv.ym[1] + (a === 'pm' ? -1 : 1), 1); Inv.ym = [d.getFullYear(), d.getMonth()]; renderInv(); }
     else if (a === 'ymY' || a === 'ymM') { const r = await ymPick(Inv.ym[0], Inv.ym[1], a === 'ymY' ? 'y' : 'm'); if (r) { Inv.ym = r; renderInv(); } }
     else if (a === 'carSet') editCarrier(); else if (a === 'carBig') showCarrier(); });
@@ -222,29 +228,54 @@ function invFromWeb(j) {
 
 /* ---------- 發票明細 ---------- */
 function openInvDetail(no) {
-  const v = DB.invs[no]; if (!v) return;
+  let v = DB.invs[no]; if (!v) return;
   const sh = sheet({title: '🧾 發票明細', full: true, foot: '<button class="btn danger" data-a="del" style="flex:0 0 auto">刪除</button><button class="btn pri" data-a="split"></button>'});
   const draw = () => { const b = invBill(v), its = v.items || [], sum = its.reduce((s, x) => s + (+x.amt || 0), 0);
-    sh.body.innerHTML = `<div class="invHead card"><div class="ihNo">🧾 ${invNoFmt(v.no)}<span class="chip">${{qr: '紙本 QR', csv: '載具 CSV', web: '載具網站', shot: '截圖', acc: '協助工具'}[v.src] || ''}</span></div>
-        <div class="ihR"><span>發票日期</span><b>${dayLabel(v.date)}${v.time ? ' ' + esc(v.time) : ''}</b></div>
+    sh.body.innerHTML = `<div class="small muted" style="margin:-.2rem 0 .5rem">點任何一個欄位或品項就可以修改</div>
+      <div class="invHead card"><button class="ihNo" data-a="no">🧾 ${invNoFmt(v.no)} <i class="ed">✎</i><span class="chip">${{qr: '紙本 QR', csv: '載具 CSV', web: '載具網站', shot: '截圖', acc: '協助工具'}[v.src] || ''}</span></button>
+        <div class="ihR"><span>發票日期</span><b class="ihDT"><button data-a="date">${v.date ? dayLabel(v.date) : '未填'} ✎</button><button data-a="time">${esc(v.time || '時間')} ✎</button></b></div>
         <button class="ihR ihS" data-a="seller"><span>消費店家</span><b>${esc(invSeller(v))} ✎</b></button>
-        ${v.sellerId ? `<div class="ihR"><span>店家統編</span><b>${v.sellerId}</b></div>` : ''}</div>
-      <div class="ihAmt card"><span>💲 消費金額</span><b>${money(v.total)}</b></div>
-      <div class="lbl" style="margin-top:.8rem">🛍️ 消費品項</div>
-      ${its.length ? `<div class="ihT card"><div class="ihTr h"><span>品名</span><span>數量</span><span>小計</span></div>${its.map(x => `<div class="ihTr ${+x.amt < 0 ? 'neg' : ''}"><span>${esc(x.n)}</span><span>${fq(x.q)}</span><span>${money(x.amt)}</span></div>`).join('')}</div>
+        <button class="ihR ihS" data-a="sid"><span>店家統編</span><b>${v.sellerId || '未填'} ✎</b></button></div>
+      <button class="ihAmt card" data-a="total"><span>💲 消費金額</span><b>${money(v.total)} <i class="ed">✎</i></b></button>
+      <div class="lbl ihLbl" style="margin-top:.8rem"><span>🛍️ 消費品項</span><button class="btn sm" data-a="addIt">＋ 品項</button></div>
+      ${its.length ? `<div class="ihT card"><div class="ihTr h"><span>品名</span><span>數量</span><span>小計</span></div>${its.map((x, i) => `<button class="ihTr ${+x.amt < 0 ? 'neg' : ''}" data-i="${i}"><span>${esc(x.n)}</span><span>${fq(x.q)}</span><span>${money(x.amt)}</span></button>`).join('')}</div>
         ${Math.abs(sum - numP(v.total)) > 0.5 && v.total ? `<div class="blWarn" style="margin:.5rem 0 0">⚠️ 品項合計 ${money(sum)} 和消費金額不同${v.src === 'qr' ? '（右邊 QR 可能沒掃到，可以再掃一次）' : ''}</div>` : ''}`
-        : `<div class="empty" style="padding:1rem">這張發票還沒有品項明細<br><span class="small">${v.src === 'web' ? '請在財政部網站打開這張發票的明細頁，再按「📥 讀取這一頁」' : '可以掃描紙本發票的 QR Code 補上'}</span></div>`}
-      ${b ? `<button class="invLink card" data-a="open">✓ 已拿去分帳：${dayLabel(billKey(b))} ${esc(billStore(b) || '')} <b>打開 ›</b></button>` : ''}`;
+        : `<div class="empty" style="padding:1rem">這張發票還沒有品項明細<br><span class="small">按「＋ 品項」手動輸入，或用截圖、協助工具補上</span></div>`}
+      ${b ? `<button class="invLink card" data-a="open"><span>✓ 已拿去分帳：${dayLabel(billKey(b))} ${esc(billStore(b) || '')}</span><b>打開 ›</b></button><div class="small muted" style="margin-top:.35rem">修改發票不會自動改到已經做好的分帳</div>` : ''}`;
     $('[data-a="split"]', sh.foot).textContent = b ? '🧾 打開分帳' : '🧾 拿去分帳'; };
   draw();
-  sh.body.addEventListener('click', async e => { const t = e.target.closest('[data-a]'); if (!t) return;
-    if (t.dataset.a === 'seller') { const nv = ((await askText('店家名稱', invSeller(v).replace(/^統編 \d+$/, ''))) || '').trim(); if (!nv) return; v.seller = nv; if (v.sellerId) { DB.scfg.sellers = DB.scfg.sellers || {}; DB.scfg.sellers[v.sellerId] = nv; saveScfg(); } invChanged(); draw(); }
-    else if (t.dataset.a === 'open') { const b = invBill(v); if (b) { while (sheets.length) sheets[sheets.length - 1].close(); gotoBill(billKey(b), b.id); } } });
-  sh.foot.addEventListener('click', async e => { const t = e.target.closest('[data-a]'); if (!t) return;
+  const save = () => { invChanged(); draw(); };
+  sh.body.addEventListener('click', async e => { const t = e.target.closest('[data-a],[data-i]'); if (!t) return; buzz(8); const a = t.dataset.a;
+    if (t.dataset.i != null && !a) { await invItemEdit(v, +t.dataset.i); save(); return; }
+    if (a === 'addIt') { await invItemEdit(v, -1); save(); }
+    else if (a === 'no') { const nv = ((await askText('發票號碼（2 個英文字母＋8 位數字）', invNoFmt(v.no))) || '').toUpperCase().replace(/[^A-Z0-9]/g, ''); if (!nv || nv === v.no) return;
+      if (!/^[A-Z]{2}\d{8}$/.test(nv)) { toast('發票號碼格式不對，例如 AB-12345678'); return; } if (DB.invs[nv]) { toast('已經有這張發票了'); return; }
+      delete DB.invs[v.no]; v.no = nv; DB.invs[nv] = v; save(); }
+    else if (a === 'date') { const k = await datePick(v.date || ymd(new Date())); if (k) { v.date = k; save(); } }
+    else if (a === 'time') { const tv = await timePick(v.time); if (tv != null) { v.time = tv; save(); } }
+    else if (a === 'seller') { const nv = ((await askText('店家名稱', invSeller(v).replace(/^統編 \d+$/, ''))) || '').trim(); if (!nv) return; v.seller = nv; if (v.sellerId) { DB.scfg.sellers = DB.scfg.sellers || {}; DB.scfg.sellers[v.sellerId] = nv; saveScfg(); } save(); }
+    else if (a === 'sid') { const nv = ((await askText('店家統編（8 位數字，可留空）', v.sellerId || '')) || '').replace(/\D/g, ''); if (nv && nv.length !== 8) { toast('統編是 8 位數字'); return; } v.sellerId = nv; if (nv && !v.seller) lookupSeller(nv); save(); }
+    else if (a === 'total') { const nv = await askText('消費金額', v.total == null ? '' : String(v.total)); if (nv == null || nv === '') return; const n = parseFloat(String(nv).replace(/[^\d.\-]/g, '')); if (isNaN(n)) return; v.total = n; save(); }
+    else if (a === 'open') { const b = invBill(v); if (b) { while (sheets.length) sheets[sheets.length - 1].close(); gotoBill(billKey(b), b.id); } } });
+  sh.foot.addEventListener('click', async e => { const t = e.target.closest('[data-a]'); if (!t) return; buzz(10);
     if (t.dataset.a === 'del') { if (!await ask(`刪除發票 ${invNoFmt(v.no)}？（已經做好的分帳不會刪）`, '刪除', true)) return; delete DB.invs[v.no]; invChanged(); sh.close(); return; }
     const b = invBill(v); if (b) { while (sheets.length) sheets[sheets.length - 1].close(); gotoBill(billKey(b), b.id); return; }
     if (!(v.items || []).length && !await ask('這張發票沒有品項明細，還是要建立分帳嗎？（之後可以手動加品項）', '建立')) return;
     invToBill(v); });
+}
+/* 編輯發票品項：品名、數量、小計（負數＝折扣） */
+function invItemEdit(v, i) {
+  return new Promise(res => { const isNew = i < 0, x = isNew ? {n: '', q: 1, amt: ''} : v.items[i];
+    const sh = sheet({title: isNew ? '新增品項' : '編輯品項', foot: `${isNew ? '' : '<button class="btn danger" data-a="del" style="flex:0 0 auto">刪除</button>'}<button class="btn pri" data-a="ok">${isNew ? '新增' : '儲存'}</button>`, onClose() { res(); }});
+    sh.body.innerHTML = `<div class="field"><label>品名</label><input id="ivN" value="${esc(x.n)}" maxlength="80"></div>
+      <div class="iGrid"><div class="field"><label>單價</label><input id="ivU" inputmode="decimal" value="${x.amt !== '' && x.q ? esc(Math.round(x.amt / x.q * 100) / 100) : ''}"></div><div class="field"><label>數量</label><input id="ivQ" inputmode="decimal" value="${x.q}"></div><div class="field"><label>小計</label><input id="ivA" inputmode="decimal" value="${esc(x.amt)}"></div></div>
+      <div class="small muted">折扣（例如鮮食促）小計填負數，例如 -21</div>`;
+    const r2 = n => Math.round(n * 100) / 100, U = $('#ivU', sh.body), Q = $('#ivQ', sh.body), A = $('#ivA', sh.body), num = el => parseFloat(String(el.value).replace(/[^\d.\-]/g, ''));
+    sh.body.addEventListener('input', e => { const q = num(Q) || 1; if ((e.target === U || e.target === Q) && !isNaN(num(U))) A.value = r2(num(U) * q); else if (e.target === A && !isNaN(num(A))) U.value = r2(num(A) / q); });
+    sh.foot.onclick = async e => { const t = e.target.closest('[data-a]'); if (!t) return; buzz(8);
+      if (t.dataset.a === 'del') { v.items.splice(i, 1); sh.close(); return; }
+      const n = $('#ivN', sh.body).value.trim(), q = num(Q) || 1, a = num(A); if (!n || isNaN(a)) { toast('請輸入品名和小計'); return; }
+      const o = {n, q, p: r2(a / q), amt: r2(a)}; v.items = v.items || []; if (isNew) v.items.push(o); else v.items[i] = o; sh.close(); }; });
 }
 /* 發票 → 購物分帳：負數的行（鮮食促 -21）當成品項折扣，自動配對品項 */
 function invToBill(v) {
@@ -270,12 +301,14 @@ function openInvSettings() {
   const sh = sheet({title: '⚙️ 發票設定', full: true, onClose() { if (curTab === 'Inv') renderInv(); }});
   const draw = () => { const n = invList().length;
     sh.body.innerHTML = `<div class="msSec"><div class="msH"><b class="grow">📱 手機條碼</b><button class="btn sm" data-a="car">${DB.scfg.carrier ? '✎ 修改' : '＋ 設定'}</button></div><div class="small muted">${DB.scfg.carrier ? esc(DB.scfg.carrier) + '（顯示在發票區最上面，結帳時給店員掃）' : '還沒設定'}</div>${DB.scfg.carrier ? '<button class="btn sm" data-a="carDel" style="margin-top:.5rem">移除手機條碼</button>' : ''}</div>
+      ${IS_APP && NB.invApps ? `<div class="msSec"><div class="msH"><b class="grow">🤖 協助工具</b><button class="btn sm" data-a="accHelp">說明／設定</button></div><div class="small muted">按「🤖 協助工具」時自動打開：<b>${esc(((invAppList().apps || []).find(x => x.pkg === DB.scfg.invApp) || {}).label || '自動（發票大師）')}</b></div><button class="btn sm" data-a="accApp" style="margin-top:.5rem">更換要打開的 App</button></div>` : ''}
       <div class="msSec"><div class="msH"><b class="grow">🏪 店家名稱對照</b></div><div class="small muted" style="margin-bottom:.4rem">掃 QR Code 只會拿到統編，App 會自動查經濟部公示資料；查不到或想改名可以在這裡改</div>
         ${Object.entries(DB.scfg.sellers || {}).map(([id, nm]) => `<div class="msR" data-id="${id}"><b class="grow">${esc(nm)}<small class="muted" style="display:block;font-weight:500">${id}</small></b><button class="btn sm" data-a="sRen">✎</button></div>`).join('') || '<div class="small muted">還沒有</div>'}</div>
       <div class="msSec"><div class="msH"><b class="grow">🧾 發票紀錄</b></div><div class="small muted">共 ${n} 張，會一起放進「設定 → 匯出備份」。</div>${n ? '<button class="btn sm danger" data-a="wipe" style="margin-top:.6rem">清除所有發票</button>' : ''}</div>
       <div class="gTip">ℹ️ 用手機條碼直接連動載具、把紙本發票存進載具，需要財政部核發的電子發票 API 帳號（目前只開放給營業人或組織，並要求資安認證），所以這裡改用掃描 QR Code、匯入 CSV 和 App 內讀取網站的方式。</div>`; };
   draw();
   sh.body.addEventListener('click', async e => { const t = e.target.closest('[data-a]'); if (!t) return; const a = t.dataset.a;
+    if (a === 'accApp') { await pickInvApp(true); draw(); return; } if (a === 'accHelp') { openInvAcc(true); return; }
     if (a === 'car') { await editCarrier(); draw(); } else if (a === 'carDel') { delete DB.scfg.carrier; saveScfg(); draw(); }
     else if (a === 'sRen') { const id = t.closest('.msR').dataset.id, nv = ((await askText('店家名稱', DB.scfg.sellers[id])) || '').trim(); if (nv) { DB.scfg.sellers[id] = nv; saveScfg(); draw(); } }
     else if (a === 'wipe') { if (!await ask('確定要清除所有發票紀錄嗎？（分帳紀錄不會刪）', '全部清除', true)) return; DB.invs = {}; saveInvs(); draw(); } });
@@ -328,23 +361,34 @@ async function invShots(files) {
 }
 
 /* ---------- 協助工具讀取（讀發票大師等 App 畫面上的文字） ---------- */
-function openInvAcc() {
+/* 協助工具要打開的發票 App：設定過的 → 上次讀取的 → 名稱有「發票大師」→ 讓你選 */
+function invAppList() { try { return JSON.parse(NB.invApps()); } catch (e) { return {apps: []}; } }
+async function pickInvApp(force) {
+  const r = invAppList(), L = r.apps || [];
+  if (!force) { const pref = DB.scfg.invApp || r.last; if (pref && L.some(x => x.pkg === pref)) return pref; const m = L.find(x => /發票大師/.test(x.label)); if (m) return m.pkg; if (L.length === 1) return L[0].pkg; }
+  if (!L.length) { toast('找不到發票 App，請自己切到發票大師', 3500); return ''; }
+  return new Promise(res => { let done = false; const sh = sheet({title: '要打開哪個發票 App？', onClose() { if (!done) res(''); }});
+    sh.body.innerHTML = `<div class="actList">${L.map(x => `<button data-p="${esc(x.pkg)}">🧾 ${esc(x.label)}${x.pkg === DB.scfg.invApp ? '　✓' : ''}</button>`).join('')}</div>`;
+    sh.body.onclick = e => { const t = e.target.closest('[data-p]'); if (!t) return; buzz(10); DB.scfg.invApp = t.dataset.p; saveScfg(); done = true; sh.close(); res(t.dataset.p); }; });
+}
+async function openInvAcc(setup) {
   if (!(IS_APP && NB.invAccState)) { const sh = sheet({title: '🤖 協助工具讀取'}); sh.body.innerHTML = '<p>這個功能要在 Android App 裡使用。</p>'; return; }
+  if (!setup && NB.invAccState() === 'on') { const pkg = await pickInvApp(); NB.invAccArm(true); buzz(20); if (pkg) { NB.openPkg(pkg); toast('已打開發票 App：在發票明細或列表按右下的 🧾', 3500); } else toast('切到發票 App，按畫面上的 🧾', 3500); return; }
   const sh = sheet({title: '🤖 協助工具讀取', full: true, foot: '<button class="btn" data-a="set">⚙️ 協助工具設定</button><button class="btn pri" data-a="go">▶ 開始</button>'});
   const draw = () => { const on = NB.invAccState() === 'on';
     sh.body.innerHTML = `<div class="accSt ${on ? 'on' : ''}">${on ? '✅ 協助工具已開啟' : '⚠️ 還沒開啟協助工具'}</div>
       <ol class="invSteps">
         <li>${on ? '<s>開啟協助工具</s>（已完成）' : '按下面的「⚙️ 協助工具設定」→ 找到「<b>食光帳本 發票讀取</b>」→ 開啟'}</li>
-        <li>按「▶ 開始」，然後切到<b>發票大師</b>（或其他發票 App）</li>
-        <li>畫面下方會出現食光帳本的小面板：
-          <div class="accBtns"><span>📥 讀取這頁</span>打開一張發票明細時按，讀這一張<br><span>⏬ 捲動讀取列表</span>在發票列表按，自動往下捲、讀出每張的日期、店家、金額<br><span>🔁 自動讀取全部明細</span>在發票列表按，會自動一張一張點開、讀取、返回（再按一次停止）<br><span>✓ 完成</span>收起面板、回到食光帳本</div></li>
-        <li>回到食光帳本，讀到的發票會自動存進發票區，同一張不會重複</li></ol>
-      <div class="gTip">🔒 只有你按下面板上的按鈕時才會讀取畫面上的文字，讀到的內容只存在這支手機裡，不會上傳。不用時可以到協助工具設定關掉。</div>`; };
+        <li>之後在發票區按「🤖 協助工具」，會<b>自動打開發票大師</b>，畫面上出現一顆綠色圓形按鈕 🧾（可以拖曳）</li>
+        <li>打開<b>發票列表</b>或<b>發票明細</b>，按一下 🧾：
+          <div class="accBtns">明細頁 → 讀這一張<br>列表頁 → 自動往下捲到底，讀出全部發票<br>讀完可以選「🔁 也讀取每張明細」，自動一張張打開讀品項<br>沒有發票號碼 → 會跳出「未偵測到發票號碼」</div></li>
+        <li>按「✓ 返回食光帳本」，讀到的發票自動存進發票區，同一張不會重複</li></ol>
+      <div class="gTip">🔒 只有你按 🧾 時才會讀取畫面上的文字，讀到的內容只存在這支手機裡，不會上傳。不用時可以到協助工具設定關掉。</div>`; };
   draw();
-  sh.foot.addEventListener('click', e => { const t = e.target.closest('[data-a]'); if (!t) return;
+  sh.foot.addEventListener('click', e => { const t = e.target.closest('[data-a]'); if (!t) return; buzz(10);
     if (t.dataset.a === 'set') { NB.invAccSettings(); return; }
     if (NB.invAccState() !== 'on') { toast('請先到協助工具設定開啟「食光帳本 發票讀取」', 3500); NB.invAccSettings(); return; }
-    NB.invAccArm(true); sh.close(); toast('▶ 已開始：切到發票 App，畫面下方會出現讀取面板', 4000); });
+    sh.close(); openInvAcc(); });
   const re = () => { if (!document.hidden && !sh.closed) draw(); }; document.addEventListener('visibilitychange', re);
 }
 function invPullAcc() {

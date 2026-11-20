@@ -113,7 +113,7 @@ function gotoBill(k, id) { if (S.mode !== 'shop') setMode('shop', true); const d
 function shopPlaceHtml(p) {
   const L = []; Object.keys(DB.bills).sort().reverse().forEach(k => DB.bills[k].forEach(b => { if (b.place === p.id) L.push({k, b}); }));
   const tot = L.reduce((s, r) => s + billCalc(r.b).computed, 0);
-  return `<div class="h3"><span class="grow">🧾 購物紀錄 <span class="muted small" style="font-weight:600">${L.length ? L.length + ' 筆・' + money(tot) : ''}</span></span></div>
+  return `<div class="h3" id="menuTop"><span class="grow">🧾 購物紀錄 <span class="muted small" style="font-weight:600">${L.length ? L.length + ' 筆・' + money(tot) : ''}</span></span></div>
     <div class="mBtns"><button class="btn pri" data-a="sbNew">＋ 新增這家店的明細</button></div>
     ${L.length ? L.slice(0, 30).map(r => `<button class="srD" data-a="sbGo" data-k="${r.k}" data-id="${r.b.id}"><div class="row"><b class="grow">${dayLabel(r.k)}${r.b.time ? ' ' + esc(r.b.time) : ''}</b><span class="srA">${money(billCalc(r.b).computed)}</span></div><div class="srL">${esc(r.b.items.slice(0, 4).map(x => x.n).join('、'))}${r.b.items.length > 4 ? '…' : ''}</div></button>`).join('') : '<div class="empty" style="padding:1rem">這家店還沒有購物紀錄</div>'}`;
 }
