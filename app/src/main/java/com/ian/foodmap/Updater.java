@@ -43,7 +43,7 @@ final class Updater {
         new Thread(new Runnable() {
             @Override public void run() {
                 try {
-                    if (url == null || !url.startsWith(SOURCE)) throw new Exception("不是食光地圖的下載位置");
+                    if (url == null || !url.startsWith(SOURCE)) throw new Exception("不是食光帳本的下載位置");
                     File f = new File(ctx.getCacheDir(), "update.apk");
                     report("download", 0, null);
                     download(url, f);

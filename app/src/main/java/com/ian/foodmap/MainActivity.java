@@ -36,7 +36,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
 
-/** 食光地圖：把 assets/index.html 以 https://app.local/ 載入 WebView，並提供少量原生功能（震動、導航、選圖／拍照、定位、存檔）。 */
+/** 食光帳本：把 assets/index.html 以 https://app.local/ 載入 WebView，並提供少量原生功能（震動、導航、選圖／拍照、定位、存檔）。 */
 public class MainActivity extends Activity {
     static final String HOST = "app.local";
     static final int REQ_FILE = 11, REQ_GEO = 12, REQ_LOC = 13;
@@ -431,7 +431,7 @@ public class MainActivity extends Activity {
                     ContentValues cv = new ContentValues();
                     cv.put(MediaStore.Images.Media.DISPLAY_NAME, "foodmap_" + System.currentTimeMillis() + ".jpg");
                     cv.put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg");
-                    cv.put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_PICTURES + "/食光地圖");
+                    cv.put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_PICTURES + "/食光帳本");
                     camUri = getContentResolver().insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, cv);
                     if (camUri != null) {
                         Intent cam = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
