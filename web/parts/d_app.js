@@ -149,7 +149,8 @@ function renderSet() {
       <button class="btn pri modeSw" data-a="mode">${S.mode === 'shop' ? '🍽️ 切換到美食點餐' : '🛒 切換到購物分帳'}</button></div></div></div>
   <div class="setG"><h3>使用說明</h3><div class="setC">
     <button class="setR" data-a="guideFood" style="width:100%;text-align:left"><span class="gRi">🍽️</span><div class="t"><b>美食點餐 圖解說明</b><small>找店收藏、AI 菜單表格、點餐分帳、匯出</small></div><span class="muted">›</span></button>
-    <button class="setR" data-a="guideShop" style="width:100%;text-align:left"><span class="gRi">🛒</span><div class="t"><b>購物分帳 圖解說明</b><small>上傳明細、選誰付、折扣與費用、驗算匯出</small></div><span class="muted">›</span></button>
+    <button class="setR" data-a="guideShop" style="width:100%;text-align:left"><span class="gRi">🛒</span><div class="t"><b>購物分帳 圖解說明</b><small>上傳明細、購物方式、選誰付、折扣與費用、驗算匯出</small></div><span class="muted">›</span></button>
+    <button class="setR" data-a="guideInv" style="width:100%;text-align:left"><span class="gRi">🎫</span><div class="t"><b>發票 圖解說明</b><small>手機條碼、掃 QR、截圖、協助工具、折扣、拿去分帳</small></div><span class="muted">›</span></button>
     <button class="setR" data-a="welcome" style="width:100%;text-align:left"><span class="gRi">👋</span><div class="t"><b>歡迎畫面與金鑰教學</b><small>第一次打開時看到的介紹</small></div><span class="muted">›</span></button></div></div>
   <div class="setG"><h3>外觀</h3><div class="setC">
     <div class="setR"><div class="t"><b>主題</b></div>${seg('theme', [['auto', '跟隨系統'], ['light', '淺色'], ['dark', '深色']], S.theme)}</div>
@@ -199,7 +200,7 @@ function initSet() {
     else if (a === 'updChk') Upd.check(true); else if (a === 'updApk') Upd.releases(); else if (a === 'updBack') Upd.restore(); else if (a === 'updShare') Upd.share(); else if (a === 'updWeb') openUrl(GH.pages);
     else if (a === 'aiStudio') openUrl('https://aistudio.google.com/rate-limit?timeRange=last-28-days'); else if (a === 'aiLog') { const o = $('#aiLogBox'); o.classList.toggle('hide'); b.textContent = o.classList.contains('hide') ? '查看最近 AI 紀錄' : '收起紀錄'; }
     else if (a === 'mcheck') openMenuCheck();
-    else if (a === 'mode') setMode(S.mode === 'shop' ? 'food' : 'shop'); else if (a === 'guideFood') openGuide('food'); else if (a === 'guideShop') openGuide('shop');
+    else if (a === 'mode') setMode(S.mode === 'shop' ? 'food' : 'shop'); else if (a === 'guideFood') openGuide('food'); else if (a === 'guideShop') openGuide('shop'); else if (a === 'guideInv') openGuide('inv');
     else if (a === 'cats') openCats('place'); else if (a === 'rcats') openCats('recipe'); else if (a.indexOf('off') === 0) Off.act(a); else if (a === 'exp') exportBackup(); else if (a === 'imp') importBackup(); else if (a === 'welcome') welcome();
     else if (a === 'wipe') { if (await ask('確定要清除「所有」收藏、菜單、食譜與設定嗎？\n這個動作無法復原，建議先匯出備份。', '全部清除', true) && await ask('再確認一次：真的要全部清除嗎？', '清除', true)) { for (const s of ['kv', 'places', 'recipes', 'imgs']) await IDB.clear(s).catch(() => {}); try { localStorage.clear(); } catch (er) {} location.reload(); } } });
 }
@@ -267,7 +268,8 @@ function welcome() {
   sh.body.innerHTML = `<div class="gHero" style="margin-top:.2rem"><div class="gIcon">${APP_ICON}</div><h2 style="font-size:1.35rem;font-weight:800;margin:.2rem 0 0">食光帳本</h2><span class="muted small">收藏愛店、點餐分帳、購物明細分帳，一本搞定</span></div>
     <div class="h3">📘 圖解使用說明（第一次用請先看）</div>
     <div class="gPick"><button data-g="food"><i>🍽️</i><b>美食點餐</b><small>找店收藏、AI 菜單表格、每天吃什麼、誰付多少、食譜</small><span>看說明 ›</span></button>
-      <button data-g="shop"><i>🛒</i><b>購物分帳</b><small>全聯、超商、Foodpanda 明細拍照，AI 讀出品項折扣，自動分帳</small><span>看說明 ›</span></button></div>
+      <button data-g="shop"><i>🛒</i><b>購物分帳</b><small>全聯、超商、Foodpanda 明細拍照，AI 讀出品項折扣，自動分帳</small><span>看說明 ›</span></button>
+      <button data-g="inv" class="wide"><i>🎫</i><b>發票</b><small>手機條碼、掃發票 QR Code、匯入發票大師、協助工具讀取，一鍵拿去分帳</small><span>看說明 ›</span></button></div>
     <div class="h3">🔑 建議先完成的設定</div>
     <div class="row wrap" style="gap:.5rem"><button class="btn olive grow" data-t="ai">AI 辨識金鑰教學</button><button class="btn grow" data-t="maps">Google 搜尋金鑰教學</button></div>
     <div class="small muted" style="margin-top:.6rem">不設定也可以先使用；之後隨時能到「設定」頁完成，或在「設定 → 使用說明」再看一次。</div>`;
@@ -282,7 +284,7 @@ async function saveFile(name, blob) {
 }
 async function exportBackup() {
   busy('整理備份資料…'); try { const Sx = Object.assign({}, S); delete Sx.gkey; delete Sx.aikey;
-    const parts = [`{"app":"shiguang-foodmap","v":1,"t":${Date.now()},"S":${JSON.stringify(Sx)},"cats":${JSON.stringify(DB.side.food.cats)},"cats_shop":${JSON.stringify(DB.side.shop.cats)},"bills":${JSON.stringify(DB.bills || {})},"scfg":${JSON.stringify(DB.scfg || null)},"invs":${JSON.stringify(DB.invs || {})},"rcats":${JSON.stringify(DB.rcats)},"places":${JSON.stringify(DB.side.food.places.concat(DB.side.shop.places))},"recipes":${JSON.stringify(DB.recipes)},"mcfg":${JSON.stringify(DB.mcfg || null)},"days":${JSON.stringify(DB.days || {})},"imgs":{`];
+    const parts = [`{"app":"shiguang-foodmap","v":1,"t":${Date.now()},"S":${JSON.stringify(Sx)},"cats":${JSON.stringify(DB.side.food.cats)},"shared1":1,"bills":${JSON.stringify(DB.bills || {})},"scfg":${JSON.stringify(DB.scfg || null)},"invs":${JSON.stringify(DB.invs || {})},"rcats":${JSON.stringify(DB.rcats)},"places":${JSON.stringify(DB.side.food.places.concat(DB.side.shop.places))},"recipes":${JSON.stringify(DB.recipes)},"mcfg":${JSON.stringify(DB.mcfg || null)},"days":${JSON.stringify(DB.days || {})},"imgs":{`];
     const keys = await IDB.keys('imgs'); let n = 0; for (const k of keys) { const r = await IDB.get('imgs', k); if (!r) continue; parts.push((n++ ? ',' : '') + JSON.stringify(k) + ':' + JSON.stringify({type: r.type, w: r.w, h: r.h, d: await blobB64(new Blob([r.buf]))})); }
     parts.push('}}'); const d = new Date(), nm = `食光帳本備份_${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}.json`;
     const p = await saveFile(nm, new Blob(parts, {type: 'application/json'})); busy(false); toast(IS_APP ? '已匯出到「下載」資料夾：' + p : '已下載備份檔 ' + nm, 4000);
@@ -295,6 +297,6 @@ function importBackup() { const f = $('#jsonPick'); f.value = ''; f.onchange = a
     const b64buf = s => { const bin = atob(s), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return u.buffer; };
     for (const k in j.imgs || {}) { const r = j.imgs[k]; await IDB.put('imgs', k, {buf: b64buf(r.d), type: r.type || 'image/jpeg', w: r.w, h: r.h}); }
     for (const p of j.places) await IDB.put('places', p.id, p); for (const r of j.recipes || []) await IDB.put('recipes', r.id, r);
-    await IDB.put('kv', 'cats', j.cats || []); if (j.rcats) await IDB.put('kv', 'rcats', j.rcats); if (j.mcfg) await IDB.put('kv', 'mcfg', j.mcfg); await IDB.put('kv', 'days', j.days || {}); if (j.cats_shop) await IDB.put('kv', 'cats_shop', j.cats_shop); await IDB.put('kv', 'bills', j.bills || {}); if (j.scfg) await IDB.put('kv', 'scfg', j.scfg); if (j.invs) await IDB.put('kv', 'invs', j.invs); await IDB.put('kv', 'S', Object.assign({}, S_DEF, j.S || {}, {gkey: S.gkey, aikey: S.aikey, onboard: true})); location.reload();
+    await IDB.put('kv', 'cats', j.cats || []); if (j.rcats) await IDB.put('kv', 'rcats', j.rcats); if (j.mcfg) await IDB.put('kv', 'mcfg', j.mcfg); await IDB.put('kv', 'days', j.days || {}); if (j.cats_shop) await IDB.put('kv', 'cats_shop', j.cats_shop); await IDB.put('kv', 'bills', j.bills || {}); if (j.scfg) await IDB.put('kv', 'scfg', j.scfg); if (j.shared1) await IDB.put('kv', 'shared1', 1); else await IDB.del('kv', 'shared1').catch(() => {}); if (j.invs) await IDB.put('kv', 'invs', j.invs); await IDB.put('kv', 'S', Object.assign({}, S_DEF, j.S || {}, {gkey: S.gkey, aikey: S.aikey, onboard: true})); location.reload();
   } catch (e) { busy(false); toast('❌ 匯入失敗：' + (e instanceof SyntaxError ? '檔案格式不正確' : e.message), 4500); } }; f.click(); }
 
