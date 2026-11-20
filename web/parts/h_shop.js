@@ -147,7 +147,7 @@ const RC_PROMPT = `你是台灣購物明細的辨識助手。接下來的圖片�
 請依照 JSON 格式回傳：
 - store：店名（有分店就寫，例如「全聯 頭份店」「Burger King 漢堡王 頭份中華店」）。Foodpanda 寫「訂購於」後面的餐廳名稱。
 - date：YYYY-MM-DD；time：HH:MM（24 小時制）；看不到就空字串。
-- total：明細上的「消費金額」或訂單總額（還沒扣福利扣點之前的金額，數字）；看不到就 null。
+- total：明細上的「消費金額」或訂單總額（還沒扣福利扣點之前的金額，數字）；看不到就 0。
 - points：全聯「福利扣點」（付款方式裡用福利點數折抵的金額，例如「福利扣點 3」）；沒有就 0。
 - items：每一個商品一筆。
   - name：品名照圖片上的字抄，被截斷就照截斷的抄（例如「履歷台灣香蕉(」「草本抑菌35」），不要自己補字、不要翻譯。
@@ -155,7 +155,7 @@ const RC_PROMPT = `你是台灣購物明細的辨識助手。接下來的圖片�
   - qty：數量（數字，「2x」「×2」= 2，沒寫就 1）。
   - amount：這一行的總金額（數量 × 單價）。全聯明細右邊的金額就是整行金額。
   - options：外送品項下面的小字（例如「燉飯, 阿薩姆奶茶, 冰」），沒有就空字串。
-- discounts：「優惠活動折扣」這類針對特定商品的折扣（例如「靠得住草本抑 任買2組229元 -138」）。amount 寫正數；items 寫套用的商品在 items 陣列的位置（從 0 開始），依品牌、品名判斷，判斷不出來就 []。
+- discounts：「優惠活動折扣」這類針對特定商品的折扣（例如「靠得住草本抑 任買2組229元 -138」）。amount 寫正數；itemIndex 寫套用的商品在 items 陣列的位置（從 0 開始），依品牌、品名判斷，判斷不出來就 []。
 - orderDiscounts：整筆訂單的折扣或優惠券（例如「85 折優惠 -$45」「折扣 -55」），amount 寫正數。
 - fees：平台費、外送服務費、包材費、小費、運費等實際收取的費用。
 
@@ -166,9 +166,9 @@ const RC_PROMPT = `你是台灣購物明細的辨識助手。接下來的圖片�
 4. 免費（$0）或被劃掉的費用不要列。
 5. 不要編造看不到的內容。`;
 const RC_SCHEMA = {type: 'OBJECT', properties: {
-  store: {type: 'STRING'}, date: {type: 'STRING'}, time: {type: 'STRING'}, total: {type: 'NUMBER', nullable: true}, points: {type: 'NUMBER'},
+  store: {type: 'STRING'}, date: {type: 'STRING'}, time: {type: 'STRING'}, total: {type: 'NUMBER'}, points: {type: 'NUMBER'},
   items: {type: 'ARRAY', items: {type: 'OBJECT', properties: {name: {type: 'STRING'}, qty: {type: 'NUMBER'}, amount: {type: 'NUMBER'}, options: {type: 'STRING'}}, required: ['name', 'amount']}},
-  discounts: {type: 'ARRAY', items: {type: 'OBJECT', properties: {name: {type: 'STRING'}, amount: {type: 'NUMBER'}, items: {type: 'ARRAY', items: {type: 'INTEGER'}}}, required: ['name', 'amount']}},
+  discounts: {type: 'ARRAY', items: {type: 'OBJECT', properties: {name: {type: 'STRING'}, amount: {type: 'NUMBER'}, itemIndex: {type: 'ARRAY', items: {type: 'INTEGER'}}}, required: ['name', 'amount']}},
   orderDiscounts: {type: 'ARRAY', items: {type: 'OBJECT', properties: {name: {type: 'STRING'}, amount: {type: 'NUMBER'}}, required: ['name', 'amount']}},
   fees: {type: 'ARRAY', items: {type: 'OBJECT', properties: {name: {type: 'STRING'}, amount: {type: 'NUMBER'}}, required: ['name', 'amount']}}},
   required: ['store', 'items']};
@@ -192,40 +192,50 @@ async function rcPrep(blobs) {
   return out;
 }
 /* 思考設定：不同世代參數不同，被拒絕就換下一種 */
-const RC_THINK = [{thinkingBudget: 0}, {thinkingLevel: 'minimal'}, null];
-async function rcCall(m, parts, think) {
-  const gc = {temperature: 0, maxOutputTokens: 8192, responseMimeType: 'application/json', responseSchema: RC_SCHEMA}; if (RC_THINK[think]) gc.thinkingConfig = RC_THINK[think];
-  const j = await jfetch(`${AI_BASE}/${encodeURIComponent(m)}:generateContent`, {method: 'POST', headers: aiHead(), body: JSON.stringify({contents: [{role: 'user', parts}], generationConfig: gc})}, 100000);
+/* 請求設定階梯：不同世代的模型支援的參數不一樣（思考設定、固定格式），
+   Google 回「Request contains an invalid argument」(400) 時，立刻改用下一種較保守的寫法重送（400 會馬上回應，不浪費時間），
+   成功的寫法會記住，下次直接用 */
+const RC_CFG = [{sc: 1, th: {thinkingBudget: 0}}, {sc: 1, th: {thinkingLevel: 'minimal'}}, {sc: 1, th: {thinkingLevel: 'low'}}, {sc: 1},
+  {js: 1, th: {thinkingBudget: 0}}, {js: 1, th: {thinkingLevel: 'minimal'}}, {js: 1}, {}];
+async function rcCall(m, parts, ci, ms) {
+  const c = RC_CFG[ci], gc = {temperature: 0, maxOutputTokens: 8192};
+  if (c.sc) { gc.responseMimeType = 'application/json'; gc.responseSchema = RC_SCHEMA; } else if (c.js) gc.responseMimeType = 'application/json';
+  if (c.th) gc.thinkingConfig = c.th;
+  const j = await jfetch(`${AI_BASE}/${encodeURIComponent(m)}:generateContent`, {method: 'POST', headers: aiHead(), body: JSON.stringify({contents: [{role: 'user', parts}], generationConfig: gc})}, ms || 75000);
   if (j.error) throw aiErr(j);
   if (j.promptFeedback && j.promptFeedback.blockReason) throw Object.assign(new Error('AI 拒絕處理這張圖片（' + j.promptFeedback.blockReason + '）'), {fatalImg: true});
-  const c = (j.candidates || [])[0] || {}; return {text: ((c.content && c.content.parts) || []).map(p => p.thought ? '' : p.text || '').join(''), finish: c.finishReason || ''};
+  const cd = (j.candidates || [])[0] || {}; return {text: ((cd.content && cd.content.parts) || []).map(p => p.thought ? '' : p.text || '').join(''), finish: cd.finishReason || ''};
 }
 async function receiptAI(b, onMsg) {
   if (!S.aikey) throw new Error('NOKEY'); const say = t => { if (onMsg) onMsg(t); };
   say('準備圖片…'); const blobs = []; for (const id of b.imgs) { const bl = await imgBlob(id); if (bl) blobs.push(bl); } if (!blobs.length) throw new Error('找不到明細圖片');
   const imgs = await rcPrep(blobs), parts = [{text: RC_PROMPT}, ...imgs, {text: `以上共 ${imgs.length} 張（同一筆明細，依序排列）。請回傳 JSON。`}];
   const ms = await aiModels(), order = [...new Set([ms.flash, ms.lite].filter(Boolean))], t0 = Date.now(); let last = null;
-  S.rcThink = S.rcThink || {};
+  S.rcCfg = S.rcCfg || {}; const errs = [];
   for (const m of order) {
     if (AIQ.blocked(m)) continue;
-    for (let tries = 0; tries < 4; tries++) {
+    let ci = S.rcCfg[m] || 0, tries = 0;
+    while (ci < RC_CFG.length && tries < 3) {
       say(`${aiShort(m)} 讀取 ${imgs.length} 張圖中…`);
-      try { const r = await rcCall(m, parts, S.rcThink[m] || 0); AIQ.inc(m);
+      try { const r = await rcCall(m, parts, ci, tries ? 90000 : 75000); AIQ.inc(m);
         const j = parseLoose(r.text); if (!j || !Array.isArray(j.items)) throw new Error('AI 回傳的內容不完整');
-        if (!j.items.length && tries < 1) { last = new Error('AI 沒有讀到任何品項'); continue; }
+        if (!j.items.length && tries < 1) { tries++; last = new Error('AI 沒有讀到任何品項'); continue; }
+        if (S.rcCfg[m] !== ci) { S.rcCfg[m] = ci; saveS(); }
         AILOG.add({kind: '明細辨識', place: j.store || b.pname || '', model: m, ms: Date.now() - t0, ok: true, n: j.items.length}); return j; }
-      catch (e) { e.model = e.model || m; last = e;
-        if (e.badThink) { S.rcThink[m] = Math.min(RC_THINK.length - 1, (S.rcThink[m] || 0) + 1); saveS(); continue; }
+      catch (e) { e.model = e.model || m; last = e; errs.push(aiShort(m) + '#' + ci + '：' + (e.raw || e.message));
         if (e.fatal || e.fatalImg) throw e;
+        if (e.code === 400) { ci++; continue; }                                       /* 參數不被接受 → 換下一種寫法 */
         if (e.code === 429 && e.perDay) { AIQ.block(m, e.limit); break; }
-        if (e.code === 429) { if (tries >= 1) break; const w = Math.min(60000, e.retryMs || 20000); say(`Google 限制每分鐘次數，${Math.ceil(w / 1000)} 秒後自動繼續…`); await sleep(w); continue; }
+        if (e.code === 429) { if (tries++ >= 1) break; const w = Math.min(60000, e.retryMs || 20000); say(`Google 限制每分鐘次數，${Math.ceil(w / 1000)} 秒後自動繼續…`); await sleep(w); continue; }
         if (e.gone) { S.aiM = null; saveS(); break; }
-        if (/逾時|連線|busy/.test(e.message) || e.busy) { if (tries < 1) { say('連線不穩，重試中…'); await sleep(2000); continue; } break; }
-        if (/解析|不完整/.test(e.message) && tries < 1) continue;
+        if (/逾時|連線/.test(e.message) || e.busy) { if (tries++ < 1) { say('連線不穩，重試中…'); await sleep(1500); continue; } break; }
+        if (/解析|不完整/.test(e.message)) { if (tries++ < 1) continue; ci++; continue; }
         break; }
     }
   }
-  AILOG.add({kind: '明細辨識', place: b.pname || '', model: last && last.model, ms: Date.now() - t0, ok: false, n: 0, err: last && last.message});
+  console.warn('明細辨識失敗', errs);
+  if (last && last.code === 400) last = Object.assign(new Error('Google 不接受這次的請求格式（' + (last.raw || '400') + '）'), {model: last.model});
+  AILOG.add({kind: '明細辨識', place: b.pname || '', model: last && last.model, ms: Date.now() - t0, ok: false, n: 0, err: errs.slice(-4).join('｜')});
   throw last || new Error('AI 沒有回應');
 }
 /* 品名清理：商品代碼、多餘空白、沒有收尾的括號 */
@@ -242,13 +252,13 @@ function applyReceipt(b, j) {
   const clean = rcName;
   const its = [], idxMap = {}; (j.items || []).forEach((x, i) => { const n = clean(x.name), amt = numP(x.amount); if (!n || !(amt > 0) || /紅利|點數折抵|印花|福利扣點|福利點|儲值|找零/.test(n)) return; const it = {id: 'x' + uid(), n, q: Math.max(1, numP(x.qty) || 1), amt, o: String(x.options || '').trim(), ppl: []}; its.push(it); idxMap[i] = it.id; });
   b.items = its;
-  b.disc = (j.discounts || []).filter(d => numP(d.amount)).map(d => { const ids = (d.items || []).map(i => idxMap[i]).filter(Boolean); return {id: 'd' + uid(), n: String(d.name || '折扣').trim(), amt: Math.abs(numP(d.amount)), items: ids, auto: !!ids.length}; });
+  b.disc = (j.discounts || []).filter(d => numP(d.amount)).map(d => { const ids = (d.itemIndex || d.items || []).map(i => idxMap[i]).filter(Boolean); return {id: 'd' + uid(), n: String(d.name || '折扣').trim(), amt: Math.abs(numP(d.amount)), items: ids, auto: !!ids.length}; });
   b.disc.forEach(d => { if (!d.items.length) { const ids = guessDiscItems(d.n, b.items); if (ids.length) { d.items = ids; d.auto = true; } } });
   let pts = Math.abs(numP(j.points)) || 0; (j.orderDiscounts || []).forEach(d => { if (/福利|扣點/.test(d.name || '') && !pts) pts = Math.abs(numP(d.amount)); });
   b.odisc = (j.orderDiscounts || []).filter(d => numP(d.amount) && !/紅利|福利|扣點|回饋|儲值/.test(d.name || '')).map(d => ({id: 'o' + uid(), n: String(d.name || '整單折扣').trim(), amt: Math.abs(numP(d.amount)), ppl: []}));
   b.fees = (j.fees || []).filter(d => numP(d.amount) > 0).map(d => ({id: 'f' + uid(), n: String(d.name || '費用').trim(), amt: numP(d.amount), ppl: []}));
   if (pts > 0) b.odisc.unshift({id: 'o' + uid(), n: '福利扣點', amt: pts, ppl: []});
-  if (j.total != null && j.total !== '') b.total = Math.round((numP(j.total) - pts) * 100) / 100;
+  if (j.total != null && j.total !== '' && numP(j.total) > 0) b.total = Math.round((numP(j.total) - pts) * 100) / 100;
   if (/^\d{1,2}:\d{2}/.test(j.time || '')) b.time = String(j.time).slice(0, 5);
   if (j.store && !b.place) { const st = matchShopStore(String(j.store)); if (st) { b.place = st.id; b.pname = st.name; } else b.pname = String(j.store).trim(); }
   /* 明細上的日期 → 放到那一天 */
