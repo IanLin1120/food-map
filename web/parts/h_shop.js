@@ -52,7 +52,7 @@ function renderShop() {
   $('#shopSub').textContent = `${sel.getMonth() + 1}月${sel.getDate()}日（${MWD[sel.getDay()]}）${bs.length ? ' · ' + bs.length + ' 筆' : ''}`;
   const order = pOrder(Object.keys(per));
   box.innerHTML = `<div class="cal card">
-      <div class="calTop"><button class="ic" data-a="pm" aria-label="上個月">‹</button><select id="sCalY" aria-label="年">${yrs.map(y => `<option value="${y}" ${y === Y ? 'selected' : ''}>${y} 年</option>`).join('')}</select><select id="sCalM" aria-label="月">${Array.from({length: 12}, (_, i) => `<option value="${i}" ${i === Mo ? 'selected' : ''}>${i + 1} 月</option>`).join('')}</select><button class="ic" data-a="nm" aria-label="下個月">›</button></div>
+      <div class="calTop"><button class="ic calNav" data-a="pm" aria-label="上個月">‹</button><button class="calYM" data-a="ym"><span><b>${Y}</b> 年 <b>${Mo + 1}</b> 月</span><i>▾</i></button><button class="ic calNav" data-a="nm" aria-label="下個月">›</button></div>
       <div class="calWd">${MWD.map((w, i) => `<span class="${i === 0 || i === 6 ? 'we' : ''}">${w}</span>`).join('')}</div><div class="calG">${cells}</div></div>
     <div class="dayHead"><b class="dhD">${sel.getMonth() + 1}月${sel.getDate()}日 星期${MWD[sel.getDay()]}</b><span class="grow"></span>${bs.length ? `<span class="dayTot">${money(dayTot)}</span><button class="btn sm" data-a="exportDay">📤 匯出</button>` : ''}</div>
     ${bs.map(billCard).join('') || '<div class="empty mealEmpty"><span class="big">🧾</span>這天還沒有購物明細<br><span class="small">按下面的按鈕拍照、上傳截圖或手動輸入<br>也可以在 Foodpanda、相簿裡按「分享」傳給食光帳本</span></div>'}
@@ -87,6 +87,7 @@ function initShop() {
   box.addEventListener('click', async e => { const t = e.target.closest('[data-a],[data-d]'); if (!t) return;
     if (t.dataset.d) { Shop.sel = t.dataset.d; renderShop(); return; }
     const a = t.dataset.a, card = t.closest('.bill'), b = card && curBill(card.dataset.b);
+    if (a === 'ym') { const r = await ymPick(Shop.ym[0], Shop.ym[1]); if (!r) return; Shop.ym = r; const nd = new Date(r[0], r[1] + 1, 0).getDate(); Shop.sel = ymd(new Date(r[0], r[1], Math.min(ymdDate(Shop.sel).getDate(), nd))); renderShop(); return; }
     if (a === 'pm' || a === 'nm') { const d = new Date(Shop.ym[0], Shop.ym[1] + (a === 'pm' ? -1 : 1), 1); Shop.ym = [d.getFullYear(), d.getMonth()]; const nd = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate(); Shop.sel = ymd(new Date(d.getFullYear(), d.getMonth(), Math.min(ymdDate(Shop.sel).getDate(), nd))); renderShop(); }
     else if (a === 'newImg') newBillImg(); else if (a === 'newMan') newBillManual();
     else if (a === 'exportDay') openShopExport(Shop.sel);
