@@ -52,7 +52,7 @@ function renderMeal() {
   const per = {}; ms.forEach(m => { const pm = perOf(m); Object.keys(pm).forEach(id => { per[id] = (per[id] || 0) + pm[id]; }); });
   const order = DB.mcfg.people.map(u => u.id).concat(Object.keys(per).filter(id => !DB.mcfg.people.some(u => u.id === id))).filter(id => per[id] != null);
   box.innerHTML = `<div class="cal card">
-      <div class="calTop"><button class="ic calNav" data-a="pm" aria-label="上個月">‹</button><button class="calYM" data-a="ymY"><b>${Y}</b><span>年</span><svg class="chev" viewBox="0 0 12 8" aria-hidden="true"><path d="M1.5 1.5 6 6l4.5-4.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button><button class="calYM" data-a="ymM"><b>${Mo + 1}</b><span>月</span><svg class="chev" viewBox="0 0 12 8" aria-hidden="true"><path d="M1.5 1.5 6 6l4.5-4.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button><button class="ic calNav" data-a="nm" aria-label="下個月">›</button></div>
+      ${calHead(Y, Mo)}
       <div class="calWd">${MWD.map((w, i) => `<span class="${i === 0 || i === 6 ? 'we' : ''}">${w}</span>`).join('')}</div>
       <div class="calG">${cells}</div></div>
     <div class="dayHead"><b class="dhD">${sel.getMonth() + 1}月${sel.getDate()}日 星期${MWD[sel.getDay()]}</b><span class="grow"></span>${ms.length ? `<span class="dayTot">${money(dayTotal(Meal.sel))}</span><button class="btn sm" data-a="export">📤 匯出</button>` : ''}</div>
@@ -288,13 +288,18 @@ function editMealCfg(k, it, done) {
     let out; if (isNew) { d.id = (k === 'types' ? 't' : 'u') + uid(); L.push(d); out = d; } else { Object.assign(it, d); out = it; } saveMcfg(); sh.close(); done && done(out); };
 }
 
+/* 月曆頁首：◀ 〔2026 年 ▾〕〔11 月 ▾〕 ▶ （點餐、分帳、日期選擇共用） */
+const TRI_L = '<svg viewBox="0 0 12 14" aria-hidden="true"><path d="M9.5 1.8v10.4a.8.8 0 0 1-1.25.66L1.9 7.66a.8.8 0 0 1 0-1.32l6.35-5.2A.8.8 0 0 1 9.5 1.8z" fill="currentColor"/></svg>';
+const TRI_R = '<svg viewBox="0 0 12 14" aria-hidden="true"><path d="M2.5 1.8v10.4a.8.8 0 0 0 1.25.66l6.35-5.2a.8.8 0 0 0 0-1.32L3.75 1.14A.8.8 0 0 0 2.5 1.8z" fill="currentColor"/></svg>';
+const TRI_D = '<svg viewBox="0 0 12 8" aria-hidden="true"><path d="M1.8 1.2h8.4a.7.7 0 0 1 .55 1.13L6.55 7.1a.7.7 0 0 1-1.1 0L1.25 2.33A.7.7 0 0 1 1.8 1.2z" fill="currentColor"/></svg>';
+const calHead = (Y, Mo) => `<div class="calTop"><button class="calNav" data-a="pm" aria-label="上個月">${TRI_L}</button><button class="calYM" data-a="ymY" aria-label="選擇年份"><span class="v"><b>${Y}</b><em>年</em></span><i class="dd">${TRI_D}</i></button><button class="calYM" data-a="ymM" aria-label="選擇月份"><span class="v"><b>${Mo + 1}</b><em>月</em></span><i class="dd">${TRI_D}</i></button><button class="calNav" data-a="nm" aria-label="下個月">${TRI_R}</button></div>`;
 /* 年／月選擇器（點餐、分帳共用）：kind = 'y' 選年、'm' 選月 */
 function ymPick(Y, M, kind) {
   return new Promise(res => { const now = new Date(), isY = kind === 'y'; let base = Y - 4, done = false;
     const sh = sheet({title: isY ? '選擇年份' : `選擇月份（${Y} 年）`, onClose() { if (!done) res(null); }});
     const fin = v => { done = true; sh.close(); res(v); };
     const draw = () => { sh.body.innerHTML = isY
-      ? `<div class="ymP"><div class="ymY"><button class="ic calNav" data-p="-12" aria-label="更早">‹</button><b>${base} – ${base + 11}</b><button class="ic calNav" data-p="12" aria-label="更晚">›</button></div>
+      ? `<div class="ymP"><div class="ymY"><button class="calNav" data-p="-12" aria-label="更早">${TRI_L}</button><b>${base} – ${base + 11}</b><button class="calNav" data-p="12" aria-label="更晚">${TRI_R}</button></div>
         <div class="ymG">${Array.from({length: 12}, (_, i) => base + i).map(y => `<button data-y="${y}" class="${y === Y ? 'on' : ''} ${y === now.getFullYear() ? 'tdy' : ''}"><b>${y}</b></button>`).join('')}</div>
         <button class="btn block ymNow" data-now="1">📅 回到今年</button></div>`
       : `<div class="ymP"><div class="ymG">${Array.from({length: 12}, (_, i) => `<button data-m="${i}" class="${i === M ? 'on' : ''} ${Y === now.getFullYear() && i === now.getMonth() ? 'tdy' : ''}"><b>${i + 1}</b><small>月</small></button>`).join('')}</div>
