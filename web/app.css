@@ -631,7 +631,7 @@ table.piv .s.pr.one{text-align:center;padding-right:.5rem}
 /* 功能區切換 */
 body:not(.mShop) #tabbar [data-tab="Shop"]{display:none}
 body.mShop #tabbar [data-tab="Meal"],body.mShop #tabbar [data-tab="Rec"]{display:none}
-.modeCard .btn{width:100%;margin-top:.5rem}
+.modeCard .modeSw{width:100%;justify-content:center;border-radius:6px;white-space:normal;margin-top:.2rem}
 /* ---- 購物分帳 ---- */
 .mlS .spin{display:inline-block;width:.8rem;height:.8rem;margin:0 .15rem 0 0;border-width:2px;vertical-align:-1px}
 .bill{cursor:pointer}
@@ -726,3 +726,14 @@ body.mShop #tabbar [data-tab="Meal"],body.mShop #tabbar [data-tab="Rec"]{display
 .phIn .hl{outline:2.5px solid #f29900;outline-offset:2px;animation:hl 1.4s ease-in-out infinite}
 .phTap{position:absolute;right:.2rem;bottom:-.2rem;font-size:1.15rem;animation:tap 1.4s ease-in-out infinite;z-index:3;pointer-events:none}
 .pc>.phTap{right:.5rem;bottom:.1rem}
+/* 頁首：標題一行、工具列三顆等寬 */
+.pgHead.two{flex-direction:column;align-items:stretch;gap:.55rem}
+.pgHead.two .phRow{display:flex;align-items:baseline;gap:.6rem;min-width:0}
+.pgHead.two .phRow h1{flex:none;white-space:nowrap}
+.pgHead.two .sub{margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;font-size:.85rem}
+.pgTools{display:grid;grid-template-columns:repeat(3,1fr);gap:.45rem}
+.pgTools .btn{justify-content:center;border-radius:6px;padding:.5rem .3rem;font-size:.88rem;white-space:nowrap;min-width:0}
+.shopAdd{display:grid;grid-template-columns:1fr 1fr;gap:.55rem;margin:.2rem 0 1rem}
+.shopAdd .btn{flex-direction:column;justify-content:center;gap:.05rem;border-radius:6px;padding:.65rem .4rem;min-width:0;white-space:normal;line-height:1.25}
+.shopAdd i{font-style:normal;font-size:1.4rem}.shopAdd b{font-size:.95rem}.shopAdd small{font-size:.74rem;opacity:.8;font-weight:600}
+.gRi{font-size:1.4rem;flex:none}
