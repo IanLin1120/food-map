@@ -52,7 +52,7 @@ function renderMeal() {
   const per = {}; ms.forEach(m => { const pm = perOf(m); Object.keys(pm).forEach(id => { per[id] = (per[id] || 0) + pm[id]; }); });
   const order = DB.mcfg.people.map(u => u.id).concat(Object.keys(per).filter(id => !DB.mcfg.people.some(u => u.id === id))).filter(id => per[id] != null);
   box.innerHTML = `<div class="cal card">
-      <div class="calTop"><button class="ic calNav" data-a="pm" aria-label="上個月">‹</button><button class="calYM" data-a="ym"><span><b>${Y}</b> 年 <b>${Mo + 1}</b> 月</span><i>▾</i></button><button class="ic calNav" data-a="nm" aria-label="下個月">›</button></div>
+      <div class="calTop"><button class="ic calNav" data-a="pm" aria-label="上個月">‹</button><button class="calYM" data-a="ymY"><b>${Y}</b><span>年</span><svg class="chev" viewBox="0 0 12 8" aria-hidden="true"><path d="M1.5 1.5 6 6l4.5-4.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button><button class="calYM" data-a="ymM"><b>${Mo + 1}</b><span>月</span><svg class="chev" viewBox="0 0 12 8" aria-hidden="true"><path d="M1.5 1.5 6 6l4.5-4.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button><button class="ic calNav" data-a="nm" aria-label="下個月">›</button></div>
       <div class="calWd">${MWD.map((w, i) => `<span class="${i === 0 || i === 6 ? 'we' : ''}">${w}</span>`).join('')}</div>
       <div class="calG">${cells}</div></div>
     <div class="dayHead"><b class="dhD">${sel.getMonth() + 1}月${sel.getDate()}日 星期${MWD[sel.getDay()]}</b><span class="grow"></span>${ms.length ? `<span class="dayTot">${money(dayTotal(Meal.sel))}</span><button class="btn sm" data-a="export">📤 匯出</button>` : ''}</div>
@@ -84,7 +84,7 @@ function initMeal() {
   box.addEventListener('click', async e => { const b = e.target.closest('[data-a],[data-d]'); if (!b) return;
     if (b.dataset.d) { Meal.sel = b.dataset.d; renderMeal(); return; }
     const a = b.dataset.a, card = b.closest('.meal'), m = card && curMeal(card.dataset.m);
-    if (a === 'ym') { const r = await ymPick(Meal.ym[0], Meal.ym[1]); if (!r) return; Meal.ym = r; const nd = new Date(r[0], r[1] + 1, 0).getDate(); Meal.sel = ymd(new Date(r[0], r[1], Math.min(ymdDate(Meal.sel).getDate(), nd))); renderMeal(); return; }
+    if (a === 'ymY' || a === 'ymM') { const r = await ymPick(Meal.ym[0], Meal.ym[1], a === 'ymY' ? 'y' : 'm'); if (!r) return; Meal.ym = r; const nd = new Date(r[0], r[1] + 1, 0).getDate(); Meal.sel = ymd(new Date(r[0], r[1], Math.min(ymdDate(Meal.sel).getDate(), nd))); renderMeal(); return; }
     if (a === 'pm' || a === 'nm') { const d = new Date(Meal.ym[0], Meal.ym[1] + (a === 'pm' ? -1 : 1), 1); Meal.ym = [d.getFullYear(), d.getMonth()]; const nd = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate(); Meal.sel = ymd(new Date(d.getFullYear(), d.getMonth(), Math.min(ymdDate(Meal.sel).getDate(), nd))); renderMeal(); }
     else if (a === 'addMeal') { const t = await pickMealType(); if (!t) return; const st = await pickStore(); if (st === undefined) return;
       const nm = {id: 'm' + uid(), type: t.id, place: st ? st.id || '' : '', pname: st ? st.name : '', items: []}; (DB.days[Meal.sel] = DB.days[Meal.sel] || []).push(nm); mealChanged(); openOrder(nm); }
@@ -288,17 +288,21 @@ function editMealCfg(k, it, done) {
     let out; if (isNew) { d.id = (k === 'types' ? 't' : 'u') + uid(); L.push(d); out = d; } else { Object.assign(it, d); out = it; } saveMcfg(); sh.close(); done && done(out); };
 }
 
-/* 年月選擇器（點餐、分帳共用）：上面切換年份、下面 12 個月 */
-function ymPick(Y, M) {
-  return new Promise(res => { let y = Y, done = false; const now = new Date();
-    const sh = sheet({title: '選擇年月', onClose() { if (!done) res(null); }});
-    const draw = () => { sh.body.innerHTML = `<div class="ymP"><div class="ymY"><button class="ic calNav" data-y="-1" aria-label="前一年">‹</button><b>${y} 年</b><button class="ic calNav" data-y="1" aria-label="後一年">›</button></div>
-      <div class="ymG">${Array.from({length: 12}, (_, i) => `<button data-m="${i}" class="${y === Y && i === M ? 'on' : ''} ${y === now.getFullYear() && i === now.getMonth() ? 'tdy' : ''}"><b>${i + 1}</b><small>月</small></button>`).join('')}</div>
-      <button class="btn block ymNow" data-now="1">📅 回到這個月</button></div>`; };
+/* 年／月選擇器（點餐、分帳共用）：kind = 'y' 選年、'm' 選月 */
+function ymPick(Y, M, kind) {
+  return new Promise(res => { const now = new Date(), isY = kind === 'y'; let base = Y - 4, done = false;
+    const sh = sheet({title: isY ? '選擇年份' : `選擇月份（${Y} 年）`, onClose() { if (!done) res(null); }});
+    const fin = v => { done = true; sh.close(); res(v); };
+    const draw = () => { sh.body.innerHTML = isY
+      ? `<div class="ymP"><div class="ymY"><button class="ic calNav" data-p="-12" aria-label="更早">‹</button><b>${base} – ${base + 11}</b><button class="ic calNav" data-p="12" aria-label="更晚">›</button></div>
+        <div class="ymG">${Array.from({length: 12}, (_, i) => base + i).map(y => `<button data-y="${y}" class="${y === Y ? 'on' : ''} ${y === now.getFullYear() ? 'tdy' : ''}"><b>${y}</b></button>`).join('')}</div>
+        <button class="btn block ymNow" data-now="1">📅 回到今年</button></div>`
+      : `<div class="ymP"><div class="ymG">${Array.from({length: 12}, (_, i) => `<button data-m="${i}" class="${i === M ? 'on' : ''} ${Y === now.getFullYear() && i === now.getMonth() ? 'tdy' : ''}"><b>${i + 1}</b><small>月</small></button>`).join('')}</div>
+        <button class="btn block ymNow" data-now="1">📅 回到這個月</button></div>`; };
     draw(); sh.body.addEventListener('click', e => { const t = e.target.closest('button'); if (!t) return; buzz(8);
-      if (t.dataset.y) { y += +t.dataset.y; draw(); return; }
-      const fin = v => { done = true; sh.close(); res(v); };
-      if (t.dataset.now) fin([now.getFullYear(), now.getMonth()]); else if (t.dataset.m) fin([y, +t.dataset.m]); }); });
+      if (t.dataset.p) { base += +t.dataset.p; draw(); return; }
+      if (t.dataset.now) fin(isY ? [now.getFullYear(), M] : [now.getFullYear(), now.getMonth()]);
+      else if (t.dataset.y) fin([+t.dataset.y, M]); else if (t.dataset.m) fin([Y, +t.dataset.m]); }); });
 }
 /* ---------- 搜尋：吃過哪家店、哪幾天、吃了什麼、多少錢 ---------- */
 const mealPhone = m => { const P = FP().find(x => x.id === m.place); return (P ? P.phone : m.phone) || ''; };
