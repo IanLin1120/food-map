@@ -868,3 +868,8 @@ body.mShop #tabbar [data-tab="Meal"],body.mShop #tabbar [data-tab="Rec"]{display
 .ihLbl{display:flex;align-items:center;justify-content:space-between}.ihLbl .btn{border-radius:6px}
 button.ihTr{width:100%;text-align:left;border:0;border-top:1px solid var(--border-soft);background:none;color:inherit;font:inherit;font-size:.9rem}
 .invLink{align-items:center;gap:.6rem}.invLink b{flex:none}
+.ihD{display:flex;align-items:center;gap:.6rem;width:100%;text-align:left;border:0;border-top:1px solid var(--border-soft);background:none;padding:.55rem 0;color:inherit}
+.ihD:first-child{border-top:0}.ihD b{font-size:.92rem}.ihD small{display:block;font-size:.76rem;color:var(--text-2);margin-top:.1rem}.ihD .neg{color:var(--success);flex:none}
+.iGrid2{display:grid;grid-template-columns:1.6fr 1fr;gap:.6rem}
+.pnR{display:block;width:100%;text-align:left;padding:.65rem .75rem;margin-bottom:.4rem;border-radius:6px;border:1px solid var(--border-soft);background:var(--surface-3);font-size:.95rem;color:var(--text)}
+.pnR mark{background:color-mix(in srgb,var(--accent) 28%,transparent);color:inherit;border-radius:3px;padding:0 .05rem}

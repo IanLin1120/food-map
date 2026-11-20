@@ -52,11 +52,11 @@ public class InvAccessService extends AccessibilityService {
     static InvAccessService me;
     static final Pattern NO = Pattern.compile("([A-Z]{2})-?(\\d{8})");
     WindowManager wm;
-    TextView fab;
+    FabView fab;
     WindowManager.LayoutParams fabLp;
     LinearLayout card;
     final Handler h = new Handler(Looper.getMainLooper());
-    boolean ownFront = false, busy = false, autoRun = false;
+    boolean ownFront = false, busy = false, autoRun = false, scrolling = false;
     final Set<String> visited = new HashSet<>();
     int autoCount = 0, noNew = 0;
     float dp = 1;
@@ -98,9 +98,8 @@ public class InvAccessService extends AccessibilityService {
     /* ---------- 圓形懸浮按鈕 ---------- */
     void showFab() {
         if (fab != null || wm == null) return;
-        fab = new TextView(this); fab.setText("🧾"); fab.setTextSize(24); fab.setGravity(Gravity.CENTER);
-        GradientDrawable g = new GradientDrawable(); g.setShape(GradientDrawable.OVAL); g.setColor(Color.parseColor("#5a7a44")); g.setStroke((int) (3 * dp), Color.WHITE);
-        fab.setBackground(g); fab.setElevation(10 * dp);
+        fab = new FabView(this, dp); fab.setElevation(10 * dp);
+        fab.setOutlineProvider(new android.view.ViewOutlineProvider() { public void getOutline(View v, android.graphics.Outline o) { o.setOval(0, 0, v.getWidth(), v.getHeight()); } });
         int sz = (int) (60 * dp);
         fabLp = new WindowManager.LayoutParams(sz, sz, WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS, PixelFormat.TRANSLUCENT);
@@ -109,16 +108,19 @@ public class InvAccessService extends AccessibilityService {
         fabLp.x = s.getInt("fx", getResources().getDisplayMetrics().widthPixels - sz - (int) (16 * dp));
         fabLp.y = s.getInt("fy", (int) (getResources().getDisplayMetrics().heightPixels * 0.62f));
         fab.setOnTouchListener(new View.OnTouchListener() {
-            float sx, sy; int ox, oy; boolean moved;
+            float sx, sy; int ox, oy; boolean moved, longed;
+            final Runnable lp = new Runnable() { public void run() { longed = true; vib(70); closeFab(); } };
             public boolean onTouch(View v, MotionEvent ev) {
                 switch (ev.getAction()) {
-                    case MotionEvent.ACTION_DOWN: sx = ev.getRawX(); sy = ev.getRawY(); ox = fabLp.x; oy = fabLp.y; moved = false; vib(12); return true;
+                    case MotionEvent.ACTION_DOWN: sx = ev.getRawX(); sy = ev.getRawY(); ox = fabLp.x; oy = fabLp.y; moved = false; longed = false; vib(12); h.postDelayed(lp, 650); return true;
                     case MotionEvent.ACTION_MOVE:
                         float dx = ev.getRawX() - sx, dy = ev.getRawY() - sy;
-                        if (!moved && Math.hypot(dx, dy) > 12 * dp) { moved = true; vib(20); }
+                        if (!moved && Math.hypot(dx, dy) > 12 * dp) { moved = true; h.removeCallbacks(lp); vib(20); }
                         if (moved) { fabLp.x = ox + (int) dx; fabLp.y = Math.max(0, oy + (int) dy); try { wm.updateViewLayout(fab, fabLp); } catch (Exception x) { } }
                         return true;
+                    case MotionEvent.ACTION_CANCEL: h.removeCallbacks(lp); return true;
                     case MotionEvent.ACTION_UP:
+                        h.removeCallbacks(lp); if (longed) return true;
                         if (moved) { vib(25); sp(InvAccessService.this).edit().putInt("fx", fabLp.x).putInt("fy", fabLp.y).apply(); }
                         else { vib(30); onTap(); }
                         return true;
@@ -129,9 +131,36 @@ public class InvAccessService extends AccessibilityService {
         try { wm.addView(fab, fabLp); } catch (Exception x) { fab = null; }
     }
 
+    /* 長按：取消所有偵測、關掉懸浮按鈕（不回到食光帳本） */
+    void closeFab() {
+        autoRun = false; busy = false; scrolling = false; h.removeCallbacksAndMessages(null);
+        sp(this).edit().putBoolean("armed", false).apply(); hideCard(); hideFab();
+        try { android.widget.Toast.makeText(this, "已關閉發票讀取按鈕", android.widget.Toast.LENGTH_SHORT).show(); } catch (Exception x) { }
+    }
+
     void hideFab() { if (fab != null) { try { wm.removeView(fab); } catch (Exception x) { } fab = null; } }
 
-    void fabText(String t) { if (fab != null) { fab.setText(t); fab.setTextSize(t.length() > 2 ? 13 : 24); } }
+    void fabText(String t) { if (fab != null) fab.setLabel("🧾".equals(t) ? null : t); }
+
+    /* 圓形按鈕：用畫的（白色發票圖示），保證在正中間；讀取中改顯示進度文字 */
+    static class FabView extends View {
+        final android.graphics.Paint bgP = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG), stP = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG), fgP = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG), txP = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
+        final float dp; String label;
+        FabView(Context c, float dp) { super(c); this.dp = dp; bgP.setColor(Color.parseColor("#5a7a44")); stP.setColor(Color.WHITE); stP.setStyle(android.graphics.Paint.Style.STROKE); stP.setStrokeWidth(3 * dp);
+            fgP.setColor(Color.WHITE); fgP.setStyle(android.graphics.Paint.Style.STROKE); fgP.setStrokeWidth(2.2f * dp); fgP.setStrokeCap(android.graphics.Paint.Cap.ROUND); fgP.setStrokeJoin(android.graphics.Paint.Join.ROUND);
+            txP.setColor(Color.WHITE); txP.setTextAlign(android.graphics.Paint.Align.CENTER); txP.setTypeface(Typeface.DEFAULT_BOLD); }
+        void setLabel(String t) { label = t; invalidate(); }
+        @Override protected void onDraw(android.graphics.Canvas c) {
+            float w = getWidth(), h = getHeight(), cx = w / 2, cy = h / 2, r = Math.min(w, h) / 2 - 2 * dp;
+            c.drawCircle(cx, cy, r, bgP); c.drawCircle(cx, cy, r, stP);
+            if (label != null) { txP.setTextSize(label.length() > 3 ? 12 * dp : 15 * dp); android.graphics.Paint.FontMetrics fm = txP.getFontMetrics(); c.drawText(label, cx, cy - (fm.ascent + fm.descent) / 2, txP); return; }
+            float bw = 16 * dp, bh = 21 * dp, l = cx - bw / 2, t = cy - bh / 2, rr = l + bw, b = t + bh, z = 2.6f * dp;
+            android.graphics.Path p = new android.graphics.Path(); p.moveTo(l, t); p.lineTo(rr, t); p.lineTo(rr, b);
+            for (int i = 0; i < 4; i++) { float x0 = rr - i * bw / 4; p.lineTo(x0 - bw / 8, b - z); p.lineTo(x0 - bw / 4, b); }
+            p.close(); c.drawPath(p, fgP);
+            c.drawLine(l + 4 * dp, t + 6 * dp, rr - 4 * dp, t + 6 * dp, fgP); c.drawLine(l + 4 * dp, t + 10.5f * dp, rr - 4 * dp, t + 10.5f * dp, fgP); c.drawLine(l + 4 * dp, t + 15 * dp, rr - 7 * dp, t + 15 * dp, fgP);
+        }
+    }
 
     /* ---------- 結果卡片 ---------- */
     void showCard(String title, String msg, String[] labels, final Runnable[] acts) {
@@ -243,19 +272,20 @@ public class InvAccessService extends AccessibilityService {
 
     /* 列表：一路往下捲，每捲一次讀一次，直到捲不動或畫面不再變化 */
     void scrollAll() {
-        busy = true; fabText("讀取中");
+        busy = true; scrolling = true; fabText("讀取中");
         final List<List<String>> pages = new ArrayList<>(); final Set<String> all = new HashSet<>();
         final Runnable[] step = new Runnable[1];
         step[0] = new Runnable() {
             int i = 0, same = 0; String last = "";
             public void run() {
+                if (!scrolling) return;
                 List<String> L = lines(); String sig = L.toString();
                 if (!sig.equals(last)) { pages.add(L); all.addAll(nos(L)); same = 0; } else same++;
                 last = sig; fabText(all.size() + "張");
                 AccessibilityNodeInfo sc = scroller(getRootInActiveWindow(), 0);
                 boolean ok = sc != null && sc.performAction(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD);
                 if (ok && same < 2 && i++ < 80) { h.postDelayed(step[0], 650); return; }
-                save("list", pages); busy = false; fabText("🧾"); vib(60);
+                save("list", pages); busy = false; scrolling = false; fabText("🧾"); vib(60);
                 showCard("✅ 讀到 " + all.size() + " 張發票", "列表只有日期、店家和金額；要品項的話可以讓它自動一張一張打開明細讀取",
                         new String[]{"✓ 返回食光帳本", "🔁 也讀取每張明細", "繼續"}, new Runnable[]{back, new Runnable() { public void run() { startAuto(); } }, null});
             }
