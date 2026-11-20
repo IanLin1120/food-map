@@ -140,9 +140,9 @@ function pickStore(cur) {
 function menuChoices(p, rg) {
   const all = p.menu || [], regs = [...new Set(all.map(r => r.g).filter(Boolean))]; const cur = regs.includes(rg) ? rg : regs.includes(p.rgSel) ? p.rgSel : regs[0] || '';
   const inR = r => !cur || r.g === cur || (!r.g && !all.some(y => y.g === cur && (y.t || 'item') === (r.t || 'item') && baseName(y.n) === baseName(r.n)));
-  const R = all.filter(inR), ogs = optGroups(R.filter(r => r.t === 'opt')), isCol = colLabels(R.filter(r => (r.t || 'item') !== 'opt'));
+  const R = all.filter(inR), ogs = optGroups(R.filter(r => r.t === 'opt')), isCol = colLabels(R.filter(r => (r.t || 'item') !== 'opt' && r.t !== 'note'));
   const out = [], idx = {}, owned = new Set();
-  R.forEach(r => { const t = r.t || 'item'; if (t === 'opt') return;
+  R.forEach(r => { const t = r.t || 'item'; if (t === 'opt' || t === 'note') return;
     const T = labelOf(r.n), z = T.z, b = T.n, k = t + '|' + r.c + '|' + b;
     if (idx[k] == null) { idx[k] = out.length; out.push({t, rc: r.c, c: t === 'add' ? '➕ ' + (r.c || '加購') : r.c || '其他', n: b, full: t === 'item' ? fullName(r.c, b) : b, v: [], og: [], temps: new Set()}); }
     const o = out[idx[k]]; if (T.t) o.temps.add(T.t); if (!o.v.some(x => x.s === z && x.p === r.p) && !(T.t && !z && o.v.some(x => x.p === r.p))) o.v.push({s: z, p: r.p}); });
@@ -152,6 +152,13 @@ function menuChoices(p, rg) {
   /* 每個品項只拿「系列共用」和「專屬自己」的選項群組 */
   const cn = {}; out.forEach(o => { if (o.t === 'item') (cn[o.rc] = cn[o.rc] || []).push(o.n); });
   out.forEach(o => { if (o.t !== 'item') return; const seen = new Set(); o.og = groupsFor(o.rc, o.n, cn[o.rc], ogs).filter(g => { const k = (/溫度/.test(g.label) ? '溫度' : g.label) + '|' + g.L.map(r => r.n + r.p).join(','); if (seen.has(k)) return false; seen.add(k); return true; }); o.og.forEach(g => owned.add(g.c)); });
+  /* 整個分類裡有一欄完全沒價格（例如「法式麵包｜可頌」只有法式麵包有價格）＝同價可選 → 一個價格＋「選擇」選項 */
+  const labs = {}; out.forEach(o => o.v.forEach(v => { if (v.s && isCol(o.rc, v.s)) { const L = labs[o.rc] = labs[o.rc] || {}; L[v.s] = L[v.s] || (v.p !== '' && v.p != null); } }));
+  out.forEach(o => { const L = labs[o.rc]; if (!L) return; const all = Object.keys(L), empty = all.filter(z => !L[z]); if (!empty.length || empty.length === all.length) return;
+    const pv = o.v.filter(v => v.p !== '' && v.p != null); if (!pv.length) return; o.v = [{s: '', p: pv[0].p}]; o.og = o.og.concat([{label: '選擇', tag: '選一', L: all.map(n => ({n, p: ''}))}]); });
+  /* 品名裡的「(辣/原)」→ 點餐時選口味 */
+  out.forEach(o => { if (o.t !== 'item') return; const m = o.n.match(/\s*[（(]([^()（）]+[\/／][^()（）]+)[)）]\s*$/); if (!m) return; const base = o.n.slice(0, m.index).trim();
+    o.full = fullName(o.rc, base); o.og = o.og.concat([{label: '口味', tag: '選一', L: m[1].split(/[\/／]/).map(n => ({n: n.trim(), p: ''})).filter(x => x.n)}]); });
   /* 沒有歸屬到系列、但有價格的選項，當成一般品項 */
   ogs.filter(g => !owned.has(g.c)).forEach(g => g.L.forEach(r => { if (r.p) out.push({t: 'opt', rc: g.c, c: '🧩 ' + (g.owner ? g.owner + '・' + g.label : g.label), n: r.n, full: r.n, v: [{s: '', p: r.p}], og: [], temps: new Set()}); }));
   const csz = {}; out.forEach(o => o.v.forEach(v => { if (v.s && isCol(o.rc, v.s)) (csz[o.rc] = csz[o.rc] || new Set()).add(v.s); }));
