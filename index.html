@@ -4,7 +4,7 @@
 <script>/* 線上更新開機程式：手機上若已下載比 APK 內建更新的介面版本，就改用新版（存在 IndexedDB）。
    新版連續兩次沒有正常開啟 → 自動退回 APK 內建版本。網址加上 #builtin 也會強制使用內建版本。 */
 (function () {
-  var B = '3.0.0'; if (!window.__OTA) window.APP_BUILTIN = B;
+  var B = '3.0.1'; if (!window.__OTA) window.APP_BUILTIN = B;
   if (window.__OTA || location.hash.indexOf('builtin') >= 0) return;
   var v = null; try { v = JSON.parse(localStorage.getItem('fm.ota') || 'null'); } catch (e) {}
   function gt(a, b) { a = String(a).split('.').map(Number); b = String(b).split('.').map(Number); for (var i = 0; i < Math.max(a.length, b.length); i++) { var p = a[i] || 0, q = b[i] || 0; if (p !== q) return p > q; } return false; }
@@ -673,7 +673,7 @@ table.piv .s.pr.one{text-align:center;padding-right:.5rem}
 /* 功能區切換 */
 body:not(.mShop) #tabbar [data-tab="Shop"]{display:none}
 body.mShop #tabbar [data-tab="Meal"],body.mShop #tabbar [data-tab="Rec"]{display:none}
-.modeCard .btn{width:100%;margin-top:.5rem}
+.modeCard .modeSw{width:100%;justify-content:center;border-radius:6px;white-space:normal;margin-top:.2rem}
 /* ---- 購物分帳 ---- */
 .mlS .spin{display:inline-block;width:.8rem;height:.8rem;margin:0 .15rem 0 0;border-width:2px;vertical-align:-1px}
 .bill{cursor:pointer}
@@ -768,6 +768,17 @@ body.mShop #tabbar [data-tab="Meal"],body.mShop #tabbar [data-tab="Rec"]{display
 .phIn .hl{outline:2.5px solid #f29900;outline-offset:2px;animation:hl 1.4s ease-in-out infinite}
 .phTap{position:absolute;right:.2rem;bottom:-.2rem;font-size:1.15rem;animation:tap 1.4s ease-in-out infinite;z-index:3;pointer-events:none}
 .pc>.phTap{right:.5rem;bottom:.1rem}
+/* 頁首：標題一行、工具列三顆等寬 */
+.pgHead.two{flex-direction:column;align-items:stretch;gap:.55rem}
+.pgHead.two .phRow{display:flex;align-items:baseline;gap:.6rem;min-width:0}
+.pgHead.two .phRow h1{flex:none;white-space:nowrap}
+.pgHead.two .sub{margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;font-size:.85rem}
+.pgTools{display:grid;grid-template-columns:repeat(3,1fr);gap:.45rem}
+.pgTools .btn{justify-content:center;border-radius:6px;padding:.5rem .3rem;font-size:.88rem;white-space:nowrap;min-width:0}
+.shopAdd{display:grid;grid-template-columns:1fr 1fr;gap:.55rem;margin:.2rem 0 1rem}
+.shopAdd .btn{flex-direction:column;justify-content:center;gap:.05rem;border-radius:6px;padding:.65rem .4rem;min-width:0;white-space:normal;line-height:1.25}
+.shopAdd i{font-style:normal;font-size:1.4rem}.shopAdd b{font-size:.95rem}.shopAdd small{font-size:.74rem;opacity:.8;font-weight:600}
+.gRi{font-size:1.4rem;flex:none}
 </style>
 </head>
 <body>
@@ -802,12 +813,12 @@ body.mShop #tabbar [data-tab="Meal"],body.mShop #tabbar [data-tab="Rec"]{display
   </section>
 
   <section class="page" id="pgShop">
-    <div class="pgHead"><div class="grow"><h1>購物分帳</h1><div class="sub" id="shopSub"></div></div><button class="btn sm" id="shopFind" aria-label="搜尋購物紀錄">🔍</button><button class="btn sm" id="shopToday">📅 今天</button><button class="btn sm" id="shopSet" aria-label="分帳設定">⚙️ 設定</button></div>
+    <div class="pgHead two"><div class="phRow"><h1>購物分帳</h1><div class="sub" id="shopSub"></div></div><div class="pgTools"><button class="btn" id="shopFind" aria-label="搜尋紀錄">🔍 搜尋</button><button class="btn" id="shopToday">📅 今天</button><button class="btn" id="shopSet" aria-label="設定">⚙️ 設定</button></div></div>
     <div class="pgBody"><div class="pgInner" id="shopBody"></div></div>
   </section>
 
   <section class="page" id="pgMeal">
-    <div class="pgHead"><div class="grow"><h1>吃什麼</h1><div class="sub" id="mealSub"></div></div><button class="btn sm" id="mealFind" aria-label="搜尋吃過的店家">🔍</button><button class="btn sm" id="mealToday">📅 今天</button><button class="btn sm" id="mealSet" aria-label="點餐設定">⚙️ 設定</button></div>
+    <div class="pgHead two"><div class="phRow"><h1>吃什麼</h1><div class="sub" id="mealSub"></div></div><div class="pgTools"><button class="btn" id="mealFind" aria-label="搜尋紀錄">🔍 搜尋</button><button class="btn" id="mealToday">📅 今天</button><button class="btn" id="mealSet" aria-label="設定">⚙️ 設定</button></div></div>
     <div class="pgBody"><div class="pgInner" id="mealBody"></div></div>
   </section>
 
@@ -907,7 +918,7 @@ return maplibregl$1;
 /* ============================================================
    食光帳本 — 核心：工具、資料儲存、主題、面板、拖曳排序、圖片
    ============================================================ */
-const APP_VERSION = '3.0.0';
+const APP_VERSION = '3.0.1';
 const APP_VER = APP_VERSION;
 /* 線上更新來源（GitHub Pages）：IanLin1120/food-map */
 const GH = {repo: 'https://github.com/IanLin1120/food-map', pages: 'https://ianlin1120.github.io/food-map/'};
@@ -2528,7 +2539,11 @@ function renderSet() {
   const dark = isDark(), navs = navApps({lat: 0, lon: 0});
   $('#setBody').innerHTML = `
   <div class="setG"><h3>功能區</h3><div class="setC"><div class="setR col modeCard"><div class="t"><b>${S.mode === 'shop' ? '🍽️ 美食點餐' : '🛒 購物分帳'}</b><small>${S.mode === 'shop' ? '美食地圖、收藏店家的菜單表格、每天吃什麼的點餐分帳、食譜。' : '量販店、超商、Foodpanda 的購物明細：拍照或截圖讓 AI 讀出品項和折扣，選誰買的、誰一起分攤，自動算出每個人要付多少。'}</small></div>
-      <div class="row" style="gap:.5rem"><button class="btn pri grow" data-a="mode" style="justify-content:center">${S.mode === 'shop' ? '🍽️ 切換到美食點餐' : '🛒 切換到購物分帳'}</button><button class="btn" data-a="guideMode" style="flex:0 0 auto">📘 說明</button></div></div></div></div>
+      <button class="btn pri modeSw" data-a="mode">${S.mode === 'shop' ? '🍽️ 切換到美食點餐' : '🛒 切換到購物分帳'}</button></div></div></div>
+  <div class="setG"><h3>使用說明</h3><div class="setC">
+    <button class="setR" data-a="guideFood" style="width:100%;text-align:left"><span class="gRi">🍽️</span><div class="t"><b>美食點餐 圖解說明</b><small>找店收藏、AI 菜單表格、點餐分帳、匯出</small></div><span class="muted">›</span></button>
+    <button class="setR" data-a="guideShop" style="width:100%;text-align:left"><span class="gRi">🛒</span><div class="t"><b>購物分帳 圖解說明</b><small>上傳明細、選誰付、折扣與費用、驗算匯出</small></div><span class="muted">›</span></button>
+    <button class="setR" data-a="welcome" style="width:100%;text-align:left"><span class="gRi">👋</span><div class="t"><b>歡迎畫面與金鑰教學</b><small>第一次打開時看到的介紹</small></div><span class="muted">›</span></button></div></div>
   <div class="setG"><h3>外觀</h3><div class="setC">
     <div class="setR"><div class="t"><b>主題</b></div>${seg('theme', [['auto', '跟隨系統'], ['light', '淺色'], ['dark', '深色']], S.theme)}</div>
     <div class="setR col"><div class="t"><b>重點顏色</b><small>底色維持大地色系，只換按鈕與標題的顏色</small></div><div class="pal">${Object.keys(PALETTES).map(k => `<button data-pal="${k}" class="${S.palette === k ? 'on' : ''}"><i style="--c:${dark ? PALETTES[k].sd : PALETTES[k].sw}"></i>${PALETTES[k].name}</button>`).join('')}</div></div>
@@ -2557,7 +2572,6 @@ function renderSet() {
       <div class="row wrap"><button class="btn sm pri" data-a="exp">匯出備份檔</button><button class="btn sm" data-a="imp">匯入備份檔</button><button class="btn sm danger" data-a="wipe">清除所有資料</button></div></div></div></div>
   <div class="setG"><h3>版本與更新</h3><div class="setC" id="updCard">${Upd.card()}</div></div>
   <div class="setG"><h3>關於</h3><div class="setC">
-    <button class="setR" data-a="welcome" style="width:100%;text-align:left"><div class="t"><b>📘 使用說明</b><small>美食點餐、購物分帳的圖解教學</small></div><span class="muted">›</span></button>
     <div class="setR"><div class="t"><b>食光帳本 v${APP_VER}</b><small>${IS_APP ? 'Android App' + (NB.version ? ' · APK v' + NB.version() : '') : '網頁版'}${window.__OTA ? '（已線上更新）' : ''} · 地圖資料 © OpenFreeMap、© OpenStreetMap 貢獻者</small></div></div></div></div>`;
 }
 function initSet() {
@@ -2578,7 +2592,7 @@ function initSet() {
     else if (a === 'updChk') Upd.check(true); else if (a === 'updApk') Upd.releases(); else if (a === 'updBack') Upd.restore(); else if (a === 'updShare') Upd.share(); else if (a === 'updWeb') openUrl(GH.pages);
     else if (a === 'aiStudio') openUrl('https://aistudio.google.com/rate-limit?timeRange=last-28-days'); else if (a === 'aiLog') { const o = $('#aiLogBox'); o.classList.toggle('hide'); b.textContent = o.classList.contains('hide') ? '查看最近 AI 紀錄' : '收起紀錄'; }
     else if (a === 'mcheck') openMenuCheck();
-    else if (a === 'mode') setMode(S.mode === 'shop' ? 'food' : 'shop'); else if (a === 'guideMode') openGuide(S.mode === 'shop' ? 'food' : 'shop');
+    else if (a === 'mode') setMode(S.mode === 'shop' ? 'food' : 'shop'); else if (a === 'guideFood') openGuide('food'); else if (a === 'guideShop') openGuide('shop');
     else if (a === 'cats') openCats('place'); else if (a === 'rcats') openCats('recipe'); else if (a.indexOf('off') === 0) Off.act(a); else if (a === 'exp') exportBackup(); else if (a === 'imp') importBackup(); else if (a === 'welcome') welcome();
     else if (a === 'wipe') { if (await ask('確定要清除「所有」收藏、菜單、食譜與設定嗎？\n這個動作無法復原，建議先匯出備份。', '全部清除', true) && await ask('再確認一次：真的要全部清除嗎？', '清除', true)) { for (const s of ['kv', 'places', 'recipes', 'imgs']) await IDB.clear(s).catch(() => {}); try { localStorage.clear(); } catch (er) {} location.reload(); } } });
 }
@@ -3308,7 +3322,7 @@ const SHOP_FEES = ['平台費', '外送服務費', '包材費', '小費', '運�
 const saveBills = debounce(() => IDB.put('kv', 'bills', DB.bills).catch(saveErr), 200);
 const saveScfg = debounce(() => IDB.put('kv', 'scfg', DB.scfg).catch(saveErr), 200);
 async function loadShop() {
-  DB.bills = await IDB.get('kv', 'bills').catch(() => null) || {}; Object.values(DB.bills).forEach(L => L.forEach(b => { delete b.aiBusy; }));
+  DB.bills = await IDB.get('kv', 'bills').catch(() => null) || {}; Object.values(DB.bills).forEach(L => L.forEach(b => { delete b.aiBusy; delete b.aiMsg; if (b.src === 'ai') (b.items || []).forEach(x => { x.n = rcName(x.n); }); }));
   DB.scfg = await IDB.get('kv', 'scfg').catch(() => null) || {fees: SHOP_FEES.slice(), odisc: SHOP_OD.slice()};
 }
 const Shop = {sel: ymd(new Date()), ym: null};
@@ -3350,16 +3364,16 @@ function renderShop() {
       <div class="calWd">${MWD.map((w, i) => `<span class="${i === 0 || i === 6 ? 'we' : ''}">${w}</span>`).join('')}</div><div class="calG">${cells}</div></div>
     <div class="dayHead"><b class="dhD">${sel.getMonth() + 1}月${sel.getDate()}日 星期${MWD[sel.getDay()]}</b><span class="grow"></span>${bs.length ? `<span class="dayTot">${money(dayTot)}</span><button class="btn sm" data-a="exportDay">📤 匯出</button>` : ''}</div>
     ${bs.map(billCard).join('') || '<div class="empty mealEmpty"><span class="big">🧾</span>這天還沒有購物明細<br><span class="small">按下面的按鈕拍照、上傳截圖或手動輸入<br>也可以在 Foodpanda、相簿裡按「分享」傳給食光帳本</span></div>'}
-    <div class="row" style="gap:.5rem;margin:.2rem 0 1rem"><button class="btn pri grow" data-a="newImg" style="border-radius:var(--r-sm)">📷 上傳明細（AI 辨識）</button><button class="btn grow" data-a="newMan" style="border-radius:var(--r-sm)">✏️ 手動輸入</button></div>
+    <div class="shopAdd"><button class="btn pri" data-a="newImg"><i>📷</i><b>上傳明細</b><small>AI 自動辨識</small></button><button class="btn" data-a="newMan"><i>✏️</i><b>手動輸入</b><small>自己打品項</small></button></div>
     ${order.length ? `<div class="perSum card"><div class="psH">👥 每個人這天要付</div>${order.map(id => { const u = mWho(id); return `<div class="psR"><span class="psI">${esc(u.icon)}</span><b class="grow">${esc(u.name)}</b><span>${money(per[id])}</span></div>`; }).join('')}<div class="psR tot"><b class="grow">合計</b><span>${money(dayTot)}</span></div></div>` : ''}`;
 }
 function billCard(b) {
   const c = billCalc(b), w = billWarn(c), ids = pOrder(Object.keys(c.per)), nm = billStore(b);
   return `<div class="meal card bill" data-b="${b.id}">
-    <div class="mlH"><div class="grow"><b>${esc(nm || '未選店家')}</b><div class="mlS">${b.aiBusy ? '<span class="spin"></span> AI 辨識中・' : ''}${b.time ? '🕒 ' + esc(b.time) + '・' : ''}${b.items.length} 項${(b.imgs || []).length ? '・🖼️ ' + b.imgs.length : ''}</div></div><span class="blTot">${money(c.computed)}</span><button class="btn sm pri" data-a="edit">編輯</button><button class="ic" data-a="bMore" aria-label="更多">⋯</button></div>
+    <div class="mlH"><div class="grow"><b>${esc(nm || '未選店家')}</b><div class="mlS">${b.aiBusy ? `<span class="spin"></span> <span class="rcMsg" data-b="${b.id}">${esc(b.aiMsg || 'AI 辨識中')}</span>・` : ''}${b.time ? '🕒 ' + esc(b.time) + '・' : ''}${b.items.length} 項${(b.imgs || []).length ? '・🖼️ ' + b.imgs.length : ''}</div></div><span class="blTot">${money(c.computed)}</span><button class="btn sm pri" data-a="edit">編輯</button><button class="ic" data-a="bMore" aria-label="更多">⋯</button></div>
     ${ids.length ? `<div class="blPer">${ids.map(id => `<span><i>${esc(mWho(id).icon)}</i>${esc(mWho(id).name)} <b>${money(c.per[id])}</b></span>`).join('')}</div>` : ''}
     ${w.length ? `<div class="blWarn">⚠️ ${w.map(esc).join('・')}</div>` : c.total != null ? '<div class="blOk">✅ 金額和明細一致</div>' : ''}
-    <div class="blItems">${b.items.slice(0, 6).map(x => `<div><span class="grow">${esc(x.n)}${x.q > 1 ? ' ×' + x.q : ''}</span><span class="muted">${esc(pplNames(x.ppl)) || '—'}</span><b>${money(numP(x.amt) - (c.itemDisc[x.id] || 0))}</b></div>`).join('')}${b.items.length > 6 ? `<div class="muted small">…還有 ${b.items.length - 6} 項</div>` : ''}</div></div>`;
+    ${b.items.length ? `<div class="blItems">${b.items.slice(0, 6).map(x => `<div><span class="grow">${esc(x.n)}${x.q > 1 ? ' ×' + x.q : ''}</span><span class="muted">${esc(pplNames(x.ppl)) || '—'}</span><b>${money(numP(x.amt) - (c.itemDisc[x.id] || 0))}</b></div>`).join('')}${b.items.length > 6 ? `<div class="muted small">…還有 ${b.items.length - 6} 項</div>` : ''}</div>` : ''}</div>`;
 }
 const curBill = id => dayBills(Shop.sel).find(b => b.id === id);
 function shopChanged() { Object.keys(DB.bills).forEach(k => { if (!DB.bills[k].length) delete DB.bills[k]; }); saveBills(); if (curTab === 'Shop') renderShop(); document.dispatchEvent(new Event('fm:shop')); }
@@ -3412,43 +3426,127 @@ async function shopFromBlobs(fs, p) {
   busy('存入圖片中…'); const imgs = []; try { for (const f of fs) imgs.push(await imgStore(f, 2600)); } catch (er) { busy(false); toast('❌ ' + er.message, 4000); return; } busy(false);
   const b = {id: 'b' + uid(), place: p && p.id || '', pname: p ? p.name : '', time: '', total: '', imgs, items: [], disc: [], odisc: [], fees: [], src: 'ai', aiBusy: true};
   (DB.bills[Shop.sel] = DB.bills[Shop.sel] || []).push(b); shopChanged();
-  toast('🤖 AI 辨識中，完成後會自動帶入（可以先做別的事）', 3500);
-  try { await receiptAI(b); buzz(40); } catch (er) { toast('❌ 明細辨識失敗：' + aiErrText(er), 5000); }
-  delete b.aiBusy; shopChanged();
+  toast('🤖 AI 辨識中，通常 10～30 秒，完成後會自動帶入', 3000);
+  try { const j = await runReceipt(b); buzz(40); toast(`✅ 讀到 ${b.items.length} 項${j.store ? '・' + j.store : ''}，請確認每一項是誰付的`, 3500); } catch (er) { toast('❌ 明細辨識失敗：' + aiErrText(er), 6000); }
+  shopChanged();
   const k = Object.keys(DB.bills).find(d => DB.bills[d].includes(b)); if (k && k !== Shop.sel) { const d = ymdDate(k); Shop.sel = k; Shop.ym = [d.getFullYear(), d.getMonth()]; renderShop(); }
   if (curTab === 'Shop') editBill(b);
 }
 
 /* ---------- AI 辨識明細 ---------- */
-const RECEIPT_PROMPT = `你是購物明細辨識助手。圖片是台灣的購物發票明細、量販店／超市 App（例如全聯 PX Pay）的交易明細，或 Foodpanda、Uber Eats 的訂單／購物車截圖；好幾張圖時是同一筆的不同部分。
-請只輸出一個 JSON 物件（不要 markdown、不要說明），格式：
-{"store":"店名（有分店就寫，例如 好鄰居超市 中央店、星星漢堡 幸福店）","date":"YYYY-MM-DD","time":"HH:MM","total":實際付款或消費金額（數字）,
-"items":[{"name":"品名","qty":數量,"amount":這一行的金額（數字）,"options":"規格或套餐內容，沒有就空字串"}],
-"discounts":[{"name":"折扣活動名稱","amount":折扣金額（正數）,"items":[套用到的品項在 items 裡的位置，從 0 開始]}],
-"orderDiscounts":[{"name":"整單折扣或優惠券名稱","amount":正數}],
-"fees":[{"name":"平台費、外送服務費、包材費、小費…","amount":數字}]}
+async function runReceipt(b) {
+  b.aiBusy = true; const t0 = Date.now(); let base = '準備中…';
+  const tick = () => { b.aiMsg = `${base}（${Math.round((Date.now() - t0) / 1000)} 秒）`; $$(`.rcMsg[data-b="${b.id}"]`).forEach(e => { e.textContent = b.aiMsg; }); };
+  tick(); document.dispatchEvent(new Event('fm:shop')); const iv = setInterval(tick, 1000);
+  try { const j = await receiptAI(b, t => { base = t; tick(); }); applyReceipt(b, j); return j; }
+  finally { clearInterval(iv); delete b.aiBusy; delete b.aiMsg; }
+}
+/* ============================================================
+   明細辨識（獨立流程，不和菜單辨識共用）
+   1. 圖片前處理：轉成灰階 JPEG、寬度 1000px；長截圖在「空白行」切成好幾段，避免字被縮到看不清楚
+   2. 一次請求、不串流，要求 Gemini 直接回傳固定格式的 JSON（responseSchema），關閉思考 → 快
+   3. Flash 不行自動換 Flash-Lite；額度、忙線、逾時各自處理
+   4. 回來的結果用程式再清一次：去掉商品代碼、截斷的括號、0 元贈品、紅利
+   ============================================================ */
+const RC_PROMPT = `你是台灣購物明細的辨識助手。接下來的圖片是「同一筆」購物明細，依照順序排列（長截圖被切成好幾段，段與段之間是連續的，不要重複列）。
+可能是：全聯 PX Pay／量販店 App 的交易明細、紙本發票或收據照片、Foodpanda／Uber Eats 的訂單明細。
+
+請依照 JSON 格式回傳：
+- store：店名（有分店就寫，例如「好鄰居超市 中央店」「星星漢堡 幸福店」）。Foodpanda 寫「訂購於」後面的餐廳名稱。
+- date：YYYY-MM-DD；time：HH:MM（24 小時制）；看不到就空字串。
+- total：實際付款／消費金額（數字）；看不到就 null。
+- items：每一個商品一筆。
+  - name：品名照圖片上的字抄，被截斷就照截斷的抄（例如「履歷台灣香蕉(」「洗衣精35」），不要自己補字、不要翻譯。
+    ★ 全聯品名前面的「兩位數商品代碼」不要抄，例如「68 礦泉水1500」→「礦泉水1500」、「96 台灣高麗菜」→「台灣高麗菜」。
+  - qty：數量（數字，「2x」「×2」= 2，沒寫就 1）。
+  - amount：這一行的總金額（數量 × 單價）。全聯明細右邊的金額就是整行金額。
+  - options：外送品項下面的小字（例如「燉飯, 阿薩姆奶茶, 冰」），沒有就空字串。
+- discounts：「優惠活動折扣」這類針對特定商品的折扣（例如「靠得住草本抑 任買2組229元 -138」）。amount 寫正數；items 寫套用的商品在 items 陣列的位置（從 0 開始），依品牌、品名判斷，判斷不出來就 []。
+- orderDiscounts：整筆訂單的折扣或優惠券（例如「85 折優惠 -$45」「折扣 -55」），amount 寫正數。
+- fees：平台費、外送服務費、包材費、小費、運費等實際收取的費用。
+
 規則：
-1. 品名前面的兩位數商品代碼不要寫進品名，例如「68 礦泉水1500」寫成「礦泉水1500」。品名照抄，不要自己補字。
-2. 金額 0 元的贈品、印花、點數（例如「印花貼紙(促)」）不要列。
-3. 「紅利抵現」「點數折抵」「福利點」「回饋」「儲值金」「愛心捐款」全部忽略，不要寫進任何欄位。
-4. 「優惠活動折扣」（例如「靠得住草本抑 任買2組229元 -138」）放 discounts，依品牌、品名判斷套用在哪幾個品項（品名可能被截斷、或折扣只寫品牌名稱）；真的判斷不出來就給空陣列 []。
-5. 外送平台：品項同時顯示劃線原價和折扣後價格時，amount 用折扣後的價格；如果「小計」是原價加總、下面另外列「折扣 -55」，品項 amount 就用原價，那筆 -55 放 orderDiscounts。同一筆折扣只能算一次，不可以重複扣。優惠券（例如「85 折優惠 -$45」）放 orderDiscounts。
-6. 免費的費用（$0、標示「免費」、被劃掉的原價）不要列，只列實際收的金額。
-7. qty 寫數字，「2x」「×2」都是 2；amount 是整行金額（數量 × 單價）。
-8. 外送品項下面的小字（例如「燉飯, 阿薩姆奶茶, 冰」）寫在 options。
-9. 看不到的欄位寫空字串或 null，不要編造。`;
-async function receiptAI(b) {
-  const parts = [{text: RECEIPT_PROMPT}]; for (const id of b.imgs) { const bl = await imgBlob(id); if (bl) parts.push(await imgPart(bl)); }
-  const r = await aiRun({contents: [{role: 'user', parts}], generationConfig: {temperature: 0, maxOutputTokens: 8192}, _hiRes: true}, {prefer: 'flash', keepPartial: true});
-  AILOG.add({kind: '明細辨識', place: b.pname || '', model: r.model, ms: r.ms, ok: true, n: 0});
-  const t = String(r.text || ''), m = t.match(/\{[\s\S]*\}/); if (!m) throw new Error('AI 沒有回傳可以讀的結果');
-  let j; try { j = JSON.parse(m[0]); } catch (er) { j = JSON.parse(m[0].replace(/,\s*([}\]])/g, '$1')); }
-  applyReceipt(b, j);
+1. 金額 0 元的贈品、印花、點數（例如「印花貼紙(促)」）不要列。
+2.「紅利抵現」「點數折抵」「福利點」「回饋」「儲值金」「載具」「發票」「找零」「付款方式」都不要列。
+3. 外送平台的品項同時有劃線原價和折扣後價格時，amount 用折扣後價格；如果「小計」是原價加總、下面另外列折扣，品項用原價、折扣放 orderDiscounts。同一筆折扣只能出現一次。
+4. 免費（$0）或被劃掉的費用不要列。
+5. 不要編造看不到的內容。`;
+const RC_SCHEMA = {type: 'OBJECT', properties: {
+  store: {type: 'STRING'}, date: {type: 'STRING'}, time: {type: 'STRING'}, total: {type: 'NUMBER', nullable: true},
+  items: {type: 'ARRAY', items: {type: 'OBJECT', properties: {name: {type: 'STRING'}, qty: {type: 'NUMBER'}, amount: {type: 'NUMBER'}, options: {type: 'STRING'}}, required: ['name', 'amount']}},
+  discounts: {type: 'ARRAY', items: {type: 'OBJECT', properties: {name: {type: 'STRING'}, amount: {type: 'NUMBER'}, items: {type: 'ARRAY', items: {type: 'INTEGER'}}}, required: ['name', 'amount']}},
+  orderDiscounts: {type: 'ARRAY', items: {type: 'OBJECT', properties: {name: {type: 'STRING'}, amount: {type: 'NUMBER'}}, required: ['name', 'amount']}},
+  fees: {type: 'ARRAY', items: {type: 'OBJECT', properties: {name: {type: 'STRING'}, amount: {type: 'NUMBER'}}, required: ['name', 'amount']}}},
+  required: ['store', 'items']};
+/* 圖片前處理：寬 1000、灰階、長圖在空白行切段（每段最高 1400px） */
+async function rcPrep(blobs) {
+  const out = [], W = 1000, H = 1400;
+  for (const bl of blobs) {
+    let bm; try { bm = await createImageBitmap(bl); } catch (e) { out.push(await imgPart(bl)); continue; }
+    const sc = Math.min(1, W / bm.width), w = Math.round(bm.width * sc), h = Math.round(bm.height * sc);
+    const cv = document.createElement('canvas'); cv.width = w; cv.height = h; const g = cv.getContext('2d', {willReadFrequently: true});
+    g.fillStyle = '#fff'; g.fillRect(0, 0, w, h); g.filter = 'grayscale(1) contrast(1.15)'; g.drawImage(bm, 0, 0, w, h); g.filter = 'none'; bm.close && bm.close();
+    /* 找切點：在 [目標-260, 目標] 之間找「最像空白」的一行（像素變化最小） */
+    const cuts = [0]; let y = 0;
+    while (h - y > H) { const lo = y + H - 260, hi = y + H, d = g.getImageData(0, lo, w, hi - lo).data; let best = hi, bv = Infinity;
+      for (let r = 0; r < hi - lo; r += 2) { let s = 0, s2 = 0, n = 0; for (let x = 0; x < w; x += 6) { const v = d[(r * w + x) * 4]; s += v; s2 += v * v; n++; } const va = s2 / n - (s / n) * (s / n); if (va < bv - 0.5) { bv = va; best = lo + r; } }
+      cuts.push(best); y = best; }
+    cuts.push(h);
+    for (let i = 0; i < cuts.length - 1; i++) { const ph = cuts[i + 1] - cuts[i]; if (ph < 8) continue; const c2 = document.createElement('canvas'); c2.width = w; c2.height = ph; c2.getContext('2d').drawImage(cv, 0, cuts[i], w, ph, 0, 0, w, ph);
+      const jb = await new Promise(r => c2.toBlob(r, 'image/jpeg', 0.86)); out.push(await imgPart(jb)); }
+  }
+  return out;
+}
+/* 思考設定：不同世代參數不同，被拒絕就換下一種 */
+const RC_THINK = [{thinkingBudget: 0}, {thinkingLevel: 'minimal'}, null];
+async function rcCall(m, parts, think) {
+  const gc = {temperature: 0, maxOutputTokens: 8192, responseMimeType: 'application/json', responseSchema: RC_SCHEMA}; if (RC_THINK[think]) gc.thinkingConfig = RC_THINK[think];
+  const j = await jfetch(`${AI_BASE}/${encodeURIComponent(m)}:generateContent`, {method: 'POST', headers: aiHead(), body: JSON.stringify({contents: [{role: 'user', parts}], generationConfig: gc})}, 100000);
+  if (j.error) throw aiErr(j);
+  if (j.promptFeedback && j.promptFeedback.blockReason) throw Object.assign(new Error('AI 拒絕處理這張圖片（' + j.promptFeedback.blockReason + '）'), {fatalImg: true});
+  const c = (j.candidates || [])[0] || {}; return {text: ((c.content && c.content.parts) || []).map(p => p.thought ? '' : p.text || '').join(''), finish: c.finishReason || ''};
+}
+async function receiptAI(b, onMsg) {
+  if (!S.aikey) throw new Error('NOKEY'); const say = t => { if (onMsg) onMsg(t); };
+  say('準備圖片…'); const blobs = []; for (const id of b.imgs) { const bl = await imgBlob(id); if (bl) blobs.push(bl); } if (!blobs.length) throw new Error('找不到明細圖片');
+  const imgs = await rcPrep(blobs), parts = [{text: RC_PROMPT}, ...imgs, {text: `以上共 ${imgs.length} 張（同一筆明細，依序排列）。請回傳 JSON。`}];
+  const ms = await aiModels(), order = [...new Set([ms.flash, ms.lite].filter(Boolean))], t0 = Date.now(); let last = null;
+  S.rcThink = S.rcThink || {};
+  for (const m of order) {
+    if (AIQ.blocked(m)) continue;
+    for (let tries = 0; tries < 4; tries++) {
+      say(`${aiShort(m)} 讀取 ${imgs.length} 張圖中…`);
+      try { const r = await rcCall(m, parts, S.rcThink[m] || 0); AIQ.inc(m);
+        const j = parseLoose(r.text); if (!j || !Array.isArray(j.items)) throw new Error('AI 回傳的內容不完整');
+        if (!j.items.length && tries < 1) { last = new Error('AI 沒有讀到任何品項'); continue; }
+        AILOG.add({kind: '明細辨識', place: j.store || b.pname || '', model: m, ms: Date.now() - t0, ok: true, n: j.items.length}); return j; }
+      catch (e) { e.model = e.model || m; last = e;
+        if (e.badThink) { S.rcThink[m] = Math.min(RC_THINK.length - 1, (S.rcThink[m] || 0) + 1); saveS(); continue; }
+        if (e.fatal || e.fatalImg) throw e;
+        if (e.code === 429 && e.perDay) { AIQ.block(m, e.limit); break; }
+        if (e.code === 429) { if (tries >= 1) break; const w = Math.min(60000, e.retryMs || 20000); say(`Google 限制每分鐘次數，${Math.ceil(w / 1000)} 秒後自動繼續…`); await sleep(w); continue; }
+        if (e.gone) { S.aiM = null; saveS(); break; }
+        if (/逾時|連線|busy/.test(e.message) || e.busy) { if (tries < 1) { say('連線不穩，重試中…'); await sleep(2000); continue; } break; }
+        if (/解析|不完整/.test(e.message) && tries < 1) continue;
+        break; }
+    }
+  }
+  AILOG.add({kind: '明細辨識', place: b.pname || '', model: last && last.model, ms: Date.now() - t0, ok: false, n: 0, err: last && last.message});
+  throw last || new Error('AI 沒有回應');
+}
+/* 品名清理：商品代碼、多餘空白、沒有收尾的括號 */
+const RC_UNIT = '入包盒瓶罐組片條顆粒個件支卷抽克斤公升毫克兩串粒顆';
+function rcName(n) {
+  let s = String(n || '').replace(/[\u3000\s]+/g, ' ').trim();
+  let m = s.match(/^(\d{2})\s+(\S.*)$/); if (m && !RC_UNIT.includes(m[2][0])) s = m[2];
+  else { m = s.match(/^(\d{2})([\u4e00-\u9fff].*)$/); if (m && !RC_UNIT.includes(m[2][0]) && m[2].length >= 2) s = m[2]; }
+  s = s.replace(/^[*＊#＃\-－.。、]+\s*/, '');
+  const o = (s.match(/[（(]/g) || []).length, c = (s.match(/[）)]/g) || []).length; if (o > c) s = s.replace(/\s*[（(]\s*$/, '');
+  return s.trim();
 }
 function applyReceipt(b, j) {
-  const clean = n => String(n || '').replace(/^\s*\d{2}\s+(?=\S)/, '').replace(/\s+/g, ' ').trim();
-  const its = (j.items || []).map(x => ({id: 'x' + uid(), n: clean(x.name), q: Math.max(1, numP(x.qty) || 1), amt: numP(x.amount), o: String(x.options || '').trim(), ppl: []})).filter(x => x.n && x.amt > 0);
-  const idxMap = {}; let k = 0; (j.items || []).forEach((x, i) => { const n = clean(x.name); if (n && numP(x.amount) > 0) idxMap[i] = its[k++].id; });
+  const clean = rcName;
+  const its = [], idxMap = {}; (j.items || []).forEach((x, i) => { const n = clean(x.name), amt = numP(x.amount); if (!n || !(amt > 0) || /紅利|點數折抵|印花|福利點|儲值|找零/.test(n)) return; const it = {id: 'x' + uid(), n, q: Math.max(1, numP(x.qty) || 1), amt, o: String(x.options || '').trim(), ppl: []}; its.push(it); idxMap[i] = it.id; });
   b.items = its;
   b.disc = (j.discounts || []).filter(d => numP(d.amount)).map(d => { const ids = (d.items || []).map(i => idxMap[i]).filter(Boolean); return {id: 'd' + uid(), n: String(d.name || '折扣').trim(), amt: Math.abs(numP(d.amount)), items: ids, auto: !!ids.length}; });
   b.disc.forEach(d => { if (!d.items.length) { const ids = guessDiscItems(d.n, b.items); if (ids.length) { d.items = ids; d.auto = true; } } });
@@ -3505,7 +3603,7 @@ function editBill(b) {
   let qs = null; const sh = sheet({title: '🧾 ' + (billStore(b) || '購物明細'), full: true, foot: '<div class="grow ordTot" id="ebT"></div><button class="btn pri" data-a="done" style="flex:0 0 auto">完成</button>', onClose() { shopChanged(); }});
   const chips = ids => (ids || []).length ? `<span class="pplC">${ids.map(id => `<i>${esc(mWho(id).icon)}${esc(mWho(id).name)}</i>`).join('')}</span>` : '<span class="pplC none">選誰付</span>';
   const draw = () => { const c = billCalc(b), ids = pOrder(Object.keys(c.per)), top = sh.body.scrollTop;
-    sh.body.innerHTML = `${b.aiBusy ? '<div class="jobBar"><span class="spin"></span><span class="grow">AI 辨識中…<small>完成後會自動帶入</small></span></div>' : ''}
+    sh.body.innerHTML = `${b.aiBusy ? `<div class="jobBar"><span class="spin"></span><span class="grow">AI 辨識中…<small class="rcMsg" data-b="${b.id}">${esc(b.aiMsg || '')}</small></span></div>` : ''}
       <div class="ebHead"><button class="ebF" data-a="store"><small>店家</small><b>${esc(billStore(b) || '未選店家')}</b></button><label class="ebF"><small>時間</small><input type="time" id="ebTime" value="${esc(b.time || '')}"></label><label class="ebF"><small>明細上的實付金額</small><input id="ebTotal" inputmode="decimal" placeholder="選填，用來驗算" value="${b.total == null ? '' : esc(b.total)}"></label></div>
       ${(b.imgs || []).length ? `<div class="ebImgs">${b.imgs.map((id, i) => `<button class="ebImg" data-a="img" data-i="${i}"><img data-img="${id}" alt=""></button>`).join('')}<button class="btn sm" data-a="reAI" ${b.aiBusy ? 'disabled' : ''}>🔄 重新辨識</button></div>` : ''}
       <div class="ebSec"><div class="msH"><b class="grow">🛍️ 品項（${b.items.length}）</b><button class="btn sm" data-a="addItem">＋ 品項</button></div>
@@ -3531,7 +3629,7 @@ function editBill(b) {
     const X = row && row.dataset.x && b.items.find(x => x.id === row.dataset.x), D = row && row.dataset.d && b.disc.find(d => d.id === row.dataset.d), O = row && row.dataset.o && b.odisc.find(d => d.id === row.dataset.o), F = row && row.dataset.f && b.fees.find(d => d.id === row.dataset.f);
     if (a === 'store') { const st = await pickShopStore(b.place); if (st === undefined) return; b.place = st ? st.id || '' : ''; b.pname = st ? st.name : ''; $('.shTitle', sh.el).textContent = '🧾 ' + (billStore(b) || '購物明細'); draw(); }
     else if (a === 'img') Viewer.open(b.imgs.map((id, i) => ({id, label: `明細圖片 ${i + 1}/${b.imgs.length}`})), +t.dataset.i, billStore(b));
-    else if (a === 'reAI') { if (b.items.length && !await ask('重新辨識會取代目前的品項、折扣和費用（你選的人也會清掉），確定嗎？', '重新辨識')) return; b.aiBusy = true; draw(); try { await receiptAI(b); toast('✅ 已重新辨識'); } catch (er) { toast('❌ ' + aiErrText(er), 5000); } delete b.aiBusy; draw(); }
+    else if (a === 'reAI') { if (b.items.length && !await ask('重新辨識會取代目前的品項、折扣和費用（你選的人也會清掉），確定嗎？', '重新辨識')) return; b.aiBusy = true; draw(); try { await runReceipt(b); toast('✅ 已重新辨識'); } catch (er) { toast('❌ ' + aiErrText(er), 6000); } draw(); shopChanged(); }
     else if (a === 'qAll' || a === 'qShare') { const ids = a === 'qAll' ? [t.dataset.id] : null; let L = ids; if (!L) { L = await pickPeople(DB.mcfg.people.map(u => u.id), '👥 這些品項由誰一起分？'); if (!L) return; } b.items.forEach(x => { if (!(x.ppl || []).length) x.ppl = L.slice(); }); buzz(15); draw(); }
     else if (a === 'who' && X) { const L = await pickPeople(X.ppl, `「${X.n}」誰付？`); if (L) { X.ppl = L; draw(); } }
     else if (a === 'odWho' && O) { const L = await pickPeople(O.ppl, `「${O.n}」由誰均攤？`); if (L) { O.ppl = L; draw(); } }
