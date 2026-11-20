@@ -404,7 +404,7 @@ function webMenu(p) {
   const sh = sheet({title: '上網找菜單 · ' + p.name, html: `<div class="setC">
     <button class="setR" data-a="net" style="width:100%;text-align:left"><span style="font-size:1.5rem">🔎</span><span class="t"><b>在網路上搜尋最新菜單</b><small>App 在背景用瀏覽器搜尋「${esc(brandName(p.name))} 菜單」，點搜尋結果就會抓出網頁裡的菜單圖片或文字，挑選後存成菜單（可標北中南區域）。</small></span><span class="muted">›</span></button>
     <button class="setR" data-a="url" style="width:100%;text-align:left"><span style="font-size:1.5rem">🔗</span><span class="t"><b>讀取線上點餐網頁（最新菜單）</b><small>例如「你訂」、iChef、店家官網的點餐頁。App 會開啟網頁讀出所有品項與價格，再用 AI 整理成表格；網址會記住，之後一鍵更新。${u0 ? '<br>✅ 已有網址：' + esc(u0) : p.web ? '<br>Google 地圖上的網站：' + esc(p.web) : ''}</small></span><span class="muted">›</span></button>
-    <button class="setR" data-a="gm" style="width:100%;text-align:left"><span style="font-size:1.5rem">📲</span><span class="t"><b>到 Google 地圖的「菜單」截圖（推薦）</b><small>打開這家店的 Google 地圖，在「菜單」分頁截圖，再用「分享」傳回食光帳本，會自動存進這家店的菜單。${canShare ? '' : '<br>⚠️ 需要 APK v1.4.0 以上才能用「分享」傳回；舊版請截圖後用「管理圖檔」從相簿加入。'}</small></span><span class="muted">›</span></button>
+    <button class="setR" data-a="gm" style="width:100%;text-align:left"><span style="font-size:1.5rem">📲</span><span class="t"><b>到 Google 地圖的「菜單」截圖（推薦）</b><small>打開這家店的 Google 地圖，在「菜單」分頁截圖，再用「分享」傳回日日帳本，會自動存進這家店的菜單。${canShare ? '' : '<br>⚠️ 需要 APK v1.4.0 以上才能用「分享」傳回；舊版請截圖後用「管理圖檔」從相簿加入。'}</small></span><span class="muted">›</span></button>
     <button class="setR" data-a="gp" style="width:100%;text-align:left"><span style="font-size:1.5rem">🖼️</span><span class="t"><b>Google 地圖首頁相片</b><small>Google 只開放每家店最多 10 張首頁相片（拿不到「菜單」分頁），不一定有菜單。AI 會先幫忙挑。${S.gkey ? '' : '<br>⚠️ 需要先設定 Google Maps 金鑰。'}</small></span><span class="muted">›</span></button>
     <button class="setR" data-a="web" style="width:100%;text-align:left"><span style="font-size:1.5rem">🌐</span><span class="t"><b>AI 網路文字搜尋</b><small>⚠️ 只有「已開通付費」的 Gemini 專案能用，免費金鑰一定會失敗。</small></span><span class="muted">›</span></button></div>`});
   sh.body.addEventListener('click', e => { const b = e.target.closest('[data-a]'); if (!b) return; sh.close(); const a = b.dataset.a; if (a === 'net') netMenuSearch(p); else if (a === 'url') urlMenuSheet(p); else if (a === 'gm') gmMenuGuide(p); else if (a === 'gp') gPhotoPicker(p); else webTextMenu(p); });
@@ -543,8 +543,8 @@ function gmMenuGuide(p) {
       <div><b>1</b><span>按下方按鈕打開 Google 地圖，在店家頁面點上方的「<b>菜單</b>」分頁。</span></div>
       <div><b>2</b><span>點開菜單照片，放大到整張菜單看得清楚的大小。</span></div>
       <div><b>3</b><span><b>截圖</b>（通常是 電源鍵＋音量下）。菜單很長或有好幾張，就每張各截一次。</span></div>
-      <div><b>4</b><span>在截圖預覽按「<b>分享</b>」→ 選「<b>食光帳本</b>」。也可以截完全部後，到相簿一次選多張分享。</span></div>
-      <div><b>5</b><span>回到食光帳本會問你要存到哪一家店（已經幫你選好「${esc(p.name)}」），存好就能按 AI 辨識。</span></div></div>
+      <div><b>4</b><span>在截圖預覽按「<b>分享</b>」→ 選「<b>日日帳本</b>」。也可以截完全部後，到相簿一次選多張分享。</span></div>
+      <div><b>5</b><span>回到日日帳本會問你要存到哪一家店（已經幫你選好「${esc(p.name)}」），存好就能按 AI 辨識。</span></div></div>
     <div class="callout">💡 30 分鐘內陸續分享回來的截圖，會自動放進同一個菜單版本。</div>
     ${IS_APP && NB.sharedTake ? '' : '<div class="callout warn">這個版本還不能接收「分享」。請安裝 APK v1.4.0，或截圖後到「管理圖檔」→「新增版本」從相簿選擇。</div>'}</div>`;
   sh.foot.onclick = () => { Share.expect(p.id); sh.close(); const u = gmUrl(p); if (IS_APP && NB.openNav) NB.openNav('com.google.android.apps.maps', u, u); else openUrl(u); };

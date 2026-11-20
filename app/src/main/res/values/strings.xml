@@ -1,3 +1,3 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources><string name="app_name">食光帳本</string>
-<string name="acc_desc">在食光帳本的發票區按「協助工具讀取」後，會在畫面上出現一個小面板；你在發票 App（例如發票大師）打開發票時按「讀取」，就會把畫面上的發票號碼、日期、店家、金額和品項文字存回食光帳本。只在你按下讀取時才讀取畫面，不會在背景收集任何資料。</string></resources>
+<resources><string name="app_name">日日帳本</string>
+<string name="acc_desc">在日日帳本的發票區按「協助工具讀取」後，會在畫面上出現一個小面板；你在發票 App（例如發票大師）打開發票時按「讀取」，就會把畫面上的發票號碼、日期、店家、金額和品項文字存回日日帳本。只在你按下讀取時才讀取畫面，不會在背景收集任何資料。</string></resources>

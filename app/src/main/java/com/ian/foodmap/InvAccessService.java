@@ -45,8 +45,8 @@ import java.util.regex.Pattern;
  *   沒有 → 跳出「未偵測到發票號碼」
  *   明細頁 → 讀這一張
  *   列表頁 → 自動往下捲到底，讀出全部
- * 讀完跳出結果卡片：✓ 返回食光帳本／🔁 也讀取每張明細／繼續
- * 只在按按鈕時讀取，讀到的文字寫進 files/inv_inbox.json，回到食光帳本時由網頁解析。
+ * 讀完跳出結果卡片：✓ 返回日日帳本／🔁 也讀取每張明細／繼續
+ * 只在按按鈕時讀取，讀到的文字寫進 files/inv_inbox.json，回到日日帳本時由網頁解析。
  */
 public class InvAccessService extends AccessibilityService {
     static InvAccessService me;
@@ -131,7 +131,7 @@ public class InvAccessService extends AccessibilityService {
         try { wm.addView(fab, fabLp); } catch (Exception x) { fab = null; }
     }
 
-    /* 長按：取消所有偵測、關掉懸浮按鈕（不回到食光帳本） */
+    /* 長按：取消所有偵測、關掉懸浮按鈕（不回到日日帳本） */
     void closeFab() {
         autoRun = false; busy = false; scrolling = false; h.removeCallbacksAndMessages(null);
         sp(this).edit().putBoolean("armed", false).apply(); hideCard(); hideFab();
@@ -252,7 +252,7 @@ public class InvAccessService extends AccessibilityService {
         }
         if (isDetail(L, s.size())) {
             List<List<String>> P = new ArrayList<>(); P.add(L); save("detail", P); vib(40);
-            showCard("✅ 已讀取 1 張發票明細", s.iterator().next(), new String[]{"✓ 返回食光帳本", "繼續讀取其他發票"}, new Runnable[]{back, null});
+            showCard("✅ 已讀取 1 張發票明細", s.iterator().next(), new String[]{"✓ 返回日日帳本", "繼續讀取其他發票"}, new Runnable[]{back, null});
             return;
         }
         scrollAll();
@@ -287,7 +287,7 @@ public class InvAccessService extends AccessibilityService {
                 if (ok && same < 2 && i++ < 80) { h.postDelayed(step[0], 650); return; }
                 save("list", pages); busy = false; scrolling = false; fabText("🧾"); vib(60);
                 showCard("✅ 讀到 " + all.size() + " 張發票", "列表只有日期、店家和金額；要品項的話可以讓它自動一張一張打開明細讀取",
-                        new String[]{"✓ 返回食光帳本", "🔁 也讀取每張明細", "繼續"}, new Runnable[]{back, new Runnable() { public void run() { startAuto(); } }, null});
+                        new String[]{"✓ 返回日日帳本", "🔁 也讀取每張明細", "繼續"}, new Runnable[]{back, new Runnable() { public void run() { startAuto(); } }, null});
             }
         };
         h.post(step[0]);
@@ -306,7 +306,7 @@ public class InvAccessService extends AccessibilityService {
 
     void stopAuto() { autoRun = false; busy = false; h.removeCallbacks(autoStep); fabText("🧾"); vib(40); doneCard("⏹ 已停止"); }
 
-    void doneCard(String head) { showCard(head + "，共讀 " + autoCount + " 張明細", null, new String[]{"✓ 返回食光帳本", "繼續"}, new Runnable[]{back, null}); }
+    void doneCard(String head) { showCard(head + "，共讀 " + autoCount + " 張明細", null, new String[]{"✓ 返回日日帳本", "繼續"}, new Runnable[]{back, null}); }
 
     AccessibilityNodeInfo findNo(AccessibilityNodeInfo n, int depth) {
         if (n == null || depth > 60) return null;

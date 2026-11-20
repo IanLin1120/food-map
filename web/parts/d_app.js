@@ -8,7 +8,7 @@ function modeUI() { const m = S.mode === 'shop' ? 'shop' : 'food'; document.body
   $('#favTitle') && ($('#favTitle').textContent = m === 'shop' ? '我的店家' : '收藏分類'); $('#mQ') && ($('#mQ').placeholder = m === 'shop' ? '搜尋量販店、超商、外送店家…' : '搜尋店家、地址…'); }
 function setMode(m, quiet) { m = m === 'shop' ? 'shop' : 'food'; S.mode = m; saveS(); DB.places = DB.side[m].places; DB.cats = DB.side[m].cats;
   M.filter = 'all'; M.sel = null; try { clearSel(); } catch (e) {} modeUI();
-  refreshAll(); if (!quiet) { showTab(m === 'shop' ? 'Shop' : 'Map'); buzz(30); toast(m === 'shop' ? '🛒 已切換到「購物分帳」' : '🍽️ 已切換到「美食點餐」', 2200); } }
+  refreshAll(); if (!quiet) { showTab(m === 'shop' ? 'Shop' : 'Map'); buzz(30); toast(m === 'shop' ? '🛒 已切換到「購物分帳」' : '🍽️ 已切換到「美食・日常」', 2200); } }
 function showTab(t) { curTab = t; $$('.page').forEach(p => p.classList.toggle('on', p.id === 'pg' + t)); $$('#tabbar button').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
   if (t === 'Map') mapResize(); else if (t === 'Fav') renderFav(); else if (t === 'Rec') renderRec(); else if (t === 'Meal') renderMeal(); else if (t === 'Shop') renderShop(); else if (t === 'Inv') renderInv(); else renderSet(); updCounts(); }
 
@@ -145,10 +145,10 @@ function renderSet() {
   const sw = (id, on) => `<button class="sw2 ${on ? 'on' : ''}" data-sw="${id}" role="switch" aria-checked="${!!on}"></button>`;
   const dark = isDark(), navs = navApps({lat: 0, lon: 0});
   $('#setBody').innerHTML = `
-  <div class="setG"><h3>功能區</h3><div class="setC"><div class="setR col modeCard"><div class="t"><b>${S.mode === 'shop' ? '🍽️ 美食點餐' : '🛒 購物分帳'}</b><small>${S.mode === 'shop' ? '美食地圖、收藏店家的菜單表格、每天吃什麼的點餐分帳、食譜。' : '量販店、超商、Foodpanda 的購物明細：拍照或截圖讓 AI 讀出品項和折扣，選誰買的、誰一起分攤，自動算出每個人要付多少。'}</small></div>
-      <button class="btn pri modeSw" data-a="mode">${S.mode === 'shop' ? '🍽️ 切換到美食點餐' : '🛒 切換到購物分帳'}</button></div></div></div>
+  <div class="setG"><h3>功能區</h3><div class="setC"><div class="setR col modeCard"><div class="t"><b>${S.mode === 'shop' ? '🍽️ 美食・日常' : '🛒 購物分帳'}</b><small>${S.mode === 'shop' ? '美食地圖、收藏店家的菜單表格、每天吃什麼的點餐分帳、食譜。' : '量販店、超商、Foodpanda 的購物明細：拍照或截圖讓 AI 讀出品項和折扣，選誰買的、誰一起分攤，自動算出每個人要付多少。'}</small></div>
+      <button class="btn pri modeSw" data-a="mode">${S.mode === 'shop' ? '🍽️ 切換到美食・日常' : '🛒 切換到購物分帳'}</button></div></div></div>
   <div class="setG"><h3>使用說明</h3><div class="setC">
-    <button class="setR" data-a="guideFood" style="width:100%;text-align:left"><span class="gRi">🍽️</span><div class="t"><b>美食點餐 圖解說明</b><small>找店收藏、AI 菜單表格、點餐分帳、匯出</small></div><span class="muted">›</span></button>
+    <button class="setR" data-a="guideFood" style="width:100%;text-align:left"><span class="gRi">🍽️</span><div class="t"><b>美食・日常 圖解說明</b><small>找店收藏、AI 菜單表格、記一餐分帳、購物清單、食譜</small></div><span class="muted">›</span></button>
     <button class="setR" data-a="guideShop" style="width:100%;text-align:left"><span class="gRi">🛒</span><div class="t"><b>購物分帳 圖解說明</b><small>上傳明細、購物方式、選誰付、折扣與費用、驗算匯出</small></div><span class="muted">›</span></button>
     <button class="setR" data-a="guideInv" style="width:100%;text-align:left"><span class="gRi">🎫</span><div class="t"><b>發票 圖解說明</b><small>手機條碼、掃 QR、截圖、協助工具、折扣、拿去分帳</small></div><span class="muted">›</span></button>
     <button class="setR" data-a="welcome" style="width:100%;text-align:left"><span class="gRi">👋</span><div class="t"><b>歡迎畫面與金鑰教學</b><small>第一次打開時看到的介紹</small></div><span class="muted">›</span></button></div></div>
@@ -180,7 +180,7 @@ function renderSet() {
       <div class="row wrap"><button class="btn sm pri" data-a="exp">匯出備份檔</button><button class="btn sm" data-a="imp">匯入備份檔</button><button class="btn sm danger" data-a="wipe">清除所有資料</button></div></div></div></div>
   <div class="setG"><h3>版本與更新</h3><div class="setC" id="updCard">${Upd.card()}</div></div>
   <div class="setG"><h3>關於</h3><div class="setC">
-    <div class="setR"><div class="t"><b>食光帳本 v${APP_VER}</b><small>${IS_APP ? 'Android App' + (NB.version ? ' · APK v' + NB.version() : '') : '網頁版'}${window.__OTA ? '（已線上更新）' : ''} · 地圖資料 © OpenFreeMap、© OpenStreetMap 貢獻者</small></div></div></div></div>`;
+    <div class="setR"><div class="t"><b>日日帳本 v${APP_VER}</b><small>${IS_APP ? 'Android App' + (NB.version ? ' · APK v' + NB.version() : '') : '網頁版'}${window.__OTA ? '（已線上更新）' : ''} · 地圖資料 © OpenFreeMap、© OpenStreetMap 貢獻者</small></div></div></div></div>`;
 }
 function initSet() {
   const box = $('#setBody');
@@ -226,7 +226,7 @@ function aiUsageCard() {
 const mock = (url, inner, g) => `<div class="mock"><div class="bar ${g ? 'g' : ''}"><i></i><i></i><i></i><span class="url">${url}</span></div><div class="bd">${inner}</div></div>`;
 const TUT = {
   maps: {title: 'Google 地圖搜尋金鑰 · 圖文教學', key: 'gkey', steps: [
-    {t: '這把金鑰是做什麼的？', h: mock('食光帳本', '<div class="inp">🔍 HEN厚食早午餐</div><div class="card2"><b>HEN厚食早午餐</b><div class="lbl">早午餐餐廳 · 距離 350 公尺</div></div><div class="card2">🕒 星期一: 06:00 – 13:00<div class="lbl">營業時間自動帶入</div></div>', 1) +
+    {t: '這把金鑰是做什麼的？', h: mock('日日帳本', '<div class="inp">🔍 HEN厚食早午餐</div><div class="card2"><b>HEN厚食早午餐</b><div class="lbl">早午餐餐廳 · 距離 350 公尺</div></div><div class="card2">🕒 星期一: 06:00 – 13:00<div class="lbl">營業時間自動帶入</div></div>', 1) +
       '<p>填入 <b>Google Maps 金鑰</b>後，搜尋店家就會和 Google 地圖一樣準確，加入收藏時還會<b>自動帶入地址、營業時間、電話</b>。</p><div class="callout">💡 如果你已經在<b>行跡導航</b>設定過 Google 金鑰，直接把同一把金鑰貼過來就可以了，不用重新申請——請直接跳到最後一步。</div><div class="callout warn">Google 會要求綁定信用卡做身分驗證，並提供每月免費用量；一般個人使用通常不會超過。實際收費方式請以 Google 官方說明為準。</div>'},
     {t: '建立一個專案', url: 'https://console.cloud.google.com/projectcreate', btn: '開啟 Google Cloud Console', h: mock('console.cloud.google.com/projectcreate', '<b>新增專案</b><div class="lbl">專案名稱</div><div class="inp">MyFoodMap</div><div class="lbl">位置</div><div class="inp">無機構</div><span class="b hl">建立<span class="tap">👆</span></span><span class="b o">取消</span>') +
       '<p>按下方按鈕開啟 Google Cloud Console，用你的 Google 帳號登入。</p><ul><li>「專案名稱」隨意取，例如 <b>MyFoodMap</b></li><li>按「<b>建立</b>」，等右上角通知顯示完成</li></ul>'},
@@ -240,7 +240,7 @@ const TUT = {
       '<p>點一下剛建立的金鑰名稱進入設定：</p><ul><li>「應用程式限制」選「<b>無</b>」</li><li>「API 限制」選「<b>限制金鑰</b>」，只勾選 <b>Places API (New)</b></li><li>按「儲存」</li></ul><div class="callout">這樣即使金鑰外流，也只能拿來做地點搜尋。與行跡導航共用金鑰的話，記得保留那邊需要的 API。</div>'},
     {t: '把金鑰貼到這裡', paste: true, h: '<p>把剛剛複製的金鑰貼到下面，按「測試金鑰」確認可以使用。</p>'}]},
   ai: {title: 'AI 圖片辨識金鑰 · 圖文教學', key: 'aikey', steps: [
-    {t: '這把金鑰是做什麼的？', h: mock('食光帳本', '<div class="row" style="gap:.5rem;align-items:stretch"><div class="card2" style="flex:1;text-align:center;margin:0">🖼️<div class="lbl" style="margin:0">菜單照片</div></div><div style="align-self:center">➜ ✨ ➜</div><div class="card2" style="flex:1.4;margin:0;font-size:.72rem"><b>品項｜品名｜價格</b><br>漢堡｜熱狗蛋｜$40<br>吐司｜玉米蛋｜$35</div></div>', 1) +
+    {t: '這把金鑰是做什麼的？', h: mock('日日帳本', '<div class="row" style="gap:.5rem;align-items:stretch"><div class="card2" style="flex:1;text-align:center;margin:0">🖼️<div class="lbl" style="margin:0">菜單照片</div></div><div style="align-self:center">➜ ✨ ➜</div><div class="card2" style="flex:1.4;margin:0;font-size:.72rem"><b>品項｜品名｜價格</b><br>漢堡｜熱狗蛋｜$40<br>吐司｜玉米蛋｜$35</div></div>', 1) +
       '<p><b>Gemini 金鑰</b>讓 App 可以用 Google 的 AI 把<b>菜單照片</b>轉成「品項／品名／價格」表格，也能把<b>食譜截圖</b>轉成食材表與步驟。</p><div class="callout">Google AI Studio 提供免費額度，申請不需要信用卡，個人使用通常很夠用。免費額度與規則以 Google 官方說明為準。</div><div class="callout warn">辨識時，圖片會傳送到 Google 的 AI 服務處理。</div>'},
     {t: '開啟 Google AI Studio', url: 'https://aistudio.google.com/apikey', btn: '開啟 Google AI Studio', h: mock('aistudio.google.com/apikey', '<b>API keys</b><div class="lbl">用 Google 帳號登入，第一次使用請勾選同意條款</div><span class="b hl">🔑 Create API key<span class="tap">👆</span></span><div class="ln" style="width:70%"></div><div class="ln" style="width:45%"></div>') +
       '<p>按下方按鈕開啟 Google AI Studio 並登入 Google 帳號。</p><ul><li>按右上角「<b>Create API key</b>（建立 API 金鑰）」</li><li>如果詢問專案，選剛才建立的專案，或讓它自動建立新專案</li></ul>'},
@@ -264,10 +264,10 @@ function openTutorial(kind) {
     else if (a === 'test') { const o = $('#tOut', sh.body); o.innerHTML = '測試中…'; o.innerHTML = kind === 'maps' ? await testG() : await testA(); } });
 }
 function welcome() {
-  const sh = sheet({title: '歡迎使用 食光帳本', full: true, foot: '<button class="btn pri" data-a="go">開始使用</button>', onClose() { if (!S.onboard) { S.onboard = true; saveS(); } }});
-  sh.body.innerHTML = `<div class="gHero" style="margin-top:.2rem"><div class="gIcon">${APP_ICON}</div><h2 style="font-size:1.35rem;font-weight:800;margin:.2rem 0 0">食光帳本</h2><span class="muted small">收藏愛店、點餐分帳、購物明細分帳，一本搞定</span></div>
+  const sh = sheet({title: '歡迎使用 日日帳本', full: true, foot: '<button class="btn pri" data-a="go">開始使用</button>', onClose() { if (!S.onboard) { S.onboard = true; saveS(); } }});
+  sh.body.innerHTML = `<div class="gHero" style="margin-top:.2rem"><div class="gIcon">${APP_ICON}</div><h2 style="font-size:1.35rem;font-weight:800;margin:.2rem 0 0">日日帳本</h2><span class="muted small">吃什麼、買什麼、誰付多少，每天都記在這一本</span></div>
     <div class="h3">📘 圖解使用說明（第一次用請先看）</div>
-    <div class="gPick"><button data-g="food"><i>🍽️</i><b>美食點餐</b><small>找店收藏、AI 菜單表格、每天吃什麼、誰付多少、食譜</small><span>看說明 ›</span></button>
+    <div class="gPick"><button data-g="food"><i>🍽️</i><b>美食・日常</b><small>找店收藏、AI 菜單表格、記一餐誰付多少、購物清單、食譜</small><span>看說明 ›</span></button>
       <button data-g="shop"><i>🛒</i><b>購物分帳</b><small>全聯、超商、Foodpanda 明細拍照，AI 讀出品項折扣，自動分帳</small><span>看說明 ›</span></button>
       <button data-g="inv" class="wide"><i>🎫</i><b>發票</b><small>手機條碼、掃發票 QR Code、匯入發票大師、協助工具讀取，一鍵拿去分帳</small><span>看說明 ›</span></button></div>
     <div class="h3">🔑 建議先完成的設定</div>
@@ -284,19 +284,19 @@ async function saveFile(name, blob) {
 }
 async function exportBackup() {
   busy('整理備份資料…'); try { const Sx = Object.assign({}, S); delete Sx.gkey; delete Sx.aikey;
-    const parts = [`{"app":"shiguang-foodmap","v":1,"t":${Date.now()},"S":${JSON.stringify(Sx)},"cats":${JSON.stringify(DB.side.food.cats)},"shared1":1,"bills":${JSON.stringify(DB.bills || {})},"scfg":${JSON.stringify(DB.scfg || null)},"invs":${JSON.stringify(DB.invs || {})},"rcats":${JSON.stringify(DB.rcats)},"places":${JSON.stringify(DB.side.food.places.concat(DB.side.shop.places))},"recipes":${JSON.stringify(DB.recipes)},"mcfg":${JSON.stringify(DB.mcfg || null)},"days":${JSON.stringify(DB.days || {})},"imgs":{`];
+    const parts = [`{"app":"shiguang-foodmap","v":1,"t":${Date.now()},"S":${JSON.stringify(Sx)},"cats":${JSON.stringify(DB.side.food.cats)},"shared1":1,"bills":${JSON.stringify(DB.bills || {})},"scfg":${JSON.stringify(DB.scfg || null)},"invs":${JSON.stringify(DB.invs || {})},"lists":${JSON.stringify(DB.lists || {})},"rcats":${JSON.stringify(DB.rcats)},"places":${JSON.stringify(DB.side.food.places.concat(DB.side.shop.places))},"recipes":${JSON.stringify(DB.recipes)},"mcfg":${JSON.stringify(DB.mcfg || null)},"days":${JSON.stringify(DB.days || {})},"imgs":{`];
     const keys = await IDB.keys('imgs'); let n = 0; for (const k of keys) { const r = await IDB.get('imgs', k); if (!r) continue; parts.push((n++ ? ',' : '') + JSON.stringify(k) + ':' + JSON.stringify({type: r.type, w: r.w, h: r.h, d: await blobB64(new Blob([r.buf]))})); }
-    parts.push('}}'); const d = new Date(), nm = `食光帳本備份_${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}.json`;
+    parts.push('}}'); const d = new Date(), nm = `日日帳本備份_${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}.json`;
     const p = await saveFile(nm, new Blob(parts, {type: 'application/json'})); busy(false); toast(IS_APP ? '已匯出到「下載」資料夾：' + p : '已下載備份檔 ' + nm, 4000);
   } catch (e) { busy(false); toast('❌ 匯出失敗：' + e.message, 4000); }
 }
 function importBackup() { const f = $('#jsonPick'); f.value = ''; f.onchange = async () => { const file = f.files[0]; if (!file) return;
-  try { busy('讀取備份檔…'); const j = JSON.parse(await file.text()); busy(false); if (!/^shiguang/.test(j.app || '') || !Array.isArray(j.places)) throw new Error('這不是食光帳本的備份檔');
+  try { busy('讀取備份檔…'); const j = JSON.parse(await file.text()); busy(false); if (!/^shiguang/.test(j.app || '') || !Array.isArray(j.places)) throw new Error('這不是日日帳本的備份檔');
     if (!await ask(`備份檔內有 ${j.places.length} 間收藏、${(j.recipes || []).length} 道食譜。\n匯入後會「取代」目前這台裝置上的所有資料，確定嗎？`, '匯入並取代', true)) return; busy('匯入中…');
     for (const s of ['places', 'recipes', 'imgs']) await IDB.clear(s);
     const b64buf = s => { const bin = atob(s), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return u.buffer; };
     for (const k in j.imgs || {}) { const r = j.imgs[k]; await IDB.put('imgs', k, {buf: b64buf(r.d), type: r.type || 'image/jpeg', w: r.w, h: r.h}); }
     for (const p of j.places) await IDB.put('places', p.id, p); for (const r of j.recipes || []) await IDB.put('recipes', r.id, r);
-    await IDB.put('kv', 'cats', j.cats || []); if (j.rcats) await IDB.put('kv', 'rcats', j.rcats); if (j.mcfg) await IDB.put('kv', 'mcfg', j.mcfg); await IDB.put('kv', 'days', j.days || {}); if (j.cats_shop) await IDB.put('kv', 'cats_shop', j.cats_shop); await IDB.put('kv', 'bills', j.bills || {}); if (j.scfg) await IDB.put('kv', 'scfg', j.scfg); if (j.shared1) await IDB.put('kv', 'shared1', 1); else await IDB.del('kv', 'shared1').catch(() => {}); if (j.invs) await IDB.put('kv', 'invs', j.invs); await IDB.put('kv', 'S', Object.assign({}, S_DEF, j.S || {}, {gkey: S.gkey, aikey: S.aikey, onboard: true})); location.reload();
+    await IDB.put('kv', 'cats', j.cats || []); if (j.rcats) await IDB.put('kv', 'rcats', j.rcats); if (j.mcfg) await IDB.put('kv', 'mcfg', j.mcfg); await IDB.put('kv', 'days', j.days || {}); if (j.cats_shop) await IDB.put('kv', 'cats_shop', j.cats_shop); await IDB.put('kv', 'bills', j.bills || {}); if (j.scfg) await IDB.put('kv', 'scfg', j.scfg); if (j.shared1) await IDB.put('kv', 'shared1', 1); else await IDB.del('kv', 'shared1').catch(() => {}); if (j.invs) await IDB.put('kv', 'invs', j.invs); if (j.lists) await IDB.put('kv', 'lists', j.lists); await IDB.put('kv', 'S', Object.assign({}, S_DEF, j.S || {}, {gkey: S.gkey, aikey: S.aikey, onboard: true})); location.reload();
   } catch (e) { busy(false); toast('❌ 匯入失敗：' + (e instanceof SyntaxError ? '檔案格式不正確' : e.message), 4500); } }; f.click(); }
 

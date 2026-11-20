@@ -31,12 +31,12 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
             <!-- 接收其他 App 分享的圖片（Google 地圖菜單截圖、相簿） -->
-            <intent-filter android:label="傳到食光帳本">
+            <intent-filter android:label="傳到日日帳本">
                 <action android:name="android.intent.action.SEND" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="image/*" />
             </intent-filter>
-            <intent-filter android:label="傳到食光帳本">
+            <intent-filter android:label="傳到日日帳本">
                 <action android:name="android.intent.action.SEND_MULTIPLE" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="image/*" />
@@ -44,7 +44,7 @@
         </activity>
         <!-- 發票區：協助工具讀取其他發票 App 畫面上的文字（使用者自己到系統設定開啟） -->
         <service android:name="com.ian.foodmap.InvAccessService" android:exported="false"
-            android:label="食光帳本 發票讀取"
+            android:label="日日帳本 發票讀取"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
             <intent-filter><action android:name="android.accessibilityservice.AccessibilityService" /></intent-filter>
             <meta-data android:name="android.accessibilityservice" android:resource="@xml/inv_access" />

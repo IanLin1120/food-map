@@ -57,7 +57,7 @@ function renderShop() {
       ${calHead(Y, Mo)}
       <div class="calWd">${MWD.map((w, i) => `<span class="${i === 0 || i === 6 ? 'we' : ''}">${w}</span>`).join('')}</div><div class="calG">${cells}</div></div>
     <div class="dayHead"><b class="dhD">${sel.getMonth() + 1}月${sel.getDate()}日 星期${MWD[sel.getDay()]}</b><span class="grow"></span>${bs.length ? `<span class="dayTot">${money(dayTot)}</span><button class="btn sm" data-a="exportDay">📤 匯出</button>` : ''}</div>
-    ${bs.map(billCard).join('') || '<div class="empty mealEmpty"><span class="big">🧾</span>這天還沒有購物明細<br><span class="small">按上面的「上傳明細」拍照或選截圖，或「手動輸入」<br>也可以在 Foodpanda、相簿裡按「分享」傳給食光帳本</span></div>'}
+    ${bs.map(billCard).join('') || '<div class="empty mealEmpty"><span class="big">🧾</span>這天還沒有購物明細<br><span class="small">按上面的「上傳明細」拍照或選截圖，或「手動輸入」<br>也可以在 Foodpanda、相簿裡按「分享」傳給日日帳本</span></div>'}
     
     ${order.length ? `<div class="perSum card"><div class="psH">👥 每個人這天要付</div>${order.map(id => { const u = mWho(id); return `<div class="psR"><span class="psI">${esc(u.icon)}</span><b class="grow">${esc(u.name)}</b><span>${money(per[id])}</span></div>`; }).join('')}<div class="psR tot"><b class="grow">合計</b><span>${money(dayTot)}</span></div></div>` : ''}`;
 }
@@ -490,7 +490,7 @@ function openShopExport(k, bid) {
     else { try { const L = pick(), nm = `購物分帳_${k.replace(/-/g, '')}${sel === 'all' ? '' : '_' + (billStore(L[0]) || '明細').replace(/[\\/:*?"<>|\s]+/g, '')}.xlsx`; const p = await saveFile(nm, shopXlsx(k, L)); toast(IS_APP ? '已匯出到「下載」資料夾：' + p : '已下載 ' + nm, 4000); } catch (er) { toast('❌ 匯出失敗：' + er.message, 4000); } } });
 }
 function shopXlsx(k, L) {
-  const rows = [[{v: '食光帳本 購物分帳　' + dayLabel(k), s: 2}], [], ['日期', '店家', '品項', '規格', '數量', '金額', '折扣', '實付', '誰付'].map(v => ({v, s: 1}))], per = {};
+  const rows = [[{v: '日日帳本 購物分帳　' + dayLabel(k), s: 2}], [], ['日期', '店家', '品項', '規格', '數量', '金額', '折扣', '實付', '誰付'].map(v => ({v, s: 1}))], per = {};
   L.forEach(b => { const c = billCalc(b), nm = billStore(b);
     b.items.forEach(x => { const dsc = c.itemDisc[x.id] || 0; rows.push([k, nm, x.n, x.o || '', x.q || 1, numP(x.amt), dsc ? -Math.round(dsc * 100) / 100 : '', Math.round((numP(x.amt) - dsc) * 100) / 100, pplNames(x.ppl) + ((x.ppl || []).length > 1 ? '（平均分攤）' : '') || '未指定']); });
     (b.odisc || []).forEach(d => rows.push([k, nm, d.n, '整單折扣', '', '', -numP(d.amt), -numP(d.amt), pplNames(d.ppl) || '未指定']));
