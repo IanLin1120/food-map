@@ -4,7 +4,7 @@
 <script>/* 線上更新開機程式：手機上若已下載比 APK 內建更新的介面版本，就改用新版（存在 IndexedDB）。
    新版連續兩次沒有正常開啟 → 自動退回 APK 內建版本。網址加上 #builtin 也會強制使用內建版本。 */
 (function () {
-  var B = '3.0.2'; if (!window.__OTA) window.APP_BUILTIN = B;
+  var B = '3.0.3'; if (!window.__OTA) window.APP_BUILTIN = B;
   if (window.__OTA || location.hash.indexOf('builtin') >= 0) return;
   var v = null; try { v = JSON.parse(localStorage.getItem('fm.ota') || 'null'); } catch (e) {}
   function gt(a, b) { a = String(a).split('.').map(Number); b = String(b).split('.').map(Number); for (var i = 0; i < Math.max(a.length, b.length); i++) { var p = a[i] || 0, q = b[i] || 0; if (p !== q) return p > q; } return false; }
@@ -790,6 +790,22 @@ body.mShop #tabbar [data-tab="Meal"],body.mShop #tabbar [data-tab="Rec"]{display
 .iGrid{display:grid;grid-template-columns:1fr .75fr 1fr;gap:.6rem}
 .iGrid .field input{text-align:center}
 .presetRow button.on{background:var(--accent);color:#fff;border-color:transparent}
+/* 月曆年月：一顆大按鈕＋左右切換 */
+.calTop{gap:.5rem}
+.calTop .calNav,.ymY .calNav{width:2.6rem;height:2.6rem;border-radius:6px;background:var(--surface-3);border:1px solid var(--border);font-size:1.35rem;font-weight:800;color:var(--accent);display:flex;align-items:center;justify-content:center}
+.calYM{flex:1;display:flex;align-items:center;justify-content:center;gap:.5rem;height:2.6rem;border-radius:6px;border:1px solid color-mix(in srgb,var(--accent) 35%,var(--border));background:linear-gradient(180deg,color-mix(in srgb,var(--accent) 10%,var(--surface)),var(--surface-3));color:var(--text);font-size:1.02rem;box-shadow:inset 0 1px 0 rgba(255,255,255,.5)}
+.calYM b{font-size:1.15rem;font-weight:800;color:var(--accent);font-variant-numeric:tabular-nums}
+.calYM i{font-style:normal;font-size:.75rem;color:var(--accent);background:color-mix(in srgb,var(--accent) 15%,transparent);border-radius:4px;padding:.1rem .3rem}
+.calYM:active,.calTop .calNav:active{transform:scale(.97)}
+.ymP{padding:.1rem 0 .3rem}
+.ymY{display:flex;align-items:center;justify-content:space-between;margin-bottom:.8rem}
+.ymY b{font-size:1.35rem;font-weight:800;color:var(--accent);font-variant-numeric:tabular-nums}
+.ymG{display:grid;grid-template-columns:repeat(4,1fr);gap:.5rem;margin-bottom:.9rem}
+.ymG button{display:flex;align-items:baseline;justify-content:center;gap:.1rem;padding:.75rem 0;border-radius:6px;background:var(--surface-3);border:1px solid var(--border-soft);color:var(--text)}
+.ymG b{font-size:1.25rem;font-weight:800;font-variant-numeric:tabular-nums}.ymG small{font-size:.75rem;color:var(--text-2)}
+.ymG button.tdy{border:2px solid var(--accent)}
+.ymG button.on{background:var(--accent);border-color:transparent;color:#fff}.ymG button.on small{color:rgba(255,255,255,.85)}
+.ymNow{border-radius:6px;justify-content:center}
 </style>
 </head>
 <body>
@@ -929,7 +945,7 @@ return maplibregl$1;
 /* ============================================================
    食光帳本 — 核心：工具、資料儲存、主題、面板、拖曳排序、圖片
    ============================================================ */
-const APP_VERSION = '3.0.2';
+const APP_VERSION = '3.0.3';
 const APP_VER = APP_VERSION;
 /* 線上更新來源（GitHub Pages）：IanLin1120/food-map */
 const GH = {repo: 'https://github.com/IanLin1120/food-map', pages: 'https://ianlin1120.github.io/food-map/'};
@@ -2409,9 +2425,11 @@ function updCounts() { $('#favSub').textContent = `共 ${DB.places.length} 間�
    ============================================================ */
 let curTab = 'Map';
 /* ---------- 切換功能區：美食 ↔ 購物分帳 ---------- */
+/* 依目前功能區套用畫面（分頁、標題、搜尋提示）；啟動時也會呼叫，重開 App 會回到上次的功能區 */
+function modeUI() { const m = S.mode === 'shop' ? 'shop' : 'food'; document.body.classList.toggle('mShop', m === 'shop');
+  $('#favTitle') && ($('#favTitle').textContent = m === 'shop' ? '我的店家' : '收藏分類'); $('#mQ') && ($('#mQ').placeholder = m === 'shop' ? '搜尋量販店、超商、外送店家…' : '搜尋店家、地址…'); }
 function setMode(m, quiet) { m = m === 'shop' ? 'shop' : 'food'; S.mode = m; saveS(); DB.places = DB.side[m].places; DB.cats = DB.side[m].cats;
-  document.body.classList.toggle('mShop', m === 'shop'); M.filter = 'all'; M.sel = null; try { clearSel(); } catch (e) {}
-  $('#favTitle') && ($('#favTitle').textContent = m === 'shop' ? '我的店家' : '收藏分類'); $('#mQ').placeholder = m === 'shop' ? '搜尋量販店、超商、外送店家…' : '搜尋店家、地址…';
+  M.filter = 'all'; M.sel = null; try { clearSel(); } catch (e) {} modeUI();
   refreshAll(); if (!quiet) { showTab(m === 'shop' ? 'Shop' : 'Map'); buzz(30); toast(m === 'shop' ? '🛒 已切換到「購物分帳」' : '🍽️ 已切換到「美食點餐」', 2200); } }
 function showTab(t) { curTab = t; $$('.page').forEach(p => p.classList.toggle('on', p.id === 'pg' + t)); $$('#tabbar button').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
   if (t === 'Map') mapResize(); else if (t === 'Fav') renderFav(); else if (t === 'Rec') renderRec(); else if (t === 'Meal') renderMeal(); else if (t === 'Shop') renderShop(); else renderSet(); updCounts(); }
@@ -2990,7 +3008,7 @@ function renderMeal() {
   const per = {}; ms.forEach(m => { const pm = perOf(m); Object.keys(pm).forEach(id => { per[id] = (per[id] || 0) + pm[id]; }); });
   const order = DB.mcfg.people.map(u => u.id).concat(Object.keys(per).filter(id => !DB.mcfg.people.some(u => u.id === id))).filter(id => per[id] != null);
   box.innerHTML = `<div class="cal card">
-      <div class="calTop"><button class="ic" data-a="pm" aria-label="上個月">‹</button><select id="calY" aria-label="年">${yrs.map(y => `<option value="${y}" ${y === Y ? 'selected' : ''}>${y} 年</option>`).join('')}</select><select id="calM" aria-label="月">${Array.from({length: 12}, (_, i) => `<option value="${i}" ${i === Mo ? 'selected' : ''}>${i + 1} 月</option>`).join('')}</select><button class="ic" data-a="nm" aria-label="下個月">›</button></div>
+      <div class="calTop"><button class="ic calNav" data-a="pm" aria-label="上個月">‹</button><button class="calYM" data-a="ym"><span><b>${Y}</b> 年 <b>${Mo + 1}</b> 月</span><i>▾</i></button><button class="ic calNav" data-a="nm" aria-label="下個月">›</button></div>
       <div class="calWd">${MWD.map((w, i) => `<span class="${i === 0 || i === 6 ? 'we' : ''}">${w}</span>`).join('')}</div>
       <div class="calG">${cells}</div></div>
     <div class="dayHead"><b class="dhD">${sel.getMonth() + 1}月${sel.getDate()}日 星期${MWD[sel.getDay()]}</b><span class="grow"></span>${ms.length ? `<span class="dayTot">${money(dayTotal(Meal.sel))}</span><button class="btn sm" data-a="export">📤 匯出</button>` : ''}</div>
@@ -3022,6 +3040,7 @@ function initMeal() {
   box.addEventListener('click', async e => { const b = e.target.closest('[data-a],[data-d]'); if (!b) return;
     if (b.dataset.d) { Meal.sel = b.dataset.d; renderMeal(); return; }
     const a = b.dataset.a, card = b.closest('.meal'), m = card && curMeal(card.dataset.m);
+    if (a === 'ym') { const r = await ymPick(Meal.ym[0], Meal.ym[1]); if (!r) return; Meal.ym = r; const nd = new Date(r[0], r[1] + 1, 0).getDate(); Meal.sel = ymd(new Date(r[0], r[1], Math.min(ymdDate(Meal.sel).getDate(), nd))); renderMeal(); return; }
     if (a === 'pm' || a === 'nm') { const d = new Date(Meal.ym[0], Meal.ym[1] + (a === 'pm' ? -1 : 1), 1); Meal.ym = [d.getFullYear(), d.getMonth()]; const nd = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate(); Meal.sel = ymd(new Date(d.getFullYear(), d.getMonth(), Math.min(ymdDate(Meal.sel).getDate(), nd))); renderMeal(); }
     else if (a === 'addMeal') { const t = await pickMealType(); if (!t) return; const st = await pickStore(); if (st === undefined) return;
       const nm = {id: 'm' + uid(), type: t.id, place: st ? st.id || '' : '', pname: st ? st.name : '', items: []}; (DB.days[Meal.sel] = DB.days[Meal.sel] || []).push(nm); mealChanged(); openOrder(nm); }
@@ -3225,6 +3244,18 @@ function editMealCfg(k, it, done) {
     let out; if (isNew) { d.id = (k === 'types' ? 't' : 'u') + uid(); L.push(d); out = d; } else { Object.assign(it, d); out = it; } saveMcfg(); sh.close(); done && done(out); };
 }
 
+/* 年月選擇器（點餐、分帳共用）：上面切換年份、下面 12 個月 */
+function ymPick(Y, M) {
+  return new Promise(res => { let y = Y, done = false; const now = new Date();
+    const sh = sheet({title: '選擇年月', onClose() { if (!done) res(null); }});
+    const draw = () => { sh.body.innerHTML = `<div class="ymP"><div class="ymY"><button class="ic calNav" data-y="-1" aria-label="前一年">‹</button><b>${y} 年</b><button class="ic calNav" data-y="1" aria-label="後一年">›</button></div>
+      <div class="ymG">${Array.from({length: 12}, (_, i) => `<button data-m="${i}" class="${y === Y && i === M ? 'on' : ''} ${y === now.getFullYear() && i === now.getMonth() ? 'tdy' : ''}"><b>${i + 1}</b><small>月</small></button>`).join('')}</div>
+      <button class="btn block ymNow" data-now="1">📅 回到這個月</button></div>`; };
+    draw(); sh.body.addEventListener('click', e => { const t = e.target.closest('button'); if (!t) return; buzz(8);
+      if (t.dataset.y) { y += +t.dataset.y; draw(); return; }
+      const fin = v => { done = true; sh.close(); res(v); };
+      if (t.dataset.now) fin([now.getFullYear(), now.getMonth()]); else if (t.dataset.m) fin([y, +t.dataset.m]); }); });
+}
 /* ---------- 搜尋：吃過哪家店、哪幾天、吃了什麼、多少錢 ---------- */
 const mealPhone = m => { const P = FP().find(x => x.id === m.place); return (P ? P.phone : m.phone) || ''; };
 const storeName = m => { const P = FP().find(x => x.id === m.place); return P ? P.name : m.pname || ''; };
@@ -3373,7 +3404,7 @@ function renderShop() {
   $('#shopSub').textContent = `${sel.getMonth() + 1}月${sel.getDate()}日（${MWD[sel.getDay()]}）${bs.length ? ' · ' + bs.length + ' 筆' : ''}`;
   const order = pOrder(Object.keys(per));
   box.innerHTML = `<div class="cal card">
-      <div class="calTop"><button class="ic" data-a="pm" aria-label="上個月">‹</button><select id="sCalY" aria-label="年">${yrs.map(y => `<option value="${y}" ${y === Y ? 'selected' : ''}>${y} 年</option>`).join('')}</select><select id="sCalM" aria-label="月">${Array.from({length: 12}, (_, i) => `<option value="${i}" ${i === Mo ? 'selected' : ''}>${i + 1} 月</option>`).join('')}</select><button class="ic" data-a="nm" aria-label="下個月">›</button></div>
+      <div class="calTop"><button class="ic calNav" data-a="pm" aria-label="上個月">‹</button><button class="calYM" data-a="ym"><span><b>${Y}</b> 年 <b>${Mo + 1}</b> 月</span><i>▾</i></button><button class="ic calNav" data-a="nm" aria-label="下個月">›</button></div>
       <div class="calWd">${MWD.map((w, i) => `<span class="${i === 0 || i === 6 ? 'we' : ''}">${w}</span>`).join('')}</div><div class="calG">${cells}</div></div>
     <div class="dayHead"><b class="dhD">${sel.getMonth() + 1}月${sel.getDate()}日 星期${MWD[sel.getDay()]}</b><span class="grow"></span>${bs.length ? `<span class="dayTot">${money(dayTot)}</span><button class="btn sm" data-a="exportDay">📤 匯出</button>` : ''}</div>
     ${bs.map(billCard).join('') || '<div class="empty mealEmpty"><span class="big">🧾</span>這天還沒有購物明細<br><span class="small">按下面的按鈕拍照、上傳截圖或手動輸入<br>也可以在 Foodpanda、相簿裡按「分享」傳給食光帳本</span></div>'}
@@ -3408,6 +3439,7 @@ function initShop() {
   box.addEventListener('click', async e => { const t = e.target.closest('[data-a],[data-d]'); if (!t) return;
     if (t.dataset.d) { Shop.sel = t.dataset.d; renderShop(); return; }
     const a = t.dataset.a, card = t.closest('.bill'), b = card && curBill(card.dataset.b);
+    if (a === 'ym') { const r = await ymPick(Shop.ym[0], Shop.ym[1]); if (!r) return; Shop.ym = r; const nd = new Date(r[0], r[1] + 1, 0).getDate(); Shop.sel = ymd(new Date(r[0], r[1], Math.min(ymdDate(Shop.sel).getDate(), nd))); renderShop(); return; }
     if (a === 'pm' || a === 'nm') { const d = new Date(Shop.ym[0], Shop.ym[1] + (a === 'pm' ? -1 : 1), 1); Shop.ym = [d.getFullYear(), d.getMonth()]; const nd = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate(); Shop.sel = ymd(new Date(d.getFullYear(), d.getMonth(), Math.min(ymdDate(Shop.sel).getDate(), nd))); renderShop(); }
     else if (a === 'newImg') newBillImg(); else if (a === 'newMan') newBillManual();
     else if (a === 'exportDay') openShopExport(Shop.sel);
@@ -3796,7 +3828,7 @@ function openShopSettings() {
 /* ============================================================
    使用說明：給第一次用的人看的圖解（手機畫面示意圖＋白話說明）
    ============================================================ */
-const APP_ICON = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><defs> <linearGradient id="gibg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F7EDDA"/><stop offset="1" stop-color="#EAD6B0"/></linearGradient> <linearGradient id="gicv" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#D9773F"/><stop offset="1" stop-color="#A3482A"/></linearGradient> <linearGradient id="gisp" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#8E3B22"/><stop offset="1" stop-color="#A9502E"/></linearGradient> <linearGradient id="gicn" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F4C766"/><stop offset="1" stop-color="#DE9E36"/></linearGradient> <filter id="gish" x="-20%" y="-20%" width="140%" height="150%"><feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="#6B3A1E" flood-opacity=".28"/></filter></defs><clipPath id="gir"><rect width="512" height="512" rx="112"/></clipPath><g clip-path="url(#gir)"><rect width="512" height="512" fill="url(#gibg)"/><g stroke="#FFF8EA" stroke-width="30" fill="none" stroke-linecap="round" opacity=".9"><path d="M-20 150 L540 90"/><path d="M-20 400 L540 440"/><path d="M90 -20 L60 540"/><path d="M440 -20 L470 540"/></g><path d="M300 0 L520 0 L520 70 L290 100Z" fill="#D9DDB0" opacity=".55"/><g transform="translate(0,8)"><g filter="url(#gish)"> <rect x="150" y="104" width="250" height="324" rx="26" fill="#FFF8EA"/> <rect x="150" y="104" width="250" height="324" rx="26" fill="none" stroke="#E2CDA6" stroke-width="3"/> <path d="M384 120 v292" stroke="#E7D5B2" stroke-width="3"/><path d="M372 116 v300" stroke="#EADCBF" stroke-width="3"/> <rect x="118" y="88" width="256" height="336" rx="30" fill="url(#gicv)"/> <path d="M148 88 h18 v336 h-18 a30 30 0 0 1 -30 -30 v-276 a30 30 0 0 1 30 -30z" fill="url(#gisp)"/> <rect x="166" y="88" width="5" height="336" fill="#7E321C" opacity=".35"/> <path d="M318 74 h34 v118 l-17 -16 l-17 16z" fill="#7C8B4E"/> <circle cx="262" cy="236" r="84" fill="#FFF8EA"/> <g fill="#9E4626"><path d="M224 186 h8 v40 h6 v-40 h8 v40 h6 v-40 h8 v48 a18 18 0 0 1 -14 17 v62 a7 7 0 0 1 -14 0 v-62 a18 18 0 0 1 -14 -17z"/> <ellipse cx="298" cy="214" rx="19" ry="28"/><rect x="291" y="236" width="14" height="78" rx="7"/></g> <rect x="190" y="346" width="120" height="12" rx="6" fill="#FFF8EA" opacity=".85"/><rect x="190" y="372" width="84" height="12" rx="6" fill="#FFF8EA" opacity=".6"/> <circle cx="340" cy="362" r="44" fill="url(#gicn)" stroke="#FFF3D6" stroke-width="6"/><circle cx="340" cy="362" r="31" fill="none" stroke="#B9791F" stroke-width="3" opacity=".6"/> <text x="340" y="378" text-anchor="middle" font-family="DejaVu Sans, Arial" font-weight="700" font-size="44" fill="#8A5310">$</text></g></g></g></svg>';
+const APP_ICON = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="54 54 324 324"><defs> <linearGradient id="gicv" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#E0844B"/><stop offset=".55" stop-color="#C2633A"/><stop offset="1" stop-color="#9A4226"/></linearGradient> <linearGradient id="gisp" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#7E321C"/><stop offset="1" stop-color="#9C4527"/></linearGradient> <linearGradient id="gipl" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFF9EC"/><stop offset="1" stop-color="#F2E2C2"/></linearGradient> <linearGradient id="gicn" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F7D27A"/><stop offset="1" stop-color="#DB9A33"/></linearGradient> <radialGradient id="gigl" cx=".35" cy=".25" r=".8"><stop offset="0" stop-color="#fff" stop-opacity=".22"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient> <filter id="gish" x="-30%" y="-30%" width="160%" height="170%"><feDropShadow dx="0" dy="8" stdDeviation="9" flood-color="#5A2410" flood-opacity=".35"/></filter></defs><rect width="432" height="432" fill="url(#gicv)"/> <g opacity=".10" stroke="#FFF3DC" stroke-width="10" fill="none"><path d="M-10 120 L442 70"/><path d="M-10 350 L442 380"/><path d="M330 -10 L360 442"/></g> <rect x="0" y="0" width="112" height="432" fill="url(#gisp)"/><rect x="112" y="0" width="7" height="432" fill="#6E2A16" opacity=".45"/> <g stroke="#F4D9B6" stroke-width="5" stroke-linecap="round" stroke-dasharray="14 14" opacity=".75"><path d="M96 -6 V440"/></g> <path d="M286 0 h44 v150 l-22 -20 l-22 20z" fill="#7C8B4E"/><path d="M286 0 h44 v8 h-44z" fill="#5F6C39"/> <rect width="432" height="432" fill="url(#gigl)"/><g filter="url(#gish)"><circle cx="222" cy="210" r="102" fill="url(#gipl)"/><circle cx="222" cy="210" r="84" fill="none" stroke="#E4CDA4" stroke-width="4"/> <g fill="#A3482A"><path d="M178 150 h9 v46 h7 v-46 h9 v46 h7 v-46 h9 v55 a21 21 0 0 1 -16 20 v66 a8 8 0 0 1 -16 0 v-66 a21 21 0 0 1 -16 -20z"/> <ellipse cx="262" cy="182" rx="21" ry="31"/><rect x="254" y="206" width="16" height="85" rx="8"/></g></g> <g filter="url(#gish)"><circle cx="296" cy="290" r="40" fill="url(#gicn)" stroke="#FFF1CF" stroke-width="6"/><circle cx="296" cy="290" r="28" fill="none" stroke="#B5741C" stroke-width="3" opacity=".55"/> <text x="296" y="305" text-anchor="middle" font-family="DejaVu Sans, Arial" font-weight="700" font-size="40" fill="#8A5310">$</text></g></svg>';
 const PHT = {food: [['🗺️', '地圖'], ['🔖', '收藏'], ['🍱', '點餐'], ['📖', '食譜'], ['⚙️', '設定']], shop: [['🗺️', '地圖'], ['🔖', '店家'], ['🧾', '分帳'], ['⚙️', '設定']]};
 /* 一支小手機：title 標題、body 內容、tab 亮起哪一個分頁、area 美食或購物 */
 const phone = (title, body, tab, area) => `<div class="ph"><div class="phIn"><div class="phNotch"></div><div class="phTop">${title}</div><div class="phBd">${body}</div>
@@ -3865,7 +3897,7 @@ function openGuide(kind) {
   applyTheme();
   try { localStorage.removeItem('fm.otaFail'); } catch (e) {}
   try { await loadAll(); } catch (e) { console.error(e); }
-  applyTheme(); initViewer(); initChips(); initSearch(); initCard(); initFav(); initRec(); initMeal(); initShop(); initSet();
+  applyTheme(); modeUI(); initViewer(); initChips(); initSearch(); initCard(); initFav(); initRec(); initMeal(); initShop(); initSet();
   $('#tabbar').addEventListener('click', e => { const b = e.target.closest('button'); if (b) { buzz(8); showTab(b.dataset.tab); } });
   $('#fb3d').onclick = () => { if (!M.map) return; const to3 = M.map.getPitch() <= 5; S.map3d = to3; saveS(); buzz(10); M.map.easeTo({pitch: to3 ? 55 : 0, duration: 500}); };
   $('#fbN').onclick = () => { if (M.map) M.map.easeTo({bearing: 0, duration: 400}); };
