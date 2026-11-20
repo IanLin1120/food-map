@@ -850,3 +850,8 @@ body.mShop #tabbar [data-tab="Meal"],body.mShop #tabbar [data-tab="Rec"]{display
 .scState{display:flex;gap:.5rem;justify-content:center;margin:.6rem 0}
 .scState .chip{font-size:.82rem;padding:.3rem .7rem}
 .scGot .invC{margin-top:.4rem}
+#invJobs{display:flex;flex-direction:column;gap:.4rem}#invJobs[hidden]{display:none}
+.accSt{font-weight:800;padding:.6rem .8rem;border-radius:6px;margin-bottom:.6rem;background:color-mix(in srgb,var(--danger) 10%,var(--surface));color:var(--danger)}
+.accSt.on{background:color-mix(in srgb,var(--success) 12%,var(--surface));color:var(--success)}
+.accBtns{font-size:.84rem;line-height:1.9;margin:.3rem 0 .2rem;color:var(--text-2)}
+.accBtns span{display:inline-block;font-weight:800;color:var(--text);background:var(--surface-3);border:1px solid var(--border);border-radius:6px;padding:0 .4rem;margin-right:.35rem}

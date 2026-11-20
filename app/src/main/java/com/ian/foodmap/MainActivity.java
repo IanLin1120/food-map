@@ -731,6 +731,21 @@ public class MainActivity extends Activity {
         @JavascriptInterface
         public void offCancel() { Offline.cancel = true; }
 
+        /* 發票區：協助工具讀取 */
+        @JavascriptInterface
+        public String invAccState() {
+            try { String v = android.provider.Settings.Secure.getString(getContentResolver(), android.provider.Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES);
+                return v != null && v.contains(getPackageName() + "/") && v.contains("InvAccessService") ? "on" : "off"; } catch (Exception e) { return "off"; }
+        }
+        @JavascriptInterface
+        public void invAccArm(boolean on) { InvAccessService.sp(MainActivity.this).edit().putBoolean("armed", on).apply(); InvAccessService.rearm(MainActivity.this); }
+        @JavascriptInterface
+        public void invAccSettings() { runOnUiThread(new Runnable() { public void run() { try { startActivity(new Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS)); } catch (Exception e) { } } }); }
+        @JavascriptInterface
+        public String invInbox() { return InvAccessService.takeInbox(MainActivity.this); }
+        @JavascriptInterface
+        public void openPkg(final String pkg) { runOnUiThread(new Runnable() { public void run() { try { Intent i = getPackageManager().getLaunchIntentForPackage(pkg); if (i != null) startActivity(i); } catch (Exception e) { } } }); }
+
         @JavascriptInterface
         public void invWeb(final String url) { runOnUiThread(new Runnable() { public void run() { openInvWeb(url); } }); }
 
