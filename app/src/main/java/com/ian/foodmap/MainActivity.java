@@ -39,7 +39,8 @@ import java.util.ArrayList;
 /** 食光帳本：把 assets/index.html 以 https://app.local/ 載入 WebView，並提供少量原生功能（震動、導航、選圖／拍照、定位、存檔）。 */
 public class MainActivity extends Activity {
     static final String HOST = "app.local";
-    static final int REQ_FILE = 11, REQ_GEO = 12, REQ_LOC = 13;
+    static final int REQ_FILE = 11, REQ_GEO = 12, REQ_LOC = 13, REQ_CAM = 14;
+    android.webkit.PermissionRequest camReq;
     static MainActivity cur;
     WebView web;
     ValueCallback<Uri[]> fileCb;
@@ -230,6 +231,90 @@ public class MainActivity extends Activity {
         h.postDelayed(new Runnable() { public void run() { if (!done[0]) extract.run(); } }, 50000);
     }
 
+    /* ---------- 發票區：App 內打開財政部電子發票平台，使用者自己登入，按「讀取這一頁」把頁面上的發票傳回 ---------- */
+    android.widget.LinearLayout invBox;
+    WebView invWebV;
+
+    void closeInvWeb() {
+        if (invBox == null) return;
+        try { ((ViewGroup) invBox.getParent()).removeView(invBox); invWebV.stopLoading(); invWebV.destroy(); } catch (Throwable t) { }
+        invBox = null; invWebV = null;
+    }
+
+    void openInvWeb(String url) {
+        if (url == null || !url.startsWith("https://")) return;
+        closeInvWeb();
+        final float dp = getResources().getDisplayMetrics().density;
+        final android.widget.FrameLayout host = (android.widget.FrameLayout) findViewById(android.R.id.content);
+        invBox = new android.widget.LinearLayout(this);
+        invBox.setOrientation(android.widget.LinearLayout.VERTICAL);
+        invBox.setBackgroundColor(Color.parseColor("#efe5d3"));
+        invBox.setClickable(true);
+        android.widget.LinearLayout bar = new android.widget.LinearLayout(this);
+        bar.setOrientation(android.widget.LinearLayout.HORIZONTAL);
+        bar.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        int pd = (int) (8 * dp);
+        bar.setPadding(pd, pd, pd, pd);
+        bar.setBackgroundColor(Color.parseColor("#efe5d3"));
+        android.widget.Button close = new android.widget.Button(this);
+        close.setText("✕ 關閉"); close.setAllCaps(false); close.setTextColor(Color.parseColor("#3a2c22"));
+        close.setBackground(rounded("#e6d8bf", "#cdb994", dp));
+        android.widget.Button read = new android.widget.Button(this);
+        read.setText("📥 讀取這一頁"); read.setAllCaps(false); read.setTextColor(Color.WHITE);
+        read.setTypeface(null, android.graphics.Typeface.BOLD);
+        read.setBackground(rounded("#5a7a44", "#5a7a44", dp));
+        android.widget.LinearLayout.LayoutParams lc = new android.widget.LinearLayout.LayoutParams(0, (int) (44 * dp), 1f);
+        android.widget.LinearLayout.LayoutParams lr = new android.widget.LinearLayout.LayoutParams(0, (int) (44 * dp), 1.6f);
+        lr.leftMargin = pd;
+        bar.addView(close, lc); bar.addView(read, lr);
+        invWebV = new WebView(this);
+        WebSettings ws = invWebV.getSettings();
+        ws.setJavaScriptEnabled(true); ws.setDomStorageEnabled(true); ws.setDatabaseEnabled(true);
+        ws.setAllowFileAccess(false); ws.setSupportZoom(true); ws.setBuiltInZoomControls(true); ws.setDisplayZoomControls(false);
+        android.webkit.CookieManager.getInstance().setAcceptCookie(true);
+        android.webkit.CookieManager.getInstance().setAcceptThirdPartyCookies(invWebV, true);
+        invWebV.setWebViewClient(new WebViewClient() {
+            @Override
+            public boolean shouldOverrideUrlLoading(WebView v, WebResourceRequest r) {
+                String sc = r.getUrl().getScheme();
+                return !("http".equals(sc) || "https".equals(sc));
+            }
+        });
+        invWebV.setWebChromeClient(new WebChromeClient());
+        invBox.addView(bar, new android.widget.LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        invBox.addView(invWebV, new android.widget.LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
+        host.addView(invBox, new android.widget.FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        close.setOnClickListener(new View.OnClickListener() { public void onClick(View v) { closeInvWeb(); } });
+        read.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                if (invWebV == null) return;
+                /* 頁面文字＋所有表格（含同網域的 iframe） */
+                String js = "(function(){function tb(doc,out){var ts=doc.querySelectorAll('table');for(var i=0;i<ts.length&&out.length<40;i++){var R=[],rs=ts[i].rows;for(var j=0;j<rs.length&&j<400;j++){var C=[];for(var k=0;k<rs[j].cells.length;k++)C.push((rs[j].cells[k].innerText||'').replace(/\\s+/g,' ').trim());R.push(C);}out.push(R);}"
+                        + "var g=doc.querySelectorAll('[role=table],[class*=table],[class*=Table]');for(var a=0;a<g.length&&out.length<60;a++){if(g[a].tagName=='TABLE')continue;var rows=g[a].querySelectorAll('[role=row],[class*=row],[class*=Row],tr,li');if(rows.length<2)continue;var R2=[];for(var b=0;b<rows.length&&b<400;b++){var cs=rows[b].querySelectorAll('[role=cell],[role=columnheader],[class*=cell],[class*=Cell],[class*=col],td,th,span');var C2=[];for(var c=0;c<cs.length&&c<12;c++){var tx=(cs[c].innerText||'').replace(/\\s+/g,' ').trim();if(tx&&C2.indexOf(tx)<0)C2.push(tx);}if(C2.length>1)R2.push(C2);}if(R2.length>1)out.push(R2);}}"
+                        + "var T=[],X='';try{tb(document,T);X=document.body.innerText;var fr=document.querySelectorAll('iframe');for(var f=0;f<fr.length;f++){try{var d=fr[f].contentDocument;if(d){tb(d,T);X+='\\n'+d.body.innerText;}}catch(e){}}}catch(e){}"
+                        + "return JSON.stringify({u:location.href,t:document.title,x:X.slice(0,200000),tables:T});})()";
+                invWebV.evaluateJavascript(js, new ValueCallback<String>() {
+                    public void onReceiveValue(String val) {
+                        if (val == null || "null".equals(val)) { Toast.makeText(MainActivity.this, "讀不到這一頁", Toast.LENGTH_SHORT).show(); return; }
+                        web.evaluateJavascript("window.__invWeb&&window.__invWeb(" + val + ")", null);
+                    }
+                });
+            }
+        });
+        invWebV.loadUrl(url);
+    }
+
+    android.graphics.drawable.GradientDrawable rounded(String fill, String stroke, float dp) {
+        android.graphics.drawable.GradientDrawable g = new android.graphics.drawable.GradientDrawable();
+        g.setColor(Color.parseColor(fill)); g.setCornerRadius(6 * dp); g.setStroke((int) Math.max(1, dp), Color.parseColor(stroke));
+        return g;
+    }
+
+    float getStatusBarH() {
+        int id = getResources().getIdentifier("status_bar_height", "dimen", "android");
+        return id > 0 ? getResources().getDimensionPixelSize(id) : 0;
+    }
+
     /* ---------- 原生定位：同時用 GPS、網路、整合定位，並立刻回報最後已知位置 ---------- */
     android.location.LocationManager lm;
     android.location.LocationListener locL;
@@ -331,6 +416,7 @@ public class MainActivity extends Activity {
 
     @Override
     public void onBackPressed() {
+        if (invBox != null) { if (invWebV != null && invWebV.canGoBack()) invWebV.goBack(); else closeInvWeb(); return; }
         web.evaluateJavascript("(window.__back&&window.__back())?1:0", new ValueCallback<String>() {
             @Override
             public void onReceiveValue(String v) {
@@ -454,6 +540,20 @@ public class MainActivity extends Activity {
             return true;
         }
 
+        /* 網頁要用相機（掃描發票 QR Code） */
+        @Override
+        public void onPermissionRequest(final android.webkit.PermissionRequest r) {
+            runOnUiThread(new Runnable() { public void run() {
+                boolean video = false;
+                for (String x : r.getResources()) if (android.webkit.PermissionRequest.RESOURCE_VIDEO_CAPTURE.equals(x)) video = true;
+                if (!video) { r.deny(); return; }
+                if (checkSelfPermission(Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) { r.grant(new String[]{android.webkit.PermissionRequest.RESOURCE_VIDEO_CAPTURE}); return; }
+                if (camReq != null) { try { camReq.deny(); } catch (Exception e) { } }
+                camReq = r;
+                requestPermissions(new String[]{Manifest.permission.CAMERA}, REQ_CAM);
+            } });
+        }
+
         @Override
         public void onGeolocationPermissionsShowPrompt(String origin, GeolocationPermissions.Callback cb) {
             if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
@@ -476,6 +576,11 @@ public class MainActivity extends Activity {
 
     @Override
     public void onRequestPermissionsResult(int req, String[] perms, int[] res) {
+        if (req == REQ_CAM) {
+            boolean ok = res.length > 0 && res[0] == PackageManager.PERMISSION_GRANTED;
+            if (camReq != null) { try { if (ok) camReq.grant(new String[]{android.webkit.PermissionRequest.RESOURCE_VIDEO_CAPTURE}); else camReq.deny(); } catch (Exception e) { } camReq = null; }
+            return;
+        }
         if (req == REQ_LOC) {
             boolean ok = false;
             for (int r : res) if (r == PackageManager.PERMISSION_GRANTED) ok = true;
@@ -625,6 +730,9 @@ public class MainActivity extends Activity {
 
         @JavascriptInterface
         public void offCancel() { Offline.cancel = true; }
+
+        @JavascriptInterface
+        public void invWeb(final String url) { runOnUiThread(new Runnable() { public void run() { openInvWeb(url); } }); }
 
         @JavascriptInterface
         public String version() {
