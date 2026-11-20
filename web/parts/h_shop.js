@@ -16,6 +16,7 @@ async function loadShop() {
   DB.scfg = await IDB.get('kv', 'scfg').catch(() => null) || {fees: SHOP_FEES.slice(), odisc: SHOP_OD.slice()};
   let fx = 0; Object.values(DB.bills).forEach(L => L.forEach(b => { if ((b.odisc || []).some(d => /福利|點數|扣點/.test(d.n)) && ptFix(b, 0, true)) fx++; })); if (fx) IDB.put('kv', 'bills', DB.bills).catch(() => {});
   if (!DB.scfg.v2) { if (!DB.scfg.odisc.includes('福利扣點')) DB.scfg.odisc.unshift('福利扣點'); DB.scfg.v2 = 1; IDB.put('kv', 'scfg', DB.scfg).catch(() => {}); }
+  await loadInv();
 }
 const Shop = {sel: ymd(new Date()), ym: null};
 const shopPlaces = () => DB.side ? DB.side.shop.places : [];

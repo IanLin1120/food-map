@@ -629,7 +629,7 @@ table.piv .s.pr.one{text-align:center;padding-right:.5rem}
 .mcS{flex:none;font-size:1.1rem}
 .mcN{font-size:.78rem;color:var(--text-2);line-height:1.45;padding:.1rem 0}
 /* 功能區切換 */
-body:not(.mShop) #tabbar [data-tab="Shop"]{display:none}
+body:not(.mShop) #tabbar [data-tab="Shop"],body:not(.mShop) #tabbar [data-tab="Inv"]{display:none}
 body.mShop #tabbar [data-tab="Meal"],body.mShop #tabbar [data-tab="Rec"]{display:none}
 .modeCard .modeSw{width:100%;justify-content:center;border-radius:6px;white-space:normal;margin-top:.2rem}
 /* ---- 購物分帳 ---- */
@@ -809,3 +809,44 @@ body.mShop #tabbar [data-tab="Meal"],body.mShop #tabbar [data-tab="Rec"]{display
 .sjGo{flex:none;font-size:.8rem;font-weight:800;color:var(--accent)}
 .sjBar{position:absolute;left:0;bottom:0;height:3px;width:35%;background:var(--accent);border-radius:3px;animation:sjMove 1.6s ease-in-out infinite}
 @keyframes sjMove{0%{left:-35%}100%{left:100%}}
+/* ---- 發票區 ---- */
+.carCard{display:flex;flex-direction:column;align-items:stretch;gap:.35rem;width:100%;padding:.7rem .85rem .6rem;margin-bottom:.7rem;text-align:left;background:#fff;border:1px solid var(--border)}
+.carCard.empty{background:color-mix(in srgb,var(--accent) 10%,var(--surface));border-style:dashed;align-items:flex-start}
+.carCard.empty b{font-size:1rem}.carCard.empty span{font-size:.8rem;color:var(--text-2)}
+.carT{display:flex;justify-content:space-between;align-items:baseline;color:#3a2c22}.carT b{font-size:.9rem}.carT span{font-size:.72rem;color:#8a7a66}
+.c39{width:100%;height:3.4rem;display:block;fill:#111}
+.carN{text-align:center;font-family:ui-monospace,Menlo,monospace;font-weight:800;letter-spacing:.35em;color:#111;font-size:1rem}
+.carBig{background:#fff;border-radius:6px;padding:1rem .8rem;text-align:center}.carBig .c39{height:8rem}.carN.big{font-size:1.5rem;margin-top:.4rem}
+.invCal{padding:.6rem;margin-bottom:.6rem}
+.invSum{display:grid;grid-template-columns:repeat(3,1fr);gap:.4rem;margin-bottom:.7rem}
+.invSum span{background:var(--surface-3);border:1px solid var(--border-soft);border-radius:6px;padding:.45rem .3rem;text-align:center;font-size:.78rem;color:var(--text-2)}
+.invSum b{display:block;font-size:1.02rem;color:var(--text);font-variant-numeric:tabular-nums}
+.invDay{font-size:.82rem;font-weight:800;color:var(--text-2);margin:.7rem 0 .35rem}
+.invC{display:flex;align-items:center;gap:.6rem;width:100%;text-align:left;padding:.65rem .8rem;margin-bottom:.45rem}
+.invL{flex:1;min-width:0}.invL b{display:block;font-size:.98rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.invL small{display:block;font-size:.76rem;color:var(--text-2);margin-top:.15rem;font-variant-numeric:tabular-nums}
+.invR{flex:none;display:flex;flex-direction:column;align-items:flex-end;gap:.25rem}.invR b{font-size:1.05rem;font-variant-numeric:tabular-nums}
+.chip{display:inline-block;font-size:.7rem;font-weight:800;border-radius:6px;padding:.12rem .45rem;background:var(--surface-3);border:1px solid var(--border);color:var(--text-2);white-space:nowrap}
+.chip.ok{background:color-mix(in srgb,var(--success) 14%,var(--surface));border-color:color-mix(in srgb,var(--success) 45%,transparent);color:var(--success)}
+.warnT{color:var(--danger);font-weight:700}
+.invHead{padding:.7rem .85rem;margin-bottom:.6rem}
+.ihNo{display:flex;align-items:center;gap:.5rem;font-size:1.25rem;font-weight:800;font-variant-numeric:tabular-nums;margin-bottom:.4rem}
+.ihR{display:flex;gap:.7rem;width:100%;text-align:left;padding:.3rem 0;font-size:.88rem;border-top:1px dashed var(--border-soft)}
+.ihR span{flex:none;width:4.6rem;color:var(--text-2)}.ihR b{flex:1;font-weight:700;word-break:break-word}
+.ihS b{color:var(--accent)}
+.ihAmt{display:flex;justify-content:space-between;align-items:center;padding:.7rem .85rem}.ihAmt span{font-weight:800}.ihAmt b{font-size:1.35rem;font-variant-numeric:tabular-nums}
+.ihT{padding:.2rem .7rem}
+.ihTr{display:grid;grid-template-columns:1fr 3rem 4.6rem;gap:.4rem;padding:.55rem 0;border-top:1px solid var(--border-soft);font-size:.9rem;font-variant-numeric:tabular-nums}
+.ihTr:first-child{border-top:0}.ihTr.h{font-weight:800;color:var(--text-2);font-size:.8rem}
+.ihTr span:nth-child(2),.ihTr span:nth-child(3){text-align:right}.ihTr.neg{color:var(--success)}
+.invLink{display:flex;justify-content:space-between;width:100%;text-align:left;margin-top:.8rem;padding:.65rem .8rem;font-size:.86rem;color:var(--success);font-weight:700}
+.invSteps{padding-left:1.2rem;line-height:1.75;font-size:.92rem}
+/* 掃描畫面 */
+.scanBox{position:relative;border-radius:6px;overflow:hidden;background:#000;aspect-ratio:4/3}
+.scanBox video{width:100%;height:100%;object-fit:cover;display:block}
+.scFrame{position:absolute;inset:14% 6%;display:grid;grid-template-columns:1fr 1fr;gap:6%;pointer-events:none}
+.scFrame i{border:3px solid rgba(255,255,255,.9);border-radius:8px;box-shadow:0 0 0 2000px rgba(0,0,0,.18)}
+.scTip{position:absolute;left:0;right:0;bottom:.5rem;text-align:center;color:#fff;font-weight:700;font-size:.86rem;text-shadow:0 1px 3px #000}
+.scState{display:flex;gap:.5rem;justify-content:center;margin:.6rem 0}
+.scState .chip{font-size:.82rem;padding:.3rem .7rem}
+.scGot .invC{margin-top:.4rem}
