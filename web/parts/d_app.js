@@ -3,9 +3,11 @@
    ============================================================ */
 let curTab = 'Map';
 /* ---------- 切換功能區：美食 ↔ 購物分帳 ---------- */
+/* 依目前功能區套用畫面（分頁、標題、搜尋提示）；啟動時也會呼叫，重開 App 會回到上次的功能區 */
+function modeUI() { const m = S.mode === 'shop' ? 'shop' : 'food'; document.body.classList.toggle('mShop', m === 'shop');
+  $('#favTitle') && ($('#favTitle').textContent = m === 'shop' ? '我的店家' : '收藏分類'); $('#mQ') && ($('#mQ').placeholder = m === 'shop' ? '搜尋量販店、超商、外送店家…' : '搜尋店家、地址…'); }
 function setMode(m, quiet) { m = m === 'shop' ? 'shop' : 'food'; S.mode = m; saveS(); DB.places = DB.side[m].places; DB.cats = DB.side[m].cats;
-  document.body.classList.toggle('mShop', m === 'shop'); M.filter = 'all'; M.sel = null; try { clearSel(); } catch (e) {}
-  $('#favTitle') && ($('#favTitle').textContent = m === 'shop' ? '我的店家' : '收藏分類'); $('#mQ').placeholder = m === 'shop' ? '搜尋量販店、超商、外送店家…' : '搜尋店家、地址…';
+  M.filter = 'all'; M.sel = null; try { clearSel(); } catch (e) {} modeUI();
   refreshAll(); if (!quiet) { showTab(m === 'shop' ? 'Shop' : 'Map'); buzz(30); toast(m === 'shop' ? '🛒 已切換到「購物分帳」' : '🍽️ 已切換到「美食點餐」', 2200); } }
 function showTab(t) { curTab = t; $$('.page').forEach(p => p.classList.toggle('on', p.id === 'pg' + t)); $$('#tabbar button').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
   if (t === 'Map') mapResize(); else if (t === 'Fav') renderFav(); else if (t === 'Rec') renderRec(); else if (t === 'Meal') renderMeal(); else if (t === 'Shop') renderShop(); else renderSet(); updCounts(); }

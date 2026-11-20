@@ -4,7 +4,7 @@
   applyTheme();
   try { localStorage.removeItem('fm.otaFail'); } catch (e) {}
   try { await loadAll(); } catch (e) { console.error(e); }
-  applyTheme(); initViewer(); initChips(); initSearch(); initCard(); initFav(); initRec(); initMeal(); initShop(); initSet();
+  applyTheme(); modeUI(); initViewer(); initChips(); initSearch(); initCard(); initFav(); initRec(); initMeal(); initShop(); initSet();
   $('#tabbar').addEventListener('click', e => { const b = e.target.closest('button'); if (b) { buzz(8); showTab(b.dataset.tab); } });
   $('#fb3d').onclick = () => { if (!M.map) return; const to3 = M.map.getPitch() <= 5; S.map3d = to3; saveS(); buzz(10); M.map.easeTo({pitch: to3 ? 55 : 0, duration: 500}); };
   $('#fbN').onclick = () => { if (M.map) M.map.easeTo({bearing: 0, duration: 400}); };
