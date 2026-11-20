@@ -69,7 +69,7 @@ var Upd = {
     const self = this;
     if (!this.native()) { openUrl(url); toast('已用瀏覽器開始下載，完成後點通知安裝（直接覆蓋安裝，資料會保留）', 4500); return; }
     if (!NB.canInstall()) { this.pend = {url, v};
-      this.dialog('需要允許安裝', '第一次在 App 內更新，需要允許「食光帳本」安裝應用程式。按「前往設定」打開「允許來自這個來源的應用程式」，回到 App 後會自動繼續下載安裝。',
+      this.dialog('需要允許安裝', '第一次在 App 內更新，需要允許「日日帳本」安裝應用程式。按「前往設定」打開「允許來自這個來源的應用程式」，回到 App 後會自動繼續下載安裝。',
         [['前往設定', () => NB.askInstall()], ['改用瀏覽器下載', () => { self.pend = null; openUrl(url); }], ['取消', () => { self.pend = null; }]]); return; }
     this.pend = null; this.instUrl = url; this.instAt = Date.now();
     this.dialog('⬇ 更新到 v' + esc(v || ''), '<div id="apkTx" class="small muted">準備下載…</div><div class="prog" style="margin-top:8px"><i id="apkBar" style="width:0%"></i></div>', [['在背景繼續', null]]);
@@ -90,7 +90,7 @@ var Upd = {
     else if (d.state === 'error') { this.instAt = 0; const u = this.instUrl; this.dialog('更新沒有完成', esc(d.msg || '未知錯誤') + '<br><br>可以改用瀏覽器下載 APK，再點通知安裝（直接覆蓋舊版）。', [['改用瀏覽器下載', () => { if (u) openUrl(u); }], ['關閉', null]]); }
   },
   restore() { this.dialog('還原為 APK 內建版本？', '會刪除線上下載的新版介面，改回這支 APK 內建的版本。收藏、菜單、食譜與設定不受影響。', [['還原', () => { try { localStorage.removeItem('fm.ota'); } catch (e) {} location.replace(location.pathname + '#builtin'); location.reload(); }], ['取消', null]]); },
-  share() { const url = GH.pages + 'download.html'; if (IS_APP && NB.share) NB.share('食光帳本 App 下載：' + url); else if (navigator.share) navigator.share({title: '食光帳本', url}).catch(() => {}); else copyText(url); },
+  share() { const url = GH.pages + 'download.html'; if (IS_APP && NB.share) NB.share('日日帳本 App 下載：' + url); else if (navigator.share) navigator.share({title: '日日帳本', url}).catch(() => {}); else copyText(url); },
   dialog(title, html, btns) { if (this.dlg) this.dlg.close(); this.dlg = dialog(title, html, btns); return this.dlg; },
   isOpen() { return !!(this.dlg && !this.dlg.closed); },
   /* 設定頁的「版本與更新」卡片 */

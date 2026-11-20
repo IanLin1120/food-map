@@ -14,7 +14,7 @@ const saveMcfg = debounce(() => IDB.put('kv', 'mcfg', DB.mcfg).catch(saveErr), 2
 const saveDays = debounce(() => IDB.put('kv', 'days', DB.days).catch(saveErr), 200);
 async function loadMeal() {
   DB.mcfg = await IDB.get('kv', 'mcfg').catch(() => null) || {types: MEAL_DEF_TYPES.map(([name, icon], i) => ({id: 't' + i + uid(), name, icon})), people: [{id: 'u' + uid(), name: '我', icon: '🙂'}], custom: []};
-  DB.mcfg.custom = DB.mcfg.custom || []; DB.days = await IDB.get('kv', 'days').catch(() => null) || {};
+  DB.mcfg.custom = DB.mcfg.custom || []; DB.days = await IDB.get('kv', 'days').catch(() => null) || {}; DB.lists = await IDB.get('kv', 'lists').catch(() => null) || {};
 }
 const mType = id => DB.mcfg.types.find(t => t.id === id) || {id, name: '（已刪除的餐別）', icon: '🍴'};
 const FP = () => DB.side ? DB.side.food.places : DB.places;
@@ -45,9 +45,9 @@ function renderMeal() {
   const yrs = []; for (let y = Math.min(yNow - 5, Y); y <= Math.max(yNow + 2, Y); y++) yrs.push(y);
   let cells = ''; for (let i = 0; i < first.getDay(); i++) cells += '<span class="cd emp"></span>';
   for (let d = 1; d <= nd; d++) { const k = ymd(new Date(Y, Mo, d)), ms = DB.days[k] || [], t = dayTotal(k), dow = (first.getDay() + d - 1) % 7;
-    cells += `<button class="cd ${k === Meal.sel ? 'sel' : ''} ${k === today ? 'tdy' : ''} ${dow === 0 || dow === 6 ? 'we' : ''}" data-d="${k}"><b>${d}</b>${ms.length ? '<em class="dot"></em>' : ''}</button>`; }
+    cells += `<button class="cd ${k === Meal.sel ? 'sel' : ''} ${k === today ? 'tdy' : ''} ${dow === 0 || dow === 6 ? 'we' : ''}" data-d="${k}"><b>${d}</b>${ms.length || dayLists(k).length ? `<span class="dots">${ms.length ? '<em class="dot"></em>' : ''}${dayLists(k).length ? '<em class="dot ls"></em>' : ''}</span>` : ''}</button>`; }
   const ms = DB.days[Meal.sel] || [];
-  $('#mealSub').textContent = `${sel.getMonth() + 1}月${sel.getDate()}日（${MWD[sel.getDay()]}）${ms.length ? ' · ' + ms.length + ' 餐' : ''}`;
+  updMealSub();
   /* 每個人今天的總金額 */
   const per = {}; ms.forEach(m => { const pm = perOf(m); Object.keys(pm).forEach(id => { per[id] = (per[id] || 0) + pm[id]; }); });
   const order = DB.mcfg.people.map(u => u.id).concat(Object.keys(per).filter(id => !DB.mcfg.people.some(u => u.id === id))).filter(id => per[id] != null);
@@ -56,10 +56,14 @@ function renderMeal() {
       <div class="calWd">${MWD.map((w, i) => `<span class="${i === 0 || i === 6 ? 'we' : ''}">${w}</span>`).join('')}</div>
       <div class="calG">${cells}</div></div>
     <div class="dayHead"><b class="dhD">${sel.getMonth() + 1}月${sel.getDate()}日 星期${MWD[sel.getDay()]}</b><span class="grow"></span>${ms.length ? `<span class="dayTot">${money(dayTotal(Meal.sel))}</span><button class="btn sm" data-a="export">📤 匯出</button>` : ''}</div>
-    ${ms.map(mealCard).join('') || '<div class="empty mealEmpty"><span class="big">🍽️</span>這天還沒有安排要吃什麼<br><span class="small">按下面的「新增餐點」選餐別和店家</span></div>'}
-    <button class="btn pri mealAdd" data-a="addMeal">＋ 新增餐點</button>
+    ${ms.length ? `<div class="secT">🍱 餐點（${ms.length}）</div>` : ''}${ms.map(mealCard).join('')}
+    ${dayLists(Meal.sel).length ? `<div class="secT">🛒 購物清單（${dayLists(Meal.sel).length}）</div>${dayLists(Meal.sel).map(listCard).join('')}` : ''}
+    ${!ms.length && !dayLists(Meal.sel).length ? '<div class="empty mealEmpty"><span class="big">📒</span>這天還沒有安排<br><span class="small">按上面的「🍱 記一餐」記錄吃什麼、誰付多少，<br>或「🛒 購物清單」列出要買的東西</span></div>' : ''}
     ${order.length ? `<div class="perSum card"><div class="psH">👥 每個人這天的總金額</div>${order.map(id => { const u = mWho(id); return `<div class="psR"><span class="psI">${esc(u.icon)}</span><b class="grow">${esc(u.name)}</b><span>${money(per[id])}</span></div>`; }).join('')}<div class="psR tot"><b class="grow">合計</b><span>${money(dayTotal(Meal.sel))}</span></div></div>` : ''}`;
+  $$('.slist', box).forEach(bindListSort);
 }
+function updMealSub() { const sel = ymdDate(Meal.sel), ms = DB.days[Meal.sel] || [], ls = dayLists(Meal.sel), left = ls.reduce((t, l) => t + (l.items || []).length, 0);
+  $('#mealSub').textContent = `${sel.getMonth() + 1}月${sel.getDate()}日（${MWD[sel.getDay()]}）${ms.length ? ' · ' + ms.length + ' 餐' : ''}${ls.length ? ` · 🛒 ${left ? '待買 ' + left : '已買齊'}` : ''}`; }
 function mealCard(m) {
   const T = mType(m.type), P = FP().find(x => x.id === m.place), groups = ownIds(m), shs = shareSets(m), per = perOf(m), sha = shareOf(m), any = (m.items || []).length;
   const tbl = xs => `<table class="mlT"><tr><th class="n">品項</th><th>單價</th><th>數量</th><th>小計</th></tr>${xs.map(x => `<tr data-i="${x.id}"><td class="n" data-a="editItem">${esc(x.n)}${xTags(x)}</td><td class="r">${money(x.p)}</td><td class="qc"><span class="q"><button data-a="qm">−</button><b>${x.q}</b><button data-a="qp">＋</button></span></td><td class="r b">${money(xAmt(x))}</td></tr>`).join('')}</table>`;
@@ -79,6 +83,10 @@ function initMeal() {
   const box = $('#mealBody');
   $('#mealToday').onclick = () => { const d = new Date(); Meal.sel = ymd(d); Meal.ym = [d.getFullYear(), d.getMonth()]; renderMeal(); };
   $('#mealSet').onclick = () => openMealSettings(); $('#mealFind').onclick = () => openMealSearch();
+  $('#mealAddBtn').onclick = () => { buzz(15); box.dispatchEvent(new CustomEvent('fm:addMeal')); }; $('#listAddBtn').onclick = () => { buzz(15); newList(); };
+  box.addEventListener('fm:addMeal', async () => { const t = await pickMealType(); if (!t) return; const st = await pickStore(); if (st === undefined) return;
+    const nm = {id: 'm' + uid(), type: t.id, place: st ? st.id || '' : '', pname: st ? st.name : '', items: []}; (DB.days[Meal.sel] = DB.days[Meal.sel] || []).push(nm); mealChanged(); openOrder(nm); });
+  initLists();
   box.addEventListener('change', e => { if (e.target.id === 'calY') Meal.ym[0] = +e.target.value; else if (e.target.id === 'calM') Meal.ym[1] = +e.target.value; else return;
     const nd = new Date(Meal.ym[0], Meal.ym[1] + 1, 0).getDate(), d = Math.min(ymdDate(Meal.sel).getDate(), nd); Meal.sel = ymd(new Date(Meal.ym[0], Meal.ym[1], d)); renderMeal(); });
   box.addEventListener('click', async e => { const b = e.target.closest('[data-a],[data-d]'); if (!b) return;
@@ -255,7 +263,7 @@ function editMealItem(m, x) {
 const MK = {types: {title: '餐別', unit: '個', emoji: CAT_EMOJI, ph: '例如：早餐、下午茶、宵夜', def: '🍴', used: id => Object.values(DB.days).some(L => L.some(m => m.type === id))},
   people: {title: '人名', unit: '位', emoji: PERSON_EMOJI, ph: '例如：我、老婆、小明', def: '🙂', used: id => Object.values(DB.days).some(L => L.some(m => m.items.some(x => x.who === id || (isShare(x) && x.share.includes(id)))))}};
 function openMealSettings(after) {
-  const sh = sheet({title: '⚙️ 點餐設定', full: true, onClose() { renderMeal(); after && after(); }});
+  const sh = sheet({title: '⚙️ 日常設定', full: true, onClose() { renderMeal(); after && after(); }});
   const draw = () => { const cus = {}; DB.mcfg.custom.forEach(c => { const k = c.place && FP().find(p => p.id === c.place) ? FP().find(p => p.id === c.place).name : c.pname || '未指定店家'; (cus[k] = cus[k] || []).push(c); });
     const days = Object.keys(DB.days).length;
     sh.body.innerHTML = ['types', 'people'].map(k => `<div class="msSec"><div class="msH"><b class="grow">${MK[k].title}</b><button class="btn sm" data-a="add" data-k="${k}">＋ 新增</button></div><div class="small muted" style="margin:-.2rem 0 .5rem">按住 ☰ 拖曳調整順序</div>
@@ -334,9 +342,12 @@ function personBlock(m, amt) { const per = perOf(m), out = [];
     if (amt) out.push(`小計：${ntd(per[id])}`); });
   return out; }
 function openMealSearch() {
-  let q = ''; const sh = sheet({title: '🔍 搜尋吃過的店家', full: true});
-  sh.body.innerHTML = `<div class="searchBox" style="margin-bottom:.8rem"><input id="msQ" type="search" placeholder="輸入店名或品項，例如：鴨香飯"></div><div id="msR"></div>`;
+  let q = '', tab = 'meal'; const sh = sheet({title: '🔍 搜尋日常紀錄', full: true});
+  sh.body.innerHTML = `<div class="searchBox" style="margin-bottom:.6rem"><input id="msQ" type="search" placeholder="店名或品項，例如：鴨香飯、雞蛋"></div><div class="dkSeg" style="grid-template-columns:1fr 1fr"><button data-t="meal" class="on">🍱 餐點</button><button data-t="list">🛒 購物清單</button></div><div id="msR"></div>`;
+  sh.body.addEventListener('click', e => { const t = e.target.closest('[data-t]'); if (!t) return; buzz(8); tab = t.dataset.t; $$('[data-t]', sh.body).forEach(b => b.classList.toggle('on', b === t)); draw(); });
   const draw = () => { const by = {};
+    if (tab === 'list') { const R = []; Object.keys(DB.lists).sort().reverse().forEach(k => DB.lists[k].forEach(l => { const nm = listStore(l) || '購物清單', all = (l.items || []).concat(l.bought || []), hits = q ? all.filter(x => x.n.toLowerCase().includes(q)) : all; if (q && !nm.toLowerCase().includes(q) && !hits.length) return; R.push({k, l, nm, hits}); }));
+      $('#msR', sh.body).innerHTML = R.length ? R.map(r => `<button class="srD" data-k="${r.k}"><div class="row"><b class="grow">${dayLabel(r.k)} 🛒 ${esc(r.nm)}</b><span class="srA">${(r.l.items || []).length ? '待買 ' + r.l.items.length : '已買齊'}</span></div><div class="srL">${esc((q ? r.hits : (r.l.items || []).concat(r.l.bought || [])).slice(0, 8).map(x => ((r.l.bought || []).includes(x) ? '☑ ' : '☐ ') + x.n).join('　'))}</div></button>`).join('') : `<div class="empty">${Object.keys(DB.lists).length ? '找不到符合的清單或品項' : '還沒有購物清單'}</div>`; return; }
     Object.keys(DB.days).sort().reverse().forEach(k => DB.days[k].forEach(m => { const nm = storeName(m) || '未選店家', hit = !q || nm.toLowerCase().includes(q) || m.items.some(x => x.n.toLowerCase().includes(q)); if (!hit) return;
       const key = m.place || 'n:' + nm; (by[key] = by[key] || {nm, place: m.place, rows: []}).rows.push({k, m}); }));
     const G = Object.values(by);
@@ -370,7 +381,7 @@ function openExport(k, mid) {
 }
 /* 產生 .xlsx（不用外部程式庫：手寫 OOXML + 不壓縮的 zip） */
 function mealXlsx(k, L) {
-  const rows = [[{v: '食光帳本 點餐紀錄　' + dayLabel(k), s: 2}], [], ['日期', '餐別', '店家', '人名', '品項', '尺寸／選項', '單價', '數量', '小計'].map(v => ({v, s: 1}))];
+  const rows = [[{v: '日日帳本 點餐紀錄　' + dayLabel(k), s: 2}], [], ['日期', '餐別', '店家', '人名', '品項', '尺寸／選項', '單價', '數量', '小計'].map(v => ({v, s: 1}))];
   const per = {};
   L.forEach(m => { const T = mType(m.type), nm = storeName(m); personLines(m, false);
     ownIds(m).forEach(id => m.items.filter(x => !isShare(x) && x.who === id).forEach(x => rows.push([k, T.name, nm, mWho(id).name, x.n, [x.s, x.o].filter(Boolean).join('、'), numP(x.p), x.q, xAmt(x)])));

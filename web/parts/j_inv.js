@@ -150,7 +150,7 @@ function openInvScan() {
     requestAnimationFrame(tick); };
   navigator.mediaDevices.getUserMedia({video: {facingMode: {ideal: 'environment'}, width: {ideal: 1920}, height: {ideal: 1080}}, audio: false})
     .then(s => { stream = s; if (stop) { s.getTracks().forEach(t => t.stop()); return; } v.srcObject = s; v.play().catch(() => {}); tick(); })
-    .catch(er => { $('#scTip', sh.body).textContent = '❌ 打不開相機：' + (er.name === 'NotAllowedError' ? '請允許食光帳本使用相機' : er.message); });
+    .catch(er => { $('#scTip', sh.body).textContent = '❌ 打不開相機：' + (er.name === 'NotAllowedError' ? '請允許日日帳本使用相機' : er.message); });
 }
 
 /* ---------- 統編查店名（經濟部商工登記公示資料，查不到就顯示統編，可以自己改） ---------- */
@@ -194,7 +194,7 @@ function parseInvCsv(t) {
 function openInvWeb() {
   if (!(IS_APP && NB.invWeb)) { const sh = sheet({title: '🌐 載具發票'}); sh.body.innerHTML = `<p>這個功能需要在 App 裡使用（要用 App 內的瀏覽器打開財政部網站，再讀取頁面）。</p><p class="small muted">也可以到財政部電子發票整合服務平台下載「載具消費明細」CSV，再按「📄 匯入 CSV」。</p>`; return; }
   const sh = sheet({title: '🌐 讀取載具發票（實驗性）', foot: '<button class="btn pri" data-a="go">打開財政部網站</button>'});
-  sh.body.innerHTML = `<ol class="invSteps"><li>按下面的按鈕，會在 App 裡打開<b>財政部電子發票整合服務平台</b></li><li>用你的<b>手機條碼＋驗證碼</b>登入（帳密只在財政部網站上輸入，食光帳本不會儲存）</li><li>進到「消費發票查詢」，打開想要的發票明細</li><li>按上面的 <b>📥 讀取這一頁</b>，頁面上的發票和品項就會存進發票區</li></ol>
+  sh.body.innerHTML = `<ol class="invSteps"><li>按下面的按鈕，會在 App 裡打開<b>財政部電子發票整合服務平台</b></li><li>用你的<b>手機條碼＋驗證碼</b>登入（帳密只在財政部網站上輸入，日日帳本不會儲存）</li><li>進到「消費發票查詢」，打開想要的發票明細</li><li>按上面的 <b>📥 讀取這一頁</b>，頁面上的發票和品項就會存進發票區</li></ol>
     <div class="gTip">💡 發票列表頁可以一次讀到多張發票的表頭（日期、店家、金額）；要品項的話請打開那張發票的明細頁再讀一次。網站改版可能會讀不到，這時可以改用「📄 匯入 CSV」。</div>`;
   sh.foot.onclick = e => { if (!e.target.closest('[data-a="go"]')) return; sh.close(); NB.invWeb('https://www.einvoice.nat.gov.tw/'); };
 }
@@ -450,16 +450,16 @@ async function openInvAcc(setup) {
   const draw = () => { const on = NB.invAccState() === 'on';
     sh.body.innerHTML = `<div class="accSt ${on ? 'on' : ''}">${on ? '✅ 協助工具已開啟' : '⚠️ 還沒開啟協助工具'}</div>
       <ol class="invSteps">
-        <li>${on ? '<s>開啟協助工具</s>（已完成）' : '按下面的「⚙️ 協助工具設定」→ 找到「<b>食光帳本 發票讀取</b>」→ 開啟'}</li>
+        <li>${on ? '<s>開啟協助工具</s>（已完成）' : '按下面的「⚙️ 協助工具設定」→ 找到「<b>日日帳本 發票讀取</b>」→ 開啟'}</li>
         <li>之後在發票區按「🤖 協助工具」，會<b>自動打開發票大師</b>，畫面上出現一顆綠色圓形按鈕 🧾（可以拖曳）</li>
         <li>打開<b>發票列表</b>或<b>發票明細</b>，按一下 🧾：
           <div class="accBtns">明細頁 → 讀這一張<br>列表頁 → 自動往下捲到底，讀出全部發票<br>讀完可以選「🔁 也讀取每張明細」，自動一張張打開讀品項<br>沒有發票號碼 → 會跳出「未偵測到發票號碼」</div></li>
-        <li>按「✓ 返回食光帳本」，讀到的發票自動存進發票區，同一張不會重複</li></ol>
+        <li>按「✓ 返回日日帳本」，讀到的發票自動存進發票區，同一張不會重複</li></ol>
       <div class="gTip">🔒 只有你按 🧾 時才會讀取畫面上的文字，讀到的內容只存在這支手機裡，不會上傳。不用時可以到協助工具設定關掉。</div>`; };
   draw();
   sh.foot.addEventListener('click', e => { const t = e.target.closest('[data-a]'); if (!t) return; buzz(10);
     if (t.dataset.a === 'set') { NB.invAccSettings(); return; }
-    if (NB.invAccState() !== 'on') { toast('請先到協助工具設定開啟「食光帳本 發票讀取」', 3500); NB.invAccSettings(); return; }
+    if (NB.invAccState() !== 'on') { toast('請先到協助工具設定開啟「日日帳本 發票讀取」', 3500); NB.invAccSettings(); return; }
     sh.close(); openInvAcc(); });
   const re = () => { if (!document.hidden && !sh.closed) draw(); }; document.addEventListener('visibilitychange', re);
 }

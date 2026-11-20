@@ -6,7 +6,7 @@ root = os.path.join(here, '..')
 ver = os.environ.get('VER') or open(os.path.join(root, 'VERSION')).read().strip()
 R = lambda *p: open(os.path.join(here, *p), encoding='utf-8').read()
 
-order = ['a_core', 'b_map', 'c_places', 'd_app', 'e_update', 'f_area', 'g_meal', 'h_shop', 'i_guide', 'j_inv', 'z_boot']
+order = ['a_core', 'b_map', 'c_places', 'd_app', 'e_update', 'f_area', 'g_meal', 'h_shop', 'i_guide', 'j_inv', 'k_list', 'z_boot']
 app = '\n'.join(R('parts', n + '.js') for n in order).replace('__VER__', ver)
 assert '</script' not in app.lower()
 assert "const APP_VERSION = '" + ver + "'" in app          # 線上更新靠這一行確認下載到的版本
@@ -14,7 +14,7 @@ shell = R('shell.html').strip()
 assert shell.startswith('<body>')
 html = ('<!DOCTYPE html>\n<html lang="zh-Hant" data-theme="light">\n<head>\n<script>' + R('ota_boot.js').replace('__VER__', ver) + '</script>\n'
   '<meta charset="utf-8">\n<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">\n'
-  '<meta name="theme-color" content="#efe5d3">\n<title>食光帳本</title>\n<link rel="icon" href="icon-192.png">\n'
+  '<meta name="theme-color" content="#efe5d3">\n<title>日日帳本</title>\n<link rel="icon" href="icon-192.png">\n'
   '<style>' + R('vendor', 'maplibre.css') + '</style>\n<style>' + R('app.css') + '</style>\n</head>\n' +
   shell.replace('</body>', '') + '\n<script>' + R('vendor', 'maplibre.js') + '</script>\n<script>' + R('vendor', 'topojson.js') + '</script>\n<script>' + R('vendor', 'tw_topo.js') + '</script>\n<script>' + R('vendor', 'jsqr.js') + '</script>\n<script>' + app + '</script>\n</body>\n</html>\n')
 
