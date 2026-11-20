@@ -30,7 +30,7 @@
   </section>
 
   <section class="page" id="pgInv">
-    <div class="pgHead two"><div class="phRow"><h1>發票</h1><div class="sub" id="invSub"></div></div><div class="shopAdd top"><button class="btn pri" id="invScan">📷 掃描發票</button><button class="btn" id="invWeb">🌐 載具發票</button></div><div class="pgTools"><button class="btn" id="invCsv">📄 匯入 CSV</button><button class="btn" id="invFind">🔍 搜尋</button><button class="btn" id="invSet">⚙️ 設定</button></div></div>
+    <div class="pgHead two"><div class="phRow"><h1>發票</h1><div class="sub" id="invSub"></div></div><div class="pgTools"><button class="btn pri" id="invScan">📷 掃描</button><button class="btn" id="invShot">🖼️ 截圖</button><button class="btn" id="invAcc">🤖 協助工具</button></div><div class="pgTools"><button class="btn" id="invMore">📥 其他匯入</button><button class="btn" id="invFind">🔍 搜尋</button><button class="btn" id="invSet">⚙️ 設定</button></div><div id="invJobs" hidden></div></div>
     <div class="pgBody"><div class="pgInner" id="invBody"></div></div>
   </section>
 
@@ -71,6 +71,7 @@
 <div id="busy"><div class="box"><div class="spin"></div><div id="busyT"></div></div></div>
 <div id="toast"></div>
 <input type="file" id="filePick" accept="image/*" multiple class="hide">
+<input type="file" id="invShotPick" accept="image/*" multiple class="hide">
 <input type="file" id="csvPick" accept=".csv,.txt,text/csv,text/plain,text/comma-separated-values,application/vnd.ms-excel" class="hide">
 <input type="file" id="jsonPick" accept=".json,application/json" class="hide">
 </body>
