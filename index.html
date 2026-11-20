@@ -4,7 +4,7 @@
 <script>/* 線上更新開機程式：手機上若已下載比 APK 內建更新的介面版本，就改用新版（存在 IndexedDB）。
    新版連續兩次沒有正常開啟 → 自動退回 APK 內建版本。網址加上 #builtin 也會強制使用內建版本。 */
 (function () {
-  var B = '3.5.0'; if (!window.__OTA) window.APP_BUILTIN = B;
+  var B = '3.5.1'; if (!window.__OTA) window.APP_BUILTIN = B;
   if (window.__OTA || location.hash.indexOf('builtin') >= 0) return;
   var v = null; try { v = JSON.parse(localStorage.getItem('fm.ota') || 'null'); } catch (e) {}
   function gt(a, b) { a = String(a).split('.').map(Number); b = String(b).split('.').map(Number); for (var i = 0; i < Math.max(a.length, b.length); i++) { var p = a[i] || 0, q = b[i] || 0; if (p !== q) return p > q; } return false; }
@@ -160,10 +160,11 @@ h1,h2,h3{margin:0;line-height:1.25;text-wrap:balance}
 #mCard h3{font-size:1.08rem}
 #mCard .acts{display:flex;gap:.45rem;margin-top:.65rem;flex-wrap:wrap}
 #mCard .acts .btn{flex:1}
-.mapHint{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:3;padding:.6rem 1rem;border-radius:var(--r-sm);font-size:.85rem;text-align:center;max-width:80%}
+.mapHint{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:3;padding:.6rem 1rem;border-radius:var(--r-sm);font-size:.85rem;text-align:center;width:max-content;max-width:80%}
 
 /* 旗子圖釘 */
-.pin{position:relative;width:0;height:0;cursor:pointer}
+.pin{width:0;height:0;cursor:pointer}
+.maplibregl-marker.pin,.maplibregl-marker.meWrap,.maplibregl-canvas-container>.maplibregl-marker{position:absolute!important;top:0;left:0}
 .pin .pole{position:absolute;left:-1.5px;bottom:0;width:3px;height:38px;border-radius:2px;background:linear-gradient(#5a4532,#2f251b)}
 .pin .base{position:absolute;left:-5px;bottom:-3px;width:10px;height:6px;border-radius:50%;background:rgba(40,30,20,.35)}
 .pin .flag{position:absolute;left:1px;bottom:16px;height:24px;min-width:30px;padding:0 9px 0 5px;display:flex;align-items:center;font-size:14px;line-height:1;
@@ -252,7 +253,7 @@ h1,h2,h3{margin:0;line-height:1.25;text-wrap:balance}
 .shWrap.center{align-items:center}
 .dlg p{margin:0 0 1rem;white-space:pre-wrap}
 .dlg .row{justify-content:flex-end}
-#toast{position:fixed;left:50%;bottom:calc(var(--nav) + var(--sab) + 1.2rem);transform:translate(-50%,1rem);background:#3a2e22;color:#fbf3e4;padding:.6rem 1.1rem;border-radius:999px;font-size:.88rem;font-weight:600;z-index:90;opacity:0;pointer-events:none;transition:.25s;max-width:88%;text-align:center;box-shadow:0 8px 24px rgba(0,0,0,.35)}
+#toast{position:fixed;left:50%;bottom:calc(var(--nav) + var(--sab) + 1.2rem);transform:translate(-50%,1rem);background:#3a2e22;color:#fbf3e4;padding:.6rem 1.1rem;border-radius:999px;font-size:.88rem;font-weight:600;z-index:90;opacity:0;pointer-events:none;transition:.25s;width:max-content;max-width:88vw;text-align:center;box-shadow:0 8px 24px rgba(0,0,0,.35)}
 #toast.on{opacity:1;transform:translate(-50%,0)}
 #busy{position:fixed;inset:0;z-index:95;background:rgba(30,20,10,.5);display:none;align-items:center;justify-content:center}
 #busy.on{display:flex}
@@ -410,7 +411,7 @@ h1,h2,h3{margin:0;line-height:1.25;text-wrap:balance}
 .jobBar{display:flex;gap:.7rem;align-items:center;padding:.65rem .8rem;border-radius:var(--r-sm);background:color-mix(in srgb,var(--olive) 16%,var(--surface));border:1px solid color-mix(in srgb,var(--olive) 40%,transparent);margin-bottom:.7rem;font-weight:700;font-size:.9rem}
 .jobBar small{display:block;font-weight:400;color:var(--muted)}
 .jobBar .spin,#aiPill .spin{width:1.2rem;height:1.2rem;margin:0;flex:none;border-width:2.5px}
-#aiPill{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--nav) + var(--sab) + .6rem);z-index:45;display:flex;gap:.5rem;align-items:center;padding:.45rem .9rem;border-radius:999px;font-size:.8rem;font-weight:700;max-width:92%;color:var(--text)}
+#aiPill{position:fixed;left:50%;width:max-content;max-width:92vw;transform:translateX(-50%);bottom:calc(var(--nav) + var(--sab) + .6rem);z-index:45;display:flex;gap:.5rem;align-items:center;padding:.45rem .9rem;border-radius:999px;font-size:.8rem;font-weight:700;max-width:92%;color:var(--text)}
 #aiPill span:last-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .callout a{color:var(--accent-2);font-weight:700}
 .dropOn{outline:3px dashed var(--accent);outline-offset:-2px}
@@ -459,7 +460,7 @@ h1,h2,h3{margin:0;line-height:1.25;text-wrap:balance}
 /* 定位中 */
 .fab.locating svg{animation:spin 1.2s linear infinite}
 .fab.locating{color:var(--accent)}
-.meWrap{position:relative;width:18px;height:18px}
+.meWrap{width:18px;height:18px}
 .meAcc{position:absolute;left:50%;top:50%;border-radius:50%;background:rgba(47,111,214,.14);border:1px solid rgba(47,111,214,.35);transform:translate(-50%,-50%);pointer-events:none}
 
 /* 菜單：組合選項、加購 */
@@ -747,7 +748,7 @@ body.mShop #tabbar [data-tab="Meal"],body.mShop #tabbar [data-tab="Rec"]{display
 .pb{display:inline-flex;align-items:center;justify-content:center;padding:.25rem .5rem;border-radius:6px;border:1px solid var(--border);background:var(--surface);font-weight:700;font-size:.66rem;position:relative;white-space:nowrap}
 .pb.pri{background:var(--accent);color:#fff;border-color:transparent}.pb.wide{display:flex;margin-top:.3rem}
 .pBtns{display:flex;gap:.3rem;flex-wrap:wrap;margin-top:.3rem;position:relative}
-.pin{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:.3rem .5rem;color:var(--text-2)}
+.pSrch{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:.3rem .5rem;color:var(--text-2)}
 .pMap{height:5.5rem;border-radius:6px;position:relative;background:linear-gradient(115deg,transparent 46%,#fff8ea 46% 52%,transparent 52%),linear-gradient(10deg,transparent 40%,#fff8ea 40% 46%,transparent 46%),#e8d9b8}
 .pMap .flag{position:absolute;left:30%;top:22%;font-size:1.2rem}.pMap .f2{left:64%;top:48%}
 .pImgs{display:flex;gap:.3rem;margin:.3rem 0}.pImgs i{font-style:normal;font-size:1.1rem;background:var(--surface);border:1px solid var(--border-soft);border-radius:6px;padding:.2rem .45rem}
@@ -961,6 +962,47 @@ button.ihTr{width:100%;text-align:left;border:0;border-top:1px solid var(--borde
 .slDone summary::-webkit-details-marker{display:none}.slDone summary::after{content:' ▸'}.slDone[open] summary::after{content:' ▾'}
 .slR.done .slN{text-decoration:line-through;color:var(--muted);font-weight:500}.slR.done .btn{flex:none;border-radius:6px}
 .pList{display:flex;flex-direction:column;gap:.2rem;margin:.3rem 0}.pList span{display:flex;align-items:center;gap:.35rem;font-size:.7rem}.pList i{width:.7rem;height:.7rem;border-radius:50%;border:1.5px solid #6f8f3e;flex:none}.pList .ck{opacity:.45;text-decoration:line-through}.pList .ck i{background:#6f8f3e}.pList em{font-style:normal;color:var(--accent);font-weight:800}
+
+/* ---------- 設定：目前所在功能區 ---------- */
+.areaHero{--h:#b5653a;position:relative;display:flex;align-items:center;gap:.85rem;margin:0 0 1.1rem;padding:1rem 1rem 1rem .95rem;border-radius:var(--r);overflow:hidden;
+  background:linear-gradient(135deg,color-mix(in srgb,var(--h) 22%,var(--surface)),color-mix(in srgb,var(--h) 7%,var(--surface)) 70%);border:1px solid color-mix(in srgb,var(--h) 30%,var(--border-soft));box-shadow:0 3px 14px var(--sh)}
+.areaHero.shop{--h:#6f7d3c}
+.areaHero::after{content:'';position:absolute;right:-2.2rem;top:-2.2rem;width:7rem;height:7rem;border-radius:50%;background:color-mix(in srgb,var(--h) 13%,transparent);pointer-events:none}
+.areaHero .ahIc{flex:none;width:3.3rem;height:3.3rem;border-radius:12px;display:grid;place-items:center;font-size:1.75rem;background:var(--surface);border:1.5px solid color-mix(in srgb,var(--h) 40%,transparent);box-shadow:inset 0 -3px 0 color-mix(in srgb,var(--h) 18%,transparent)}
+.areaHero .ahT{flex:1;min-width:0;position:relative;z-index:1}
+.areaHero .ahT small{display:block;font-size:.72rem;font-weight:800;letter-spacing:.08em;color:color-mix(in srgb,var(--h) 75%,var(--text))}
+.areaHero .ahT b{display:block;font-size:1.28rem;font-weight:900;line-height:1.25;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.areaHero .ahTabs{display:flex;flex-wrap:wrap;gap:.3rem;margin-top:.45rem}
+.areaHero .ahTabs span{white-space:nowrap;font-size:.7rem;font-weight:700;padding:.12rem .45rem;border-radius:6px;background:color-mix(in srgb,var(--surface) 80%,transparent);border:1px solid color-mix(in srgb,var(--h) 25%,var(--border-soft));color:var(--text-2)}
+.areaHero .ahOn{position:absolute;right:.7rem;top:.65rem;z-index:1;display:inline-flex;align-items:center;gap:.3rem;white-space:nowrap;font-size:.68rem;font-weight:800;color:var(--h);padding:.12rem .45rem;border-radius:6px;background:var(--surface);border:1px solid color-mix(in srgb,var(--h) 35%,transparent)}
+.areaHero .ahOn i{width:.45rem;height:.45rem;border-radius:50%;background:var(--h);box-shadow:0 0 0 3px color-mix(in srgb,var(--h) 22%,transparent)}
+
+/* 設定列：說明文字很長又有下拉選單/分段按鈕時，標題和控制項同一行、說明放到下一行整行顯示 */
+.setR:not(.col):has(>.t small):has(>select,>.seg){display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:.7rem;row-gap:.3rem;align-items:center}
+.setR:not(.col):has(>.t small):has(>select,>.seg)>.t{display:contents}
+.setR:not(.col):has(>.t small):has(>select,>.seg)>.t b{grid-column:1;grid-row:1}
+.setR:not(.col):has(>.t small):has(>select,>.seg)>.t small{grid-column:1/-1;grid-row:2;color:var(--muted);line-height:1.45}
+.setR:not(.col):has(>.t small):has(>select,>.seg)>:not(.t){grid-column:2;grid-row:1}
+.ihS b{display:flex;align-items:flex-start;gap:.3rem}.ihS b em{font-style:normal;flex:1;min-width:0}.ihS b .ed{flex:none;font-style:normal}
+.ihNo .chip:empty{display:none}
+
+/* 頁首：標題不准直排，空間不夠時右邊按鈕換到下一行 */
+.pgHead{flex-wrap:wrap;row-gap:.5rem}
+.pgHead h1{white-space:nowrap}
+.pgHead>.grow{flex:1 1 9.5rem;min-width:0}
+.pgHead>.grow .sub{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pgHead>.btn{flex:none;white-space:nowrap}
+#pgRec .pgInner>.row{flex-wrap:wrap;row-gap:.5rem}#pgRec .pgInner>.row .searchBox{flex:1 1 10rem;min-width:0}#pgRec .pgInner>.row .btn{flex:none;white-space:nowrap}
+/* 窄螢幕的年月按鈕 */
+@media (max-width:370px){.calYM .dd{width:1.45rem}.calYM .v{gap:.12rem;padding:0 .2rem}.calYM b{font-size:.98rem;letter-spacing:0}.calYM em{font-size:.76rem}.calNav{width:1.65rem}.calTop{gap:.3rem}}
+/* 避免最後一行只剩一兩個字 */
+body{text-wrap:pretty}
+h1,h2,h3,.gTitle,.wlSub{text-wrap:balance}
+.pgHead>.phBtns{flex:none;display:flex;gap:.45rem;margin-left:auto}.pgHead>.phBtns .btn{white-space:nowrap}
+.mBtns .btn:only-child{grid-column:1/-1;white-space:nowrap}
+.gHero b{text-wrap:balance}
+.pgHead.two{flex-wrap:nowrap}
+@media (max-width:400px){#pgRec .pgInner>.row .searchBox{flex-basis:100%}#pgRec .pgInner>.row .btn{flex:1}}
 </style>
 </head>
 <body>
@@ -987,7 +1029,7 @@ button.ihTr{width:100%;text-align:left;border:0;border-top:1px solid var(--borde
   </section>
 
   <section class="page" id="pgFav">
-    <div class="pgHead"><div class="grow"><h1 id="favTitle">收藏分類</h1><div class="sub" id="favSub"></div></div><button class="btn sm foldAll" id="favFold">全部收合</button><button class="btn sm" id="favCats">管理分類</button></div>
+    <div class="pgHead"><div class="grow"><h1 id="favTitle">收藏分類</h1><div class="sub" id="favSub"></div></div><div class="phBtns"><button class="btn sm foldAll" id="favFold">全部收合</button><button class="btn sm" id="favCats">管理分類</button></div></div>
     <div class="pgBody"><div class="pgInner">
       <div class="searchBox" style="margin-bottom:.9rem"><input id="favQ" type="search" placeholder="搜尋店名、地址、菜單品項…"></div>
       <div id="favList" class="noSel"></div>
@@ -1010,7 +1052,7 @@ button.ihTr{width:100%;text-align:left;border:0;border-top:1px solid var(--borde
   </section>
 
   <section class="page" id="pgRec">
-    <div class="pgHead"><div class="grow"><h1>我的食譜</h1><div class="sub" id="recSub"></div></div><button class="btn sm" id="recAI">✨ 圖片匯入</button><button class="btn sm pri" id="recAdd">＋ 新增</button></div>
+    <div class="pgHead"><div class="grow"><h1>我的食譜</h1><div class="sub" id="recSub"></div></div><div class="phBtns"><button class="btn sm" id="recAI">✨ 圖片匯入</button><button class="btn sm pri" id="recAdd">＋ 新增</button></div></div>
     <div class="pgBody"><div class="pgInner">
       <div class="row" style="margin-bottom:.9rem"><div class="searchBox grow"><input id="recQ" type="search" placeholder="搜尋食譜、食材…"></div><button class="btn sm foldAll" id="recFold">全部收合</button><button class="btn sm" id="recCats">🗂️ 分類</button></div>
       <div id="recList" class="noSel"></div>
@@ -1109,7 +1151,7 @@ return maplibregl$1;
 /* ============================================================
    日日帳本 — 核心：工具、資料儲存、主題、面板、拖曳排序、圖片
    ============================================================ */
-const APP_VERSION = '3.5.0';
+const APP_VERSION = '3.5.1';
 const APP_VER = APP_VERSION;
 /* 線上更新來源（GitHub Pages）：IanLin1120/food-map */
 const GH = {repo: 'https://github.com/IanLin1120/food-map', pages: 'https://ianlin1120.github.io/food-map/'};
@@ -2736,11 +2778,18 @@ async function aiRecipe() {
 }
 
 /* ---------- 設定 ---------- */
+/* 設定頁最上面：目前所在的功能區 */
+function areaHero() {
+  const shop = S.mode === 'shop', tabs = shop ? [['🗺️', '地圖'], ['⭐', '收藏'], ['🧾', '分帳'], ['🎫', '發票']] : [['🗺️', '地圖'], ['⭐', '收藏'], ['📒', '日常'], ['📖', '食譜']];
+  return `<div class="areaHero ${shop ? 'shop' : 'food'}"><div class="ahIc">${shop ? '🛒' : '🍽️'}</div><div class="ahT"><small>目前所在的功能區</small><b>${shop ? '購物分帳' : '美食・日常'}</b>
+    <div class="ahTabs">${tabs.map(([i, t]) => `<span>${i} ${t}</span>`).join('')}</div></div><span class="ahOn"><i></i>使用中</span></div>`;
+}
 function renderSet() {
   const seg = (id, opts, cur) => `<div class="seg" data-seg="${id}">${opts.map(([v, t]) => `<button data-v="${v}" class="${String(cur) === String(v) ? 'on' : ''}">${t}</button>`).join('')}</div>`;
   const sw = (id, on) => `<button class="sw2 ${on ? 'on' : ''}" data-sw="${id}" role="switch" aria-checked="${!!on}"></button>`;
   const dark = isDark(), navs = navApps({lat: 0, lon: 0});
   $('#setBody').innerHTML = `
+  ${areaHero()}
   <div class="setG"><h3>功能區</h3><div class="setC"><div class="setR col modeCard"><div class="t"><b>${S.mode === 'shop' ? '🍽️ 美食・日常' : '🛒 購物分帳'}</b><small>${S.mode === 'shop' ? '美食地圖、收藏店家的菜單表格、每天吃什麼的點餐分帳、食譜。' : '量販店、超商、Foodpanda 的購物明細：拍照或截圖讓 AI 讀出品項和折扣，選誰買的、誰一起分攤，自動算出每個人要付多少。'}</small></div>
       <button class="btn pri modeSw" data-a="mode">${S.mode === 'shop' ? '🍽️ 切換到美食・日常' : '🛒 切換到購物分帳'}</button></div></div></div>
   <div class="setG"><h3>使用說明</h3><div class="setC">
@@ -4111,10 +4160,10 @@ const pRow = (a, b, cls) => `<div class="pr ${cls || ''}"><span>${a}</span><b>${
 const tip = t => `<div class="gTip">💡 ${t}</div>`;
 const GUIDE = {
   food: {title: '🍽️ 美食・日常 使用說明', steps: [
-    {t: '歡迎使用日日帳本', h: `<div class="gHero"><div class="gIcon">${APP_ICON}</div><b>收藏愛店 × 菜單 × 點餐分帳 × 購物分帳</b></div>
-      <div class="gGrid"><div><i>🗺️</i><b>地圖</b>找店、插旗收藏</div><div><i>🔖</i><b>收藏</b>店家資料和菜單</div><div><i>📒</i><b>日常</b>餐點分帳＋購物清單</div><div><i>📖</i><b>食譜</b>記錄拿手菜</div></div>
+    {t: '歡迎使用日日帳本', h: `<div class="gHero"><div class="gIcon">${APP_ICON}</div><b>收藏愛店・菜單・記帳分帳</b></div>
+      <div class="gGrid"><div><i>🗺️</i><b>地圖</b>找店、插旗收藏</div><div><i>🔖</i><b>收藏</b>店家資料和菜單</div><div><i>📒</i><b>日常</b>記一餐、購物清單</div><div><i>📖</i><b>食譜</b>記錄拿手菜</div></div>
       <p>跟著這份說明走一遍，大約 2 分鐘。看完可以隨時到 <b>設定 → 使用說明</b> 再打開。購物分帳和發票另外有自己的說明。</p>`},
-    {t: '① 找到店家，按收藏', h: phone('🔍 搜尋店家', `<div class="pin">🔍 晨曦早午餐</div><div class="pMap"><span class="flag">🚩</span><span class="flag f2">🚩</span></div>${pc(`<b>晨曦早午餐 幸福店</b><small>早午餐・距離 350 公尺</small><div class="pBtns">${pb('導航')}${pb('⭐ 收藏', 'pri hl') + tap}</div>`)}`, '地圖') +
+    {t: '① 找到店家，按收藏', h: phone('🔍 搜尋店家', `<div class="pSrch">🔍 晨曦早午餐</div><div class="pMap"><span class="flag">🚩</span><span class="flag f2">🚩</span></div>${pc(`<b>晨曦早午餐 幸福店</b><small>早午餐・距離 350 公尺</small><div class="pBtns">${pb('導航')}${pb('⭐ 收藏', 'pri hl') + tap}</div>`)}`, '地圖') +
       `<ul><li>在地圖頁上方的搜尋框輸入店名</li><li>點選搜尋結果，按 <b>⭐ 收藏</b>，選一個分類（早餐、飲料…）</li><li>也可以<b>長按地圖</b>任何地方直接插旗</li></ul>${tip('有填 Google 金鑰的話，地址、電話、營業時間會自動帶入。')}`},
     {t: '② 拍菜單，AI 自動整理成表格', h: phone('晨曦早午餐 幸福店', `${pc('<b>📋 菜單</b><div class="pImgs"><i>🖼️</i><i>🖼️</i></div>' + pb('✨ AI 辨識成表格', 'pri hl') + tap)}<div class="pTable"><div><b>品名</b><b>小</b><b>大</b></div><div><span>玉米濃湯</span><span>35</span><span>50</span></div><div><span>雞腿蛋堡</span><span>65</span><span>-</span></div></div>`, '收藏') +
       `<ul><li>打開收藏的店家，在「菜單」加入菜單照片</li><li>按 <b>✨ AI 辨識成表格</b>，等一下就會變成價格表</li><li>大小杯、冰熱、加購選項都會自動分欄</li></ul>${tip('菜單照片也可以在 Google 地圖截圖後，用「分享」傳給日日帳本。')}`},
@@ -4141,7 +4190,7 @@ const GUIDE = {
       <p>適合全聯、量販店、超商一起買東西，或 Foodpanda 一起訂外送的時候。</p>`},
     {t: '① 切換到購物分帳', h: phone('設定', `${pc('<b>功能區</b><small>量販店、超商、Foodpanda 的購物明細…</small>' + pb('🛒 切換到購物分帳', 'pri wide hl') + tap)}${pc('<b>📘 使用說明</b><small>美食・日常・購物分帳・發票</small>')}`, '設定') +
       `<ul><li>到 <b>設定</b> 頁最上面的「功能區」，按 <b>🛒 切換到購物分帳</b></li><li>下面的分頁會換成 <b>地圖、收藏、分帳、發票、設定</b></li><li>想回去點餐，同一個位置按 <b>🍽️ 切換到美食・日常</b>；關掉 App 再打開會回到上次的功能區</li></ul>${tip('美食・日常和購物分帳<b>共用同一份收藏</b>，分類也是同一份（早餐、午餐、晚餐、量販店、超市、超商…）。')}`},
-    {t: '② 收藏常去的店', h: phone('🔍 搜尋', `<div class="pin">🔍 好鄰居超市</div><div class="pMap"><span class="flag">🛒</span><span class="flag f2">🍱</span></div>${pc(`<b>好鄰居超市 中央店</b><small>量販店</small><div class="pBtns">${pb('🧾 購物紀錄')}${pb('⭐ 收藏', 'pri hl') + tap}</div>`)}`, '地圖', 'shop') +
+    {t: '② 收藏常去的店', h: phone('🔍 搜尋', `<div class="pSrch">🔍 好鄰居超市</div><div class="pMap"><span class="flag">🛒</span><span class="flag f2">🍱</span></div>${pc(`<b>好鄰居超市 中央店</b><small>量販店</small><div class="pBtns">${pb('🧾 購物紀錄')}${pb('⭐ 收藏', 'pri hl') + tap}</div>`)}`, '地圖', 'shop') +
       `<ul><li>在地圖搜尋全聯、全家、常叫外送的餐廳…按收藏，選一個分類</li><li>外送的餐廳就照早餐、午餐、晚餐分類；是不是外送，改在每一筆明細選「購物方式」</li><li>店家卡片上的 <b>🧾 購物紀錄</b> 可以看這家店所有的明細</li></ul>`},
     {t: '③ 上傳明細，AI 幫你讀', h: phone('購物分帳', `<div class="pBtns">${pb('📷 上傳明細', 'pri hl') + tap}${pb('✏️ 手動輸入')}</div><div class="pc" style="border-color:var(--accent)"><b>🤖 AI 辨識中・11/08</b><small>Flash-Lite 已讀到 5 項…（12 秒）</small></div><div class="pCal">${Array.from({length: 7}, (_, i) => `<i class="${i === 3 ? 'on' : ''}">${i + 5}${i === 3 ? '<em></em>' : ''}</i>`).join('')}</div>`, '分帳', 'shop') +
       `<ul><li>按最上面的 <b>📷 上傳明細</b>，選全聯 App 明細截圖、發票照片或 Foodpanda 訂單截圖（可以一次選好幾張）</li><li>辨識進度會<b>固定顯示在頁首</b>，不管看哪一天都看得到，點一下直接打開那筆</li><li>AI 會讀出店名、日期、時間、品項、折扣、平台費，自動放到明細上的日期</li></ul>${tip('也可以在 Foodpanda 或相簿按「分享」→ 日日帳本。')}`},
@@ -4426,8 +4475,8 @@ function openInvDetail(no) {
     sh.body.innerHTML = `<div class="small muted" style="margin:-.2rem 0 .5rem">點任何一個欄位或品項就可以修改</div>
       <div class="invHead card"><button class="ihNo" data-a="no">🧾 ${invNoFmt(v.no)} <i class="ed">✎</i><span class="chip">${{qr: '紙本 QR', csv: '載具 CSV', web: '載具網站', shot: '截圖', acc: '協助工具'}[v.src] || ''}</span></button>
         <div class="ihR"><span>發票日期</span><b class="ihDT"><button data-a="date">${v.date ? dayLabel(v.date) : '未填'} ✎</button><button data-a="time">${esc(v.time || '時間')} ✎</button></b></div>
-        <button class="ihR ihS" data-a="seller"><span>消費店家</span><b>${esc(invSeller(v))} ✎</b></button>
-        <button class="ihR ihS" data-a="sid"><span>店家統編</span><b>${v.sellerId || '未填'} ✎</b></button></div>
+        <button class="ihR ihS" data-a="seller"><span>消費店家</span><b><em>${esc(invSeller(v))}</em><i class="ed">✎</i></b></button>
+        <button class="ihR ihS" data-a="sid"><span>店家統編</span><b><em>${v.sellerId || '未填'}</em><i class="ed">✎</i></b></button></div>
       <div class="ihWay">${wayBox(v.way)}</div>
       <button class="ihAmt card" data-a="total"><span>💲 消費金額</span><b>${money(v.total)} <i class="ed">✎</i></b></button>
       <div class="lbl ihLbl" style="margin-top:.8rem"><span>🛍️ 消費品項</span><button class="btn sm" data-a="addIt">＋ 品項</button></div>
