@@ -55,8 +55,8 @@ function renderShop() {
       ${calHead(Y, Mo)}
       <div class="calWd">${MWD.map((w, i) => `<span class="${i === 0 || i === 6 ? 'we' : ''}">${w}</span>`).join('')}</div><div class="calG">${cells}</div></div>
     <div class="dayHead"><b class="dhD">${sel.getMonth() + 1}月${sel.getDate()}日 星期${MWD[sel.getDay()]}</b><span class="grow"></span>${bs.length ? `<span class="dayTot">${money(dayTot)}</span><button class="btn sm" data-a="exportDay">📤 匯出</button>` : ''}</div>
-    ${bs.map(billCard).join('') || '<div class="empty mealEmpty"><span class="big">🧾</span>這天還沒有購物明細<br><span class="small">按下面的按鈕拍照、上傳截圖或手動輸入<br>也可以在 Foodpanda、相簿裡按「分享」傳給食光帳本</span></div>'}
-    <div class="shopAdd"><button class="btn pri" data-a="newImg"><i>📷</i><b>上傳明細</b><small>AI 自動辨識</small></button><button class="btn" data-a="newMan"><i>✏️</i><b>手動輸入</b><small>自己打品項</small></button></div>
+    ${bs.map(billCard).join('') || '<div class="empty mealEmpty"><span class="big">🧾</span>這天還沒有購物明細<br><span class="small">按上面的「上傳明細」拍照或選截圖，或「手動輸入」<br>也可以在 Foodpanda、相簿裡按「分享」傳給食光帳本</span></div>'}
+    
     ${order.length ? `<div class="perSum card"><div class="psH">👥 每個人這天要付</div>${order.map(id => { const u = mWho(id); return `<div class="psR"><span class="psI">${esc(u.icon)}</span><b class="grow">${esc(u.name)}</b><span>${money(per[id])}</span></div>`; }).join('')}<div class="psR tot"><b class="grow">合計</b><span>${money(dayTot)}</span></div></div>` : ''}`;
 }
 function billCard(b) {
@@ -97,6 +97,7 @@ function shopPlaceHtml(p) {
 function initShop() {
   const box = $('#shopBody');
   $('#shopToday').onclick = () => { const d = new Date(); Shop.sel = ymd(d); Shop.ym = [d.getFullYear(), d.getMonth()]; renderShop(); };
+  $('#shopNewImg').onclick = () => newBillImg(); $('#shopNewMan').onclick = () => newBillManual();
   $('#shopSet').onclick = () => openShopSettings(); $('#shopFind').onclick = () => openShopSearch();
   box.addEventListener('change', e => { if (e.target.id === 'sCalY') Shop.ym[0] = +e.target.value; else if (e.target.id === 'sCalM') Shop.ym[1] = +e.target.value; else return;
     const nd = new Date(Shop.ym[0], Shop.ym[1] + 1, 0).getDate(); Shop.sel = ymd(new Date(Shop.ym[0], Shop.ym[1], Math.min(ymdDate(Shop.sel).getDate(), nd))); renderShop(); });
