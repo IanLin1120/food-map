@@ -235,8 +235,8 @@ function openInvDetail(no) {
     sh.body.innerHTML = `<div class="small muted" style="margin:-.2rem 0 .5rem">點任何一個欄位或品項就可以修改</div>
       <div class="invHead card"><button class="ihNo" data-a="no">🧾 ${invNoFmt(v.no)} <i class="ed">✎</i><span class="chip">${{qr: '紙本 QR', csv: '載具 CSV', web: '載具網站', shot: '截圖', acc: '協助工具'}[v.src] || ''}</span></button>
         <div class="ihR"><span>發票日期</span><b class="ihDT"><button data-a="date">${v.date ? dayLabel(v.date) : '未填'} ✎</button><button data-a="time">${esc(v.time || '時間')} ✎</button></b></div>
-        <button class="ihR ihS" data-a="seller"><span>消費店家</span><b>${esc(invSeller(v))} ✎</b></button>
-        <button class="ihR ihS" data-a="sid"><span>店家統編</span><b>${v.sellerId || '未填'} ✎</b></button></div>
+        <button class="ihR ihS" data-a="seller"><span>消費店家</span><b><em>${esc(invSeller(v))}</em><i class="ed">✎</i></b></button>
+        <button class="ihR ihS" data-a="sid"><span>店家統編</span><b><em>${v.sellerId || '未填'}</em><i class="ed">✎</i></b></button></div>
       <div class="ihWay">${wayBox(v.way)}</div>
       <button class="ihAmt card" data-a="total"><span>💲 消費金額</span><b>${money(v.total)} <i class="ed">✎</i></b></button>
       <div class="lbl ihLbl" style="margin-top:.8rem"><span>🛍️ 消費品項</span><button class="btn sm" data-a="addIt">＋ 品項</button></div>
