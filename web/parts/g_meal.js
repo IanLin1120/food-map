@@ -17,6 +17,7 @@ async function loadMeal() {
   DB.mcfg.custom = DB.mcfg.custom || []; DB.days = await IDB.get('kv', 'days').catch(() => null) || {};
 }
 const mType = id => DB.mcfg.types.find(t => t.id === id) || {id, name: '（已刪除的餐別）', icon: '🍴'};
+const FP = () => DB.side ? DB.side.food.places : DB.places;
 const mWho = id => DB.mcfg.people.find(u => u.id === id) || {id, name: '（已刪除）', icon: '👤'};
 /* 一起吃：x.who = '*'、x.share = [人id…]，金額平均分攤 */
 const SHARE = '*';
@@ -60,7 +61,7 @@ function renderMeal() {
     ${order.length ? `<div class="perSum card"><div class="psH">👥 每個人這天的總金額</div>${order.map(id => { const u = mWho(id); return `<div class="psR"><span class="psI">${esc(u.icon)}</span><b class="grow">${esc(u.name)}</b><span>${money(per[id])}</span></div>`; }).join('')}<div class="psR tot"><b class="grow">合計</b><span>${money(dayTotal(Meal.sel))}</span></div></div>` : ''}`;
 }
 function mealCard(m) {
-  const T = mType(m.type), P = DB.places.find(x => x.id === m.place), groups = ownIds(m), shs = shareSets(m), per = perOf(m), sha = shareOf(m), any = (m.items || []).length;
+  const T = mType(m.type), P = FP().find(x => x.id === m.place), groups = ownIds(m), shs = shareSets(m), per = perOf(m), sha = shareOf(m), any = (m.items || []).length;
   const tbl = xs => `<table class="mlT"><tr><th class="n">品項</th><th>單價</th><th>數量</th><th>小計</th></tr>${xs.map(x => `<tr data-i="${x.id}"><td class="n" data-a="editItem">${esc(x.n)}${xTags(x)}</td><td class="r">${money(x.p)}</td><td class="qc"><span class="q"><button data-a="qm">−</button><b>${x.q}</b><button data-a="qp">＋</button></span></td><td class="r b">${money(xAmt(x))}</td></tr>`).join('')}</table>`;
   return `<div class="meal card" data-m="${m.id}">
     <div class="mlH"><div class="grow"><b>${esc(T.name)}</b><div class="mlS" data-a="store">${m.place || m.pname ? '🏪 ' + esc(P ? P.name : m.pname || '') : '<span class="muted">未選店家</span>'}</div></div>${m.place || m.pname ? `<button class="ic mlTel ${mealPhone(m) ? '' : 'none'}" data-a="tel" aria-label="打電話">📞</button>` : ''}<button class="btn sm pri" data-a="order">＋ 點餐</button><button class="ic" data-a="mMore" aria-label="更多">⋯</button></div>
@@ -92,7 +93,7 @@ function initMeal() {
     else if (a === 'store') { const st = await pickStore(m.place); if (st === undefined) return; m.place = st ? st.id || '' : ''; m.pname = st ? st.name : ''; mealChanged(); }
     else if (a === 'mMore') mealMore(m);
     else if (a === 'tel') { let ph = mealPhone(m);
-      if (!ph) { const v = ((await askText(`「${storeName(m)}」還沒有電話，輸入後會記住`, '', '例如 037-590111')) || '').trim(); if (!v) return; const P = DB.places.find(x => x.id === m.place); if (P) { P.phone = v; savePlace(P); } else m.phone = v; saveDays(); ph = v; renderMeal(); }
+      if (!ph) { const v = ((await askText(`「${storeName(m)}」還沒有電話，輸入後會記住`, '', '例如 037-590111')) || '').trim(); if (!v) return; const P = FP().find(x => x.id === m.place); if (P) { P.phone = v; savePlace(P); } else m.phone = v; saveDays(); ph = v; renderMeal(); }
       openUrl('tel:' + ph.replace(/[^\d+]/g, '')); }
     else if (a === 'qm' || a === 'qp') { const x = m.items.find(i => i.id === b.closest('tr').dataset.i); if (!x) return; buzz(10);
       if (a === 'qp') x.q++; else if (x.q > 1) x.q--; else { if (!await ask(`要刪除「${x.n}」嗎？`, '刪除', true)) return; m.items.splice(m.items.indexOf(x), 1); } mealChanged(); }
@@ -100,7 +101,7 @@ function initMeal() {
 }
 async function mealMore(m) {
   const T = mType(m.type), sh = sheet({title: T.icon + ' ' + T.name, html: `<div class="actList">
-    <button data-a="type">🔁 改成其他餐別</button><button data-a="store">🏪 更換店家</button>${DB.places.some(p => p.id === m.place) ? '<button data-a="open">📋 打開店家與菜單</button>' : ''}
+    <button data-a="type">🔁 改成其他餐別</button><button data-a="store">🏪 更換店家</button>${FP().some(p => p.id === m.place) ? '<button data-a="open">📋 打開店家與菜單</button>' : ''}
     <button data-a="exp">📤 匯出這一餐（文字／Excel）</button><button data-a="copy">📅 複製到其他日期</button><button data-a="del" class="dng">🗑 刪除這一餐</button></div>`});
   sh.body.onclick = async e => { const b = e.target.closest('[data-a]'); if (!b) return; const a = b.dataset.a; sh.close();
     if (a === 'type') { const t = await pickMealType(m.type); if (t) { m.type = t.id; mealChanged(); } }
@@ -127,11 +128,11 @@ function pickStore(cur) {
     const draw = () => { const hit = p => !q || (p.name + ' ' + (p.addr || '')).toLowerCase().includes(q);
       const secs = DB.cats.concat([UNCAT]).map(c => ({c, ps: placesIn(c.id).filter(hit)})).filter(s => s.ps.length);
       $('#psL', sh.body).innerHTML = secs.map(({c, ps}) => `<div class="psSec" style="--c:${c.color}"><div class="psSH"><span>${esc(c.icon)}</span>${esc(c.name)}</div>${ps.map(p => `<button class="psP ${p.id === cur ? 'on' : ''}" data-id="${p.id}"><b>${esc(p.name)}</b><small>${(p.menu || []).length ? '📋 ' + p.menu.length + ' 個品項' : '<span class="muted">沒有菜單表格</span>'}${p.addr ? ' · ' + esc(p.addr) : ''}</small></button>`).join('')}</div>`).join('')
-        || `<div class="empty">${DB.places.length ? '找不到符合的收藏店家' : '還沒有收藏店家<br><span class="small">可以先在地圖頁收藏，或用下面的「自己輸入店名」</span>'}</div>`; };
+        || `<div class="empty">${FP().length ? '找不到符合的收藏店家' : '還沒有收藏店家<br><span class="small">可以先在地圖頁收藏，或用下面的「自己輸入店名」</span>'}</div>`; };
     sh.body.innerHTML = `<div class="searchBox" style="margin-bottom:.7rem"><input id="psQ" type="search" placeholder="搜尋收藏的店家…"></div><div class="row" style="margin-bottom:.7rem;gap:.5rem"><button class="btn sm" data-a="free">✏️ 自己輸入店名</button><button class="btn sm" data-a="none">先不選店家</button></div><div id="psL"></div>`;
     draw(); $('#psQ', sh.body).oninput = e => { q = e.target.value.trim().toLowerCase(); draw(); };
     sh.body.addEventListener('click', async e => { const b = e.target.closest('button'); if (!b) return;
-      if (b.dataset.id) fin(DB.places.find(p => p.id === b.dataset.id));
+      if (b.dataset.id) fin(FP().find(p => p.id === b.dataset.id));
       else if (b.dataset.a === 'none') fin(null);
       else if (b.dataset.a === 'free') { const v = ((await askText('店名', '', '例如：巷口早餐店')) || '').trim(); if (v) fin({id: '', name: v.slice(0, 30)}); } }); });
 }
@@ -186,7 +187,7 @@ function pickOpts(o, v) {
 const xTags = x => `${x.s ? ` <span class="szT">${esc(x.s)}</span>` : ''}${x.o ? ` <span class="opT">${esc(x.o)}</span>` : ''}`;
 const xParen = x => { const a = [x.s, x.o].filter(Boolean); return a.length ? '(' + a.join('、') + ')' : ''; };
 function openOrder(m) {
-  const P = DB.places.find(x => x.id === m.place), T = mType(m.type);
+  const P = FP().find(x => x.id === m.place), T = mType(m.type);
   let who = m.lastWho && keyIds(m.lastWho).every(id => DB.mcfg.people.some(u => u.id === id)) ? m.lastWho : (DB.mcfg.people[0] || {}).id, q = '', cat = '', rg = P ? P.rgSel : '';
   const sh = sheet({title: `${T.icon} ${T.name}${P || m.pname ? ' · ' + (P ? P.name : m.pname) : ''}`, full: true, foot: '<div class="grow ordTot" id="oTot"></div><button class="btn pri" data-a="done" style="flex:0 0 auto">完成</button>', onClose() { renderMeal(); }});
   let LIST = [];
@@ -254,7 +255,7 @@ const MK = {types: {title: '餐別', unit: '個', emoji: CAT_EMOJI, ph: '例如�
   people: {title: '人名', unit: '位', emoji: PERSON_EMOJI, ph: '例如：我、老婆、小明', def: '🙂', used: id => Object.values(DB.days).some(L => L.some(m => m.items.some(x => x.who === id || (isShare(x) && x.share.includes(id)))))}};
 function openMealSettings(after) {
   const sh = sheet({title: '⚙️ 點餐設定', full: true, onClose() { renderMeal(); after && after(); }});
-  const draw = () => { const cus = {}; DB.mcfg.custom.forEach(c => { const k = c.place && DB.places.find(p => p.id === c.place) ? DB.places.find(p => p.id === c.place).name : c.pname || '未指定店家'; (cus[k] = cus[k] || []).push(c); });
+  const draw = () => { const cus = {}; DB.mcfg.custom.forEach(c => { const k = c.place && FP().find(p => p.id === c.place) ? FP().find(p => p.id === c.place).name : c.pname || '未指定店家'; (cus[k] = cus[k] || []).push(c); });
     const days = Object.keys(DB.days).length;
     sh.body.innerHTML = ['types', 'people'].map(k => `<div class="msSec"><div class="msH"><b class="grow">${MK[k].title}</b><button class="btn sm" data-a="add" data-k="${k}">＋ 新增</button></div><div class="small muted" style="margin:-.2rem 0 .5rem">按住 ☰ 拖曳調整順序</div>
         <div class="msL" data-k="${k}">${DB.mcfg[k].map(t => `<div class="msR" data-id="${t.id}"><span class="grip"></span><span class="msI">${esc(t.icon)}</span><b class="grow">${esc(t.name)}</b><button class="btn sm" data-a="edit">✎ 編輯</button></div>`).join('') || '<div class="empty" style="padding:.8rem">還沒有' + MK[k].title + '</div>'}</div></div>`).join('')
@@ -287,8 +288,8 @@ function editMealCfg(k, it, done) {
 }
 
 /* ---------- 搜尋：吃過哪家店、哪幾天、吃了什麼、多少錢 ---------- */
-const mealPhone = m => { const P = DB.places.find(x => x.id === m.place); return (P ? P.phone : m.phone) || ''; };
-const storeName = m => { const P = DB.places.find(x => x.id === m.place); return P ? P.name : m.pname || ''; };
+const mealPhone = m => { const P = FP().find(x => x.id === m.place); return (P ? P.phone : m.phone) || ''; };
+const storeName = m => { const P = FP().find(x => x.id === m.place); return P ? P.name : m.pname || ''; };
 const dayLabel = k => { const d = ymdDate(k); return `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}(${MWD[d.getDay()]})`; };
 /* 匯出用：括號一律半形、括號前不留空白「招牌牛肉麵 (中辣)」→「招牌牛肉麵(中辣)」 */
 const tn = n => String(n || '').replace(/\s*[（(]\s*/g, '(').replace(/\s*[）)]/g, ')');
@@ -347,7 +348,7 @@ function openExport(k, mid) {
 }
 /* 產生 .xlsx（不用外部程式庫：手寫 OOXML + 不壓縮的 zip） */
 function mealXlsx(k, L) {
-  const rows = [[{v: '食光地圖 點餐紀錄　' + dayLabel(k), s: 2}], [], ['日期', '餐別', '店家', '人名', '品項', '尺寸／選項', '單價', '數量', '小計'].map(v => ({v, s: 1}))];
+  const rows = [[{v: '食光帳本 點餐紀錄　' + dayLabel(k), s: 2}], [], ['日期', '餐別', '店家', '人名', '品項', '尺寸／選項', '單價', '數量', '小計'].map(v => ({v, s: 1}))];
   const per = {};
   L.forEach(m => { const T = mType(m.type), nm = storeName(m); personLines(m, false);
     ownIds(m).forEach(id => m.items.filter(x => !isShare(x) && x.who === id).forEach(x => rows.push([k, T.name, nm, mWho(id).name, x.n, [x.s, x.o].filter(Boolean).join('、'), numP(x.p), x.q, xAmt(x)])));

@@ -1,6 +1,6 @@
 'use strict';
 /* ============================================================
-   食光地圖 — 核心：工具、資料儲存、主題、面板、拖曳排序、圖片
+   食光帳本 — 核心：工具、資料儲存、主題、面板、拖曳排序、圖片
    ============================================================ */
 const APP_VERSION = '__VER__';
 const APP_VER = APP_VERSION;
@@ -48,13 +48,15 @@ const DEF_CATS = [
 ];
 const CAT_COLORS = ['#E8A13A', '#D2603A', '#C23B4E', '#C2678F', '#8A5A9E', '#4A5B8C', '#3F6E8C', '#3F8F86', '#5A7A44', '#8C8A2E', '#8E4B2B', '#6B5344', '#57606A', '#2F2A25'];
 const CAT_EMOJI = '🍳 🥪 🥞 🥐 🍱 🍛 🍜 🍝 🍚 🍙 🍣 🥟 🍲 🥘 🍽️ 🥩 🍗 🍖 🍔 🍟 🍕 🌭 🌮 🥗 🍢 🍡 🌙 🍺 🍻 🍷 🍶 🧋 🥤 🍵 ☕ 🧃 🍰 🧁 🍩 🍦 🍧 🍮 🥧 🍪 🍫 🥖 🧇 🥓 🧆 🦐 🦀 🐟 🔥 ⭐ ❤️ 🏪 🛒 🥬'.split(' ');
+/* 購物分帳功能區的預設分類 */
+const SHOP_CATS = [['量販店', '🛒', '#C23B4E'], ['超市', '🧺', '#5A7A44'], ['超商', '🏪', '#3F6E8C'], ['外送', '🛵', '#D2603A'], ['藥妝', '💊', '#8A5A9E'], ['其他', '🛍️', '#6B5344']];
 const UNCAT = {id: '', name: '未分類', icon: '📍', color: '#7d6c57'};
 const catOf = id => DB.cats.find(c => c.id === id) || UNCAT;
 
 const saveS = debounce(() => { IDB.put('kv', 'S', S).catch(() => {}); try { localStorage.setItem('fm.theme', JSON.stringify({theme: S.theme, palette: S.palette, scale: S.scale})); } catch (e) {} }, 150);
-const saveCats = () => IDB.put('kv', 'cats', DB.cats).catch(saveErr);
+const saveCats = () => IDB.put('kv', S.mode === 'shop' ? 'cats_shop' : 'cats', DB.cats).catch(saveErr);
 const saveRcats = () => IDB.put('kv', 'rcats', DB.rcats).catch(saveErr);
-const savePlace = p => IDB.put('places', p.id, p).catch(saveErr);
+const savePlace = p => { if (!p.mode) p.mode = DB.side && DB.side.shop.places.includes(p) ? 'shop' : DB.side && DB.side.food.places.includes(p) ? 'food' : S.mode === 'shop' ? 'shop' : 'food'; return IDB.put('places', p.id, p).catch(saveErr); };
 const saveRecipe = r => IDB.put('recipes', r.id, r).catch(saveErr);
 function saveErr(e) { toast('⚠️ 儲存失敗：' + (e && e.message || e), 4000); }
 
@@ -73,13 +75,16 @@ async function loadAll() {
   if (cats) DB.cats = cats; else { DB.cats = DEF_CATS.map(([name, icon, color], i) => ({id: 'c' + i + uid(), name, icon, color})); saveCats();
     SAMPLE_RECIPES.forEach((r, i) => { const o = {id: uid() + i, title: r.title, serv: r.serv, ing: r.ing.map(([n, q]) => ({n, q})), steps: r.steps.slice(), note: '', cover: '', ord: i, t: Date.now()}; DB.recipes.push(o); saveRecipe(o); }); }
   if (cats) DB.recipes = (await IDB.all('recipes').catch(() => [])) || [];
-  DB.places = (await IDB.all('places').catch(() => [])) || [];
-  DB.places.sort((a, b) => (a.ord || 0) - (b.ord || 0)); DB.recipes.sort((a, b) => (a.ord || 0) - (b.ord || 0));
+  const allP = ((await IDB.all('places').catch(() => [])) || []).sort((a, b) => (a.ord || 0) - (b.ord || 0)); DB.recipes.sort((a, b) => (a.ord || 0) - (b.ord || 0));
+  /* 兩個功能區（美食／購物分帳）各有自己的收藏店家和分類；DB.places、DB.cats 永遠指向目前功能區的那一份 */
+  let sc = await IDB.get('kv', 'cats_shop').catch(() => null); if (!sc) { sc = SHOP_CATS.map(([name, icon, color], i) => ({id: 's' + i + uid(), name, icon, color})); IDB.put('kv', 'cats_shop', sc).catch(() => {}); }
+  DB.side = {food: {places: allP.filter(p => (p.mode || 'food') === 'food'), cats: DB.cats}, shop: {places: allP.filter(p => p.mode === 'shop'), cats: sc}};
+  const md = S.mode === 'shop' ? 'shop' : 'food'; DB.places = DB.side[md].places; DB.cats = DB.side[md].cats;
   const rc = await IDB.get('kv', 'rcats').catch(() => null);
   if (rc) DB.rcats = rc; else { DB.rcats = DEF_RCATS.map(([name, icon, color], i) => ({id: 'r' + i + uid(), name, icon, color})); saveRcats(); }
-  await loadMeal();
+  await loadMeal(); await loadShop();
   /* 舊版資料升級：菜單圖片改成「版本資料夾」（每個版本可放多張） */
-  DB.places.forEach(p => { if (!p.albums) { p.albums = (p.imgs || []).length ? [{id: 'a' + uid(), name: dateName(p.t), t: p.t || Date.now(), imgs: p.imgs}] : []; delete p.imgs; savePlace(p); } });
+  DB.side.food.places.concat(DB.side.shop.places).forEach(p => { if (!p.albums) { p.albums = (p.imgs || []).length ? [{id: 'a' + uid(), name: dateName(p.t), t: p.t || Date.now(), imgs: p.imgs}] : []; delete p.imgs; savePlace(p); } });
 }
 const dateName = t => { const d = new Date(t || Date.now()); return d.getFullYear() + '/' + String(d.getMonth() + 1).padStart(2, '0') + '/' + String(d.getDate()).padStart(2, '0'); };
 /* 菜單圖檔：albums 由新到舊；allImgs 依序攤平（最新版本在最前面） */
