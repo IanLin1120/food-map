@@ -751,16 +751,17 @@ body.mShop #tabbar [data-tab="Meal"],body.mShop #tabbar [data-tab="Rec"]{display
 /* 月曆年月：一顆大按鈕＋左右切換 */
 .calTop{gap:.5rem}
 .calTop .calNav,.ymY .calNav{width:2.6rem;height:2.6rem;border-radius:6px;background:var(--surface-3);border:1px solid var(--border);font-size:1.35rem;font-weight:800;color:var(--accent);display:flex;align-items:center;justify-content:center}
-.calYM{flex:1;display:flex;align-items:center;justify-content:center;gap:.5rem;height:2.6rem;border-radius:6px;border:1px solid color-mix(in srgb,var(--accent) 35%,var(--border));background:linear-gradient(180deg,color-mix(in srgb,var(--accent) 10%,var(--surface)),var(--surface-3));color:var(--text);font-size:1.02rem;box-shadow:inset 0 1px 0 rgba(255,255,255,.5)}
+.calYM{flex:1;display:flex;align-items:center;justify-content:center;gap:.35rem;height:2.6rem;min-width:0;border-radius:6px;border:1px solid color-mix(in srgb,var(--accent) 30%,var(--border));background:linear-gradient(180deg,var(--surface),color-mix(in srgb,var(--accent) 8%,var(--surface-3)));color:var(--text);box-shadow:0 1px 2px rgba(0,0,0,.05),inset 0 1px 0 rgba(255,255,255,.6);padding:0 .6rem}
 .calYM b{font-size:1.15rem;font-weight:800;color:var(--accent);font-variant-numeric:tabular-nums}
-.calYM i{font-style:normal;font-size:.75rem;color:var(--accent);background:color-mix(in srgb,var(--accent) 15%,transparent);border-radius:4px;padding:.1rem .3rem}
+.calYM span{font-size:.92rem;font-weight:700;color:var(--text-2)}
+.calYM .chev{width:.8rem;height:.55rem;color:var(--accent);margin-left:.15rem;flex:none;opacity:.85}
 .calYM:active,.calTop .calNav:active{transform:scale(.97)}
 .ymP{padding:.1rem 0 .3rem}
 .ymY{display:flex;align-items:center;justify-content:space-between;margin-bottom:.8rem}
 .ymY b{font-size:1.35rem;font-weight:800;color:var(--accent);font-variant-numeric:tabular-nums}
 .ymG{display:grid;grid-template-columns:repeat(4,1fr);gap:.5rem;margin-bottom:.9rem}
 .ymG button{display:flex;align-items:baseline;justify-content:center;gap:.1rem;padding:.75rem 0;border-radius:6px;background:var(--surface-3);border:1px solid var(--border-soft);color:var(--text)}
-.ymG b{font-size:1.25rem;font-weight:800;font-variant-numeric:tabular-nums}.ymG small{font-size:.75rem;color:var(--text-2)}
+.ymG b{font-size:1.15rem;font-weight:800;font-variant-numeric:tabular-nums}.ymG small{font-size:.75rem;color:var(--text-2)}
 .ymG button.tdy{border:2px solid var(--accent)}
 .ymG button.on{background:var(--accent);border-color:transparent;color:#fff}.ymG button.on small{color:rgba(255,255,255,.85)}
 .ymNow{border-radius:6px;justify-content:center}
