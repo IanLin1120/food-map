@@ -54,9 +54,9 @@ const UNCAT = {id: '', name: '未分類', icon: '📍', color: '#7d6c57'};
 const catOf = id => DB.cats.find(c => c.id === id) || UNCAT;
 
 const saveS = debounce(() => { IDB.put('kv', 'S', S).catch(() => {}); try { localStorage.setItem('fm.theme', JSON.stringify({theme: S.theme, palette: S.palette, scale: S.scale})); } catch (e) {} }, 150);
-const saveCats = () => IDB.put('kv', S.mode === 'shop' ? 'cats_shop' : 'cats', DB.cats).catch(saveErr);
+const saveCats = () => IDB.put('kv', 'cats', DB.cats).catch(saveErr);
 const saveRcats = () => IDB.put('kv', 'rcats', DB.rcats).catch(saveErr);
-const savePlace = p => { if (!p.mode) p.mode = DB.side && DB.side.shop.places.includes(p) ? 'shop' : DB.side && DB.side.food.places.includes(p) ? 'food' : S.mode === 'shop' ? 'shop' : 'food'; return IDB.put('places', p.id, p).catch(saveErr); };
+const savePlace = p => IDB.put('places', p.id, p).catch(saveErr);
 const saveRecipe = r => IDB.put('recipes', r.id, r).catch(saveErr);
 function saveErr(e) { toast('⚠️ 儲存失敗：' + (e && e.message || e), 4000); }
 
@@ -76,15 +76,25 @@ async function loadAll() {
     SAMPLE_RECIPES.forEach((r, i) => { const o = {id: uid() + i, title: r.title, serv: r.serv, ing: r.ing.map(([n, q]) => ({n, q})), steps: r.steps.slice(), note: '', cover: '', ord: i, t: Date.now()}; DB.recipes.push(o); saveRecipe(o); }); }
   if (cats) DB.recipes = (await IDB.all('recipes').catch(() => [])) || [];
   const allP = ((await IDB.all('places').catch(() => [])) || []).sort((a, b) => (a.ord || 0) - (b.ord || 0)); DB.recipes.sort((a, b) => (a.ord || 0) - (b.ord || 0));
-  /* 兩個功能區（美食／購物分帳）各有自己的收藏店家和分類；DB.places、DB.cats 永遠指向目前功能區的那一份 */
-  let sc = await IDB.get('kv', 'cats_shop').catch(() => null); if (!sc) { sc = SHOP_CATS.map(([name, icon, color], i) => ({id: 's' + i + uid(), name, icon, color})); IDB.put('kv', 'cats_shop', sc).catch(() => {}); }
-  DB.side = {food: {places: allP.filter(p => (p.mode || 'food') === 'food'), cats: DB.cats}, shop: {places: allP.filter(p => p.mode === 'shop'), cats: sc}};
-  const md = S.mode === 'shop' ? 'shop' : 'food'; DB.places = DB.side[md].places; DB.cats = DB.side[md].cats;
   const rc = await IDB.get('kv', 'rcats').catch(() => null);
   if (rc) DB.rcats = rc; else { DB.rcats = DEF_RCATS.map(([name, icon, color], i) => ({id: 'r' + i + uid(), name, icon, color})); saveRcats(); }
   await loadMeal(); await loadShop();
+  /* 美食點餐和購物分帳共用同一份收藏店家和分類（v3.4 起）。舊版購物分帳自己的店家：
+     同名（或很近又名字相似）的店合併成一家、明細改指向美食那家；「外送」分類拿掉，那些店先放「未分類」讓你自己選 */
+  let allPl = allP;
+  if (!await IDB.get('kv', 'shared1').catch(() => null)) {
+    const sc = await IDB.get('kv', 'cats_shop').catch(() => null) || SHOP_CATS.filter(c => c[0] !== '其他' || !DB.cats.some(f => f.name === '其他')).map(([name, icon, color], i) => ({id: 's' + i + uid(), name, icon, color})), foodP = allP.filter(p => (p.mode || 'food') === 'food'), shopP = allP.filter(p => p.mode === 'shop');
+    const norm = x => String(x || '').replace(/\s+/g, '').toLowerCase(), near = (a, b) => Math.abs((a.lat || 0) - (b.lat || 0)) < 0.0007 && Math.abs((a.lon || 0) - (b.lon || 0)) < 0.0008;
+    const dl = sc.find(c => c.name === '外送'), remap = {}, gone = [];
+    sc.forEach(c => { if (dl && c.id === dl.id) return; const same = DB.cats.find(f => f.name === c.name); if (same) remap[c.id] = same.id; else DB.cats.push(c); });
+    shopP.forEach(p => { const n = norm(p.name), dup = foodP.find(f => norm(f.name) === n || near(f, p) && n && (norm(f.name).includes(n) || n.includes(norm(f.name))));
+      if (dup) { Object.values(DB.bills || {}).forEach(L => L.forEach(b => { if (b.place === p.id) b.place = dup.id; })); gone.push(p); IDB.del('places', p.id).catch(() => {}); }
+      else { if (dl && p.cat === dl.id) p.cat = ''; else if (remap[p.cat]) p.cat = remap[p.cat]; delete p.mode; IDB.put('places', p.id, p).catch(() => {}); } });
+    allPl = allP.filter(p => !gone.includes(p)); await IDB.put('kv', 'cats', DB.cats).catch(() => {}); await IDB.put('kv', 'bills', DB.bills || {}).catch(() => {}); await IDB.put('kv', 'shared1', 1).catch(() => {});
+  }
+  DB.side = {food: {places: allPl, cats: DB.cats}}; DB.side.shop = DB.side.food; DB.places = allPl;
   /* 舊版資料升級：菜單圖片改成「版本資料夾」（每個版本可放多張） */
-  DB.side.food.places.concat(DB.side.shop.places).forEach(p => { if (!p.albums) { p.albums = (p.imgs || []).length ? [{id: 'a' + uid(), name: dateName(p.t), t: p.t || Date.now(), imgs: p.imgs}] : []; delete p.imgs; savePlace(p); } });
+  DB.places.forEach(p => { if (!p.albums) { p.albums = (p.imgs || []).length ? [{id: 'a' + uid(), name: dateName(p.t), t: p.t || Date.now(), imgs: p.imgs}] : []; delete p.imgs; savePlace(p); } });
 }
 const dateName = t => { const d = new Date(t || Date.now()); return d.getFullYear() + '/' + String(d.getMonth() + 1).padStart(2, '0') + '/' + String(d.getDate()).padStart(2, '0'); };
 /* 菜單圖檔：albums 由新到舊；allImgs 依序攤平（最新版本在最前面） */

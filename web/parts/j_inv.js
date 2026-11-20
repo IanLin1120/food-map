@@ -48,7 +48,7 @@ function renderInv() {
 }
 function invCard(v) {
   const b = invBill(v);
-  return `<button class="invC card" data-no="${v.no}"><div class="invL"><b>${esc(invSeller(v))}</b><small>${invNoFmt(v.no)}${v.time ? '・' + esc(v.time) : ''}・${(v.items || []).length ? (v.items || []).length + ' 項' : '<span class="warnT">沒有明細</span>'}</small></div>
+  return `<button class="invC card" data-no="${v.no}"><div class="invL"><b>${esc(invSeller(v))}</b><small>${v.way ? wayIcon(v.way) + ' ' + esc(v.way) + '・' : ''}${invNoFmt(v.no)}${v.time ? '・' + esc(v.time) : ''}・${(v.items || []).length ? (v.items || []).length + ' 項' : '<span class="warnT">沒有明細</span>'}</small></div>
     <div class="invR"><b>${money(v.total)}</b>${b ? '<span class="chip ok">✓ 已分帳</span>' : '<span class="chip">未分帳</span>'}</div></button>`;
 }
 function initInv() {
@@ -114,7 +114,7 @@ function parseInvQR(left, right) {
     if (!n && isNaN(q)) continue; if (enc === '2') { try { n = new TextDecoder('utf-8').decode(Uint8Array.from(atob(n), c => c.charCodeAt(0))); } catch (e) {} }
     if (!n || isNaN(q) || isNaN(p)) continue; items.push({n, q: q || 1, p, amt: Math.round(q * p * 100) / 100});
   }
-  return {no, date: `${y}-${m}-${d}`, sellerId: /^\d{8}$/.test(sellerId) ? sellerId : '', total: isNaN(total) ? 0 : total, items, src: 'qr', need: +(f[3] || 0)};
+  return {no, way: '實體店購物', date: `${y}-${m}-${d}`, sellerId: /^\d{8}$/.test(sellerId) ? sellerId : '', total: isNaN(total) ? 0 : total, items, src: 'qr', need: +(f[3] || 0)};
 }
 /* 一張畫面讀兩個 QR：jsQR 一次只能讀一個，兩個並排時整張可能讀不到 → 依序試整張、左半、右半…，
    讀到一個就把它塗白，再從整張重新找下一個 */
@@ -231,17 +231,18 @@ function openInvDetail(no) {
   let v = DB.invs[no]; if (!v) return;
   const sh = sheet({title: '🧾 發票明細', full: true, foot: '<button class="btn danger" data-a="del" style="flex:0 0 auto">刪除</button><button class="btn pri" data-a="split"></button>'});
   invIds(v);
-  const draw = () => { const b = invBill(v), its = v.items || [], ds = v.disc || [], sum = its.reduce((s, x) => s + (+x.amt || 0), 0) - ds.reduce((s, d) => s + (+d.amt || 0), 0);
+  const draw = () => { (v.disc || []).forEach(d => { if (d.kind && d.kind !== 'amt') d.amt = discCalc(v, d); }); const b = invBill(v), its = v.items || [], ds = v.disc || [], sum = its.reduce((s, x) => s + (+x.amt || 0), 0) - ds.reduce((s, d) => s + (+d.amt || 0), 0);
     sh.body.innerHTML = `<div class="small muted" style="margin:-.2rem 0 .5rem">點任何一個欄位或品項就可以修改</div>
       <div class="invHead card"><button class="ihNo" data-a="no">🧾 ${invNoFmt(v.no)} <i class="ed">✎</i><span class="chip">${{qr: '紙本 QR', csv: '載具 CSV', web: '載具網站', shot: '截圖', acc: '協助工具'}[v.src] || ''}</span></button>
         <div class="ihR"><span>發票日期</span><b class="ihDT"><button data-a="date">${v.date ? dayLabel(v.date) : '未填'} ✎</button><button data-a="time">${esc(v.time || '時間')} ✎</button></b></div>
         <button class="ihR ihS" data-a="seller"><span>消費店家</span><b>${esc(invSeller(v))} ✎</b></button>
         <button class="ihR ihS" data-a="sid"><span>店家統編</span><b>${v.sellerId || '未填'} ✎</b></button></div>
+      <div class="ihWay">${wayBox(v.way)}</div>
       <button class="ihAmt card" data-a="total"><span>💲 消費金額</span><b>${money(v.total)} <i class="ed">✎</i></b></button>
       <div class="lbl ihLbl" style="margin-top:.8rem"><span>🛍️ 消費品項</span><button class="btn sm" data-a="addIt">＋ 品項</button></div>
       ${its.length ? `<div class="ihT card"><div class="ihTr h"><span>品名</span><span>數量</span><span>小計</span></div>${its.map((x, i) => `<button class="ihTr ${+x.amt < 0 ? 'neg' : ''}" data-i="${i}"><span>${esc(x.n)}</span><span>${fq(x.q)}</span><span>${money(x.amt)}</span></button>`).join('')}</div>
         <div class="lbl ihLbl" style="margin-top:.9rem"><span>🏷️ 折扣</span><button class="btn sm" data-a="addDs">＋ 折扣</button></div>
-        ${ds.length ? `<div class="ihT card">${ds.map((d, k) => { const nm = (d.items || []).map(id => (its.find(x => x.id === id) || {}).n).filter(Boolean); return `<button class="ihD" data-dk="${k}"><span class="grow"><b>${esc(d.n)}</b><small>${nm.length ? '套用：' + esc(nm.join('、')) : '<span class="warnT">還沒勾選品項</span>'}</small></span><b class="neg">-${money(d.amt)}</b></button>`; }).join('')}</div>` : '<div class="small muted" style="margin:-.1rem 0 .2rem">例如「鮮食促 -21」：填折扣名稱和金額，再勾選上面套用的品項</div>'}
+        ${ds.length ? `<div class="ihT card">${ds.map((d, k) => { const nm = (d.items || []).map(id => (its.find(x => x.id === id) || {}).n).filter(Boolean); return `<button class="ihD" data-dk="${k}"><span class="grow"><b>${esc(d.n)}${discLabel(d) ? `<span class="chip" style="margin-left:.35rem">${discLabel(d)}</span>` : ''}</b><small>${nm.length ? '套用：' + esc(nm.join('、')) : '<span class="warnT">還沒勾選品項</span>'}</small></span><b class="neg">-${money(d.amt)}</b></button>`; }).join('')}</div>` : '<div class="small muted" style="margin:-.1rem 0 .2rem">例如「鮮食促 -21」：填折扣名稱和金額，再勾選上面套用的品項</div>'}
         ${Math.abs(sum - numP(v.total)) > 0.5 && v.total ? `<div class="blWarn" style="margin:.5rem 0 0">⚠️ 品項${ds.length ? '扣掉折扣後' : ''}合計 ${money(sum)} 和消費金額不同${v.src === 'qr' ? '（右邊 QR 可能沒掃到，可以再掃一次）' : ''}</div>` : `${ds.length || its.some(x => +x.amt < 0) ? `<div class="blOk" style="margin:.5rem 0 0">✅ 品項${ds.length ? '扣掉折扣後' : ''}合計和消費金額一致</div>` : ''}`}`
         : `<div class="empty" style="padding:1rem">這張發票還沒有品項明細<br><span class="small">按「＋ 品項」手動輸入，或用截圖、協助工具補上</span></div>`}
       ${b ? `<button class="invLink card" data-a="open"><span>✓ 已拿去分帳：${dayLabel(billKey(b))} ${esc(billStore(b) || '')}</span><b>打開 ›</b></button><div class="small muted" style="margin-top:.35rem">修改發票不會自動改到已經做好的分帳</div>` : ''}`;
@@ -252,6 +253,8 @@ function openInvDetail(no) {
     if (t.dataset.i != null && !a) { await invItemEdit(v, +t.dataset.i); save(); return; }
     if (t.dataset.dk != null) { await invDiscEdit(v, +t.dataset.dk); save(); return; }
     if (a === 'addDs') { await invDiscEdit(v, -1); save(); return; }
+    if (a === 'way') { v.way = v.way === t.dataset.w ? '' : t.dataset.w; save(); return; }
+    if (a === 'wayAdd') { const w = await addWay(); if (w) { v.way = w; save(); } return; }
     if (a === 'addIt') { await invItemEdit(v, -1); save(); }
     else if (a === 'no') { const nv = ((await askText('發票號碼（2 個英文字母＋8 位數字）', invNoFmt(v.no))) || '').toUpperCase().replace(/[^A-Z0-9]/g, ''); if (!nv || nv === v.no) return;
       if (!/^[A-Z]{2}\d{8}$/.test(nv)) { toast('發票號碼格式不對，例如 AB-12345678'); return; } if (DB.invs[nv]) { toast('已經有這張發票了'); return; }
@@ -283,23 +286,46 @@ function invItemEdit(v, i) {
       const o = {id: isNew ? 'i' + uid() : x.id || 'i' + uid(), n, q, p: r2(a / q), amt: r2(a)}; v.items = v.items || []; if (isNew) v.items.push(o); else v.items[i] = o; sh.close(); }; });
 }
 const invIds = v => { (v.items || []).forEach(x => { if (!x.id) x.id = 'i' + uid(); }); };
-/* 發票折扣：名稱、金額、勾選套用的品項（會平均分到勾選的品項） */
+/* 發票折扣：三種算法
+   amt   折扣金額（例如鮮食促 -21）
+   bundle 組合價（例如任選 2 件 $49：勾 2 件，折扣＝這 2 件原價合計 − 49）
+   pct   打折（例如 8 折、6.5 折：折扣＝勾選品項合計 × (1 − 折數/10)） */
+const DK = {amt: '折扣金額', bundle: '組合價', pct: '打折'};
+function discCalc(v, d) {
+  const its = v.items || [], sum = (d.items || []).reduce((t, id) => t + (+((its.find(x => x.id === id) || {}).amt) || 0), 0), val = +d.val || 0;
+  if (d.kind === 'bundle') return Math.max(0, Math.round((sum - val) * 100) / 100);
+  if (d.kind === 'pct') { const r = val > 10 ? val / 10 : val; return r > 0 && r < 10 ? Math.round(sum * (1 - r / 10) * 100) / 100 : 0; }
+  return Math.abs(+d.amt || val || 0);
+}
+const discLabel = d => d.kind === 'bundle' ? `組合價 $${d.val}` : d.kind === 'pct' ? `${d.val > 10 ? d.val / 10 : d.val} 折` : '';
 function invDiscEdit(v, k) {
-  return new Promise(res => { invIds(v); const isNew = k < 0, d = isNew ? {n: '', amt: '', items: []} : v.disc[k], sel = new Set(d.items || []), its = (v.items || []).filter(x => +x.amt > 0);
+  return new Promise(res => { invIds(v); const isNew = k < 0, d0 = isNew ? {n: '', kind: 'amt', val: '', items: []} : v.disc[k], sel = new Set(d0.items || []), its = (v.items || []).filter(x => +x.amt > 0);
+    let kind = d0.kind || 'amt';
     const sh = sheet({title: isNew ? '新增折扣' : '編輯折扣', full: true, foot: `${isNew ? '' : '<button class="btn danger" data-a="del" style="flex:0 0 auto">刪除</button>'}<button class="btn pri" data-a="ok">${isNew ? '新增' : '儲存'}</button>`, onClose() { res(); }});
-    const presets = [...new Set(['鮮食促', '組合優惠', '第二件折扣', '會員折扣'].concat((DB.scfg.invDisc || [])))];
+    const presets = [...new Set(['鮮食促', '組合優惠', '第二件折扣', '會員折扣'].concat((DB.scfg.invDisc || [])))], hint = {amt: '例如 21（直接折掉的金額）', bundle: '例如 49（勾選的品項合起來賣多少錢）', pct: '例如 8 或 6.5（8 折、6.5 折）'};
     sh.body.innerHTML = `<div class="whoRow presetRow" style="margin-bottom:.6rem">${presets.map(p => `<button data-p="${esc(p)}">${esc(p)}</button>`).join('')}</div>
-      <div class="iGrid2"><div class="field"><label>折扣名稱</label><input id="idN" value="${esc(d.n)}" maxlength="40" placeholder="例如 鮮食促"></div><div class="field"><label>折扣金額</label><input id="idA" inputmode="decimal" value="${esc(d.amt)}" placeholder="21"></div></div>
-      <div class="lbl">勾選這個折扣套用的品項 <span class="muted small" id="idT"></span></div>
+      <div class="field"><label>折扣名稱</label><input id="idN" value="${esc(d0.n)}" maxlength="40" placeholder="例如 鮮食促、組合優惠"></div>
+      <div class="lbl">折扣方式</div><div class="dkSeg">${Object.entries(DK).map(([kk, t]) => `<button data-k="${kk}" class="${kk === kind ? 'on' : ''}">${t}</button>`).join('')}</div>
+      <div class="field"><label id="idL"></label><input id="idA" inputmode="decimal" value="${esc(d0.kind ? d0.val : d0.amt || '')}"></div>
+      <div class="dkRes" id="idR"></div>
+      <div class="lbl">勾選這個折扣套用的品項</div>
       ${its.length ? its.map(x => `<label class="mcR"><input type="checkbox" data-id="${x.id}" ${sel.has(x.id) ? 'checked' : ''}><div class="grow"><b>${esc(x.n)}</b><small>${x.q > 1 ? '×' + fq(x.q) + '・' : ''}${money(x.amt)}</small></div></label>`).join('') : '<div class="empty" style="padding:.8rem">還沒有品項，請先新增品項</div>'}`;
-    const tip = () => { const a = Math.abs(parseFloat($('#idA', sh.body).value) || 0); $('#idT', sh.body).textContent = sel.size && a ? `（勾 ${sel.size} 項，每項折 ${money(a / sel.size)}）` : ''; };
-    tip(); sh.body.addEventListener('input', tip);
-    sh.body.addEventListener('change', e => { const c = e.target.closest('[data-id]'); if (!c) return; buzz(8); if (c.checked) sel.add(c.dataset.id); else sel.delete(c.dataset.id); tip(); });
-    sh.body.addEventListener('click', e => { const t = e.target.closest('[data-p]'); if (t) { buzz(8); $('#idN', sh.body).value = t.dataset.p; } });
+    const cur = () => ({kind, val: parseFloat(String($('#idA', sh.body).value).replace(/[^\d.]/g, '')) || 0, items: its.filter(x => sel.has(x.id)).map(x => x.id)});
+    const upd = () => { $('#idL', sh.body).textContent = {amt: '折扣金額', bundle: '組合價格（勾選的品項合計賣多少）', pct: '打幾折'}[kind]; $('#idA', sh.body).placeholder = hint[kind];
+      $$('.dkSeg button', sh.body).forEach(b => b.classList.toggle('on', b.dataset.k === kind));
+      const c = cur(), orig = c.items.reduce((t, id) => t + (+(its.find(x => x.id === id) || {}).amt || 0), 0), dc = discCalc(v, Object.assign({amt: c.val}, c));
+      $('#idR', sh.body).innerHTML = !c.items.length ? '<span class="warnT">請勾選套用的品項</span>' : !c.val ? '　' : `勾 ${c.items.length} 項・原價 ${money(orig)} → ${kind === 'amt' ? '' : `${kind === 'bundle' ? '組合價' : discLabel(c)} `}折扣 <b>-${money(dc)}</b>${c.items.length > 1 ? `（每項 -${money(dc / c.items.length)}）` : ''}`; };
+    upd(); sh.body.addEventListener('input', upd);
+    sh.body.addEventListener('change', e => { const c = e.target.closest('[data-id]'); if (!c) return; buzz(8); if (c.checked) sel.add(c.dataset.id); else sel.delete(c.dataset.id); upd(); });
+    sh.body.addEventListener('click', e => { const t = e.target.closest('[data-p],[data-k]'); if (!t) return; buzz(8);
+      if (t.dataset.k) { kind = t.dataset.k; upd(); return; }
+      $('#idN', sh.body).value = t.dataset.p; if (/組合/.test(t.dataset.p)) kind = 'bundle'; else if (/會員|第二件/.test(t.dataset.p)) kind = 'pct'; else if (kind === 'bundle') kind = 'amt'; upd(); });
     sh.foot.onclick = e => { const t = e.target.closest('[data-a]'); if (!t) return; buzz(10);
       if (t.dataset.a === 'del') { v.disc.splice(k, 1); sh.close(); return; }
-      const n = $('#idN', sh.body).value.trim() || '折扣', a = Math.abs(parseFloat(String($('#idA', sh.body).value).replace(/[^\d.\-]/g, '')) || 0); if (!a) { toast('請輸入折扣金額'); return; }
-      const o = {id: d.id || 'v' + uid(), n, amt: a, items: its.filter(x => sel.has(x.id)).map(x => x.id)}; v.disc = v.disc || []; if (isNew) v.disc.push(o); else v.disc[k] = o;
+      const c = cur(), n = $('#idN', sh.body).value.trim() || (kind === 'bundle' ? '組合優惠' : '折扣'); if (!c.val) { toast('請輸入' + {amt: '折扣金額', bundle: '組合價格', pct: '折數'}[kind]); return; }
+      if (kind !== 'amt' && !c.items.length) { toast('組合價和打折要勾選套用的品項'); return; }
+      const o = Object.assign({id: d0.id || 'v' + uid(), n}, c); o.amt = discCalc(v, Object.assign({amt: c.val}, o)); if (kind === 'amt') o.amt = c.val;
+      v.disc = v.disc || []; if (isNew) v.disc.push(o); else v.disc[k] = o;
       if (!presets.includes(n)) { DB.scfg.invDisc = (DB.scfg.invDisc || []).concat(n).slice(-12); saveScfg(); } sh.close(); }; });
 }
 /* 名稱選擇：輸入關鍵字（任何位置都可以），列出以前用過的店名讓你選 */
@@ -324,7 +350,7 @@ function pickName(title, cur) {
 /* 發票 → 購物分帳：負數的行（鮮食促 -21）當成品項折扣，自動配對品項 */
 function invToBill(v) {
   const nm = invSeller(v), st = matchShopStore(nm.replace(/^統編 \d+$/, '')), k = v.date || ymd(new Date());
-  const b = {id: 'b' + uid(), place: st ? st.id : '', pname: st ? st.name : nm, time: v.time || '', total: numP(v.total) || '', imgs: [], items: [], disc: [], odisc: [], fees: [], src: 'inv', inv: v.no};
+  const b = {id: 'b' + uid(), place: st ? st.id : '', pname: st ? st.name : nm, time: v.time || '', total: numP(v.total) || '', imgs: [], items: [], disc: [], odisc: [], fees: [], src: 'inv', inv: v.no, way: v.way || ''};
   invIds(v); const map = {};
   (v.items || []).forEach(x => { const a = +x.amt || 0; if (a > 0) { const id = 'x' + uid(); map[x.id] = id; b.items.push({id, n: rcName(x.n), q: x.q || 1, amt: a, o: '', ppl: []}); } });
   (v.disc || []).forEach(d => { const ids = (d.items || []).map(i => map[i]).filter(Boolean); b.disc.push({id: 'd' + uid(), n: d.n, amt: +d.amt || 0, items: ids, auto: false}); });
