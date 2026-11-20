@@ -623,3 +623,8 @@ table.piv .s.pr.one{text-align:center;padding-right:.5rem}
 .tplRow button small{font-size:.74rem;color:var(--text-2);font-weight:700}
 .tplRow button.on{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
 .tplRow button.on small{color:inherit;opacity:.9}
+.mcR{display:flex;align-items:flex-start;gap:.6rem;padding:.6rem .7rem;border-radius:6px;background:var(--surface-3);border:1px solid var(--border-soft);margin-bottom:.4rem}
+.mcR input{width:1.15rem;height:1.15rem;margin-top:.15rem;accent-color:var(--accent);flex:none}
+.mcR small{display:block;font-size:.76rem;color:var(--text-2);line-height:1.45;margin-top:.15rem}
+.mcS{flex:none;font-size:1.1rem}
+.mcN{font-size:.78rem;color:var(--text-2);line-height:1.45;padding:.1rem 0}

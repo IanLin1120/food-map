@@ -157,7 +157,8 @@ function renderSet() {
       <div class="keyBox"><input id="sA" type="password" value="${esc(S.aikey)}" placeholder="貼上 Gemini API 金鑰" autocomplete="off"><button class="btn sm" data-a="eyeA">顯示</button></div>
       <div class="row wrap"><button class="btn sm pri" data-a="tutA">📘 圖文教學</button><button class="btn sm" data-a="getA">申請金鑰 ↗</button><button class="btn sm olive" data-a="testA">測試金鑰</button></div><div class="testOut" id="outA"></div></div>
     <div class="setR"><div class="t"><b>辨識模型</b><small>自動＝先用 Flash-Lite（快、每天約 500 次），額度用完自動換 Flash（較準、每天約 20 次）</small></div><select id="sM"><option value="auto" ${!S.aimodel || S.aimodel === 'auto' ? 'selected' : ''}>自動</option><option value="lite" ${S.aimodel === 'lite' ? 'selected' : ''}>Flash-Lite（快）</option><option value="flash" ${S.aimodel === 'flash' ? 'selected' : ''}>Flash（較準）</option>${S.aimodel && !['auto', 'lite', 'flash'].includes(S.aimodel) ? `<option selected>${esc(S.aimodel)}</option>` : ''}</select></div>
-    ${aiUsageCard()}</div>
+    ${aiUsageCard()}
+    <button class="setR" data-a="mcheck" style="width:100%;text-align:left"><div class="t"><b>🩺 檢查所有菜單表格</b><small>自動找出可能辨識錯的店家（沒價格、同一格兩個價格、有新版圖片…），勾選後一次全部重新辨識</small></div><span class="muted">›</span></button></div>
   <div class="setG"><h3>分類</h3><div class="setC"><button class="setR" data-a="cats" style="width:100%;text-align:left"><div class="t"><b>管理收藏分類</b><small>自訂名稱、圖示、旗子顏色與排序（共 ${DB.cats.length} 個）</small></div><span class="muted">›</span></button>
     <button class="setR" data-a="rcats" style="width:100%;text-align:left"><div class="t"><b>管理食譜分類</b><small>煎、炒、電鍋、湯…自訂名稱、圖示與排序（共 ${DB.rcats.length} 個）</small></div><span class="muted">›</span></button></div></div>
   <div class="setG"><h3>資料備份</h3><div class="setC">
@@ -185,6 +186,7 @@ function initSet() {
     else if (a === 'testG') { $('#outG').innerHTML = '測試中…'; $('#outG').innerHTML = await testG(); } else if (a === 'testA') { $('#outA').innerHTML = '測試中…'; $('#outA').innerHTML = await testA(); renderSetKeep(); }
     else if (a === 'updChk') Upd.check(true); else if (a === 'updApk') Upd.releases(); else if (a === 'updBack') Upd.restore(); else if (a === 'updShare') Upd.share(); else if (a === 'updWeb') openUrl(GH.pages);
     else if (a === 'aiStudio') openUrl('https://aistudio.google.com/rate-limit?timeRange=last-28-days'); else if (a === 'aiLog') { const o = $('#aiLogBox'); o.classList.toggle('hide'); b.textContent = o.classList.contains('hide') ? '查看最近 AI 紀錄' : '收起紀錄'; }
+    else if (a === 'mcheck') openMenuCheck();
     else if (a === 'cats') openCats('place'); else if (a === 'rcats') openCats('recipe'); else if (a.indexOf('off') === 0) Off.act(a); else if (a === 'exp') exportBackup(); else if (a === 'imp') importBackup(); else if (a === 'welcome') welcome();
     else if (a === 'wipe') { if (await ask('確定要清除「所有」收藏、菜單、食譜與設定嗎？\n這個動作無法復原，建議先匯出備份。', '全部清除', true) && await ask('再確認一次：真的要全部清除嗎？', '清除', true)) { for (const s of ['kv', 'places', 'recipes', 'imgs']) await IDB.clear(s).catch(() => {}); try { localStorage.clear(); } catch (er) {} location.reload(); } } });
 }

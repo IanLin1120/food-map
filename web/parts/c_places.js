@@ -172,13 +172,16 @@ B. 組合式（自選）菜單：顧客依步驟挑選，例如「1 主食（選
 13. 同一個品項分「乾／湯」或不同口味、內餡（例如 南投意麵 乾45 湯50、麻辣湯餃(高麗菜)、麻辣湯餃(韭菜)）時，每一種各寫一行，品名後面用括號寫清楚，例如：品項|飯麵類|南投意麵 (乾)|45、品項|飯麵類|南投意麵 (湯)|50。價格一定要對應到同一行旁邊的那個數字。
 14. 一整個系列共用的選擇（例如經典系列每個品項都可以選 吐司／漢堡／脆皮+$15／乾酪+$15／起司+$10，或鐵板麵可以選 蘑菇／黑胡椒／蔥燒／沙茶），寫成「選項」，分類用「系列名稱・選項名稱（選一）」，例如：選項|經典系列・麵包（選一）|脆皮|15、選項|美味小點・醬料（選一）|蘑菇|。
 15. 飲料或咖啡可以選冰或熱、價格一樣時，不要把熱的另外寫成一個品項，只寫尺寸和價格，再加兩行選項：選項|咖啡系列・溫度（選一）|冰|、選項|咖啡系列・溫度（選一）|熱|。
-16. 同一個品項有好幾種版本、各有價格時（例如蛋餅分 一般／酥皮／特酥、法式麵包／可頌），每個版本各寫一行，品名後面括號寫版本名稱，沒標版本的那個價格寫（一般），例如：品項|活力蛋餅|原味 (一般)|30、品項|活力蛋餅|原味 (酥皮)|35。份量說明（例如 厚牛堡(4 OZ)、熱狗(4條)）照抄在品名裡。`;
+16. 同一個品項有好幾種版本、各有價格時（例如蛋餅分 一般／酥皮／特酥、法式麵包／可頌），每個版本各寫一行，品名後面括號寫版本名稱，沒標版本的那個價格寫（一般），例如：品項|活力蛋餅|原味 (一般)|30、品項|活力蛋餅|原味 (酥皮)|35。份量說明（例如 厚牛堡(4 OZ)、熱狗(4條)）照抄在品名裡。
+17. 一個區塊只寫一次價格、下面一排編號套餐都適用時（例如「私房套餐 129 元 主餐單點80元」），每個套餐都要寫出價格；有套餐和單點兩種價格就各寫一行，例如：品項|私房套餐|1號餐-清爽鳳梨 (套餐)|129、品項|私房套餐|1號餐-清爽鳳梨 (單點)|80。套餐內容或條件寫成說明行：說明|私房套餐|主餐+薯餅+25元飲品（飲品超過25元請補差價）。
+18. 同一個價格、只是可以選不同麵包或做法時（例如表頭寫「法式麵包／可頌」但只有一個價格欄），不要拆成兩行，品名只寫一次、價格寫一次，再加選項：選項|法式麵包/可頌・麵包（選一）|法式麵包|、選項|法式麵包/可頌・麵包（選一）|可頌|。
+19. 品名裡的「(辣/原)」這種斜線分開的口味照抄在品名裡。`;
 const SZ = /\s*[（(]([^()（）]{1,8})[)）]\s*$/;
 /* 尺寸由小到大：S → M → L → XL → 瓶 */
 const SZ_ORDER = ['XS', 'S', '小', '小杯', '小碗', '小份', '薄', '薄片', '單', 'M', '中', '中杯', '中碗', '一般', '一般量', '正常', 'L', '大', '大杯', '大碗', '大份', '厚', '厚片', '雙', 'XL', '特大', '特大杯', '加大', '超大', 'XXL', '瓶', '瓶裝', '罐', '桶'];
 const szRank = s => { const k = String(s || '').trim().toUpperCase().replace(/杯型$/, ''); const i = SZ_ORDER.indexOf(k); return i < 0 ? (/瓶|罐|桶/.test(k) ? 90 : 50) : i; };
 /* 品名最後括號裡是不是「尺寸」：M、L、瓶、大杯、小份、6入…（「附薯條」「期間限定」這種是說明，不是尺寸） */
-const szOf = n => { const m = String(n || '').match(SZ); if (!m) return ''; const z = m[1].trim(); if (!z || /售完|限定|推薦|新品|招牌|必點|附|含|送|擇一|任選/.test(z) || /^[+＋]?[$＄]?[+＋]?\d+(\.\d+)?元?$/.test(z)) return '';
+const szOf = n => { const m = String(n || '').match(SZ); if (!m) return ''; const z = m[1].trim(); if (!z || /售完|限定|推薦|新品|招牌|必點|附|含|送|擇一|任選|[\/／]/.test(z) || /^[+＋]?[$＄]?[+＋]?\d+(\.\d+)?元?$/.test(z)) return '';
   return SZ_ORDER.includes(z.toUpperCase()) || z.length <= 3 || (z.length <= 5 && /杯|份|碗|瓶|罐|盒|入|吋|寸|片|個|顆|隻|串|oz|ml|cc|斤|兩|人|大|中|小|單|雙/i.test(z)) ? z : ''; };
 /* 真正的「尺寸」才分欄：S/M/L、大中小、杯／瓶／碗／份…；乾／湯、高麗菜／韭菜這種是不同品項，留在品名裡各自一行 */
 const isSizeWord = (z, multi) => !!z && (SZ_ORDER.includes(z.toUpperCase()) || /杯|瓶|罐|碗|份|盒|吋|寸|oz|ml|cc|公克|克|斤|兩/i.test(z) || (multi && /^\d+\s*(片|隻|顆|個|入|塊|串|粒|條|支|尾|人)$/.test(z)));
@@ -248,13 +251,14 @@ function fixRegions(menu) {
   const win = {}; raw.forEach(l => { const n = normRegion(l); if (n && (!win[n] || l === n)) win[n] = l; }); const any = Object.keys(win).length;
   return menu.filter(r => { if (!r.g) return true; const n = normRegion(r.g); return n ? win[n] === r.g : !any; }).map(r => { if (r.g && normRegion(r.g)) r.g = normRegion(r.g); return r; });
 }
-const MT = {品項: 'item', 選項: 'opt', 加購: 'add', item: 'item', opt: 'opt', add: 'add'};
+const MT = {品項: 'item', 選項: 'opt', 加購: 'add', 說明: 'note', 備註: 'note', item: 'item', opt: 'opt', add: 'add', note: 'note'};
 const normCat = c => String(c || '').replace(/\s+/g, '').replace(/[:：]+$/, '').replace(/\(/g, '（').replace(/\)/g, '）') || '其他';
 function parseMenu(t) {
   const out = []; String(t || '').split(/\r?\n/).forEach(l => { l = l.replace(/^[\s>*\-•`]+/, '').trim(); if (!l || /^```/.test(l)) return;
     let f = l.split(/\s*[|｜]\s*/); if (f.length < 2) return; let ty = 'item';
     if (MT[f[0]]) { ty = MT[f[0]]; f = f.slice(1); } else if (/^(類型|type)$/i.test(f[0])) return;
     let rg = ''; if (f.length >= 4 && /^[\d$＄.,\-—–/／\s]*$/.test(f[f.length - 2]) && !/^[\d$＄.,\-—–/／\s]*$/.test(f[f.length - 1]) && f[f.length - 1].length <= 12) { rg = f[f.length - 1].trim(); f = f.slice(0, -1); }
+    if (ty === 'note') { if (f.length >= 2) out.push({t: 'note', c: normCat(f[0]), n: f.slice(1).join(' ').trim(), p: ''}); return; }
     let c, n, pr; if (f.length >= 3) { c = f[0]; n = f.slice(1, f.length - 1).join(' '); pr = f[f.length - 1]; } else if (f.length === 2) { if (ty === 'opt') { c = f[0]; n = f[1]; pr = ''; } else { c = '其他'; n = f[0]; pr = f[1]; } } else return;
     if (/^(分類|類別|category)$/i.test(c) && /^(品名|名稱|name)$/i.test(n)) return; n = (n || '').trim(); if (!n) return;
     c = normCat(c); if (ty === 'item' && /^(加購|加價|加點|單點加購)/.test(c)) ty = 'add';
@@ -268,7 +272,7 @@ function parseMenu(t) {
 /* 把同一個分類的品項排在一起（照第一次出現的順序），品項 → 選項 → 加購 */
 function groupMenu(rows) {
   const out = [], gs = []; (rows || []).forEach(r => { const g = r.g || ''; if (!gs.includes(g)) gs.push(g); });
-  gs.forEach(g => ['item', 'opt', 'add'].forEach(t => { const cats = [], by = {};
+  gs.forEach(g => ['item', 'opt', 'add', 'note'].forEach(t => { const cats = [], by = {};
     (rows || []).forEach(r => { if ((r.g || '') !== g || (r.t || 'item') !== t) return; const c = normCat(r.c); if (!by[c]) { by[c] = []; cats.push(c); } by[c].push(Object.assign({}, r, {c, t})); });
     cats.forEach(c => out.push(...by[c])); }));
   return out;
@@ -290,6 +294,47 @@ const AIJ = {jobs: {},
     if (!e) { e = el('<button id="aiPill" class="glass"></button>'); document.body.append(e); e.onclick = () => { const id = Object.keys(AIJ.jobs)[0]; if (id && !sheets.length) openPlace(id, true); }; }
     const p = DB.places.find(x => x.id === ids[0]); e.innerHTML = `<span class="spin"></span><span>${esc((p ? p.name : '') + '：' + (this.jobs[ids[0]].msg || 'AI 處理中…'))}${ids.length > 1 ? '（另有 ' + (ids.length - 1) + ' 個）' : ''}</span>`; }
 };
+/* ---------- 一鍵檢查所有菜單表格 ---------- */
+function menuIssues(p) {
+  const out = [], M = p.menu || [], A = albumsOf(p).filter(a => a.imgs.length); if (!A.length) return null;
+  if (!M.length) return ['有菜單圖片但還沒辨識成表格'];
+  const T = r => r.t || 'item', it = M.filter(r => T(r) === 'item' || T(r) === 'add');
+  const noP = it.filter(r => r.p === '' || r.p == null), isCol = colLabels(it);
+  /* 「法式麵包｜可頌」這種同價可選的空欄不算缺價格 */
+  const realNoP = noP.filter(r => { const L = labelOf(r.n); return !(L.z && isCol(r.c, L.z) && it.some(y => y !== r && y.c === r.c && y.p && labelOf(y.n).n === L.n)); });
+  if (realNoP.length) out.push(`${realNoP.length} 個品項沒有價格（例如「${realNoP[0].n}」）`);
+  const cell = {}; it.forEach(r => { if (!r.p) return; const L = labelOf(r.n), k = [r.g || '', T(r), r.c, L.n, L.z || '', L.t || ''].join('|'); (cell[k] = cell[k] || new Set()).add(String(r.p)); });
+  const dup = Object.keys(cell).filter(k => cell[k].size > 1); if (dup.length) out.push(`${dup.length} 個品項同一個尺寸有兩個以上的價格（例如「${dup[0].split('|')[3]}」）`);
+  const junk = it.filter(r => /\d+\s*元|[$＄]\s*\d|^\d+$/.test(r.n)); if (junk.length) out.push(`${junk.length} 個品名裡混進了價格文字`);
+  const cats = {}; it.forEach(r => { cats[r.c] = (cats[r.c] || 0) + 1; }); const tiny = Object.keys(cats).filter(c => cats[c] === 1).length; if (tiny >= 4) out.push(`${tiny} 個分類只有 1 個品項，分類可能切太碎`);
+  const src = p.menuSrc || {}; if (src.partial) out.push('上次辨識時結果被截斷，可能不完整');
+  if (src.kind === 'ai' && A[0].t > (src.t || 0) + 60000) out.push('有比表格更新的菜單圖片版本');
+  return out;
+}
+/* 自動挑要辨識的圖：每個區域各取最新的版本 */
+const autoAlbums = p => { const seen = new Set(), L = []; albumsOf(p).filter(a => a.imgs.length).forEach(a => { const g = a.rg || ''; if (!seen.has(g)) { seen.add(g); L.push(a); } }); return L; };
+function openMenuCheck() {
+  if (!S.aikey) { needAiKey(); return; }
+  const rows = DB.places.map(p => ({p, iss: menuIssues(p)})).filter(x => x.iss), bad = rows.filter(x => x.iss.length), ok = rows.filter(x => !x.iss.length), sel = new Set(bad.map(x => x.p.id));
+  let model = 'flash', running = false; const sh = sheet({title: '🩺 檢查所有菜單表格', full: true, foot: '<div class="grow ordTot" id="mcT"></div><button class="btn pri" data-a="go" style="flex:0 0 auto">重新辨識</button>'});
+  const item = x => { const m = x.p.menuSrc || {}; return `<label class="mcR"><input type="checkbox" data-id="${x.p.id}" ${sel.has(x.p.id) ? 'checked' : ''}><div class="grow"><b>${esc(x.p.name)}</b><small>${x.iss.length ? x.iss.map(esc).join('<br>') : '沒發現明顯問題'}${m.t ? `<br><span class="muted">上次辨識：${new Date(m.t).toLocaleDateString('zh-TW')}${m.model ? '・' + esc(aiShort(m.model.split('、')[0])) : ''}・${autoAlbums(x.p).length} 個版本 / ${autoAlbums(x.p).reduce((a, b) => a + b.imgs.length, 0)} 張圖</span>` : ''}</small></div><span class="mcS" id="mcs-${x.p.id}"></span></label>`; };
+  const draw = () => { sh.body.innerHTML = `<div class="small muted" style="margin-bottom:.7rem">程式會檢查每家店的表格有沒有常見的辨識錯誤。勾選的店家會用每個區域<b>最新的菜單圖片</b>重新辨識，並<b>直接取代</b>舊表格（圖片不會刪除）。</div>
+      <div class="lbl">辨識模型</div><div class="tplRow" style="grid-template-columns:repeat(2,minmax(0,1fr))"><button data-m="flash" class="${model === 'flash' ? 'on' : ''}"><b>Flash</b><small>較準・每天約 20 次</small></button><button data-m="lite" class="${model === 'lite' ? 'on' : ''}"><b>Flash-Lite</b><small>較快・每天約 500 次</small></button></div>
+      ${bad.length ? `<div class="msH"><b class="grow">⚠️ 可能有問題（${bad.length}）</b><button class="btn sm" data-a="all">全選</button><button class="btn sm" data-a="none">全不選</button></div>${bad.map(item).join('')}` : '<div class="empty" style="padding:1rem">🎉 沒有找到明顯有問題的菜單表格</div>'}
+      ${ok.length ? `<div class="msH" style="margin-top:1rem"><b class="grow">✅ 沒發現問題（${ok.length}）</b></div><div class="small muted" style="margin:-.2rem 0 .5rem">也可以勾選，用最新規則重新辨識</div>${ok.map(item).join('')}` : ''}`;
+    upd(); };
+  const upd = () => { const n = sel.size, imgs = DB.places.filter(p => sel.has(p.id)).reduce((a, p) => a + autoAlbums(p).reduce((b, al) => b + al.imgs.length, 0), 0); $('#mcT', sh.foot).innerHTML = running ? '辨識中，可以關掉這個畫面…' : `勾選 ${n} 間・共 ${imgs} 張圖${model === 'flash' && imgs > 15 ? '<br><span style="color:var(--danger)">Flash 每天約 20 次，張數多建議用 Flash-Lite</span>' : ''}`; };
+  draw();
+  sh.body.addEventListener('change', e => { const c = e.target.closest('[data-id]'); if (!c) return; if (c.checked) sel.add(c.dataset.id); else sel.delete(c.dataset.id); upd(); });
+  sh.body.addEventListener('click', e => { const b = e.target.closest('[data-m],[data-a]'); if (!b || running) return; if (b.dataset.m) { model = b.dataset.m; draw(); } else if (b.dataset.a === 'all') { rows.forEach(x => { if (x.iss.length) sel.add(x.p.id); }); draw(); } else if (b.dataset.a === 'none') { bad.forEach(x => sel.delete(x.p.id)); draw(); } });
+  sh.foot.addEventListener('click', async e => { if (!e.target.closest('[data-a="go"]') || running) return; const L = DB.places.filter(p => sel.has(p.id)); if (!L.length) { toast('請先勾選店家'); return; }
+    if (!await ask(`要用 ${model === 'flash' ? 'Flash' : 'Flash-Lite'} 重新辨識這 ${L.length} 間店的菜單嗎？\n舊表格會被新的結果取代。`, '開始')) return;
+    running = true; upd(); let ok2 = 0, fail = 0; toast(`開始在背景依序辨識 ${L.length} 間店`, 3000);
+    for (const p of L) { const st = document.getElementById('mcs-' + p.id); if (st) st.textContent = '⏳'; const before = (p.menuSrc || {}).t;
+      try { await aiMenu(p, model, autoAlbums(p), {auto: true}); } catch (er) {}
+      const done = (p.menuSrc || {}).t !== before; done ? ok2++ : fail++; const st2 = document.getElementById('mcs-' + p.id); if (st2) st2.textContent = done ? '✅' : '❌'; }
+    running = false; buzz(60); toast(`🩺 重新辨識完成：成功 ${ok2} 間${fail ? `、失敗 ${fail} 間（可到設定 → AI 執行紀錄看原因）` : ''}`, 6000); if (!sh.closed) { upd(); } refreshAll(); });
+}
 const menuDone = (p, msg) => { buzz(40); toast(msg, 4500); document.dispatchEvent(new CustomEvent('fm:job', {detail: p.id})); refreshAll(); };
 
 /* 有分區域（北部／中部／南部…）的菜單：先選要辨識哪些版本，每個區域各自一份表格 */
@@ -301,16 +346,16 @@ function pickAlbums(p, prefer) {
   render(); sh.body.addEventListener('click', e => { const b = e.target.closest('.alb'); if (!b) return; const id = b.dataset.id; if (sel.has(id)) sel.delete(id); else sel.add(id); render(); });
   sh.foot.onclick = () => { if (!sel.size) return; sh.close(); aiMenu(p, prefer, L.filter(a => sel.has(a.id))); };
 }
-async function aiMenu(p, prefer, albums) {
-  if (!S.aikey) { needAiKey(); return; } if (AIJ.jobs[p.id]) { toast('這間店的 AI 工作還在進行中'); return; }
+async function aiMenu(p, prefer, albums, opt) { opt = opt || {};
+  if (!S.aikey) { needAiKey(); return; } if (AIJ.jobs[p.id]) { if (!opt.auto) toast('這間店的 AI 工作還在進行中'); return; }
   const L = albumsOf(p).filter(a => a.imgs.length); if (!L.length) { toast('請先在「管理圖檔」加入菜單圖片'); return; }
   if (!albums) { if (L.length > 1 && L.some(a => a.rg)) { pickAlbums(p, prefer); return; } albums = [L[0]]; }
   const regs = new Set(albums.map(a => a.rg || '')), regTxt = [...regs].map(r => r || '不分區').join('、'), hasReg = (p.menu || []).some(r => r.g) || [...regs].some(Boolean);
   const old = (p.menu || []).filter(r => regs.has(r.g || ''));
-  let replace = true; if (old.length) { replace = await ask(`目前表格${hasReg ? '「' + regTxt + '」' : ''}已有 ${old.length} 個品項。\n按「刪掉舊的、換成新的」＝${hasReg ? '這些區域的' : '整份'}表格換成這次的辨識結果${hasReg ? '（其他區域不受影響）' : ''}。\n按「取消」＝保留舊表格，把新結果加在後面。`, '刪掉舊的、換成新的'); }
+  let replace = true; if (old.length && !opt.auto) { replace = await ask(`目前表格${hasReg ? '「' + regTxt + '」' : ''}已有 ${old.length} 個品項。\n按「刪掉舊的、換成新的」＝${hasReg ? '這些區域的' : '整份'}表格換成這次的辨識結果${hasReg ? '（其他區域不受影響）' : ''}。\n按「取消」＝保留舊表格，把新結果加在後面。`, '刪掉舊的、換成新的'); }
   const imgs = albums.flatMap(a => a.imgs.map(id => ({id, g: a.rg || ''}))), res = []; let fail = '', okN = 0, partial = false, models = new Set(); const t0 = Date.now(), cnt = {}, dropped = new Set();
   const show = () => { const n = Object.values(cnt).reduce((a, b) => a + b, 0); AIJ.msg(p.id, `辨識中${imgs.length > 1 ? `（${okN}/${imgs.length} 張）` : ''}… 已讀到 ${n} 項`); };
-  AIJ.set(p.id, {kind: 'img', msg: '準備圖片…'}); toast('已在背景開始辨識，完成後會自動帶入表格，可以先做別的事', 3000);
+  AIJ.set(p.id, {kind: 'img', msg: '準備圖片…'}); if (!opt.auto) toast('已在背景開始辨識，完成後會自動帶入表格，可以先做別的事', 3000);
   let i = 0; const worker = async () => { while (i < imgs.length) { const k = i++;
     try { const b = await imgBlob(imgs[k].id); if (!b) continue; cnt[k] = 0; show();
       const hint = imgs[k].g ? `\n\n補充：這張是「${imgs[k].g}」的菜單。如果圖片裡並排了好幾份不同地區或分店的菜單，只辨識角落標示「${imgs[k].g}」（或屬於${imgs[k].g}的縣市）的那一份，其他份完全不要輸出；找不到標示時只辨識最左邊那一份。` : '';
@@ -331,7 +376,7 @@ async function aiMenu(p, prefer, albums) {
   const got = new Set(rows.map(r => r.g || '')); if (got.size && !got.has('')) regs.delete(''); got.forEach(g => regs.add(g));
   p.menu = groupMenu(replace ? (p.menu || []).filter(r => !regs.has(r.g || '')).concat(rows) : (p.menu || []).concat(rows));
   const rs = [...regs].filter(Boolean); if (rs.length && !rs.includes(p.rgSel)) p.rgSel = rs[0];
-  p.menuSrc = {kind: 'ai', t: Date.now(), ver: albums.map(a => a.name).join('、'), model: [...models].join('、'), partial};
+  p.menuSrc = {kind: 'ai', t: Date.now(), ver: albums.map(a => a.name).join('、'), model: [...models].join('、'), partial, appv: APP_VERSION};
   await savePlace(p);
   menuDone(p, `✅「${p.name}」辨識完成：${rows.length} 個品項${hasReg ? '（' + regTxt + '）' : ''}，用時 ${Math.round((Date.now() - t0) / 1000)} 秒${fail ? '（有圖片失敗：' + fail + '）' : partial ? '（結果可能不完整，請核對）' : ''}${dropped.size ? `\n同一張圖裡的「${[...dropped].join('、')}」版本沒有放進表格` : ''}`);
 }
@@ -644,7 +689,7 @@ function openPlace(id, toMenu) {
         const o = out[idx[k]]; if (col) o.multi = true;
         if (!o.v.some(x => x.s === sz && x.p === r.p) && !(T.t && !sz && o.v.some(x => x.p === r.p))) o.v.push({s: sz, p: r.p}); });
       return out; };
-    const temps = {}, ogs = optGroups(opts), used = new Set();
+    const temps = {}, ogs = optGroups(opts), used = new Set(), notes = all.filter(r => TY(r) === 'note' && inReg(r)), choice = {};
     /* 卡片上方：這個系列可以選的東西（麵包、口味、醬料、冰／熱） */
     const gRow = g => `<div class="mcOR"><b>${esc(g.label)}</b>${g.tag ? `<span class="tag">${esc(g.tag)}</span>` : ''}<span class="mcOL">${g.L.map(r => `<span>${esc(r.n)}${r.p ? `<em>+$${esc(r.p)}</em>` : ''}</span>`).join('')}</span></div>`;
     const gSig = g => g.label + '|' + g.L.map(r => r.n + r.p).join(',');
@@ -661,6 +706,9 @@ function openPlace(id, toMenu) {
     const cards = (L0, pre, cls) => { const L = merge(L0), cs = [], by = {}; L.forEach(r => { if (!by[r.c]) { by[r.c] = []; cs.push(r.c); } by[r.c].push(r); });
       const has = x => x.p !== '' && x.p != null, pr = v => pre + price(v);
       return cs.map(c => { const rs = by[c], szs = [], plan = pre ? {strip: '', under: []} : optPlan(c, rs), nm = (r, i) => `<td class="n">${esc(r.n)}${(plan.under[i] || []).length ? `<div class="mcIO">${plan.under[i].map(g => `<span><b>${esc(g.label)}</b>${g.L.map(o => esc(o.n) + (o.p ? `<em>+$${esc(o.p)}</em>` : '')).join('／')}</span>`).join('')}</div>` : ''}</td>`;
+        /* 有欄位整欄都沒有價格（例如可頌那欄只是勾選框）：代表同價、只是可以選 → 收成一個價格，欄位名稱變成選項 */
+        const allLab = [...new Set(rs.flatMap(r => r.multi ? r.v.map(x => x.s).filter(Boolean) : []))], emptyLab = allLab.filter(z => !rs.some(r => r.v.some(x => x.s === z && has(x))));
+        if (!pre && emptyLab.length && emptyLab.length < allLab.length) { choice[c] = allLab; rs.forEach(r => { if (!r.multi) return; r.v = r.v.filter(x => has(x)).map(x => ({s: '', p: x.p})); r.multi = false; }); }
         rs.forEach(r => { if (r.multi) r.v.forEach(x => { if (x.s && has(x) && !szs.includes(x.s) && !TEMP_RE.test(x.s)) szs.push(x.s); }); }); szs.sort((a, b) => szRank(a) - szRank(b));
         /* 只標「熱」沒寫尺寸的價格：剛好缺一個尺寸時就放進那一欄，否則另外開一欄 */
         rs.forEach(r => { if (r.multi) r.v.forEach(x => { if (x.s || !has(x)) return; const miss = szs.filter(z => !r.v.some(y => y.s === z && has(y))); x.s = miss.length === 1 ? miss[0] : '一般'; if (!szs.includes(x.s)) szs.unshift(x.s); }); });
@@ -669,7 +717,9 @@ function openPlace(id, toMenu) {
         const body = rs.map((r, ri) => { const vs = r.v.filter(has);
           if (!szs.length || !r.multi) { const ps = [...new Set(vs.map(x => x.p))]; return `<tr>${nm(r, ri)}<td class="s pr${ps.length ? '' : ' na'}${nc > 1 ? ' one' : ''}"${nc > 1 ? ` colspan="${nc}"` : ''}>${ps.length ? ps.map(pr).join(' / ') : '-'}</td></tr>`; }
           return `<tr>${nm(r, ri)}${szs.map(z => { const ps = [...new Set(vs.filter(x => x.s === z).map(x => x.p))]; return `<td class="s${ps.length ? '' : ' na'}${ps.length > 1 ? ' dup' : ''}">${ps.length ? ps.map(pr).join('<br>') : '-'}</td>`; }).join('')}</tr>`; }).join('');
-        return `<div class="mcard ${cls || ''}"><div class="mcH">${esc(c)}<span>${rs.length}</span></div>${plan.strip}<div class="mcB"><table class="piv ${nc >= 4 ? 'many' : ''}">${head}${body}</table></div></div>`; }).join(''); };
+        const nts = pre ? [] : notes.filter(r => r.c === c), ch = choice[c], extra = (ch ? `<div class="mcOR"><b>選擇</b><span class="tag">選一</span><span class="mcOL">${ch.map(z => `<span>${esc(z)}</span>`).join('')}</span></div>` : '') + nts.map(r => `<div class="mcN">ⓘ ${esc(r.n)}</div>`).join('');
+        const strip = extra ? (plan.strip ? plan.strip.replace(/<\/div>$/, extra + '</div>') : `<div class="mcO">${extra}</div>`) : plan.strip;
+        return `<div class="mcard ${cls || ''}"><div class="mcH">${esc(c)}<span>${rs.length}</span></div>${strip}<div class="mcB"><table class="piv ${nc >= 4 ? 'many' : ''}">${head}${body}</table></div></div>`; }).join(''); };
     if (showItem && items.length) html += cards(items, '');
     const gsLeft = ogs.filter(g => !used.has(g.c) && (mc === '' || mc === '🧩' || ownsGroup(mc, g) === false && mc === '🧩'));
     if ((mc === '' || mc === '🧩') && gsLeft.length) html += `<div class="mSec">🧩 組合選項<small>依步驟挑選，已含在主餐價格內</small></div>` + gsLeft.map(g => `<div class="optG"><div class="optH"><b>${esc(g.owner ? g.owner + '・' + g.label : g.label)}</b>${g.tag ? `<span class="tag">${esc(g.tag)}</span>` : ''}</div><div class="optL">${g.L.map(r => `<span>${esc(r.n)}${r.p ? ' <em>+' + esc(r.p) + '</em>' : ''}</span>`).join('')}</div></div>`).join('');
@@ -679,7 +729,7 @@ function openPlace(id, toMenu) {
   function tableHtml() {
     const rows = p.menu || []; if (!rows.length && !editT) return `<div class="empty" style="padding:1.2rem"><span class="muted">還沒有菜單表格。<br>可以用菜單照片「✨ AI 辨識」、「🌐 上網找菜單」，或手動建立。</span><div style="margin-top:.7rem"><button class="btn sm" data-a="tEdit">✎ 手動建立表格</button></div></div>`;
     if (editT) return `${curReg() ? `<div class="callout small" style="margin:0 0 .5rem">正在編輯「${esc(curReg())}」的菜單（不分區的品項也會顯示）。</div>` : ''}<div class="small muted" style="margin-bottom:.4rem">類型：品項＝有價格的餐點；選項＝組合式菜單可挑選的東西（分類寫「步驟（選幾種）」，例如：主食（選一））；加購＝加購區、加價。</div>
-      <table class="mtable edit"><thead><tr><th style="width:4.6rem">類型</th><th style="width:26%">分類</th><th>品名</th><th style="width:18%" class="p">價格</th><th></th></tr></thead><tbody>${rows.map((r, i) => !inReg(r) ? '' : `<tr><td><select data-i="${i}" data-k="t">${[['item', '品項'], ['opt', '選項'], ['add', '加購']].map(([v, l]) => `<option value="${v}" ${TY(r) === v ? 'selected' : ''}>${l}</option>`).join('')}</select></td><td><input data-i="${i}" data-k="c" value="${esc(r.c)}"></td><td><input data-i="${i}" data-k="n" value="${esc(r.n)}"></td><td><input data-i="${i}" data-k="p" value="${esc(r.p)}" inputmode="decimal" style="text-align:right"></td><td class="x"><button class="ic" data-a="tDel" data-i="${i}" style="color:var(--danger);width:2rem;height:2rem">✕</button></td></tr>`).join('')}</tbody></table>
+      <table class="mtable edit"><thead><tr><th style="width:4.6rem">類型</th><th style="width:26%">分類</th><th>品名</th><th style="width:18%" class="p">價格</th><th></th></tr></thead><tbody>${rows.map((r, i) => !inReg(r) ? '' : `<tr><td><select data-i="${i}" data-k="t">${[['item', '品項'], ['opt', '選項'], ['add', '加購'], ['note', '說明']].map(([v, l]) => `<option value="${v}" ${TY(r) === v ? 'selected' : ''}>${l}</option>`).join('')}</select></td><td><input data-i="${i}" data-k="c" value="${esc(r.c)}"></td><td><input data-i="${i}" data-k="n" value="${esc(r.n)}"></td><td><input data-i="${i}" data-k="p" value="${esc(r.p)}" inputmode="decimal" style="text-align:right"></td><td class="x"><button class="ic" data-a="tDel" data-i="${i}" style="color:var(--danger);width:2rem;height:2rem">✕</button></td></tr>`).join('')}</tbody></table>
       <div class="row wrap" style="margin-top:.6rem"><button class="btn sm" data-a="tAdd">＋ 新增一列</button><button class="btn sm danger" data-a="tClear">清空表格</button><span class="grow"></span><button class="btn sm pri" data-a="tEdit">完成</button></div>`;
     const RR = rows.filter(inReg), cs = cats(), nO = RR.filter(r => TY(r) === 'opt').length, nA = RR.filter(r => TY(r) === 'add').length, regs = regsOf(), cr = curReg();
     if (mc && !cs.includes(mc) && !(mc === '🧩' && nO) && !(mc === '➕' && nA)) mc = ''; const src = p.menuSrc;
