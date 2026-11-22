@@ -108,10 +108,20 @@ function initMeal() {
       if (a === 'qp') x.q++; else if (x.q > 1) x.q--; else { if (!await ask(`要刪除「${x.n}」嗎？`, '刪除', true)) return; m.items.splice(m.items.indexOf(x), 1); } mealChanged(); }
     else if (a === 'editItem') { const x = m.items.find(i => i.id === b.closest('tr').dataset.i); if (x) editMealItem(m, x); } });
 }
+/* 點餐 → 購物分帳：一起吃的品項分給那幾個人，自己的品項給自己 */
+async function mealToBill(m, k) {
+  const T = mType(m.type), L = DB.bills[k] = DB.bills[k] || [], old = L.find(b => b.meal === m.id);
+  if (old && !await ask('這一餐已經轉到分帳過了，要用目前的點餐內容更新那筆明細嗎？', '更新')) return;
+  const items = (m.items || []).filter(x => xAmt(x) || x.n).map(x => ({id: 'i' + uid(), n: x.n + xParen(x), p: numP(x.p), q: x.q || 1, amt: Math.round(xAmt(x) * 100) / 100, ppl: isShare(x) ? sortIds(x.share) : x.who && x.who !== SHARE ? [x.who] : []}));
+  if (!items.length) { toast('這一餐還沒有點任何東西'); return; }
+  const P = FP().find(p => p.id === m.place), b = old || {id: 'b' + uid(), t: Date.now()};
+  Object.assign(b, {place: m.place || '', pname: P ? '' : (m.pname || T.name), way: b.way || '', time: b.time || '', items, fees: b.fees || [], disc: [], odisc: b.odisc || [], total: Math.round(mealTotal(m) * 100) / 100 - (b.odisc || []).reduce((s, d) => s + numP(d.amt), 0) + (b.fees || []).reduce((s, d) => s + numP(d.amt), 0), meal: m.id, note: T.name});
+  if (!old) L.push(b); saveBills(); buzz(30); toast(old ? '✅ 已更新分帳明細' : `✅ 已轉到分帳（${T.name}）`, 2500); gotoBill(k, b.id);
+}
 async function mealMore(m) {
   const T = mType(m.type), sh = sheet({title: T.icon + ' ' + T.name, html: `<div class="actList">
     <button data-a="type">🔁 改成其他餐別</button><button data-a="store">🏪 更換店家</button>${FP().some(p => p.id === m.place) ? '<button data-a="open">📋 打開店家與菜單</button>' : ''}
-    <button data-a="exp">📤 匯出這一餐（文字／Excel）</button><button data-a="copy">📅 複製到其他日期</button><button data-a="del" class="dng">🗑 刪除這一餐</button></div>`});
+    <button data-a="toBill">🧾 轉到購物分帳（每個人的品項、金額一起帶過去）</button><button data-a="exp">📤 匯出這一餐（文字／Excel）</button><button data-a="copy">📅 複製到其他日期</button><button data-a="del" class="dng">🗑 刪除這一餐</button></div>`});
   sh.body.onclick = async e => { const b = e.target.closest('[data-a]'); if (!b) return; const a = b.dataset.a; sh.close();
     if (a === 'type') { const t = await pickMealType(m.type); if (t) { m.type = t.id; mealChanged(); } }
     else if (a === 'store') { const st = await pickStore(m.place); if (st !== undefined) { m.place = st ? st.id || '' : ''; m.pname = st ? st.name : ''; mealChanged(); } }
@@ -119,6 +129,7 @@ async function mealMore(m) {
     else if (a === 'exp') openExport(Meal.sel, m.id);
     else if (a === 'copy') { const v = await askText('複製到哪一天？（年-月-日）', ymd(new Date(ymdDate(Meal.sel).getTime() + 864e5)), '例如 2026-11-20'); if (!v) return; const k = v.trim().replace(/[/.]/g, '-'); const d = new Date(k + 'T00:00');
       if (isNaN(d)) { toast('日期格式不正確'); return; } const c = JSON.parse(JSON.stringify(m)); c.id = 'm' + uid(); c.items.forEach(x => { x.id = 'i' + uid(); }); (DB.days[ymd(d)] = DB.days[ymd(d)] || []).push(c); saveDays(); renderMeal(); toast(`已複製到 ${ymd(d)}`); }
+    else if (a === 'toBill') mealToBill(m, Meal.sel);
     else if (a === 'del') { if (!await ask(`確定要刪除這一餐（${T.name}${m.pname ? '・' + m.pname : ''}）嗎？`, '刪除', true)) return; const L = DB.days[Meal.sel]; L.splice(L.indexOf(m), 1); mealChanged(); } };
 }
 

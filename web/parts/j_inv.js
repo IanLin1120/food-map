@@ -485,7 +485,8 @@ async function invShots(files) {
 function invAppList() { try { return JSON.parse(NB.invApps()); } catch (e) { return {apps: []}; } }
 async function pickInvApp(force) {
   const r = invAppList(), L = r.apps || [];
-  if (!force) { const pref = DB.scfg.invApp || r.last; if (pref && L.some(x => x.pkg === pref)) return pref; const m = L.find(x => /發票大師/.test(x.label)); if (m) return m.pkg; if (L.length === 1) return L[0].pkg; }
+  const zj = L.find(x => /發票載具/.test(x.label)); if (zj && !DB.scfg.invAppZJ) { DB.scfg.invAppZJ = 1; DB.scfg.invApp = zj.pkg; saveScfg(); }   /* 優先用發票載具 */
+  if (!force) { const pref = DB.scfg.invApp || r.last; if (pref && L.some(x => x.pkg === pref)) return pref; const m = zj || L.find(x => /發票大師/.test(x.label)); if (m) return m.pkg; if (L.length === 1) return L[0].pkg; }
   if (!L.length) { toast('找不到發票 App，請自己切到發票大師', 3500); return ''; }
   return new Promise(res => { let done = false; const sh = sheet({title: '要打開哪個發票 App？', onClose() { if (!done) res(''); }});
     sh.body.innerHTML = `<div class="actList">${L.map(x => `<button data-p="${esc(x.pkg)}">🧾 ${esc(x.label)}${x.pkg === DB.scfg.invApp ? '　✓' : ''}</button>`).join('')}</div>`;
@@ -524,27 +525,52 @@ function invPullAcc() {
 }
 /* 把一頁畫面文字（每行用 tab 分欄）解析成發票：明細頁或列表頁 */
 function invParseLines(lines) {
+  /* 支援：發票大師、發票存摺、發票載具…（各家 App 的畫面排法不同，盡量用通用的規則讀） */
   const L = (lines || []).map(l => String(l)), noRe = /([A-Z]{2})-?(\d{8})/, out = [], cells = l => l.split(/\s*\t\s*/).map(x => x.trim()).filter(Boolean);
   const money1 = s => { const m = String(s).replace(/,/g, '').match(/(-)?\s*\$\s*(-)?(\d+(\.\d+)?)/); return m ? (m[1] || m[2] ? -1 : 1) * parseFloat(m[3]) : NaN; };
+  const yuan = s => { const m = String(s).replace(/,/g, '').match(/(-?\d+(\.\d+)?)\s*元/); return m ? parseFloat(m[1]) : NaN; };
+  const num = s => { const m = String(s).replace(/,/g, '').trim().match(/^(-?\d+(\.\d+)?)$/); return m ? parseFloat(m[1]) : NaN; };
   const nos = new Set(); L.forEach(l => { const m = l.match(/[A-Z]{2}-?\d{8}/g); (m || []).forEach(x => nos.add(x.replace('-', ''))); });
-  const all = L.join('\n'), isDetail = /發票日期|消費店家|店家統編/.test(all) && nos.size <= 2;
+  const all = L.join('\n'), KW = /發票日期|消費店家|店家統編|賣方統編|賣方名稱|消費品項|購買品項|總金額|品名/;
+  const isDetail = (nos.size <= 2 && KW.test(all)) || (nos.size === 1 && !/我的發票|尚未開獎|對獎專區|開獎倒數/.test(all));
   if (isDetail) { const m = all.match(noRe); if (!m) return out; const v = {no: m[1] + m[2], items: [], src: 'acc'};
-    const dm = all.match(/(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})(?:\s+(\d{1,2}):(\d{2}))?/); if (dm) { v.date = `${dm[1]}-${dm[2].padStart(2, '0')}-${dm[3].padStart(2, '0')}`; if (dm[4]) v.time = dm[4].padStart(2, '0') + ':' + dm[5]; }
+    let dm = all.match(/(\d{4})\s*[-/.年]\s*(\d{1,2})\s*[-/.月]\s*(\d{1,2})\s*日?(?:\s+(\d{1,2}):(\d{2}))?/), y;
+    if (dm) y = +dm[1]; else { dm = all.match(/(?:^|\D)(1\d{2})\s*[-/.年]\s*(\d{1,2})\s*[-/.月]\s*(\d{1,2})\s*日?(?:\s+(\d{1,2}):(\d{2}))?/); if (dm) y = +dm[1] + 1911; }
+    if (dm) { v.date = `${y}-${dm[2].padStart(2, '0')}-${dm[3].padStart(2, '0')}`; if (dm[4]) v.time = dm[4].padStart(2, '0') + ':' + dm[5]; }
+    const ni = L.findIndex(l => noRe.test(l));
     L.forEach((l, i) => { const t = l.replace(/\s*\t\s*/g, ' ');
       let mm = t.match(/(?:消費店家|商店名稱|賣方名稱)[:：]\s*(.+)$/); if (mm) { let nm = mm[1].trim(); const nx = (L[i + 1] || '').replace(/\s*\t\s*/g, ' ').trim(); if (nx && !/[:：]/.test(nx) && !/統編|存入|隨機|開獎/.test(nx) && nx.length < 30) nm += nx; v.seller = nm; }
-      mm = t.match(/(?:店家統編|賣方統編|統一編號)[:：]\s*(\d{8})/); if (mm) v.sellerId = mm[1];
-      if (/消費金額|總計|總金額/.test(t)) { let a = money1(t); if (isNaN(a)) a = money1(L[i + 1] || ''); if (!isNaN(a) && v.total == null) v.total = a; } });
-    const hi = L.findIndex(l => /品名/.test(l) && /數量|小計|金額/.test(l));
-    if (hi >= 0) for (let i = hi + 1; i < L.length; i++) { if (/發票備註|刪除發票|編輯發票|字數限制/.test(L[i])) break; const c = cells(L[i]); if (c.length < 2) continue;
-      const ai = c.findIndex((x, k) => k > 0 && !isNaN(money1(x))), name = c[0]; if (ai < 0 || !name || /^\$/.test(name)) continue;
-      const qx = c.slice(1, ai).find(x => /^\d+(\.\d+)?$/.test(x)), q = qx ? parseFloat(qx) : 1, a = money1(c[ai]); v.items.push({n: name, q, p: Math.round(a / (q || 1) * 100) / 100, amt: a}); }
+      mm = t.match(/(?:店家統編|賣方統編|統一編號)[:：]?\s*(\d{8})/); if (mm) v.sellerId = mm[1];
+      if (v.total == null && /消費金額|總計|總金額/.test(t)) { const x = t.replace(/,/g, '').match(/(?:消費金額|總計|總金額)[^\d-]*(-?\d+(\.\d+)?)/); let a = x ? parseFloat(x[1]) : money1(t); if (isNaN(a)) a = money1(L[i + 1] || ''); if (!isNaN(a)) v.total = a; } });
+    /* 沒有「消費店家」標籤（例如發票載具）：號碼下面那幾行，優先用含「公司」的全名，否則用第一個店名 */
+    if (!v.seller && ni >= 0) { const near = L.slice(ni, ni + 6).map(l => l.replace(/\s*\t\s*/g, ' ').replace(noRe, '').trim()).filter(x => /[一-鿿]{2,}/.test(x) && !/[:：]|載具|手機條碼|年.*月.*日|發票明細|消費品項|總金額|尚未開獎/.test(x));
+      v.seller = (near.find(x => /公司/.test(x)) || near[0] || '').slice(0, 40); }
+    /* 品項 */
+    const hi = L.findIndex(l => /品名|消費品項|購買品項|品項明細/.test(l));
+    const rowA = /^(.+?)(?:\s*\$\s*-?[\d,.]+)?\s+[x×*]\s*(\d+(?:\.\d+)?)\s+(-?[\d,]+(?:\.\d+)?)$/;   /* 蘿蔔 $45  x1  45 */
+    for (let i = hi >= 0 ? hi + 1 : 0; i < L.length; i++) { if (/發票備註|刪除發票|編輯發票|字數限制|^備註/.test(L[i])) break;
+      const c = cells(L[i]), t = c.join(' ');
+      let r = t.match(rowA);
+      if (r) { const n = r[1].replace(/\s*\$\s*-?[\d,.]+$/, '').trim(); if (n && !KW.test(n) && !noRe.test(n)) { const q = parseFloat(r[2]) || 1, a = parseFloat(r[3].replace(/,/g, '')); v.items.push({n, q, p: Math.round(a / q * 100) / 100, amt: a}); } continue; }
+      if (hi < 0 || c.length < 2) continue;
+      const ai = c.findIndex((x, k) => k > 0 && !isNaN(money1(x))), name = c[0];
+      if (ai >= 0 && name && !/^\$/.test(name)) { const qx = c.slice(1, ai).find(x => /^[x×*]?\s*\d+(\.\d+)?$/.test(x)), q = qx ? parseFloat(qx.replace(/[x×*]/, '')) : 1, a = money1(c[ai]); v.items.push({n: name, q, p: Math.round(a / (q || 1) * 100) / 100, amt: a}); continue; }
+      /* 沒有 $ 的表格：名稱｜數量｜金額 */
+      if (c.length >= 3 && !isNaN(num(c[c.length - 1])) && /^[x×*]?\s*\d+(\.\d+)?$/.test(c[c.length - 2]) && /[一-鿿A-Za-z]/.test(name) && !KW.test(name)) { const q = parseFloat(c[c.length - 2].replace(/[x×*]/, '')) || 1, a = num(c[c.length - 1]); v.items.push({n: name.replace(/\s*\$\s*-?[\d,.]+$/, ''), q, p: Math.round(a / q * 100) / 100, amt: a}); }
+    }
     out.push(v); return out; }
-  /* 列表頁 */
-  const ym = all.match(/(\d{3})\s*年\s*(\d{1,2})/), baseY = ym ? +ym[1] + 1911 : new Date().getFullYear(); let pend = {};
-  L.forEach(l => { const c = cells(l), m = l.match(noRe);
-    c.forEach(x => { const d = x.match(/^(\d{1,2})\/(\d{1,2})$/); if (d) pend.date = `${baseY}-${d[1].padStart(2, '0')}-${d[2].padStart(2, '0')}`;
-      else if (!isNaN(money1(x)) && /\$/.test(x)) pend.total = money1(x);
-      else if (!noRe.test(x) && /[一-鿿A-Za-z]{2,}/.test(x) && !/^(電子|載具|手動存入|紙本|本期|我的發票|對獎專區|開獎倒數|消費分析|昨日消費累積)/.test(x) && !/\d{3}年/.test(x)) pend.seller = x.replace(/…$/, ''); });
-    if (m) { out.push({no: m[1] + m[2], date: pend.date || '', seller: pend.seller || '', total: pend.total, items: [], src: 'acc'}); pend = {}; } });
-  return out.filter(v => v.date);
+  /* 列表頁：每張發票的日期／店家／金額可能在號碼前面（發票大師）或後面（發票載具），兩種都試，取讀得比較完整的 */
+  const ym = all.match(/(\d{3})\s*年\s*(\d{1,2})/), baseY = ym ? +ym[1] + 1911 : new Date().getFullYear();
+  const IGN = /^(電子|載具|手動存入|紙本|本期|我的發票|對獎專區|開獎倒數|消費分析|昨日消費累積|手機條碼|尚未開獎|尚未|開獎|已開獎|未中獎|首頁|探索|掃碼|個人|載具發票)/;
+  const fields = blk => { const f = {}; blk.forEach(l => cells(l).forEach((x, k) => {
+      const d = x.match(/^(\d{1,2})\/(\d{1,2})$/); if (d) { if (!f.date) f.date = `${baseY}-${d[1].padStart(2, '0')}-${d[2].padStart(2, '0')}`; return; }
+      if (f.total == null && /\$/.test(x) && !isNaN(money1(x))) { f.total = money1(x); return; }
+      if (f.total == null && !isNaN(yuan(x))) { f.total = yuan(x); return; }
+      if (!f.seller && !noRe.test(x) && /[一-鿿A-Za-z]{2,}/.test(x) && !IGN.test(x) && !/\d{3}\s*年/.test(x)) { let sv = x.replace(/…$/, ''); f.seller = sv; } })); return f; };
+  const idx = []; L.forEach((l, i) => { const m = l.match(noRe); if (m) idx.push({i, no: m[1] + m[2]}); });
+  const build = after => idx.map((o, k) => { const blk = after ? L.slice(o.i, k + 1 < idx.length ? idx[k + 1].i : L.length) : L.slice(k ? idx[k - 1].i + 1 : 0, o.i + 1); const f = fields(blk);
+      if (after && f.seller && / /.test(f.seller) && f.seller.length > 8) f.seller = f.seller.split(' ')[0];   /* 「日昇小吃店 特製涼麵」→ 店名 */
+      return {no: o.no, date: f.date || '', seller: f.seller || '', total: f.total, items: [], src: 'acc'}; });
+  const A = build(true), B = build(false), score = R => R.filter(v => v.date && v.total != null).length;
+  return (score(A) > score(B) ? A : B).filter(v => v.date);
 }
