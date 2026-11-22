@@ -4,6 +4,7 @@
   applyTheme();
   try { localStorage.removeItem('fm.otaFail'); } catch (e) {}
   try { await loadAll(); } catch (e) { console.error(e); }
+  try { await loadAcc(); } catch (e) { console.error(e); }
   applyTheme(); modeUI(); initViewer(); initChips(); initSearch(); initCard(); initFav(); initRec(); initMeal(); initShop(); initInv(); initAcc(); initSet();
   $('#tabbar').addEventListener('click', e => { const b = e.target.closest('button'); if (b) { buzz(8); showTab(b.dataset.tab); } });
   $('#fb3d').onclick = () => { if (!M.map) return; const to3 = M.map.getPitch() <= 5; S.map3d = to3; saveS(); buzz(10); M.map.easeTo({pitch: to3 ? 55 : 0, duration: 500}); };
@@ -12,6 +13,7 @@
   window.addEventListener('resize', mapResize);
   Area.init(); renderChips(); updCounts();
   await initMap();
+  if (S.inAcc) showTab('Acc');
   if (!S.onboard) welcome();
   Upd.boot();
   Share.check(); document.addEventListener('visibilitychange', () => { if (!document.hidden) setTimeout(() => Share.check(), 300); });

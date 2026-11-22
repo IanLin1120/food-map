@@ -20,7 +20,7 @@ function invPut(v) {
   if (!v || !/^[A-Z]{2}\d{8}$/.test(v.no)) return false; const o = DB.invs[v.no];
   if (!o) {
     /* 號碼不同但同一天、同金額，而且其中一張是截圖 AI 讀的（號碼可能認錯）→ 當成同一張，號碼以比較可靠的來源為準 */
-    const dup = v.date && +v.total ? invList().find(x => x.date === v.date && +x.total === +v.total && (x.src === 'shot') !== (v.src === 'shot')) : null;
+    const tm = x => String(x.time || '').slice(0, 5), dup = v.date && +v.total ? invList().find(x => x.date === v.date && +x.total === +v.total && ((x.src === 'shot') !== (v.src === 'shot') || (tm(x) && tm(x) === tm(v)))) : null;
     if (dup) { const keep = v.src === 'shot' ? dup.no : v.no; if (keep !== dup.no) { const old = dup.no; delete DB.invs[old]; dup.no = keep; DB.invs[keep] = dup; Object.values(DB.bills || {}).forEach(L => L.forEach(b => { if (b.inv === old) b.inv = keep; })); saveBills(); }
       const src = v.src === 'shot' ? dup.src : v.src; v = Object.assign({}, v, {no: keep}); invPut(v); DB.invs[keep].src = src; return 'dup'; }
     DB.invs[v.no] = Object.assign({items: [], add: Date.now()}, v); return 'new'; }

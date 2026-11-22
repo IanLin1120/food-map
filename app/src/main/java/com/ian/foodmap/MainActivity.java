@@ -39,7 +39,9 @@ import java.util.ArrayList;
 /** 日日帳本：把 assets/index.html 以 https://app.local/ 載入 WebView，並提供少量原生功能（震動、導航、選圖／拍照、定位、存檔）。 */
 public class MainActivity extends Activity {
     static final String HOST = "app.local";
-    static final int REQ_FILE = 11, REQ_GEO = 12, REQ_LOC = 13, REQ_CAM = 14;
+    static final int REQ_FILE = 11, REQ_GEO = 12, REQ_LOC = 13, REQ_CAM = 14, REQ_GACC = 15, REQ_GCONSENT = 16;
+    static final String GSCOPE = "oauth2:https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.email";
+    String gPendId = null;
     android.webkit.PermissionRequest camReq;
     static MainActivity cur;
     WebView web;
@@ -595,8 +597,46 @@ public class MainActivity extends Activity {
         }
     }
 
+
+    /* ---------- Google 帳戶（雲端備份用）：系統的帳戶選擇器＋AccountManager 取得 Drive 權杖 ---------- */
+    void gReply(String id, String token, String err) {
+        try { org.json.JSONObject o = new org.json.JSONObject(); if (token != null) o.put("token", token); if (err != null) o.put("err", err);
+            o.put("email", getSharedPreferences("g", MODE_PRIVATE).getString("acc", ""));
+            final String js = "window.__gtok&&window.__gtok(" + org.json.JSONObject.quote(id) + "," + o.toString() + ")";
+            runOnUiThread(new Runnable() { public void run() { web.evaluateJavascript(js, null); } });
+        } catch (Exception e) { }
+    }
+    android.accounts.Account gAccount() {
+        String n = getSharedPreferences("g", MODE_PRIVATE).getString("acc", "");
+        if (n.isEmpty()) return null;
+        return new android.accounts.Account(n, "com.google");
+    }
+    void gFetch(final String id, final boolean allowUi) {
+        final android.accounts.Account a = gAccount(); if (a == null) { gReply(id, null, "尚未選擇 Google 帳戶"); return; }
+        gPendId = id;
+        android.accounts.AccountManager.get(this).getAuthToken(a, GSCOPE, null, false, new android.accounts.AccountManagerCallback<Bundle>() {
+            public void run(android.accounts.AccountManagerFuture<Bundle> f) {
+                try {
+                    Bundle b = f.getResult();
+                    Intent need = (Intent) b.get(android.accounts.AccountManager.KEY_INTENT);
+                    if (need != null) { if (allowUi) { need.setFlags(need.getFlags() & ~Intent.FLAG_ACTIVITY_NEW_TASK); startActivityForResult(need, REQ_GCONSENT); } else gReply(id, null, "需要授權"); return; }
+                    String t = b.getString(android.accounts.AccountManager.KEY_AUTHTOKEN);
+                    if (t != null) gReply(id, t, null); else gReply(id, null, "沒有拿到授權");
+                } catch (Exception e) { String m = String.valueOf(e.getMessage()); gReply(id, null, (m.contains("UNREGISTERED") || m.contains("INVALID_AUDIENCE") ? "UNREG:" : "") + m); }
+            }
+        }, null);
+    }
+
     @Override
     protected void onActivityResult(int req, int res, Intent data) {
+        if (req == REQ_GACC) {
+            if (res == RESULT_OK && data != null && data.getStringExtra(android.accounts.AccountManager.KEY_ACCOUNT_NAME) != null) {
+                getSharedPreferences("g", MODE_PRIVATE).edit().putString("acc", data.getStringExtra(android.accounts.AccountManager.KEY_ACCOUNT_NAME)).apply();
+                gFetch(gPendId == null ? "signin" : gPendId, true);
+            } else gReply(gPendId == null ? "signin" : gPendId, null, "已取消");
+            return;
+        }
+        if (req == REQ_GCONSENT) { gFetch(gPendId == null ? "signin" : gPendId, false); return; }
         if (req != REQ_FILE) { super.onActivityResult(req, res, data); return; }
         ValueCallback<Uri[]> cb = fileCb;
         fileCb = null;
@@ -760,6 +800,30 @@ public class MainActivity extends Activity {
 
         @JavascriptInterface
         public void invWeb(final String url) { runOnUiThread(new Runnable() { public void run() { openInvWeb(url); } }); }
+
+        @JavascriptInterface
+        public void gSignIn(final String id) { runOnUiThread(new Runnable() { public void run() {
+            gPendId = id;
+            try { Intent i = android.accounts.AccountManager.newChooseAccountIntent(gAccount(), null, new String[]{"com.google"}, null, null, null, null); startActivityForResult(i, REQ_GACC); }
+            catch (Exception e) { gReply(id, null, String.valueOf(e.getMessage())); } } }); }
+
+        @JavascriptInterface
+        public void gToken(final String id) { runOnUiThread(new Runnable() { public void run() { if (gAccount() == null) gSignIn(id); else gFetch(id, true); } }); }
+
+        @JavascriptInterface
+        public void gDrop(String token) { try { android.accounts.AccountManager.get(MainActivity.this).invalidateAuthToken("com.google", token); } catch (Exception e) { } }
+
+        @JavascriptInterface
+        public void gSignOut() { getSharedPreferences("g", MODE_PRIVATE).edit().remove("acc").apply(); }
+
+        @JavascriptInterface
+        public String gInfo() {
+            try { org.json.JSONObject o = new org.json.JSONObject(); o.put("pkg", getPackageName()); o.put("email", getSharedPreferences("g", MODE_PRIVATE).getString("acc", ""));
+                android.content.pm.Signature[] sg = getPackageManager().getPackageInfo(getPackageName(), PackageManager.GET_SIGNATURES).signatures;
+                java.security.MessageDigest md = java.security.MessageDigest.getInstance("SHA-1"); byte[] d = md.digest(sg[0].toByteArray()); StringBuilder sb = new StringBuilder();
+                for (int i = 0; i < d.length; i++) { if (i > 0) sb.append(':'); sb.append(String.format("%02X", d[i])); } o.put("sha1", sb.toString()); return o.toString();
+            } catch (Exception e) { return "{}"; }
+        }
 
         @JavascriptInterface
         public String version() {

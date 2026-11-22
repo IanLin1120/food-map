@@ -111,12 +111,11 @@ function initMeal() {
 /* 點餐 → 購物分帳：一起吃的品項分給那幾個人，自己的品項給自己 */
 async function mealToBill(m, k) {
   const T = mType(m.type), L = DB.bills[k] = DB.bills[k] || [], old = L.find(b => b.meal === m.id);
-  if (old && !await ask('這一餐已經轉到分帳過了，要用目前的點餐內容更新那筆明細嗎？', '更新')) return;
   const items = (m.items || []).filter(x => xAmt(x) || x.n).map(x => ({id: 'i' + uid(), n: x.n + xParen(x), p: numP(x.p), q: x.q || 1, amt: Math.round(xAmt(x) * 100) / 100, ppl: isShare(x) ? sortIds(x.share) : x.who && x.who !== SHARE ? [x.who] : []}));
   if (!items.length) { toast('這一餐還沒有點任何東西'); return; }
   const P = FP().find(p => p.id === m.place), b = old || {id: 'b' + uid(), t: Date.now()};
   Object.assign(b, {place: m.place || '', pname: P ? '' : (m.pname || T.name), way: b.way || '', time: b.time || '', items, fees: b.fees || [], disc: [], odisc: b.odisc || [], total: Math.round(mealTotal(m) * 100) / 100 - (b.odisc || []).reduce((s, d) => s + numP(d.amt), 0) + (b.fees || []).reduce((s, d) => s + numP(d.amt), 0), meal: m.id, note: T.name});
-  if (!old) L.push(b); saveBills(); buzz(30); toast(old ? '✅ 已更新分帳明細' : `✅ 已轉到分帳（${T.name}）`, 2500); gotoBill(k, b.id);
+  if (!old) L.push(b); saveBills(); buzz(30); toast(old ? '這一餐已經轉過了，不會重複匯入；已用目前的點餐內容更新那筆明細' : `✅ 已轉到分帳（${T.name}）`, 2500); gotoBill(k, b.id);
 }
 async function mealMore(m) {
   const T = mType(m.type), sh = sheet({title: T.icon + ' ' + T.name, html: `<div class="actList">

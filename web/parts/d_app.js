@@ -5,8 +5,8 @@ let curTab = 'Map';
 /* 美食・日常和購物分帳已經合併成一個介面（底部：地圖、日常、分帳、發票、設定；食譜在設定裡） */
 function modeUI() { document.body.classList.remove('mShop'); $('#favTitle') && ($('#favTitle').textContent = '收藏分類'); $('#mQ') && ($('#mQ').placeholder = '搜尋店家、地址、量販店…'); }
 function setMode() { }
-function showTab(t) { curTab = t; $$('.page').forEach(p => p.classList.toggle('on', p.id === 'pg' + t)); $$('#tabbar button').forEach(b => b.classList.toggle('on', b.dataset.tab === (t === 'Fav' ? 'Map' : t === 'Rec' || t === 'Acc' ? 'Set' : t))); document.body.classList.toggle('onFav', t === 'Fav');
-  if (t === 'Map') mapResize(); else if (t === 'Fav') renderFav(); else if (t === 'Rec') renderRec(); else if (t === 'Meal') renderMeal(); else if (t === 'Shop') renderShop(); else if (t === 'Inv') renderInv(); else if (t === 'Acc') renderAcc(); else renderSet(); updCounts(); }
+function showTab(t) { curTab = t; $$('.page').forEach(p => p.classList.toggle('on', p.id === 'pg' + t)); $$('#tabbar button').forEach(b => b.classList.toggle('on', b.dataset.tab === (t === 'Fav' ? 'Map' : t === 'Rec' ? 'Set' : t))); document.body.classList.toggle('onFav', t === 'Fav');
+  if (t === 'Map') mapResize(); else if (t === 'Fav') renderFav(); else if (t === 'Rec') renderRec(); else if (t === 'Meal') renderMeal(); else if (t === 'Shop') renderShop(); else if (t === 'Inv') renderInv(); else if (t === 'Acc') renderAcc(); else if (t === 'AccA') renderAccAsset(); else if (t === 'AccS') renderAccStat(); else if (t === 'AccC') renderAccCfg(); else renderSet(); updCounts(); }
 
 /* ---------- 全部展開／收合（收藏、食譜共用） ---------- */
 const FOLD = {fav: ['#favList', '#favFold', 'fold'], rec: ['#recList', '#recFold', 'rfold']};
@@ -202,7 +202,7 @@ function initSet() {
     else if (a === 'updChk') Upd.check(true); else if (a === 'updApk') Upd.releases(); else if (a === 'updBack') Upd.restore(); else if (a === 'updShare') Upd.share(); else if (a === 'updWeb') openUrl(GH.pages);
     else if (a === 'aiStudio') openUrl('https://aistudio.google.com/rate-limit?timeRange=last-28-days'); else if (a === 'aiLog') { const o = $('#aiLogBox'); o.classList.toggle('hide'); b.textContent = o.classList.contains('hide') ? '查看最近 AI 紀錄' : '收起紀錄'; }
     else if (a === 'mcheck') openMenuCheck();
-    else if (a === 'rec') { buzz(15); showTab('Rec'); } else if (a === 'acc') { buzz(15); showTab('Acc'); } else if (a === 'guideFood') openGuide('food'); else if (a === 'guideShop') openGuide('shop'); else if (a === 'guideInv') openGuide('inv');
+    else if (a === 'rec') { buzz(15); showTab('Rec'); } else if (a === 'acc') { buzz(15); enterAcc(); } else if (a === 'guideFood') openGuide('food'); else if (a === 'guideShop') openGuide('shop'); else if (a === 'guideInv') openGuide('inv');
     else if (a === 'cats') openCats('place'); else if (a === 'rcats') openCats('recipe'); else if (a.indexOf('off') === 0) Off.act(a); else if (a === 'exp') exportBackup(); else if (a === 'imp') importBackup(); else if (a === 'welcome') welcome();
     else if (a === 'wipe') { if (await ask('確定要清除「所有」收藏、菜單、食譜與設定嗎？\n這個動作無法復原，建議先匯出備份。', '全部清除', true) && await ask('再確認一次：真的要全部清除嗎？', '清除', true)) { for (const s of ['kv', 'places', 'recipes', 'imgs']) await IDB.clear(s).catch(() => {}); try { localStorage.clear(); } catch (er) {} location.reload(); } } });
 }
@@ -284,21 +284,32 @@ async function saveFile(name, blob) {
     for (let o = 0; o < blob.size; o += CH) { if (!NB.saveChunk(await blobB64(blob.slice(o, o + CH)))) throw new Error('寫入檔案失敗'); } const p = NB.saveEnd(); if (!p) throw new Error('儲存檔案失敗'); return p; }
   const u = URL.createObjectURL(blob), a = document.createElement('a'); a.href = u; a.download = name; document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 5000); return name;
 }
+/* 整個日日帳本打包成一個 JSON（含所有圖片）：本機匯出、雲端備份共用 */
+async function makeBackupBlob() {
+  const Sx = Object.assign({}, S); delete Sx.gkey; delete Sx.aikey; delete Sx.pc; delete Sx.gd;
+  const parts = [`{"app":"shiguang-foodmap","v":1,"t":${Date.now()},"S":${JSON.stringify(Sx)},"cats":${JSON.stringify(DB.side.food.cats)},"shared1":1,"bills":${JSON.stringify(DB.bills || {})},"scfg":${JSON.stringify(DB.scfg || null)},"invs":${JSON.stringify(DB.invs || {})},"lists":${JSON.stringify(DB.lists || {})},"acc":${JSON.stringify(DB.acc || null)},"rcats":${JSON.stringify(DB.rcats)},"places":${JSON.stringify(DB.side.food.places)},"recipes":${JSON.stringify(DB.recipes)},"mcfg":${JSON.stringify(DB.mcfg || null)},"days":${JSON.stringify(DB.days || {})},"imgs":{`];
+  const keys = await IDB.keys('imgs'); let n = 0; for (const k of keys) { const r = await IDB.get('imgs', k); if (!r) continue; parts.push((n++ ? ',' : '') + JSON.stringify(k) + ':' + JSON.stringify({type: r.type, w: r.w, h: r.h, d: await blobB64(new Blob([r.buf]))})); }
+  parts.push('}}'); return new Blob(parts, {type: 'application/json'});
+}
+const backupName = () => { const d = new Date(); return `日日帳本備份_${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}_${String(d.getHours()).padStart(2, '0')}${String(d.getMinutes()).padStart(2, '0')}.json`; };
 async function exportBackup() {
-  busy('整理備份資料…'); try { const Sx = Object.assign({}, S); delete Sx.gkey; delete Sx.aikey;
-    const parts = [`{"app":"shiguang-foodmap","v":1,"t":${Date.now()},"S":${JSON.stringify(Sx)},"cats":${JSON.stringify(DB.side.food.cats)},"shared1":1,"bills":${JSON.stringify(DB.bills || {})},"scfg":${JSON.stringify(DB.scfg || null)},"invs":${JSON.stringify(DB.invs || {})},"lists":${JSON.stringify(DB.lists || {})},"acc":${JSON.stringify(DB.acc || null)},"rcats":${JSON.stringify(DB.rcats)},"places":${JSON.stringify(DB.side.food.places.concat(DB.side.shop.places))},"recipes":${JSON.stringify(DB.recipes)},"mcfg":${JSON.stringify(DB.mcfg || null)},"days":${JSON.stringify(DB.days || {})},"imgs":{`];
-    const keys = await IDB.keys('imgs'); let n = 0; for (const k of keys) { const r = await IDB.get('imgs', k); if (!r) continue; parts.push((n++ ? ',' : '') + JSON.stringify(k) + ':' + JSON.stringify({type: r.type, w: r.w, h: r.h, d: await blobB64(new Blob([r.buf]))})); }
-    parts.push('}}'); const d = new Date(), nm = `日日帳本備份_${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}.json`;
-    const p = await saveFile(nm, new Blob(parts, {type: 'application/json'})); busy(false); toast(IS_APP ? '已匯出到「下載」資料夾：' + p : '已下載備份檔 ' + nm, 4000);
+  busy('整理備份資料…'); try { const blob = await makeBackupBlob(), nm = backupName();
+    const p = await saveFile(nm, blob); busy(false); toast(IS_APP ? '已匯出到「下載」資料夾：' + p : '已下載備份檔 ' + nm, 4000);
   } catch (e) { busy(false); toast('❌ 匯出失敗：' + e.message, 4000); }
+}
+/* 用備份取代目前的資料（本機匯入、雲端還原共用） */
+async function applyBackup(j, keepCloud) {
+  if (!/^shiguang/.test(j.app || '') || !Array.isArray(j.places)) throw new Error('這不是日日帳本的備份檔');
+  for (const s of ['places', 'recipes', 'imgs']) await IDB.clear(s);
+  const b64buf = s => { const bin = atob(s), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return u.buffer; };
+  for (const k in j.imgs || {}) { const r = j.imgs[k]; await IDB.put('imgs', k, {buf: b64buf(r.d), type: r.type || 'image/jpeg', w: r.w, h: r.h}); }
+  for (const p of j.places) await IDB.put('places', p.id, p); for (const r of j.recipes || []) await IDB.put('recipes', r.id, r);
+  await IDB.put('kv', 'cats', j.cats || []); if (j.rcats) await IDB.put('kv', 'rcats', j.rcats); if (j.mcfg) await IDB.put('kv', 'mcfg', j.mcfg); await IDB.put('kv', 'days', j.days || {}); if (j.cats_shop) await IDB.put('kv', 'cats_shop', j.cats_shop); await IDB.put('kv', 'bills', j.bills || {}); if (j.scfg) await IDB.put('kv', 'scfg', j.scfg); if (j.shared1) await IDB.put('kv', 'shared1', 1); else await IDB.del('kv', 'shared1').catch(() => {}); if (j.invs) await IDB.put('kv', 'invs', j.invs); if (j.lists) await IDB.put('kv', 'lists', j.lists); if (j.acc) await IDB.put('kv', 'acc', j.acc);
+  await IDB.put('kv', 'S', Object.assign({}, S_DEF, j.S || {}, {gkey: S.gkey, aikey: S.aikey, pc: S.pc, gd: S.gd, onboard: true}));
 }
 function importBackup() { const f = $('#jsonPick'); f.value = ''; f.onchange = async () => { const file = f.files[0]; if (!file) return;
   try { busy('讀取備份檔…'); const j = JSON.parse(await file.text()); busy(false); if (!/^shiguang/.test(j.app || '') || !Array.isArray(j.places)) throw new Error('這不是日日帳本的備份檔');
-    if (!await ask(`備份檔內有 ${j.places.length} 間收藏、${(j.recipes || []).length} 道食譜。\n匯入後會「取代」目前這台裝置上的所有資料，確定嗎？`, '匯入並取代', true)) return; busy('匯入中…');
-    for (const s of ['places', 'recipes', 'imgs']) await IDB.clear(s);
-    const b64buf = s => { const bin = atob(s), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return u.buffer; };
-    for (const k in j.imgs || {}) { const r = j.imgs[k]; await IDB.put('imgs', k, {buf: b64buf(r.d), type: r.type || 'image/jpeg', w: r.w, h: r.h}); }
-    for (const p of j.places) await IDB.put('places', p.id, p); for (const r of j.recipes || []) await IDB.put('recipes', r.id, r);
-    await IDB.put('kv', 'cats', j.cats || []); if (j.rcats) await IDB.put('kv', 'rcats', j.rcats); if (j.mcfg) await IDB.put('kv', 'mcfg', j.mcfg); await IDB.put('kv', 'days', j.days || {}); if (j.cats_shop) await IDB.put('kv', 'cats_shop', j.cats_shop); await IDB.put('kv', 'bills', j.bills || {}); if (j.scfg) await IDB.put('kv', 'scfg', j.scfg); if (j.shared1) await IDB.put('kv', 'shared1', 1); else await IDB.del('kv', 'shared1').catch(() => {}); if (j.invs) await IDB.put('kv', 'invs', j.invs); if (j.lists) await IDB.put('kv', 'lists', j.lists); if (j.acc) await IDB.put('kv', 'acc', j.acc); await IDB.put('kv', 'S', Object.assign({}, S_DEF, j.S || {}, {gkey: S.gkey, aikey: S.aikey, onboard: true})); location.reload();
+    if (!await ask(`備份檔內有 ${j.places.length} 間收藏、${(j.recipes || []).length} 道食譜${j.acc ? '、' + (j.acc.recs || []).length + ' 筆記帳' : ''}。\n匯入後會「取代」目前這台裝置上的所有資料，確定嗎？`, '匯入並取代', true)) return; busy('匯入中…');
+    await applyBackup(j); location.reload();
   } catch (e) { busy(false); toast('❌ 匯入失敗：' + (e instanceof SyntaxError ? '檔案格式不正確' : e.message), 4500); } }; f.click(); }
 

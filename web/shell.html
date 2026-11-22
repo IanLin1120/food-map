@@ -53,8 +53,20 @@
   </section>
 
   <section class="page" id="pgAcc">
-    <div class="pgHead two"><div class="phRow"><button class="favBack" id="accBack" aria-label="回設定"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button><h1>記帳</h1><div class="sub" id="accSub"></div></div><div class="shopAdd top"><button class="btn pri" id="accNew">＋ 記一筆</button><button class="btn" id="accImp">📥 從分帳匯入</button></div><div class="pgTools"><button class="btn" id="accFind">🔍 搜尋</button><button class="btn" id="accSettle">🤝 對帳</button><button class="btn" id="accCfg">⚙️ 設定</button></div></div>
+    <div class="pgHead two"><div class="phRow"><h1>記帳</h1><div class="sub" id="accSub"></div></div><div class="shopAdd top"><button class="btn pri" id="accNew">＋ 記一筆</button><button class="btn" id="accImp">📥 從分帳匯入</button></div><div class="pgTools"><button class="btn" id="accFind">🔍 搜尋</button><button class="btn" id="accTr">🔄 轉帳</button><button class="btn" id="accSettle">🤝 對帳</button></div></div>
     <div class="pgBody"><div class="pgInner" id="accBody"></div></div>
+  </section>
+  <section class="page" id="pgAccA">
+    <div class="pgHead"><div class="grow"><h1>資產</h1><div class="sub" id="accASub"></div></div></div>
+    <div class="pgBody"><div class="pgInner" id="accABody"></div></div>
+  </section>
+  <section class="page" id="pgAccS">
+    <div class="pgHead"><div class="grow"><h1>消費分析</h1><div class="sub" id="accSSub"></div></div></div>
+    <div class="pgBody"><div class="pgInner" id="accSBody"></div></div>
+  </section>
+  <section class="page" id="pgAccC">
+    <div class="pgHead"><div class="grow"><h1>記帳設定</h1><div class="sub">分類、帳戶、匯出、雲端備份</div></div></div>
+    <div class="pgBody"><div class="pgInner" id="accCBody"></div></div>
   </section>
 
   <section class="page" id="pgSet">
@@ -68,6 +80,11 @@
     <button data-tab="Shop"><svg viewBox="0 0 24 24"><path d="M6 3h12v18l-2-1.4-2 1.4-2-1.4-2 1.4-2-1.4L6 21z"/><path d="M9 8h6M9 12h6M9 16h3"/></svg>分帳</button>
     <button data-tab="Inv"><svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7h8M8 11h8"/><path d="M8 15h2M12 15h1M15 15h1M8 17.5h1M11 17.5h2M15 17.5h1"/></svg>發票</button>
     <button data-tab="Set"><svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>設定</button>
+  <button data-tab="Acc" class="accT"><svg viewBox="0 0 24 24"><rect x="4" y="3.5" width="16" height="17" rx="2.5"/><path d="M8 3.5v17M11.5 8h5M11.5 12h5"/></svg>記帳</button>
+    <button data-tab="AccA" class="accT"><svg viewBox="0 0 24 24"><path d="M3.5 9.5 12 4l8.5 5.5M5.5 10v8M10 10v8M14 10v8M18.5 10v8M3.5 20h17"/></svg>資產</button>
+    <button data-tab="AccS" class="accT"><svg viewBox="0 0 24 24"><path d="M12 3.5a8.5 8.5 0 1 0 8.5 8.5H12z"/><path d="M15 3.8A8.5 8.5 0 0 1 20.2 9H15z"/></svg>分析</button>
+    <button data-tab="AccC" class="accT"><svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>設定</button>
+
   </nav>
 </div>
 <div id="viewer"><div class="vTop"><button class="ic" id="vX">✕</button><b class="grow" id="vT"></b><span id="vN" style="opacity:.85;font-size:.9rem"></span></div><div id="vScroll"><img id="vImg" alt=""></div><div class="vBot"><button class="btn" id="vPrev">‹ 上一張</button><button class="btn" id="vZo">－</button><button class="btn" id="vZi">＋</button><button class="btn" id="vNext">下一張 ›</button></div></div>
