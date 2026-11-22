@@ -4,7 +4,7 @@
 <script>/* 線上更新開機程式：手機上若已下載比 APK 內建更新的介面版本，就改用新版（存在 IndexedDB）。
    新版連續兩次沒有正常開啟 → 自動退回 APK 內建版本。網址加上 #builtin 也會強制使用內建版本。 */
 (function () {
-  var B = '3.5.2'; if (!window.__OTA) window.APP_BUILTIN = B;
+  var B = '3.5.3'; if (!window.__OTA) window.APP_BUILTIN = B;
   if (window.__OTA || location.hash.indexOf('builtin') >= 0) return;
   var v = null; try { v = JSON.parse(localStorage.getItem('fm.ota') || 'null'); } catch (e) {}
   function gt(a, b) { a = String(a).split('.').map(Number); b = String(b).split('.').map(Number); for (var i = 0; i < Math.max(a.length, b.length); i++) { var p = a[i] || 0, q = b[i] || 0; if (p !== q) return p > q; } return false; }
@@ -1011,11 +1011,24 @@ h1,h2,h3,.gTitle,.wlSub{text-wrap:balance}
 .pgHead.two{flex-wrap:nowrap}
 @media (max-width:400px){#pgRec .pgInner>.row .searchBox{flex-basis:100%}#pgRec .pgInner>.row .btn{flex:1}}
 /* 發票月曆：當天張數直接寫在原本紅點的位置 */
-.cd .cdC{display:block;margin-top:.22rem;min-width:1.15rem;height:1.15rem;padding:0 .3rem;border-radius:999px;background:#c8553f;color:#fff;font-style:normal;font-size:.7rem;font-weight:800;line-height:1.15rem;text-align:center;font-variant-numeric:tabular-nums;box-shadow:0 0 0 2px color-mix(in srgb,#c8553f 22%,transparent)}
-.cd.sel .cdC{background:#fff;color:#c8553f;box-shadow:none}
+.cd .cdC{display:block;margin-top:.12rem;font-style:normal;font-size:.95rem;font-weight:900;line-height:1.2;color:#c0503a;text-align:center;font-variant-numeric:tabular-nums}
+.cd.sel .cdC{color:#fff}
 /* 常買：標籤自己一行，下面的品項從左邊對齊排列 */
 .slSug>span{flex:0 0 100%;font-weight:700;margin-bottom:.05rem}
 .slSug button{max-width:100%;text-align:left}
+
+/* ---------- 地圖右上角的收藏按鈕（取代下方的收藏分頁） ---------- */
+.mTopRow{display:flex;align-items:stretch;gap:.5rem;max-width:40rem;margin:0 auto}
+.mTopRow #mSearch{flex:1;min-width:0;margin:0}
+#favBtn{position:relative;flex:none;width:3.35rem;min-height:3.05rem;border-radius:14px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.05rem;padding:.2rem 0;color:var(--accent);border:1px solid color-mix(in srgb,var(--accent) 28%,var(--border-soft))}
+#favBtn svg{width:1.35rem;height:1.35rem;fill:color-mix(in srgb,var(--accent) 18%,transparent);stroke:currentColor;stroke-width:2;stroke-linejoin:round}
+#favBtn span{font-size:.66rem;font-weight:800;letter-spacing:.04em;color:var(--text-2);line-height:1.1;white-space:nowrap}
+#favBtn em{position:absolute;top:-.35rem;right:-.35rem;font-style:normal;font-size:.62rem;font-weight:800;min-width:1.15rem;height:1.15rem;line-height:1.15rem;padding:0 .28rem;border-radius:999px;background:var(--accent);color:#fff;text-align:center;box-shadow:0 0 0 2px var(--bg)}
+#favBtn em:empty{display:none}
+#favBtn:active{transform:scale(.94)}
+.favBack{flex:none;width:2.6rem;height:2.6rem;border-radius:12px;display:grid;place-items:center;border:1px solid var(--border-soft);background:var(--surface);color:var(--text);align-self:center;margin-right:.1rem}
+.favBack svg{width:1.3rem;height:1.3rem;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.favBack:active{transform:scale(.94)}
 </style>
 </head>
 <body>
@@ -1023,11 +1036,11 @@ h1,h2,h3,.gTitle,.wlSub{text-wrap:balance}
   <section class="page on" id="pgMap">
     <div id="map"></div>
     <div class="mapTop">
-      <div id="mSearch" class="glass">
+      <div class="mTopRow"><div id="mSearch" class="glass">
         <input id="mQ" type="search" placeholder="搜尋店家、地址…" autocomplete="off" enterkeyhint="search">
         <button class="ic" id="mQx" aria-label="清除" style="display:none">✕</button>
         <button class="ic" id="mQgo" aria-label="搜尋">🔍</button>
-      </div>
+      </div><button id="favBtn" class="glass" aria-label="收藏"><svg viewBox="0 0 24 24"><path d="M6.5 3.5h11v17l-5.5-3.8-5.5 3.8z"/></svg><span>收藏</span><em id="favBadge"></em></button></div>
       <div id="mResults" class="card hide"></div>
       <div id="chips" class="noSel"></div>
       <div id="areaBar"><select id="arC" class="glass" aria-label="縣市"></select><select id="arT" class="glass" aria-label="鄉鎮市區"></select><button class="ic glass" id="arMe" aria-label="我所在的鄉鎮市區">📍</button><button class="ic glass hide" id="arX" aria-label="取消區域">✕</button></div>
@@ -1042,7 +1055,7 @@ h1,h2,h3,.gTitle,.wlSub{text-wrap:balance}
   </section>
 
   <section class="page" id="pgFav">
-    <div class="pgHead"><div class="grow"><h1 id="favTitle">收藏分類</h1><div class="sub" id="favSub"></div></div><div class="phBtns"><button class="btn sm foldAll" id="favFold">全部收合</button><button class="btn sm" id="favCats">管理分類</button></div></div>
+    <div class="pgHead"><button class="favBack" id="favBack" aria-label="回地圖"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button><div class="grow"><h1 id="favTitle">收藏分類</h1><div class="sub" id="favSub"></div></div><div class="phBtns"><button class="btn sm foldAll" id="favFold">全部收合</button><button class="btn sm" id="favCats">管理分類</button></div></div>
     <div class="pgBody"><div class="pgInner">
       <div class="searchBox" style="margin-bottom:.9rem"><input id="favQ" type="search" placeholder="搜尋店名、地址、菜單品項…"></div>
       <div id="favList" class="noSel"></div>
@@ -1079,7 +1092,6 @@ h1,h2,h3,.gTitle,.wlSub{text-wrap:balance}
 
   <nav id="tabbar">
     <button data-tab="Map" class="on"><svg viewBox="0 0 24 24"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2zM9 4v14M15 6v14"/></svg>地圖</button>
-    <button data-tab="Fav"><svg viewBox="0 0 24 24"><path d="M6 3h12v18l-6-4-6 4z"/></svg>收藏</button>
     <button data-tab="Meal"><svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 9.5h17M8 3v4M16 3v4"/><path d="M8 14.5l2.4 2.3L16 12.5"/></svg>日常</button>
     <button data-tab="Shop"><svg viewBox="0 0 24 24"><path d="M6 3h12v18l-2-1.4-2 1.4-2-1.4-2 1.4-2-1.4L6 21z"/><path d="M9 8h6M9 12h6M9 16h3"/></svg>分帳</button>
     <button data-tab="Inv"><svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7h8M8 11h8"/><path d="M8 15h2M12 15h1M15 15h1M8 17.5h1M11 17.5h2M15 17.5h1"/></svg>發票</button>
@@ -1164,7 +1176,7 @@ return maplibregl$1;
 /* ============================================================
    日日帳本 — 核心：工具、資料儲存、主題、面板、拖曳排序、圖片
    ============================================================ */
-const APP_VERSION = '3.5.2';
+const APP_VERSION = '3.5.3';
 const APP_VER = APP_VERSION;
 /* 線上更新來源（GitHub Pages）：IanLin1120/food-map */
 const GH = {repo: 'https://github.com/IanLin1120/food-map', pages: 'https://ianlin1120.github.io/food-map/'};
@@ -2638,7 +2650,7 @@ function renderFav() {
   foldBtn('fav');
 }
 function initFav() {
-  const box = $('#favList'); $('#favQ').addEventListener('input', debounce(renderFav, 150)); $('#favCats').onclick = () => openCats('place'); $('#favFold').onclick = () => foldAll('fav');
+  const box = $('#favList'); $('#favQ').addEventListener('input', debounce(renderFav, 150)); $('#favCats').onclick = () => openCats('place'); $('#favBtn').onclick = () => { buzz(15); showTab('Fav'); }; $('#favBack').onclick = () => { buzz(10); showTab('Map'); }; $('#favFold').onclick = () => foldAll('fav');
   box.addEventListener('click', e => { const b = e.target.closest('[data-a]'); if (!b) return; const a = b.dataset.a;
     if (a === 'fold') { const s = b.closest('.sec'), id = s.dataset.cat; S.fold[id] = !S.fold[id]; saveS(); s.classList.toggle('fold', !!S.fold[id]); foldBtn('fav'); return; }
     const p = DB.places.find(x => x.id === b.closest('.pl').dataset.id); if (!p) return; if (a === 'open') openPlace(p.id); else if (a === 'nav') navTo(p); else if (a === 'map') selectPlace(p.id, true); });
@@ -2647,7 +2659,7 @@ function initFav() {
     const idx = []; DB.places.forEach((p, i) => { if (ids.includes(p.id)) idx.push(i); }); const by = new Map(DB.places.map(p => [p.id, p])); idx.forEach((i, k) => { DB.places[i] = by.get(ids[k]); });
     DB.places.forEach((p, i) => { if (p.ord !== i) { p.ord = i; savePlace(p); } }); renderFav(); }});
 }
-function updCounts() { $('#favSub').textContent = `共 ${DB.places.length} 間收藏 · ${DB.cats.length} 個分類`; $('#recSub').textContent = `共 ${DB.recipes.length} 道食譜`; }
+function updCounts() { const fb = $('#favBadge'); if (fb) fb.textContent = DB.places.length ? (DB.places.length > 99 ? '99+' : DB.places.length) : ''; $('#favSub').textContent = `共 ${DB.places.length} 間收藏 · ${DB.cats.length} 個分類`; $('#recSub').textContent = `共 ${DB.recipes.length} 道食譜`; }
 
 /* ============================================================
    食譜、設定、金鑰圖文教學、備份、啟動
@@ -2660,7 +2672,7 @@ function modeUI() { const m = S.mode === 'shop' ? 'shop' : 'food'; document.body
 function setMode(m, quiet) { m = m === 'shop' ? 'shop' : 'food'; S.mode = m; saveS(); DB.places = DB.side[m].places; DB.cats = DB.side[m].cats;
   M.filter = 'all'; M.sel = null; try { clearSel(); } catch (e) {} modeUI();
   refreshAll(); if (!quiet) { showTab(m === 'shop' ? 'Shop' : 'Map'); buzz(30); toast(m === 'shop' ? '🛒 已切換到「購物分帳」' : '🍽️ 已切換到「美食・日常」', 2200); } }
-function showTab(t) { curTab = t; $$('.page').forEach(p => p.classList.toggle('on', p.id === 'pg' + t)); $$('#tabbar button').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
+function showTab(t) { curTab = t; $$('.page').forEach(p => p.classList.toggle('on', p.id === 'pg' + t)); $$('#tabbar button').forEach(b => b.classList.toggle('on', b.dataset.tab === (t === 'Fav' ? 'Map' : t))); document.body.classList.toggle('onFav', t === 'Fav');
   if (t === 'Map') mapResize(); else if (t === 'Fav') renderFav(); else if (t === 'Rec') renderRec(); else if (t === 'Meal') renderMeal(); else if (t === 'Shop') renderShop(); else if (t === 'Inv') renderInv(); else renderSet(); updCounts(); }
 
 /* ---------- 全部展開／收合（收藏、食譜共用） ---------- */
@@ -4174,7 +4186,7 @@ function openShopSettings() {
    使用說明：給第一次用的人看的圖解（手機畫面示意圖＋白話說明）
    ============================================================ */
 const APP_ICON = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="54 54 324 324"><defs> <linearGradient id="gicv" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#E0844B"/><stop offset=".55" stop-color="#C2633A"/><stop offset="1" stop-color="#9A4226"/></linearGradient> <linearGradient id="gisp" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#7E321C"/><stop offset="1" stop-color="#9C4527"/></linearGradient> <linearGradient id="gipl" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFF9EC"/><stop offset="1" stop-color="#F2E2C2"/></linearGradient> <linearGradient id="gicn" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F7D27A"/><stop offset="1" stop-color="#DB9A33"/></linearGradient> <radialGradient id="gigl" cx=".35" cy=".25" r=".8"><stop offset="0" stop-color="#fff" stop-opacity=".22"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient> <filter id="gish" x="-30%" y="-30%" width="160%" height="170%"><feDropShadow dx="0" dy="8" stdDeviation="9" flood-color="#5A2410" flood-opacity=".35"/></filter></defs><rect width="432" height="432" fill="url(#gicv)"/> <g opacity=".10" stroke="#FFF3DC" stroke-width="10" fill="none"><path d="M-10 120 L442 70"/><path d="M-10 350 L442 380"/><path d="M330 -10 L360 442"/></g> <rect x="0" y="0" width="112" height="432" fill="url(#gisp)"/><rect x="112" y="0" width="7" height="432" fill="#6E2A16" opacity=".45"/> <g stroke="#F4D9B6" stroke-width="5" stroke-linecap="round" stroke-dasharray="14 14" opacity=".75"><path d="M96 -6 V440"/></g> <path d="M286 0 h44 v150 l-22 -20 l-22 20z" fill="#7C8B4E"/><path d="M286 0 h44 v8 h-44z" fill="#5F6C39"/> <rect width="432" height="432" fill="url(#gigl)"/><g filter="url(#gish)"><circle cx="222" cy="210" r="102" fill="url(#gipl)"/><circle cx="222" cy="210" r="84" fill="none" stroke="#E4CDA4" stroke-width="4"/> <g fill="#A3482A"><path d="M178 150 h9 v46 h7 v-46 h9 v46 h7 v-46 h9 v55 a21 21 0 0 1 -16 20 v66 a8 8 0 0 1 -16 0 v-66 a21 21 0 0 1 -16 -20z"/> <ellipse cx="262" cy="182" rx="21" ry="31"/><rect x="254" y="206" width="16" height="85" rx="8"/></g></g> <g filter="url(#gish)"><circle cx="296" cy="290" r="40" fill="url(#gicn)" stroke="#FFF1CF" stroke-width="6"/><circle cx="296" cy="290" r="28" fill="none" stroke="#B5741C" stroke-width="3" opacity=".55"/> <text x="296" y="305" text-anchor="middle" font-family="DejaVu Sans, Arial" font-weight="700" font-size="40" fill="#8A5310">$</text></g></svg>';
-const PHT = {food: [['🗺️', '地圖'], ['🔖', '收藏'], ['📒', '日常'], ['📖', '食譜'], ['⚙️', '設定']], shop: [['🗺️', '地圖'], ['🔖', '收藏'], ['🧾', '分帳'], ['🎫', '發票'], ['⚙️', '設定']]};
+const PHT = {food: [['🗺️', '地圖'], ['📒', '日常'], ['📖', '食譜'], ['⚙️', '設定']], shop: [['🗺️', '地圖'], ['🧾', '分帳'], ['🎫', '發票'], ['⚙️', '設定']]};
 /* 一支小手機：title 標題、body 內容、tab 亮起哪一個分頁、area 美食或購物 */
 const phone = (title, body, tab, area) => `<div class="ph"><div class="phIn"><div class="phNotch"></div><div class="phTop">${title}</div><div class="phBd">${body}</div>
   <div class="phTab">${PHT[area || 'food'].map(([i, t]) => `<span class="${t === tab ? 'on' : ''}"><i>${i}</i>${t}</span>`).join('')}</div></div></div>`;
@@ -4185,7 +4197,7 @@ const tip = t => `<div class="gTip">💡 ${t}</div>`;
 const GUIDE = {
   food: {title: '🍽️ 美食・日常 使用說明', steps: [
     {t: '歡迎使用日日帳本', h: `<div class="gHero"><div class="gIcon">${APP_ICON}</div><b>收藏愛店・菜單・記帳分帳</b></div>
-      <div class="gGrid"><div><i>🗺️</i><b>地圖</b>找店、插旗收藏</div><div><i>🔖</i><b>收藏</b>店家資料和菜單</div><div><i>📒</i><b>日常</b>記一餐、購物清單</div><div><i>📖</i><b>食譜</b>記錄拿手菜</div></div>
+      <div class="gGrid"><div><i>🗺️</i><b>地圖</b>找店、插旗收藏</div><div><i>🔖</i><b>收藏</b>地圖右上角，店家和菜單</div><div><i>📒</i><b>日常</b>記一餐、購物清單</div><div><i>📖</i><b>食譜</b>記錄拿手菜</div></div>
       <p>跟著這份說明走一遍，大約 2 分鐘。看完可以隨時到 <b>設定 → 使用說明</b> 再打開。購物分帳和發票另外有自己的說明。</p>`},
     {t: '① 找到店家，按收藏', h: phone('🔍 搜尋店家', `<div class="pSrch">🔍 晨曦早午餐</div><div class="pMap"><span class="flag">🚩</span><span class="flag f2">🚩</span></div>${pc(`<b>晨曦早午餐 幸福店</b><small>早午餐・距離 350 公尺</small><div class="pBtns">${pb('導航')}${pb('⭐ 收藏', 'pri hl') + tap}</div>`)}`, '地圖') +
       `<ul><li>在地圖頁上方的搜尋框輸入店名</li><li>點選搜尋結果，按 <b>⭐ 收藏</b>，選一個分類（早餐、飲料…）</li><li>也可以<b>長按地圖</b>任何地方直接插旗</li></ul>${tip('有填 Google 金鑰的話，地址、電話、營業時間會自動帶入。')}`},
@@ -4213,7 +4225,7 @@ const GUIDE = {
       <div class="gFlow"><span>🧾<small>拍明細</small></span><em>➜</em><span>🤖<small>AI 讀出品項</small></span><em>➜</em><span>👥<small>選誰付</small></span><em>➜</em><span>💰<small>每人金額</small></span></div>
       <p>適合全聯、量販店、超商一起買東西，或 Foodpanda 一起訂外送的時候。</p>`},
     {t: '① 切換到購物分帳', h: phone('設定', `${pc('<b>功能區</b><small>量販店、超商、Foodpanda 的購物明細…</small>' + pb('🛒 切換到購物分帳', 'pri wide hl') + tap)}${pc('<b>📘 使用說明</b><small>美食・日常・購物分帳・發票</small>')}`, '設定') +
-      `<ul><li>到 <b>設定</b> 頁最上面的「功能區」，按 <b>🛒 切換到購物分帳</b></li><li>下面的分頁會換成 <b>地圖、收藏、分帳、發票、設定</b></li><li>想回去點餐，同一個位置按 <b>🍽️ 切換到美食・日常</b>；關掉 App 再打開會回到上次的功能區</li></ul>${tip('美食・日常和購物分帳<b>共用同一份收藏</b>，分類也是同一份（早餐、午餐、晚餐、量販店、超市、超商…）。')}`},
+      `<ul><li>到 <b>設定</b> 頁最上面的「功能區」，按 <b>🛒 切換到購物分帳</b></li><li>下面的分頁會換成 <b>地圖、分帳、發票、設定</b>，收藏在地圖右上角的 <b>🔖</b></li><li>想回去點餐，同一個位置按 <b>🍽️ 切換到美食・日常</b>；關掉 App 再打開會回到上次的功能區</li></ul>${tip('美食・日常和購物分帳<b>共用同一份收藏</b>，分類也是同一份（早餐、午餐、晚餐、量販店、超市、超商…）。')}`},
     {t: '② 收藏常去的店', h: phone('🔍 搜尋', `<div class="pSrch">🔍 好鄰居超市</div><div class="pMap"><span class="flag">🛒</span><span class="flag f2">🍱</span></div>${pc(`<b>好鄰居超市 中央店</b><small>量販店</small><div class="pBtns">${pb('🧾 購物紀錄')}${pb('⭐ 收藏', 'pri hl') + tap}</div>`)}`, '地圖', 'shop') +
       `<ul><li>在地圖搜尋全聯、全家、常叫外送的餐廳…按收藏，選一個分類</li><li>外送的餐廳就照早餐、午餐、晚餐分類；是不是外送，改在每一筆明細選「購物方式」</li><li>店家卡片上的 <b>🧾 購物紀錄</b> 可以看這家店所有的明細</li></ul>`},
     {t: '③ 上傳明細，AI 幫你讀', h: phone('購物分帳', `<div class="pBtns">${pb('📷 上傳明細', 'pri hl') + tap}${pb('✏️ 手動輸入')}</div><div class="pc" style="border-color:var(--accent)"><b>🤖 AI 辨識中・11/08</b><small>Flash-Lite 已讀到 5 項…（12 秒）</small></div><div class="pCal">${Array.from({length: 7}, (_, i) => `<i class="${i === 3 ? 'on' : ''}">${i + 5}${i === 3 ? '<em></em>' : ''}</i>`).join('')}</div>`, '分帳', 'shop') +
@@ -4282,9 +4294,14 @@ const invBill = v => { if (!v.bill) return null; const L = DB.bills[v.bill.k] ||
 /* ---------- 合併一張發票（同號碼會補齊缺的資料） ---------- */
 function invPut(v) {
   if (!v || !/^[A-Z]{2}\d{8}$/.test(v.no)) return false; const o = DB.invs[v.no];
-  if (!o) { DB.invs[v.no] = Object.assign({items: [], add: Date.now()}, v); return 'new'; }
+  if (!o) {
+    /* 號碼不同但同一天、同金額，而且其中一張是截圖 AI 讀的（號碼可能認錯）→ 當成同一張，號碼以比較可靠的來源為準 */
+    const dup = v.date && +v.total ? invList().find(x => x.date === v.date && +x.total === +v.total && (x.src === 'shot') !== (v.src === 'shot')) : null;
+    if (dup) { const keep = v.src === 'shot' ? dup.no : v.no; if (keep !== dup.no) { const old = dup.no; delete DB.invs[old]; dup.no = keep; DB.invs[keep] = dup; Object.values(DB.bills || {}).forEach(L => L.forEach(b => { if (b.inv === old) b.inv = keep; })); saveBills(); }
+      const src = v.src === 'shot' ? dup.src : v.src; v = Object.assign({}, v, {no: keep}); invPut(v); DB.invs[keep].src = src; return 'dup'; }
+    DB.invs[v.no] = Object.assign({items: [], add: Date.now()}, v); return 'new'; }
   ['date', 'time', 'sellerId', 'seller', 'total'].forEach(k => { if ((o[k] == null || o[k] === '') && v[k] != null && v[k] !== '') o[k] = v[k]; });
-  if (v.items && v.items.length && (!o.items || !o.items.length || v.src === 'qr' && o.src !== 'qr' && v.items.length >= o.items.length)) o.items = v.items;
+  if (v.items && v.items.length && (!o.items || !o.items.length || v.src === 'qr' && o.src !== 'qr' && v.items.length >= o.items.length || v.src !== 'shot' && o.src === 'shot')) o.items = v.items;
   if (v.seller && (!o.seller || v.seller.length > o.seller.length && v.seller.startsWith(o.seller.replace(/…$/, '')))) o.seller = v.seller; return 'upd';
 }
 function invChanged() { saveInvs(); if (curTab === 'Inv') renderInv(); }
@@ -4736,7 +4753,7 @@ function invPullAcc() {
   saveScfg(); invChanged(); buzz(40); const wi = L.filter(v => v.items && v.items.length).length;
   const lastD = L.map(v => v.date).filter(Boolean).sort().pop(); if (lastD) { const d = ymdDate(lastD); Inv.ym = [d.getFullYear(), d.getMonth()]; }
   if (S.mode === 'shop' && curTab !== 'Inv') showTab('Inv'); else renderInv();
-  toast(`✅ 協助工具讀到 ${L.length} 張發票（${wi} 張有品項），新增 ${nNew} 張`, 4500);
+  toast(`✅ 協助工具讀到 ${L.length} 張發票（${wi} 張有品項），新增 ${nNew} 張${L.length - nNew ? `，${L.length - nNew} 張已經有了（不重複新增，只補上缺的資料）` : ''}`, 5000);
 }
 /* 把一頁畫面文字（每行用 tab 分欄）解析成發票：明細頁或列表頁 */
 function invParseLines(lines) {
