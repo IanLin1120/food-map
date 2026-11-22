@@ -174,6 +174,8 @@ function askText(msg, val, ph) {
 window.__back = function () {
   if ($('#viewer').classList.contains('on')) { Viewer.close(); return true; }
   if (sheets.length) { sheets[sheets.length - 1].close(); return true; }
+  /* 記帳區：返回只在記帳區裡面切換，不會跑到地圖 */
+  if (document.body.classList.contains('mAcc')) { if (curTab !== 'Acc') { showTab('Acc'); return true; } return false; }
   if (typeof mapBack === 'function' && mapBack()) return true;
   if (curTab !== 'Map') { showTab('Map'); return true; }
   return false;

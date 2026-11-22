@@ -622,7 +622,8 @@ public class MainActivity extends Activity {
                     if (need != null) { if (allowUi) { need.setFlags(need.getFlags() & ~Intent.FLAG_ACTIVITY_NEW_TASK); startActivityForResult(need, REQ_GCONSENT); } else gReply(id, null, "需要授權"); return; }
                     String t = b.getString(android.accounts.AccountManager.KEY_AUTHTOKEN);
                     if (t != null) gReply(id, t, null); else gReply(id, null, "沒有拿到授權");
-                } catch (Exception e) { String m = String.valueOf(e.getMessage()); gReply(id, null, (m.contains("UNREGISTERED") || m.contains("INVALID_AUDIENCE") ? "UNREG:" : "") + m); }
+                } catch (android.accounts.OperationCanceledException e) { gReply(id, null, "已取消");
+                } catch (Exception e) { String m = e.getClass().getSimpleName() + "：" + e.getMessage(); gReply(id, null, "GERR:" + m); }
             }
         }, null);
     }
@@ -815,6 +816,24 @@ public class MainActivity extends Activity {
 
         @JavascriptInterface
         public void gSignOut() { getSharedPreferences("g", MODE_PRIVATE).edit().remove("acc").apply(); }
+
+        /* 給 pCloud 用：WebView 跨網域被擋時改由原生端連線 */
+        @JavascriptInterface
+        public void http(final String id, final String method, final String url, final String ctype, final String b64) {
+            new Thread(new Runnable() { public void run() {
+                org.json.JSONObject o = new org.json.JSONObject();
+                try {
+                    java.net.HttpURLConnection c = (java.net.HttpURLConnection) new java.net.URL(url).openConnection();
+                    c.setRequestMethod(method); c.setConnectTimeout(20000); c.setReadTimeout(180000);
+                    if (b64 != null && b64.length() > 0) { byte[] body = Base64.decode(b64, Base64.NO_WRAP); c.setDoOutput(true); if (ctype != null && ctype.length() > 0) c.setRequestProperty("Content-Type", ctype); c.setFixedLengthStreamingMode(body.length); OutputStream os = c.getOutputStream(); os.write(body); os.close(); }
+                    int code = c.getResponseCode(); InputStream in = code >= 400 ? c.getErrorStream() : c.getInputStream();
+                    java.io.ByteArrayOutputStream bo = new java.io.ByteArrayOutputStream(); byte[] buf = new byte[65536]; int n; if (in != null) { while ((n = in.read(buf)) > 0) bo.write(buf, 0, n); in.close(); }
+                    o.put("status", code); o.put("text", new String(bo.toByteArray(), "UTF-8"));
+                } catch (Exception e) { try { o.put("err", String.valueOf(e.getMessage())); } catch (Exception x) { } }
+                final String js = "window.__http&&window.__http(" + org.json.JSONObject.quote(id) + "," + o.toString() + ")";
+                runOnUiThread(new Runnable() { public void run() { web.evaluateJavascript(js, null); } });
+            } }).start();
+        }
 
         @JavascriptInterface
         public String gInfo() {
