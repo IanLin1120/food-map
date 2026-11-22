@@ -4,7 +4,7 @@
 <script>/* 線上更新開機程式：手機上若已下載比 APK 內建更新的介面版本，就改用新版（存在 IndexedDB）。
    新版連續兩次沒有正常開啟 → 自動退回 APK 內建版本。網址加上 #builtin 也會強制使用內建版本。 */
 (function () {
-  var B = '3.5.4'; if (!window.__OTA) window.APP_BUILTIN = B;
+  var B = '3.6.0'; if (!window.__OTA) window.APP_BUILTIN = B;
   if (window.__OTA || location.hash.indexOf('builtin') >= 0) return;
   var v = null; try { v = JSON.parse(localStorage.getItem('fm.ota') || 'null'); } catch (e) {}
   function gt(a, b) { a = String(a).split('.').map(Number); b = String(b).split('.').map(Number); for (var i = 0; i < Math.max(a.length, b.length); i++) { var p = a[i] || 0, q = b[i] || 0; if (p !== q) return p > q; } return false; }
@@ -679,8 +679,6 @@ table.piv .s.pr.one{text-align:center;padding-right:.5rem}
 .mcS{flex:none;font-size:1.1rem}
 .mcN{font-size:.78rem;color:var(--text-2);line-height:1.45;padding:.1rem 0}
 /* 功能區切換 */
-body:not(.mShop) #tabbar [data-tab="Shop"],body:not(.mShop) #tabbar [data-tab="Inv"]{display:none}
-body.mShop #tabbar [data-tab="Meal"],body.mShop #tabbar [data-tab="Rec"]{display:none}
 .modeCard .modeSw{width:100%;justify-content:center;border-radius:6px;white-space:normal;margin-top:.2rem}
 /* ---- 購物分帳 ---- */
 .mlS .spin{display:inline-block;width:.8rem;height:.8rem;margin:0 .15rem 0 0;border-width:2px;vertical-align:-1px}
@@ -1032,6 +1030,24 @@ h1,h2,h3,.gTitle,.wlSub{text-wrap:balance}
 .piC.best{border-color:color-mix(in srgb,var(--accent) 55%,var(--border));box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 18%,transparent)}
 .piC .chip{margin-top:.3rem;align-self:flex-start;background:color-mix(in srgb,var(--accent) 14%,var(--surface));color:var(--accent);font-weight:800}
 .piC .invL{display:flex;flex-direction:column;min-width:0}
+
+/* 店家頁：菜單／購物紀錄分頁 */
+.pTabs{display:grid;grid-template-columns:1fr 1fr;gap:.3rem;padding:.3rem;margin:1rem 0 .7rem;border-radius:12px;background:var(--surface-3);border:1px solid var(--border-soft)}
+.pTabs button{display:flex;align-items:center;justify-content:center;gap:.35rem;padding:.6rem .4rem;border:0;border-radius:9px;background:transparent;font-size:.95rem;font-weight:800;color:var(--text-2);white-space:nowrap}
+.pTabs button em{font-style:normal;font-size:.72rem;font-weight:800;padding:0 .4rem;border-radius:6px;background:color-mix(in srgb,var(--text) 8%,transparent)}
+.pTabs button em:empty{display:none}
+.pTabs button.on{background:var(--surface);color:var(--accent);box-shadow:0 1px 4px var(--sh)}
+.pTabs button.on em{background:color-mix(in srgb,var(--accent) 15%,transparent);color:var(--accent)}
+.pTabH{margin-top:.2rem}
+/* 設定：食譜入口 */
+.recCard{display:flex;align-items:center;gap:.8rem;width:100%;text-align:left;padding:.95rem .9rem;border:0;background:linear-gradient(135deg,color-mix(in srgb,#b5653a 14%,var(--surface)),var(--surface) 75%);color:var(--text)}
+.recCard .rcI{flex:none;width:3rem;height:3rem;border-radius:12px;display:grid;place-items:center;font-size:1.6rem;background:var(--surface);border:1.5px solid color-mix(in srgb,#b5653a 35%,transparent)}
+.recCard .rcT{flex:1;min-width:0;display:flex;flex-direction:column;gap:.15rem}.recCard .rcT b{font-size:1.08rem;font-weight:900}.recCard .rcT small{color:var(--muted);line-height:1.4}
+.recCard .rcGo{flex:none;white-space:nowrap;font-size:.82rem;font-weight:800;color:#fff;background:var(--accent);padding:.45rem .7rem;border-radius:8px}
+.recCard:active{transform:scale(.98)}
+/* 地圖卡片：有購物紀錄時四顆按鈕排成 2×2 */
+#mCard .acts:has(>.btn:nth-child(4)){display:grid;grid-template-columns:1fr 1fr;gap:.5rem}
+#mCard .acts:has(>.btn:nth-child(4))>.btn{width:100%;margin:0}
 </style>
 </head>
 <body>
@@ -1081,7 +1097,7 @@ h1,h2,h3,.gTitle,.wlSub{text-wrap:balance}
   </section>
 
   <section class="page" id="pgRec">
-    <div class="pgHead"><div class="grow"><h1>我的食譜</h1><div class="sub" id="recSub"></div></div><div class="phBtns"><button class="btn sm" id="recAI">✨ 圖片匯入</button><button class="btn sm pri" id="recAdd">＋ 新增</button></div></div>
+    <div class="pgHead"><button class="favBack" id="recBack" aria-label="回設定"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button><div class="grow"><h1>我的食譜</h1><div class="sub" id="recSub"></div></div><div class="phBtns"><button class="btn sm" id="recAI">✨ 圖片匯入</button><button class="btn sm pri" id="recAdd">＋ 新增</button></div></div>
     <div class="pgBody"><div class="pgInner">
       <div class="row" style="margin-bottom:.9rem"><div class="searchBox grow"><input id="recQ" type="search" placeholder="搜尋食譜、食材…"></div><button class="btn sm foldAll" id="recFold">全部收合</button><button class="btn sm" id="recCats">🗂️ 分類</button></div>
       <div id="recList" class="noSel"></div>
@@ -1098,7 +1114,6 @@ h1,h2,h3,.gTitle,.wlSub{text-wrap:balance}
     <button data-tab="Meal"><svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 9.5h17M8 3v4M16 3v4"/><path d="M8 14.5l2.4 2.3L16 12.5"/></svg>日常</button>
     <button data-tab="Shop"><svg viewBox="0 0 24 24"><path d="M6 3h12v18l-2-1.4-2 1.4-2-1.4-2 1.4-2-1.4L6 21z"/><path d="M9 8h6M9 12h6M9 16h3"/></svg>分帳</button>
     <button data-tab="Inv"><svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7h8M8 11h8"/><path d="M8 15h2M12 15h1M15 15h1M8 17.5h1M11 17.5h2M15 17.5h1"/></svg>發票</button>
-    <button data-tab="Rec"><svg viewBox="0 0 24 24"><path d="M12 6c-2-1.5-5-2-8-1.5v13c3-.5 6 0 8 1.5 2-1.5 5-2 8-1.5v-13c-3-.5-6 0-8 1.5zM12 6v13"/></svg>食譜</button>
     <button data-tab="Set"><svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>設定</button>
   </nav>
 </div>
@@ -1179,7 +1194,7 @@ return maplibregl$1;
 /* ============================================================
    日日帳本 — 核心：工具、資料儲存、主題、面板、拖曳排序、圖片
    ============================================================ */
-const APP_VERSION = '3.5.4';
+const APP_VERSION = '3.6.0';
 const APP_VER = APP_VERSION;
 /* 線上更新來源（GitHub Pages）：IanLin1120/food-map */
 const GH = {repo: 'https://github.com/IanLin1120/food-map', pages: 'https://ianlin1120.github.io/food-map/'};
@@ -1612,13 +1627,13 @@ function selectPlace(id, fly) {
   showCard(`<div class="row" style="align-items:flex-start"><div class="grow" data-a="open"><h3>${esc(p.name)}</h3>
     <div class="small" style="margin:.25rem 0"><span class="tag" style="--c:${c.color}">${esc(c.icon)} ${esc(c.name)}</span></div>
     ${stateHtml(p) ? `<div class="small muted row" style="gap:.35rem">${stateHtml(p)}</div>` : ''}<div class="small muted">${esc(p.addr || '')}</div></div><button class="ic" data-a="x">✕</button></div>
-    <div class="acts"><button class="btn pri" data-a="open">詳細資料</button><button class="btn olive" data-a="nav">🧭 導航</button>${S.mode === 'shop' ? `<button class="btn" data-a="menu">🧾 購物紀錄${(() => { const k = Object.values(DB.bills || {}).reduce((t, L) => t + L.filter(b => b.place === p.id).length, 0); return k ? ' ' + k : ''; })()}</button>` : `<button class="btn" data-a="menu">📋 菜單${n ? ' ' + n : ni ? ' 🖼️' : ''}</button>`}</div>`);
+    <div class="acts"><button class="btn pri" data-a="open">詳細資料</button><button class="btn olive" data-a="nav">🧭 導航</button><button class="btn" data-a="menu">📋 菜單${n ? ' ' + n : ni ? ' 🖼️' : ''}</button>${(() => { const k = Object.values(DB.bills || {}).reduce((t, L) => t + L.filter(b => b.place === p.id).length, 0); return k ? `<button class="btn" data-a="recs">🧾 紀錄 ${k}</button>` : ''; })()}</div>`);
 }
 function initCard() {
   $('#mCard').addEventListener('click', e => { const a = e.target.closest('[data-a]'); if (!a) return; const act = a.dataset.a;
     if (act === 'ax') { Area.hideList = true; hideCard(); return; } if (act === 'ap') { selectPlace(a.dataset.id, true); return; } if (act === 'al') { Area.hideList = false; Area.card(); return; }
     if (act === 'x') { clearSel(); return; }
-    if (M.sel) { const p = DB.places.find(x => x.id === M.sel); if (!p) return; if (act === 'open') openPlace(p.id); else if (act === 'nav') navTo(p); else if (act === 'menu') openPlace(p.id, true); return; }
+    if (M.sel) { const p = DB.places.find(x => x.id === M.sel); if (!p) return; if (act === 'open') openPlace(p.id); else if (act === 'nav') navTo(p); else if (act === 'menu') openPlace(p.id, true); else if (act === 'recs') openPlace(p.id, 'recs'); return; }
     if (M.draft) { const d = M.draft; if (act === 'add') addDraft(d); else if (act === 'nav') navTo(d); else if (act === 'gm') openUrl(gmUrl(d)); } });
 }
 const gmUrl = p => p.gurl || (p.gid ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.name || '')}&query_place_id=${p.gid}` : `https://www.google.com/maps/search/?api=1&query=${(+p.lat).toFixed(6)},${(+p.lon).toFixed(6)}`);
@@ -2342,13 +2357,16 @@ function gmMenuGuide(p) {
   sh.foot.onclick = () => { Share.expect(p.id); sh.close(); const u = gmUrl(p); if (IS_APP && NB.openNav) NB.openNav('com.google.android.apps.maps', u, u); else openUrl(u); };
 }
 /* ---------- 接收其他 App「分享」過來的圖片（截圖、相簿） ---------- */
+/* 分享進來的圖片要做什麼 */
+function shareKind(n) { return new Promise(res => { let done = false; const sh = sheet({title: `收到 ${n} 張圖片，要拿來做什麼？`, onClose() { if (!done) res(null); }, html: `<div class="actList"><button data-k="menu">📋 店家的菜單（存到收藏的店家，可以 AI 辨識成表格）</button><button data-k="shop">🧾 購物明細（AI 辨識品項，拿來分帳）</button><button data-k="inv">🎫 發票截圖（AI 讀發票號碼和品項）</button></div>`});
+  sh.body.onclick = e => { const t = e.target.closest('[data-k]'); if (!t) return; buzz(10); done = true; sh.close(); res(t.dataset.k); }; }); }
 var Share = {
   expect(id) { lsSet('fm.shareFor', {id, t: Date.now()}); },
   onNative() { this.check(); },
   async check() {
     if (!IS_APP || !NB.sharedTake || this.running) return; let L = []; try { L = JSON.parse(NB.sharedTake() || '[]'); } catch (e) {} if (!L.length) return; this.running = true;
     try { const blobs = []; for (const n of L) { try { const r = await fetch(location.origin + '/shared/' + encodeURIComponent(n)); if (r.ok) blobs.push(await r.blob()); } catch (e) {} try { NB.sharedDone(n); } catch (e) {} }
-      if (!blobs.length) { toast('沒有收到可以用的圖片'); return; } while (sheets.length) sheets[sheets.length - 1].close(); if (S.mode === 'shop') { showTab('Shop'); shopFromBlobs(blobs); return; } if (curTab !== 'Fav' && curTab !== 'Map') showTab('Fav'); this.ask(blobs); }
+      if (!blobs.length) { toast('沒有收到可以用的圖片'); return; } while (sheets.length) sheets[sheets.length - 1].close(); const k = await shareKind(blobs.length); if (!k) return; if (k === 'shop') { showTab('Shop'); shopFromBlobs(blobs); return; } if (k === 'inv') { showTab('Inv'); invShots(blobs); return; } if (curTab !== 'Fav' && curTab !== 'Map') showTab('Fav'); this.ask(blobs); }
     finally { this.running = false; } },
   ask(blobs) {
     const f = lsGet('fm.shareFor', null); let pid = f && Date.now() - f.t < 2 * 3600e3 && DB.places.some(x => x.id === f.id) ? f.id : (M.sel || ''); let q = '';
@@ -2453,6 +2471,9 @@ function openMenuImgs(p) { const items = []; albumsOf(p).forEach((a, i) => a.img
 /* ---------- 收藏地點：明細 ---------- */
 function openPlace(id, toMenu) {
   const p = DB.places.find(x => x.id === id); if (!p) return; let editT = false, mq = '', mc = '';
+  /* 店家頁下面分兩個分頁：📋 菜單（美食）／🧾 購物紀錄（分帳），互不干擾 */
+  const nBills = () => Object.values(DB.bills || {}).reduce((t, L) => t + L.filter(b => b.place === p.id).length, 0);
+  let ptab = toMenu === 'recs' ? 'recs' : toMenu ? 'menu' : ((p.menu || []).length || (p.albums || []).some(a => (a.imgs || []).length) || !nBills() ? 'menu' : 'recs');
   /* 區域：目前選的區域＋不分區的列 */
   if ((p.menu || []).some(r => r.g)) { const f = fixRegions(p.menu); if (f !== p.menu) { p.menu = f; savePlace(p); } }
   const regsOf = () => { const r = []; (p.menu || []).forEach(x => { if (x.g && !r.includes(x.g)) r.push(x.g); }); return rgSorted(r); };
@@ -2544,7 +2565,8 @@ function openPlace(id, toMenu) {
         <div class="ln"><span class="k">🕒</span><span class="v hours">${(p.hours || []).length ? p.hours.map((h, i) => `<div class="${i === hi ? 'td' : ''}">${esc(h)}</div>`).join('') : '<span class="muted">（尚未填寫營業時間' + (S.gkey ? '，可按上方「更新資訊」從 Google 帶入' : '') + '）</span>'}</span></div>
         ${p.phone ? `<div class="ln"><span class="k">📞</span><span class="v">${esc(p.phone)}</span></div>` : ''}
         ${p.note ? `<div class="ln"><span class="k">📝</span><span class="v" style="white-space:pre-wrap">${esc(p.note)}</span></div>` : ''}</div>
-      ${S.mode === 'shop' ? shopPlaceHtml(p) : `      <div class="h3" id="menuTop"><span class="grow">📋 菜單 <span class="muted small" style="font-weight:600">${(p.menu || []).length ? p.menu.length + ' 個品項' : ''}</span></span></div>
+      <div class="pTabs" id="menuTop"><button data-pt="menu" class="${ptab === 'menu' ? 'on' : ''}">📋 菜單<em>${(p.menu || []).length || ''}</em></button><button data-pt="recs" class="${ptab === 'recs' ? 'on' : ''}">🧾 購物紀錄<em>${nBills() || ''}</em></button></div>
+      ${ptab === 'recs' ? shopPlaceHtml(p) : `      <div class="h3 pTabH"><span class="grow">📋 菜單 <span class="muted small" style="font-weight:600">${(p.menu || []).length ? p.menu.length + ' 個品項' : ''}</span></span></div>
       ${job ? `<div class="jobBar"><span class="spin"></span><span class="grow">${esc(job.msg || 'AI 處理中…')}<small>在背景執行中，完成後會自動帶入，可以先離開這個畫面</small></span></div>` : ''}
       <div class="mBtns"><button class="btn pri" data-a="imgs" ${ni ? '' : 'disabled'}>🖼️ 打開菜單圖檔${ni ? `（${nv > 1 ? nv + ' 個版本・' : ''}${ni} 張）` : ''}</button><button class="btn" data-a="albums">🗂️ ${ni ? '管理圖檔' : '加入菜單圖片'}</button>
         <button class="btn olive" data-a="ai" ${job ? 'disabled' : ''}>✨ AI 辨識成表格</button><button class="btn olive" data-a="webm" ${job ? 'disabled' : ''}>🌐 上網找菜單</button></div>${S.aikey && aiLeftText() ? `<div class="small muted" style="margin:-.3rem 0 .7rem">${esc(aiLeftText())}（每天 ${AIQ.resetAt()} 重置）</div>` : ''}
@@ -2554,7 +2576,7 @@ function openPlace(id, toMenu) {
   sh.body.addEventListener('input', e => { const t = e.target; if (t.id === 'mq') { mq = t.value; $('#mBody', sh.body).innerHTML = rowsHtml(); return; }
     if (t.dataset.k) { p.menu[+t.dataset.i][t.dataset.k] = t.value; save(); } });
   sh.body.addEventListener('change', e => { const t = e.target; if (t.dataset.k === 't') { p.menu[+t.dataset.i].t = t.value; save(); } });
-  sh.body.addEventListener('click', async e => { const b = e.target.closest('[data-a]'); if (!b) return; const a = b.dataset.a, i = +b.dataset.i;
+  sh.body.addEventListener('click', async e => { const pt = e.target.closest('[data-pt]'); if (pt) { buzz(10); if (ptab !== pt.dataset.pt) { ptab = pt.dataset.pt; render(); } return; } const b = e.target.closest('[data-a]'); if (!b) return; const a = b.dataset.a, i = +b.dataset.i;
     if (a === 'nav') navTo(p); else if (a === 'gm') openUrl(gmUrl(p)); else if (a === 'tel') openUrl('tel:' + p.phone.replace(/[^\d+]/g, '')); else if (a === 'web') openUrl(p.web);
     else if (a === 'show') { while (sheets.length) sheets[sheets.length - 1].close(); selectPlace(p.id, true); }
     else if (a === 'sbNew') { while (sheets.length) sheets[sheets.length - 1].close(); newBill(p); }
@@ -2668,14 +2690,10 @@ function updCounts() { const fb = $('#favBadge'); if (fb) fb.textContent = DB.pl
    食譜、設定、金鑰圖文教學、備份、啟動
    ============================================================ */
 let curTab = 'Map';
-/* ---------- 切換功能區：美食 ↔ 購物分帳 ---------- */
-/* 依目前功能區套用畫面（分頁、標題、搜尋提示）；啟動時也會呼叫，重開 App 會回到上次的功能區 */
-function modeUI() { const m = S.mode === 'shop' ? 'shop' : 'food'; document.body.classList.toggle('mShop', m === 'shop');
-  $('#favTitle') && ($('#favTitle').textContent = m === 'shop' ? '我的店家' : '收藏分類'); $('#mQ') && ($('#mQ').placeholder = m === 'shop' ? '搜尋量販店、超商、外送店家…' : '搜尋店家、地址…'); }
-function setMode(m, quiet) { m = m === 'shop' ? 'shop' : 'food'; S.mode = m; saveS(); DB.places = DB.side[m].places; DB.cats = DB.side[m].cats;
-  M.filter = 'all'; M.sel = null; try { clearSel(); } catch (e) {} modeUI();
-  refreshAll(); if (!quiet) { showTab(m === 'shop' ? 'Shop' : 'Map'); buzz(30); toast(m === 'shop' ? '🛒 已切換到「購物分帳」' : '🍽️ 已切換到「美食・日常」', 2200); } }
-function showTab(t) { curTab = t; $$('.page').forEach(p => p.classList.toggle('on', p.id === 'pg' + t)); $$('#tabbar button').forEach(b => b.classList.toggle('on', b.dataset.tab === (t === 'Fav' ? 'Map' : t))); document.body.classList.toggle('onFav', t === 'Fav');
+/* 美食・日常和購物分帳已經合併成一個介面（底部：地圖、日常、分帳、發票、設定；食譜在設定裡） */
+function modeUI() { document.body.classList.remove('mShop'); $('#favTitle') && ($('#favTitle').textContent = '收藏分類'); $('#mQ') && ($('#mQ').placeholder = '搜尋店家、地址、量販店…'); }
+function setMode() { }
+function showTab(t) { curTab = t; $$('.page').forEach(p => p.classList.toggle('on', p.id === 'pg' + t)); $$('#tabbar button').forEach(b => b.classList.toggle('on', b.dataset.tab === (t === 'Fav' ? 'Map' : t === 'Rec' ? 'Set' : t))); document.body.classList.toggle('onFav', t === 'Fav');
   if (t === 'Map') mapResize(); else if (t === 'Fav') renderFav(); else if (t === 'Rec') renderRec(); else if (t === 'Meal') renderMeal(); else if (t === 'Shop') renderShop(); else if (t === 'Inv') renderInv(); else renderSet(); updCounts(); }
 
 /* ---------- 全部展開／收合（收藏、食譜共用） ---------- */
@@ -2703,7 +2721,7 @@ async function renderRec() {
   box.dataset.q = q; foldBtn('rec');
 }
 function initRec() {
-  const box = $('#recList'); $('#recQ').addEventListener('input', debounce(renderRec, 150)); $('#recAdd').onclick = () => newRecipe(); $('#recAI').onclick = aiRecipe; $('#recCats').onclick = () => openCats('recipe'); $('#recFold').onclick = () => foldAll('rec');
+  const box = $('#recList'); $('#recQ').addEventListener('input', debounce(renderRec, 150)); $('#recAdd').onclick = () => newRecipe(); $('#recBack').onclick = () => { buzz(10); showTab('Set'); }; $('#recAI').onclick = aiRecipe; $('#recCats').onclick = () => openCats('recipe'); $('#recFold').onclick = () => foldAll('rec');
   box.addEventListener('click', e => { const f = e.target.closest('[data-a="fold"]'); if (f) { const s = f.closest('.sec'), id = s.dataset.cat; S.rfold[id] = !S.rfold[id]; saveS(); s.classList.toggle('fold', !!S.rfold[id]); foldBtn('rec'); return; } const b = e.target.closest('.rrow'); if (b) viewRecipe(b.dataset.id); });
   sortable(box, {item: '.rsec[data-srt]', start: '.secHead', scroller: '.pgBody', onSort(from, to) { moveItem(DB.rcats, from, to); saveRcats(); renderRec(); }});
   /* 食譜可以在資料夾內排序，也可以拖到別的資料夾 */
@@ -2817,11 +2835,9 @@ function renderSet() {
   const sw = (id, on) => `<button class="sw2 ${on ? 'on' : ''}" data-sw="${id}" role="switch" aria-checked="${!!on}"></button>`;
   const dark = isDark(), navs = navApps({lat: 0, lon: 0});
   $('#setBody').innerHTML = `
-  ${areaHero()}
-  <div class="setG"><h3>功能區</h3><div class="setC"><div class="setR col modeCard"><div class="t"><b>${S.mode === 'shop' ? '🍽️ 美食・日常' : '🛒 購物分帳'}</b><small>${S.mode === 'shop' ? '美食地圖、收藏店家的菜單表格、每天吃什麼的點餐分帳、食譜。' : '量販店、超商、Foodpanda 的購物明細：拍照或截圖讓 AI 讀出品項和折扣，選誰買的、誰一起分攤，自動算出每個人要付多少。'}</small></div>
-      <button class="btn pri modeSw" data-a="mode">${S.mode === 'shop' ? '🍽️ 切換到美食・日常' : '🛒 切換到購物分帳'}</button></div></div></div>
+  <div class="setG"><h3>食譜</h3><div class="setC"><button class="recCard" data-a="rec"><span class="rcI">📖</span><span class="rcT"><b>我的食譜</b><small>${(DB.recipes || []).length ? '共 ' + DB.recipes.length + ' 道・' : ''}記錄做法和食材，可以用圖片 AI 匯入</small></span><span class="rcGo">進入食譜 ›</span></button></div></div>
   <div class="setG"><h3>使用說明</h3><div class="setC">
-    <button class="setR" data-a="guideFood" style="width:100%;text-align:left"><span class="gRi">🍽️</span><div class="t"><b>美食・日常 圖解說明</b><small>找店收藏、AI 菜單表格、記一餐分帳、購物清單、食譜</small></div><span class="muted">›</span></button>
+    <button class="setR" data-a="guideFood" style="width:100%;text-align:left"><span class="gRi">🍽️</span><div class="t"><b>地圖・日常・食譜 圖解說明</b><small>找店收藏、AI 菜單表格、記一餐分帳、購物清單、食譜</small></div><span class="muted">›</span></button>
     <button class="setR" data-a="guideShop" style="width:100%;text-align:left"><span class="gRi">🛒</span><div class="t"><b>購物分帳 圖解說明</b><small>上傳明細、購物方式、選誰付、折扣與費用、驗算匯出</small></div><span class="muted">›</span></button>
     <button class="setR" data-a="guideInv" style="width:100%;text-align:left"><span class="gRi">🎫</span><div class="t"><b>發票 圖解說明</b><small>手機條碼、掃 QR、截圖、協助工具、折扣、拿去分帳</small></div><span class="muted">›</span></button>
     <button class="setR" data-a="welcome" style="width:100%;text-align:left"><span class="gRi">👋</span><div class="t"><b>歡迎畫面與金鑰教學</b><small>第一次打開時看到的介紹</small></div><span class="muted">›</span></button></div></div>
@@ -2873,7 +2889,7 @@ function initSet() {
     else if (a === 'updChk') Upd.check(true); else if (a === 'updApk') Upd.releases(); else if (a === 'updBack') Upd.restore(); else if (a === 'updShare') Upd.share(); else if (a === 'updWeb') openUrl(GH.pages);
     else if (a === 'aiStudio') openUrl('https://aistudio.google.com/rate-limit?timeRange=last-28-days'); else if (a === 'aiLog') { const o = $('#aiLogBox'); o.classList.toggle('hide'); b.textContent = o.classList.contains('hide') ? '查看最近 AI 紀錄' : '收起紀錄'; }
     else if (a === 'mcheck') openMenuCheck();
-    else if (a === 'mode') setMode(S.mode === 'shop' ? 'food' : 'shop'); else if (a === 'guideFood') openGuide('food'); else if (a === 'guideShop') openGuide('shop'); else if (a === 'guideInv') openGuide('inv');
+    else if (a === 'rec') { buzz(15); showTab('Rec'); } else if (a === 'guideFood') openGuide('food'); else if (a === 'guideShop') openGuide('shop'); else if (a === 'guideInv') openGuide('inv');
     else if (a === 'cats') openCats('place'); else if (a === 'rcats') openCats('recipe'); else if (a.indexOf('off') === 0) Off.act(a); else if (a === 'exp') exportBackup(); else if (a === 'imp') importBackup(); else if (a === 'welcome') welcome();
     else if (a === 'wipe') { if (await ask('確定要清除「所有」收藏、菜單、食譜與設定嗎？\n這個動作無法復原，建議先匯出備份。', '全部清除', true) && await ask('再確認一次：真的要全部清除嗎？', '清除', true)) { for (const s of ['kv', 'places', 'recipes', 'imgs']) await IDB.clear(s).catch(() => {}); try { localStorage.clear(); } catch (er) {} location.reload(); } } });
 }
@@ -2940,7 +2956,7 @@ function welcome() {
   const sh = sheet({title: '歡迎使用 日日帳本', full: true, foot: '<button class="btn pri" data-a="go">開始使用</button>', onClose() { if (!S.onboard) { S.onboard = true; saveS(); } }});
   sh.body.innerHTML = `<div class="gHero" style="margin-top:.2rem"><div class="gIcon">${APP_ICON}</div><h2 style="font-size:1.35rem;font-weight:800;margin:.2rem 0 0">日日帳本</h2><span class="muted small">吃什麼、買什麼、誰付多少，每天都記在這一本</span></div>
     <div class="h3">📘 圖解使用說明（第一次用請先看）</div>
-    <div class="gPick"><button data-g="food"><i>🍽️</i><b>美食・日常</b><small>找店收藏、AI 菜單表格、記一餐誰付多少、購物清單、食譜</small><span>看說明 ›</span></button>
+    <div class="gPick"><button data-g="food"><i>🍽️</i><b>地圖・日常・食譜</b><small>找店收藏、AI 菜單表格、記一餐誰付多少、購物清單、食譜</small><span>看說明 ›</span></button>
       <button data-g="shop"><i>🛒</i><b>購物分帳</b><small>全聯、超商、Foodpanda 明細拍照，AI 讀出品項折扣，自動分帳</small><span>看說明 ›</span></button>
       <button data-g="inv" class="wide"><i>🎫</i><b>發票</b><small>手機條碼、掃發票 QR Code、匯入發票大師、協助工具讀取，一鍵拿去分帳</small><span>看說明 ›</span></button></div>
     <div class="h3">🔑 建議先完成的設定</div>
@@ -3739,11 +3755,11 @@ function datePick(k0) {
 }
 const curBill = id => dayBills(Shop.sel).find(b => b.id === id);
 function shopChanged() { Object.keys(DB.bills).forEach(k => { if (!DB.bills[k].length) delete DB.bills[k]; }); saveBills(); if (curTab === 'Shop') renderShop(); document.dispatchEvent(new Event('fm:shop')); }
-function gotoBill(k, id) { if (S.mode !== 'shop') setMode('shop', true); const d = ymdDate(k); Shop.sel = k; Shop.ym = [d.getFullYear(), d.getMonth()]; showTab('Shop'); const b = curBill(id); if (b) editBill(b); }
+function gotoBill(k, id) { const d = ymdDate(k); Shop.sel = k; Shop.ym = [d.getFullYear(), d.getMonth()]; showTab('Shop'); const b = curBill(id); if (b) editBill(b); }
 function shopPlaceHtml(p) {
   const L = []; Object.keys(DB.bills).sort().reverse().forEach(k => DB.bills[k].forEach(b => { if (b.place === p.id) L.push({k, b}); }));
   const tot = L.reduce((s, r) => s + billCalc(r.b).computed, 0);
-  return `<div class="h3" id="menuTop"><span class="grow">🧾 購物紀錄 <span class="muted small" style="font-weight:600">${L.length ? L.length + ' 筆・' + money(tot) : ''}</span></span></div>
+  return `<div class="h3 pTabH"><span class="grow">🧾 購物紀錄 <span class="muted small" style="font-weight:600">${L.length ? L.length + ' 筆・' + money(tot) : ''}</span></span></div>
     <div class="mBtns"><button class="btn pri" data-a="sbNew">＋ 新增這家店的明細</button></div>
     ${L.length ? L.slice(0, 30).map(r => `<button class="srD" data-a="sbGo" data-k="${r.k}" data-id="${r.b.id}"><div class="row"><b class="grow">${dayLabel(r.k)}${r.b.time ? ' ' + esc(r.b.time) : ''}</b><span class="srA">${money(billCalc(r.b).computed)}</span></div><div class="srL">${esc(r.b.items.slice(0, 4).map(x => x.n).join('、'))}${r.b.items.length > 4 ? '…' : ''}</div></button>`).join('') : '<div class="empty" style="padding:1rem">這家店還沒有購物紀錄</div>'}`;
 }
@@ -3779,7 +3795,7 @@ function billMore(b) {
 }
 
 /* ---------- 新增：手動或上傳圖片 ---------- */
-function newBill(p) { if (S.mode !== 'shop') setMode('shop', true); showTab('Shop'); const sh = sheet({title: '新增「' + p.name + '」的明細', html: `<div class="actList"><button data-a="img">📷 上傳明細照片／截圖（AI 辨識）</button><button data-a="man">✏️ 手動輸入</button></div>`});
+function newBill(p) { showTab('Shop'); const sh = sheet({title: '新增「' + p.name + '」的明細', html: `<div class="actList"><button data-a="img">📷 上傳明細照片／截圖（AI 辨識）</button><button data-a="man">✏️ 手動輸入</button></div>`});
   sh.body.onclick = e => { const t = e.target.closest('[data-a]'); if (!t) return; sh.close(); if (t.dataset.a === 'img') newBillImg(p); else newBillManual(p); }; }
 async function newBillManual(p) {
   if (!p) { const st = await pickShopStore(); if (st === undefined) return; p = st; }
@@ -4190,7 +4206,7 @@ function openShopSettings() {
    使用說明：給第一次用的人看的圖解（手機畫面示意圖＋白話說明）
    ============================================================ */
 const APP_ICON = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="54 54 324 324"><defs> <linearGradient id="gicv" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#E0844B"/><stop offset=".55" stop-color="#C2633A"/><stop offset="1" stop-color="#9A4226"/></linearGradient> <linearGradient id="gisp" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#7E321C"/><stop offset="1" stop-color="#9C4527"/></linearGradient> <linearGradient id="gipl" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFF9EC"/><stop offset="1" stop-color="#F2E2C2"/></linearGradient> <linearGradient id="gicn" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F7D27A"/><stop offset="1" stop-color="#DB9A33"/></linearGradient> <radialGradient id="gigl" cx=".35" cy=".25" r=".8"><stop offset="0" stop-color="#fff" stop-opacity=".22"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient> <filter id="gish" x="-30%" y="-30%" width="160%" height="170%"><feDropShadow dx="0" dy="8" stdDeviation="9" flood-color="#5A2410" flood-opacity=".35"/></filter></defs><rect width="432" height="432" fill="url(#gicv)"/> <g opacity=".10" stroke="#FFF3DC" stroke-width="10" fill="none"><path d="M-10 120 L442 70"/><path d="M-10 350 L442 380"/><path d="M330 -10 L360 442"/></g> <rect x="0" y="0" width="112" height="432" fill="url(#gisp)"/><rect x="112" y="0" width="7" height="432" fill="#6E2A16" opacity=".45"/> <g stroke="#F4D9B6" stroke-width="5" stroke-linecap="round" stroke-dasharray="14 14" opacity=".75"><path d="M96 -6 V440"/></g> <path d="M286 0 h44 v150 l-22 -20 l-22 20z" fill="#7C8B4E"/><path d="M286 0 h44 v8 h-44z" fill="#5F6C39"/> <rect width="432" height="432" fill="url(#gigl)"/><g filter="url(#gish)"><circle cx="222" cy="210" r="102" fill="url(#gipl)"/><circle cx="222" cy="210" r="84" fill="none" stroke="#E4CDA4" stroke-width="4"/> <g fill="#A3482A"><path d="M178 150 h9 v46 h7 v-46 h9 v46 h7 v-46 h9 v55 a21 21 0 0 1 -16 20 v66 a8 8 0 0 1 -16 0 v-66 a21 21 0 0 1 -16 -20z"/> <ellipse cx="262" cy="182" rx="21" ry="31"/><rect x="254" y="206" width="16" height="85" rx="8"/></g></g> <g filter="url(#gish)"><circle cx="296" cy="290" r="40" fill="url(#gicn)" stroke="#FFF1CF" stroke-width="6"/><circle cx="296" cy="290" r="28" fill="none" stroke="#B5741C" stroke-width="3" opacity=".55"/> <text x="296" y="305" text-anchor="middle" font-family="DejaVu Sans, Arial" font-weight="700" font-size="40" fill="#8A5310">$</text></g></svg>';
-const PHT = {food: [['🗺️', '地圖'], ['📒', '日常'], ['📖', '食譜'], ['⚙️', '設定']], shop: [['🗺️', '地圖'], ['🧾', '分帳'], ['🎫', '發票'], ['⚙️', '設定']]};
+const PHT0 = [['🗺️', '地圖'], ['📒', '日常'], ['🧾', '分帳'], ['🎫', '發票'], ['⚙️', '設定']], PHT = {food: PHT0, shop: PHT0, inv: PHT0};
 /* 一支小手機：title 標題、body 內容、tab 亮起哪一個分頁、area 美食或購物 */
 const phone = (title, body, tab, area) => `<div class="ph"><div class="phIn"><div class="phNotch"></div><div class="phTop">${title}</div><div class="phBd">${body}</div>
   <div class="phTab">${PHT[area || 'food'].map(([i, t]) => `<span class="${t === tab ? 'on' : ''}"><i>${i}</i>${t}</span>`).join('')}</div></div></div>`;
@@ -4199,9 +4215,9 @@ const pc = (h, cls) => `<div class="pc ${cls || ''}">${h}</div>`, pb = (t, cls) 
 const pRow = (a, b, cls) => `<div class="pRw ${cls || ''}"><span>${a}</span><b>${b}</b></div>`;
 const tip = t => `<div class="gTip">💡 ${t}</div>`;
 const GUIDE = {
-  food: {title: '🍽️ 美食・日常 使用說明', steps: [
+  food: {title: '🍽️ 地圖・日常・食譜 使用說明', steps: [
     {t: '歡迎使用日日帳本', h: `<div class="gHero"><div class="gIcon">${APP_ICON}</div><b>收藏愛店・菜單・記帳分帳</b></div>
-      <div class="gGrid"><div><i>🗺️</i><b>地圖</b>找店、插旗收藏</div><div><i>🔖</i><b>收藏</b>地圖右上角，店家和菜單</div><div><i>📒</i><b>日常</b>記一餐、購物清單</div><div><i>📖</i><b>食譜</b>記錄拿手菜</div></div>
+      <div class="gGrid"><div><i>🗺️</i><b>地圖</b>找店、插旗收藏</div><div><i>🔖</i><b>收藏</b>地圖右上角，店家和菜單</div><div><i>📒</i><b>日常</b>記一餐、購物清單</div><div><i>🧾</i><b>分帳</b>購物明細誰付多少</div><div><i>🎫</i><b>發票</b>手機條碼、掃描、匯入</div><div><i>📖</i><b>食譜</b>在設定頁裡</div></div>
       <p>跟著這份說明走一遍，大約 2 分鐘。看完可以隨時到 <b>設定 → 使用說明</b> 再打開。購物分帳和發票另外有自己的說明。</p>`},
     {t: '① 找到店家，按收藏', h: phone('🔍 搜尋店家', `<div class="pSrch">🔍 晨曦早午餐</div><div class="pMap"><span class="flag">🚩</span><span class="flag f2">🚩</span></div>${pc(`<b>晨曦早午餐 幸福店</b><small>早午餐・距離 350 公尺</small><div class="pBtns">${pb('導航')}${pb('⭐ 收藏', 'pri hl') + tap}</div>`)}`, '地圖') +
       `<ul><li>在地圖頁上方的搜尋框輸入店名</li><li>點選搜尋結果，按 <b>⭐ 收藏</b>，選一個分類（早餐、飲料…）</li><li>也可以<b>長按地圖</b>任何地方直接插旗</li></ul>${tip('有填 Google 金鑰的話，地址、電話、營業時間會自動帶入。')}`},
@@ -4217,8 +4233,8 @@ const GUIDE = {
       `<ul><li><b>🔍</b>：輸入店名，看哪幾天吃過、吃什麼、花多少</li><li><b>⚙️ 設定</b>：新增人名（媽媽、同事…）、餐別和圖示</li></ul>`},
     {t: '⑦ 購物清單', h: phone('今天的安排', `<div class="pBtns">${pb('🍱 記一餐')}${pb('🛒 購物清單', 'pri hl') + tap}</div><div class="pc"><b>🛒 量販店</b><small>還要買 3 項・已買 2</small><div class="pList"><span><i></i>雞蛋 <em>×2</em></span><span><i></i>雞胸肉</span><span class="ck"><i></i>蒲瓜</span></div><small>＋ 新增品項</small></div>`, '日常') +
       `<ul><li>按 <b>🛒 購物清單</b>，選店家（可以不選），清單會記在月曆那一天</li><li>在下面輸入要買的東西，按 Enter 加入；可以一次貼好幾行，「雞蛋 ×2」會記數量；下方「常買」可以一鍵加入</li><li><b>勾選＝買到了</b>，會移到「已買」，按「放回清單」可以復原；按住 ☰ 拖曳排序</li><li>⋯ 可以換店家、改日期、複製清單文字貼 LINE、複製成今天的新清單</li></ul>${tip('🔍 搜尋可以切換「餐點」「購物清單」，找哪天買過什麼。')}`},
-    {t: '⑧ 食譜', h: phone('食譜', `<div class="pWho"><i class="on">全部</i><i>🍳 煎</i><i>🥘 炒</i><i>🍚 電鍋</i></div>${pc('<b>電鍋蒸飯</b><small>米 1 杯：水 1 杯・外鍋 1 杯水</small>')}${pc('<b>番茄炒蛋</b><small>2 人份・5 個步驟</small>')}${pb('＋ 新增食譜', 'pri wide hl') + tap}`, '食譜') +
-      `<ul><li>記錄拿手菜：食材表格＋自己的步驟</li><li>可以用「比例表」模板（例如電鍋蒸飯幾杯米配幾杯水）</li><li>自訂資料夾（煎、炒、電鍋、湯…），按住拖曳排序或移到其他資料夾</li></ul>`},
+    {t: '⑧ 食譜（在設定頁）', h: phone('設定', `<div class="pWho"><i class="on">全部</i><i>🍳 煎</i><i>🥘 炒</i><i>🍚 電鍋</i></div>${pc('<b>電鍋蒸飯</b><small>米 1 杯：水 1 杯・外鍋 1 杯水</small>')}${pc('<b>番茄炒蛋</b><small>2 人份・5 個步驟</small>')}${pb('＋ 新增食譜', 'pri wide hl') + tap}`, '設定') +
+      `<ul><li>到 <b>設定</b> 頁的「食譜」按 <b>進入食譜 ›</b>，左上角 ‹ 回設定</li><li>記錄拿手菜：食材表格＋自己的步驟</li><li>可以用「比例表」模板（例如電鍋蒸飯幾杯米配幾杯水）</li><li>自訂資料夾（煎、炒、電鍋、湯…），按住拖曳排序或移到其他資料夾</li></ul>`},
     {t: '⑨ 備份和外觀', h: phone('設定', `${pc('<b>外觀</b><small>主題：跟隨系統／淺色／深色・重點顏色・介面大小・震動強度</small>')}${pc('<b>資料</b><div class="pBtns">' + pb('📤 匯出備份', 'pri hl') + pb('📥 匯入備份') + '</div>' + tap)}`, '設定') +
       `<ul><li><b>匯出備份</b>：收藏、菜單、點餐、購物分帳、發票、食譜全部存成一個檔案，換手機時再<b>匯入備份</b></li><li>外觀可以換主題、重點顏色、介面大小和震動強度</li><li>有新版本時 App 會提醒，按一下就能更新</li></ul>`},
     {t: '⑩ 先設定金鑰（只要一次）', h: `<div class="gKeys"><div><i>🔑</i><b>AI 辨識金鑰（建議）</b><small>菜單照片、購物明細變成表格都靠它。免費申請，不用信用卡。</small><button class="btn sm pri" data-tut="ai">📘 看教學</button></div>
@@ -4228,8 +4244,8 @@ const GUIDE = {
     {t: '購物分帳是什麼？', h: `<div class="gHero"><div class="gIcon">${APP_ICON}</div><b>一張明細，自動算出每個人要付多少</b></div>
       <div class="gFlow"><span>🧾<small>拍明細</small></span><em>➜</em><span>🤖<small>AI 讀出品項</small></span><em>➜</em><span>👥<small>選誰付</small></span><em>➜</em><span>💰<small>每人金額</small></span></div>
       <p>適合全聯、量販店、超商一起買東西，或 Foodpanda 一起訂外送的時候。</p>`},
-    {t: '① 切換到購物分帳', h: phone('設定', `${pc('<b>功能區</b><small>量販店、超商、Foodpanda 的購物明細…</small>' + pb('🛒 切換到購物分帳', 'pri wide hl') + tap)}${pc('<b>📘 使用說明</b><small>美食・日常・購物分帳・發票</small>')}`, '設定') +
-      `<ul><li>到 <b>設定</b> 頁最上面的「功能區」，按 <b>🛒 切換到購物分帳</b></li><li>下面的分頁會換成 <b>地圖、分帳、發票、設定</b>，收藏在地圖右上角的 <b>🔖</b></li><li>想回去點餐，同一個位置按 <b>🍽️ 切換到美食・日常</b>；關掉 App 再打開會回到上次的功能區</li></ul>${tip('美食・日常和購物分帳<b>共用同一份收藏</b>，分類也是同一份（早餐、午餐、晚餐、量販店、超市、超商…）。')}`},
+    {t: '① 打開分帳', h: phone('分帳', `${pc('<b>購物分帳</b><small>11月22日（日）・1 筆</small>' + pb('📷 上傳明細', 'pri wide hl') + tap)}${pc('<b>好鄰居超市 中央店</b><small>11 項・$652</small>')}`, '分帳') +
+      `<ul><li>下面的分頁按 <b>🧾 分帳</b>（順序是地圖、日常、分帳、發票、設定）</li><li>收藏在地圖右上角的 <b>🔖</b>；點地圖上的店家，可以在 <b>📋 菜單</b> 和 <b>🧾 購物紀錄</b> 兩個分頁之間切換</li></ul>${tip('美食和購物<b>共用同一份收藏</b>，分類也是同一份（早餐、午餐、晚餐、量販店、超市、超商…）。')}`},
     {t: '② 收藏常去的店', h: phone('🔍 搜尋', `<div class="pSrch">🔍 好鄰居超市</div><div class="pMap"><span class="flag">🛒</span><span class="flag f2">🍱</span></div>${pc(`<b>好鄰居超市 中央店</b><small>量販店</small><div class="pBtns">${pb('🧾 購物紀錄')}${pb('⭐ 收藏', 'pri hl') + tap}</div>`)}`, '地圖', 'shop') +
       `<ul><li>在地圖搜尋全聯、全家、常叫外送的餐廳…按收藏，選一個分類</li><li>外送的餐廳就照早餐、午餐、晚餐分類；是不是外送，改在每一筆明細選「購物方式」</li><li>店家卡片上的 <b>🧾 購物紀錄</b> 可以看這家店所有的明細</li></ul>`},
     {t: '③ 上傳明細，AI 幫你讀', h: phone('購物分帳', `<div class="pBtns">${pb('📷 上傳明細', 'pri hl') + tap}${pb('✏️ 手動輸入')}</div><div class="pc" style="border-color:var(--accent)"><b>🤖 AI 辨識中・11/08</b><small>Flash-Lite 已讀到 5 項…（12 秒）</small></div><div class="pCal">${Array.from({length: 7}, (_, i) => `<i class="${i === 3 ? 'on' : ''}">${i + 5}${i === 3 ? '<em></em>' : ''}</i>`).join('')}</div>`, '分帳', 'shop') +
@@ -4247,7 +4263,7 @@ const GUIDE = {
   inv: {title: '🎫 發票 使用說明', steps: [
     {t: '發票區可以做什麼？', h: `<div class="gHero"><div class="gIcon">${APP_ICON}</div><b>把發票收進來，一鍵拿去分帳</b></div>
       <div class="gFlow"><span>📷<small>掃 QR</small></span><em>＋</em><span>🖼️<small>截圖</small></span><em>＋</em><span>🤖<small>協助工具</small></span><em>➜</em><span>🧾<small>拿去分帳</small></span></div>
-      <p>在購物分帳功能區，下面的分頁按 <b>🎫 發票</b>。可以掃紙本電子發票的 QR Code、匯入發票大師的截圖，或用協助工具直接讀發票大師的畫面。</p>${tip('用手機條碼直接同步載具需要財政部核發的 API 帳號（只給營業人或組織），所以改用這些方式。')}`},
+      <p>下面的分頁按 <b>🎫 發票</b>。可以掃紙本電子發票的 QR Code、匯入發票大師的截圖，或用協助工具直接讀發票大師的畫面。</p>${tip('用手機條碼直接同步載具需要財政部核發的 API 帳號（只給營業人或組織），所以改用這些方式。')}`},
     {t: '① 我的手機條碼', h: phone('發票', `<div class="pc" style="background:#fff"><b>📱 我的手機條碼</b><div class="pBar"></div><small style="text-align:center;letter-spacing:.3em">/ABC+123</small></div>${pc('<b>2026/11/20(五)</b><small>月光拉麵・XY-20481357</small>')}`, '發票', 'shop') +
       `<ul><li>第一次按「📱 設定我的手機條碼」輸入載具號碼（斜線開頭共 8 碼）</li><li>之後發票區最上面會顯示條碼，<b>點一下放大</b>給店員掃，發票就會存進你的載具</li></ul>`},
     {t: '② 掃描紙本發票 QR Code', h: phone('📷 掃描發票', `<div class="pScan"><i></i><i></i></div><div class="pWho"><i class="on">左邊 QR ✓</i><i class="on">右邊 QR ✓</i></div>${pc('<b>✅ 已存入 QT-36925814</b><small>2026/11/18・5 項　$108</small>')}`, '發票', 'shop') +
@@ -4799,7 +4815,7 @@ function invPullAcc() {
   let nNew = 0; L.forEach(v => { if (invPut(v) === 'new') nNew++; if (v.sellerId && v.seller) { DB.scfg.sellers = DB.scfg.sellers || {}; if (!DB.scfg.sellers[v.sellerId]) DB.scfg.sellers[v.sellerId] = v.seller; } else if (v.sellerId) lookupSeller(v.sellerId); });
   saveScfg(); invChanged(); buzz(40); const wi = L.filter(v => v.items && v.items.length).length;
   const lastD = L.map(v => v.date).filter(Boolean).sort().pop(); if (lastD) { const d = ymdDate(lastD); Inv.ym = [d.getFullYear(), d.getMonth()]; }
-  if (S.mode === 'shop' && curTab !== 'Inv') showTab('Inv'); else renderInv();
+  if (curTab !== 'Inv') showTab('Inv'); else renderInv();
   toast(`✅ 協助工具讀到 ${L.length} 張發票（${wi} 張有品項），新增 ${nNew} 張${L.length - nNew ? `，${L.length - nNew} 張已經有了（不重複新增，只補上缺的資料）` : ''}`, 5000);
 }
 /* 把一頁畫面文字（每行用 tab 分欄）解析成發票：明細頁或列表頁 */
