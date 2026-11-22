@@ -229,7 +229,11 @@ public class InvAccessService extends AccessibilityService {
 
     Set<String> nos(List<String> L) { Set<String> s = new HashSet<>(); for (String l : L) { Matcher m = NO.matcher(l); while (m.find()) s.add(m.group(1) + m.group(2)); } return s; }
 
-    boolean isDetail(List<String> L, int n) { String all = L.toString(); return n <= 2 && (all.contains("發票日期") || all.contains("消費店家") || all.contains("店家統編")); }
+    boolean isDetail(List<String> L, int n) {
+        String all = L.toString();
+        if (n == 1) return true;   /* 畫面上只有一個發票號碼 → 明細頁（發票存摺、發票大師都是） */
+        return n <= 2 && (all.contains("發票日期") || all.contains("消費店家") || all.contains("店家統編") || all.contains("賣方統編") || all.contains("購買品項") || all.contains("消費品項") || all.contains("總金額"));
+    }
 
     void save(String mode, List<List<String>> pages) {
         try {
@@ -279,27 +283,45 @@ public class InvAccessService extends AccessibilityService {
     }
 
     /* ---------- 左右滑動換下一張的 App（例如發票存摺）：讀完一張（上下捲到底）→ 往右滑到下一張 → 再讀 ---------- */
-    void startPager() {
-        autoRun = true; busy = true; autoCount = 0; fabText("⏹");
-        final Runnable[] step = new Runnable[1];
-        step[0] = new Runnable() { String lastNo = ""; boolean triedG = false; public void run() {
+    /* 第一張已經讀好了：直接往右滑，接著用逐張確認模式 */
+    void startPagerNext() { startPager(false, true); }
+    boolean pagerAll = false;
+    void startPager() { startPager(false, false); }
+    void startPager(boolean all, boolean skipFirst) {
+        autoRun = true; busy = true; autoCount = 0; pagerAll = all; fabText("⏹");
+        final Runnable[] step = new Runnable[1], next = new Runnable[1];
+        final String[] lastNo = {""}; final boolean[] triedG = {false};
+        /* 往右滑到下一張 */
+        next[0] = new Runnable() { public void run() {
+            if (!autoRun) return; hideCard(); fabText(pagerAll ? autoCount + "張" : "讀取中");
+            AccessibilityNodeInfo pg = scrollerOf(getRootInActiveWindow(), 0, 2);
+            if (!(pg != null && pg.performAction(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD))) swipeNext();
+            h.postDelayed(step[0], 1200);
+        } };
+        step[0] = new Runnable() { public void run() {
             if (!autoRun) return;
             List<String> L = lines(); Set<String> s = nos(L); String no = s.isEmpty() ? "" : s.iterator().next();
-            if (no.isEmpty() || no.equals(lastNo)) {
-                if (!triedG && !lastNo.isEmpty()) { triedG = true; swipeNext(); h.postDelayed(step[0], 1100); return; }
+            if (no.isEmpty() || no.equals(lastNo[0])) {
+                if (!triedG[0] && !lastNo[0].isEmpty()) { triedG[0] = true; swipeNext(); h.postDelayed(step[0], 1200); return; }
                 autoRun = false; busy = false; fabText("🧾"); vib(60); doneCard(no.isEmpty() ? "⚠ 這一頁不是發票明細" : "✅ 已經到最後一張"); return;
             }
             if (autoCount >= 300) { autoRun = false; busy = false; fabText("🧾"); doneCard("已達 300 張上限"); return; }
-            lastNo = no; triedG = false;
+            lastNo[0] = no; triedG[0] = false; fabText("讀取中");
+            /* 先上下捲到底把這一張讀完，讀完才決定要不要往右滑 */
             readDetail(new Cb() { public void done(List<String> all, int pages) {
                 if (!autoRun) return;
-                List<List<String>> P = new ArrayList<>(); P.add(all); save("detail", P); autoCount++; fabText(autoCount + "張");
-                AccessibilityNodeInfo pg = scrollerOf(getRootInActiveWindow(), 0, 2);
-                if (!(pg != null && pg.performAction(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD))) swipeNext();
-                h.postDelayed(step[0], 1100);
+                List<List<String>> P = new ArrayList<>(); P.add(all); save("detail", P); autoCount++; vib(30);
+                if (pagerAll) { fabText(autoCount + "張"); h.postDelayed(next[0], 300); return; }
+                busy = false; fabText("🧾");
+                final String msg = lastNo[0].substring(0, 2) + "-" + lastNo[0].substring(2) + "（上下捲了 " + (pages - 1) + " 次，讀到最下面）";
+                showCard("✅ 已讀完第 " + autoCount + " 張", msg + "\n要往右滑讀下一張嗎？",
+                        new String[]{"➡️ 往右滑，讀下一張", "⏩ 之後全部自動讀（不再詢問）", "✓ 完成，返回日日帳本"},
+                        new Runnable[]{ new Runnable() { public void run() { busy = true; h.post(next[0]); } },
+                                        new Runnable() { public void run() { busy = true; pagerAll = true; h.post(next[0]); } },
+                                        new Runnable() { public void run() { autoRun = false; busy = false; back.run(); } } });
             } });
         } };
-        h.post(step[0]);
+        if (skipFirst) { Set<String> s0 = nos(lines()); lastNo[0] = s0.isEmpty() ? "" : s0.iterator().next(); autoCount = 1; h.post(next[0]); } else h.post(step[0]);
     }
 
     final Runnable back = new Runnable() { public void run() { finishAll(); } };
@@ -318,7 +340,7 @@ public class InvAccessService extends AccessibilityService {
             final String no = s.iterator().next(); busy = true; fabText("讀取中");
             readDetail(new Cb() { public void done(List<String> all, int pages) {
                 List<List<String>> P = new ArrayList<>(); P.add(all); save("detail", P); vib(40); busy = false; fabText("🧾");
-                showCard("✅ 已讀取 1 張發票明細", no + (pages > 1 ? "（往下捲了 " + (pages - 1) + " 次，讀到最下面）" : ""), new String[]{"✓ 返回日日帳本", "➡️ 往右滑，自動讀下一張", "繼續讀取其他發票"}, new Runnable[]{back, new Runnable() { public void run() { startPager(); } }, null});
+                showCard("✅ 已讀取 1 張發票明細", no + (pages > 1 ? "（往下捲了 " + (pages - 1) + " 次，讀到最下面）" : ""), new String[]{"✓ 返回日日帳本", "➡️ 往右滑，讀下一張", "繼續讀取其他發票"}, new Runnable[]{back, new Runnable() { public void run() { startPagerNext(); } }, null});
             } });
             return;
         }
@@ -345,7 +367,7 @@ public class InvAccessService extends AccessibilityService {
     AccessibilityNodeInfo scrollerOf(AccessibilityNodeInfo n, int depth, int mode) {
         if (n == null || depth > 60) return null; AccessibilityNodeInfo best = null; int area = 0;
         try {
-            if (n.isScrollable() && n.isVisibleToUser() && (isHoriz(n) == (mode == 2))) { Rect r = new Rect(); n.getBoundsInScreen(r); area = r.width() * r.height(); best = n; }
+            if (n.isScrollable() && n.isVisibleToUser() && (isHoriz(n) == (mode == 2))) { Rect r = new Rect(); n.getBoundsInScreen(r); int sw = getResources().getDisplayMetrics().widthPixels; if (r.centerX() > 0 && r.centerX() < sw) { area = r.width() * r.height(); best = n; } }
             for (int i = 0; i < n.getChildCount(); i++) {
                 AccessibilityNodeInfo c = scrollerOf(n.getChild(i), depth + 1, mode);
                 if (c != null) { Rect r = new Rect(); c.getBoundsInScreen(r); int a = r.width() * r.height(); if (a > area) { area = a; best = c; } }

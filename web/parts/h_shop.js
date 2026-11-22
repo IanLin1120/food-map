@@ -114,11 +114,11 @@ function datePick(k0) {
 }
 const curBill = id => dayBills(Shop.sel).find(b => b.id === id);
 function shopChanged() { Object.keys(DB.bills).forEach(k => { if (!DB.bills[k].length) delete DB.bills[k]; }); saveBills(); if (curTab === 'Shop') renderShop(); document.dispatchEvent(new Event('fm:shop')); }
-function gotoBill(k, id) { if (S.mode !== 'shop') setMode('shop', true); const d = ymdDate(k); Shop.sel = k; Shop.ym = [d.getFullYear(), d.getMonth()]; showTab('Shop'); const b = curBill(id); if (b) editBill(b); }
+function gotoBill(k, id) { const d = ymdDate(k); Shop.sel = k; Shop.ym = [d.getFullYear(), d.getMonth()]; showTab('Shop'); const b = curBill(id); if (b) editBill(b); }
 function shopPlaceHtml(p) {
   const L = []; Object.keys(DB.bills).sort().reverse().forEach(k => DB.bills[k].forEach(b => { if (b.place === p.id) L.push({k, b}); }));
   const tot = L.reduce((s, r) => s + billCalc(r.b).computed, 0);
-  return `<div class="h3" id="menuTop"><span class="grow">🧾 購物紀錄 <span class="muted small" style="font-weight:600">${L.length ? L.length + ' 筆・' + money(tot) : ''}</span></span></div>
+  return `<div class="h3 pTabH"><span class="grow">🧾 購物紀錄 <span class="muted small" style="font-weight:600">${L.length ? L.length + ' 筆・' + money(tot) : ''}</span></span></div>
     <div class="mBtns"><button class="btn pri" data-a="sbNew">＋ 新增這家店的明細</button></div>
     ${L.length ? L.slice(0, 30).map(r => `<button class="srD" data-a="sbGo" data-k="${r.k}" data-id="${r.b.id}"><div class="row"><b class="grow">${dayLabel(r.k)}${r.b.time ? ' ' + esc(r.b.time) : ''}</b><span class="srA">${money(billCalc(r.b).computed)}</span></div><div class="srL">${esc(r.b.items.slice(0, 4).map(x => x.n).join('、'))}${r.b.items.length > 4 ? '…' : ''}</div></button>`).join('') : '<div class="empty" style="padding:1rem">這家店還沒有購物紀錄</div>'}`;
 }
@@ -154,7 +154,7 @@ function billMore(b) {
 }
 
 /* ---------- 新增：手動或上傳圖片 ---------- */
-function newBill(p) { if (S.mode !== 'shop') setMode('shop', true); showTab('Shop'); const sh = sheet({title: '新增「' + p.name + '」的明細', html: `<div class="actList"><button data-a="img">📷 上傳明細照片／截圖（AI 辨識）</button><button data-a="man">✏️ 手動輸入</button></div>`});
+function newBill(p) { showTab('Shop'); const sh = sheet({title: '新增「' + p.name + '」的明細', html: `<div class="actList"><button data-a="img">📷 上傳明細照片／截圖（AI 辨識）</button><button data-a="man">✏️ 手動輸入</button></div>`});
   sh.body.onclick = e => { const t = e.target.closest('[data-a]'); if (!t) return; sh.close(); if (t.dataset.a === 'img') newBillImg(p); else newBillManual(p); }; }
 async function newBillManual(p) {
   if (!p) { const st = await pickShopStore(); if (st === undefined) return; p = st; }

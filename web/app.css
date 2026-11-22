@@ -637,8 +637,6 @@ table.piv .s.pr.one{text-align:center;padding-right:.5rem}
 .mcS{flex:none;font-size:1.1rem}
 .mcN{font-size:.78rem;color:var(--text-2);line-height:1.45;padding:.1rem 0}
 /* 功能區切換 */
-body:not(.mShop) #tabbar [data-tab="Shop"],body:not(.mShop) #tabbar [data-tab="Inv"]{display:none}
-body.mShop #tabbar [data-tab="Meal"],body.mShop #tabbar [data-tab="Rec"]{display:none}
 .modeCard .modeSw{width:100%;justify-content:center;border-radius:6px;white-space:normal;margin-top:.2rem}
 /* ---- 購物分帳 ---- */
 .mlS .spin{display:inline-block;width:.8rem;height:.8rem;margin:0 .15rem 0 0;border-width:2px;vertical-align:-1px}
@@ -990,3 +988,21 @@ h1,h2,h3,.gTitle,.wlSub{text-wrap:balance}
 .piC.best{border-color:color-mix(in srgb,var(--accent) 55%,var(--border));box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 18%,transparent)}
 .piC .chip{margin-top:.3rem;align-self:flex-start;background:color-mix(in srgb,var(--accent) 14%,var(--surface));color:var(--accent);font-weight:800}
 .piC .invL{display:flex;flex-direction:column;min-width:0}
+
+/* 店家頁：菜單／購物紀錄分頁 */
+.pTabs{display:grid;grid-template-columns:1fr 1fr;gap:.3rem;padding:.3rem;margin:1rem 0 .7rem;border-radius:12px;background:var(--surface-3);border:1px solid var(--border-soft)}
+.pTabs button{display:flex;align-items:center;justify-content:center;gap:.35rem;padding:.6rem .4rem;border:0;border-radius:9px;background:transparent;font-size:.95rem;font-weight:800;color:var(--text-2);white-space:nowrap}
+.pTabs button em{font-style:normal;font-size:.72rem;font-weight:800;padding:0 .4rem;border-radius:6px;background:color-mix(in srgb,var(--text) 8%,transparent)}
+.pTabs button em:empty{display:none}
+.pTabs button.on{background:var(--surface);color:var(--accent);box-shadow:0 1px 4px var(--sh)}
+.pTabs button.on em{background:color-mix(in srgb,var(--accent) 15%,transparent);color:var(--accent)}
+.pTabH{margin-top:.2rem}
+/* 設定：食譜入口 */
+.recCard{display:flex;align-items:center;gap:.8rem;width:100%;text-align:left;padding:.95rem .9rem;border:0;background:linear-gradient(135deg,color-mix(in srgb,#b5653a 14%,var(--surface)),var(--surface) 75%);color:var(--text)}
+.recCard .rcI{flex:none;width:3rem;height:3rem;border-radius:12px;display:grid;place-items:center;font-size:1.6rem;background:var(--surface);border:1.5px solid color-mix(in srgb,#b5653a 35%,transparent)}
+.recCard .rcT{flex:1;min-width:0;display:flex;flex-direction:column;gap:.15rem}.recCard .rcT b{font-size:1.08rem;font-weight:900}.recCard .rcT small{color:var(--muted);line-height:1.4}
+.recCard .rcGo{flex:none;white-space:nowrap;font-size:.82rem;font-weight:800;color:#fff;background:var(--accent);padding:.45rem .7rem;border-radius:8px}
+.recCard:active{transform:scale(.98)}
+/* 地圖卡片：有購物紀錄時四顆按鈕排成 2×2 */
+#mCard .acts:has(>.btn:nth-child(4)){display:grid;grid-template-columns:1fr 1fr;gap:.5rem}
+#mCard .acts:has(>.btn:nth-child(4))>.btn{width:100%;margin:0}

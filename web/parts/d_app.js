@@ -2,14 +2,10 @@
    食譜、設定、金鑰圖文教學、備份、啟動
    ============================================================ */
 let curTab = 'Map';
-/* ---------- 切換功能區：美食 ↔ 購物分帳 ---------- */
-/* 依目前功能區套用畫面（分頁、標題、搜尋提示）；啟動時也會呼叫，重開 App 會回到上次的功能區 */
-function modeUI() { const m = S.mode === 'shop' ? 'shop' : 'food'; document.body.classList.toggle('mShop', m === 'shop');
-  $('#favTitle') && ($('#favTitle').textContent = m === 'shop' ? '我的店家' : '收藏分類'); $('#mQ') && ($('#mQ').placeholder = m === 'shop' ? '搜尋量販店、超商、外送店家…' : '搜尋店家、地址…'); }
-function setMode(m, quiet) { m = m === 'shop' ? 'shop' : 'food'; S.mode = m; saveS(); DB.places = DB.side[m].places; DB.cats = DB.side[m].cats;
-  M.filter = 'all'; M.sel = null; try { clearSel(); } catch (e) {} modeUI();
-  refreshAll(); if (!quiet) { showTab(m === 'shop' ? 'Shop' : 'Map'); buzz(30); toast(m === 'shop' ? '🛒 已切換到「購物分帳」' : '🍽️ 已切換到「美食・日常」', 2200); } }
-function showTab(t) { curTab = t; $$('.page').forEach(p => p.classList.toggle('on', p.id === 'pg' + t)); $$('#tabbar button').forEach(b => b.classList.toggle('on', b.dataset.tab === (t === 'Fav' ? 'Map' : t))); document.body.classList.toggle('onFav', t === 'Fav');
+/* 美食・日常和購物分帳已經合併成一個介面（底部：地圖、日常、分帳、發票、設定；食譜在設定裡） */
+function modeUI() { document.body.classList.remove('mShop'); $('#favTitle') && ($('#favTitle').textContent = '收藏分類'); $('#mQ') && ($('#mQ').placeholder = '搜尋店家、地址、量販店…'); }
+function setMode() { }
+function showTab(t) { curTab = t; $$('.page').forEach(p => p.classList.toggle('on', p.id === 'pg' + t)); $$('#tabbar button').forEach(b => b.classList.toggle('on', b.dataset.tab === (t === 'Fav' ? 'Map' : t === 'Rec' ? 'Set' : t))); document.body.classList.toggle('onFav', t === 'Fav');
   if (t === 'Map') mapResize(); else if (t === 'Fav') renderFav(); else if (t === 'Rec') renderRec(); else if (t === 'Meal') renderMeal(); else if (t === 'Shop') renderShop(); else if (t === 'Inv') renderInv(); else renderSet(); updCounts(); }
 
 /* ---------- 全部展開／收合（收藏、食譜共用） ---------- */
@@ -37,7 +33,7 @@ async function renderRec() {
   box.dataset.q = q; foldBtn('rec');
 }
 function initRec() {
-  const box = $('#recList'); $('#recQ').addEventListener('input', debounce(renderRec, 150)); $('#recAdd').onclick = () => newRecipe(); $('#recAI').onclick = aiRecipe; $('#recCats').onclick = () => openCats('recipe'); $('#recFold').onclick = () => foldAll('rec');
+  const box = $('#recList'); $('#recQ').addEventListener('input', debounce(renderRec, 150)); $('#recAdd').onclick = () => newRecipe(); $('#recBack').onclick = () => { buzz(10); showTab('Set'); }; $('#recAI').onclick = aiRecipe; $('#recCats').onclick = () => openCats('recipe'); $('#recFold').onclick = () => foldAll('rec');
   box.addEventListener('click', e => { const f = e.target.closest('[data-a="fold"]'); if (f) { const s = f.closest('.sec'), id = s.dataset.cat; S.rfold[id] = !S.rfold[id]; saveS(); s.classList.toggle('fold', !!S.rfold[id]); foldBtn('rec'); return; } const b = e.target.closest('.rrow'); if (b) viewRecipe(b.dataset.id); });
   sortable(box, {item: '.rsec[data-srt]', start: '.secHead', scroller: '.pgBody', onSort(from, to) { moveItem(DB.rcats, from, to); saveRcats(); renderRec(); }});
   /* 食譜可以在資料夾內排序，也可以拖到別的資料夾 */
@@ -151,11 +147,9 @@ function renderSet() {
   const sw = (id, on) => `<button class="sw2 ${on ? 'on' : ''}" data-sw="${id}" role="switch" aria-checked="${!!on}"></button>`;
   const dark = isDark(), navs = navApps({lat: 0, lon: 0});
   $('#setBody').innerHTML = `
-  ${areaHero()}
-  <div class="setG"><h3>功能區</h3><div class="setC"><div class="setR col modeCard"><div class="t"><b>${S.mode === 'shop' ? '🍽️ 美食・日常' : '🛒 購物分帳'}</b><small>${S.mode === 'shop' ? '美食地圖、收藏店家的菜單表格、每天吃什麼的點餐分帳、食譜。' : '量販店、超商、Foodpanda 的購物明細：拍照或截圖讓 AI 讀出品項和折扣，選誰買的、誰一起分攤，自動算出每個人要付多少。'}</small></div>
-      <button class="btn pri modeSw" data-a="mode">${S.mode === 'shop' ? '🍽️ 切換到美食・日常' : '🛒 切換到購物分帳'}</button></div></div></div>
+  <div class="setG"><h3>食譜</h3><div class="setC"><button class="recCard" data-a="rec"><span class="rcI">📖</span><span class="rcT"><b>我的食譜</b><small>${(DB.recipes || []).length ? '共 ' + DB.recipes.length + ' 道・' : ''}記錄做法和食材，可以用圖片 AI 匯入</small></span><span class="rcGo">進入食譜 ›</span></button></div></div>
   <div class="setG"><h3>使用說明</h3><div class="setC">
-    <button class="setR" data-a="guideFood" style="width:100%;text-align:left"><span class="gRi">🍽️</span><div class="t"><b>美食・日常 圖解說明</b><small>找店收藏、AI 菜單表格、記一餐分帳、購物清單、食譜</small></div><span class="muted">›</span></button>
+    <button class="setR" data-a="guideFood" style="width:100%;text-align:left"><span class="gRi">🍽️</span><div class="t"><b>地圖・日常・食譜 圖解說明</b><small>找店收藏、AI 菜單表格、記一餐分帳、購物清單、食譜</small></div><span class="muted">›</span></button>
     <button class="setR" data-a="guideShop" style="width:100%;text-align:left"><span class="gRi">🛒</span><div class="t"><b>購物分帳 圖解說明</b><small>上傳明細、購物方式、選誰付、折扣與費用、驗算匯出</small></div><span class="muted">›</span></button>
     <button class="setR" data-a="guideInv" style="width:100%;text-align:left"><span class="gRi">🎫</span><div class="t"><b>發票 圖解說明</b><small>手機條碼、掃 QR、截圖、協助工具、折扣、拿去分帳</small></div><span class="muted">›</span></button>
     <button class="setR" data-a="welcome" style="width:100%;text-align:left"><span class="gRi">👋</span><div class="t"><b>歡迎畫面與金鑰教學</b><small>第一次打開時看到的介紹</small></div><span class="muted">›</span></button></div></div>
@@ -207,7 +201,7 @@ function initSet() {
     else if (a === 'updChk') Upd.check(true); else if (a === 'updApk') Upd.releases(); else if (a === 'updBack') Upd.restore(); else if (a === 'updShare') Upd.share(); else if (a === 'updWeb') openUrl(GH.pages);
     else if (a === 'aiStudio') openUrl('https://aistudio.google.com/rate-limit?timeRange=last-28-days'); else if (a === 'aiLog') { const o = $('#aiLogBox'); o.classList.toggle('hide'); b.textContent = o.classList.contains('hide') ? '查看最近 AI 紀錄' : '收起紀錄'; }
     else if (a === 'mcheck') openMenuCheck();
-    else if (a === 'mode') setMode(S.mode === 'shop' ? 'food' : 'shop'); else if (a === 'guideFood') openGuide('food'); else if (a === 'guideShop') openGuide('shop'); else if (a === 'guideInv') openGuide('inv');
+    else if (a === 'rec') { buzz(15); showTab('Rec'); } else if (a === 'guideFood') openGuide('food'); else if (a === 'guideShop') openGuide('shop'); else if (a === 'guideInv') openGuide('inv');
     else if (a === 'cats') openCats('place'); else if (a === 'rcats') openCats('recipe'); else if (a.indexOf('off') === 0) Off.act(a); else if (a === 'exp') exportBackup(); else if (a === 'imp') importBackup(); else if (a === 'welcome') welcome();
     else if (a === 'wipe') { if (await ask('確定要清除「所有」收藏、菜單、食譜與設定嗎？\n這個動作無法復原，建議先匯出備份。', '全部清除', true) && await ask('再確認一次：真的要全部清除嗎？', '清除', true)) { for (const s of ['kv', 'places', 'recipes', 'imgs']) await IDB.clear(s).catch(() => {}); try { localStorage.clear(); } catch (er) {} location.reload(); } } });
 }
@@ -274,7 +268,7 @@ function welcome() {
   const sh = sheet({title: '歡迎使用 日日帳本', full: true, foot: '<button class="btn pri" data-a="go">開始使用</button>', onClose() { if (!S.onboard) { S.onboard = true; saveS(); } }});
   sh.body.innerHTML = `<div class="gHero" style="margin-top:.2rem"><div class="gIcon">${APP_ICON}</div><h2 style="font-size:1.35rem;font-weight:800;margin:.2rem 0 0">日日帳本</h2><span class="muted small">吃什麼、買什麼、誰付多少，每天都記在這一本</span></div>
     <div class="h3">📘 圖解使用說明（第一次用請先看）</div>
-    <div class="gPick"><button data-g="food"><i>🍽️</i><b>美食・日常</b><small>找店收藏、AI 菜單表格、記一餐誰付多少、購物清單、食譜</small><span>看說明 ›</span></button>
+    <div class="gPick"><button data-g="food"><i>🍽️</i><b>地圖・日常・食譜</b><small>找店收藏、AI 菜單表格、記一餐誰付多少、購物清單、食譜</small><span>看說明 ›</span></button>
       <button data-g="shop"><i>🛒</i><b>購物分帳</b><small>全聯、超商、Foodpanda 明細拍照，AI 讀出品項折扣，自動分帳</small><span>看說明 ›</span></button>
       <button data-g="inv" class="wide"><i>🎫</i><b>發票</b><small>手機條碼、掃發票 QR Code、匯入發票大師、協助工具讀取，一鍵拿去分帳</small><span>看說明 ›</span></button></div>
     <div class="h3">🔑 建議先完成的設定</div>

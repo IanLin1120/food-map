@@ -134,13 +134,13 @@ function selectPlace(id, fly) {
   showCard(`<div class="row" style="align-items:flex-start"><div class="grow" data-a="open"><h3>${esc(p.name)}</h3>
     <div class="small" style="margin:.25rem 0"><span class="tag" style="--c:${c.color}">${esc(c.icon)} ${esc(c.name)}</span></div>
     ${stateHtml(p) ? `<div class="small muted row" style="gap:.35rem">${stateHtml(p)}</div>` : ''}<div class="small muted">${esc(p.addr || '')}</div></div><button class="ic" data-a="x">✕</button></div>
-    <div class="acts"><button class="btn pri" data-a="open">詳細資料</button><button class="btn olive" data-a="nav">🧭 導航</button>${S.mode === 'shop' ? `<button class="btn" data-a="menu">🧾 購物紀錄${(() => { const k = Object.values(DB.bills || {}).reduce((t, L) => t + L.filter(b => b.place === p.id).length, 0); return k ? ' ' + k : ''; })()}</button>` : `<button class="btn" data-a="menu">📋 菜單${n ? ' ' + n : ni ? ' 🖼️' : ''}</button>`}</div>`);
+    <div class="acts"><button class="btn pri" data-a="open">詳細資料</button><button class="btn olive" data-a="nav">🧭 導航</button><button class="btn" data-a="menu">📋 菜單${n ? ' ' + n : ni ? ' 🖼️' : ''}</button>${(() => { const k = Object.values(DB.bills || {}).reduce((t, L) => t + L.filter(b => b.place === p.id).length, 0); return k ? `<button class="btn" data-a="recs">🧾 紀錄 ${k}</button>` : ''; })()}</div>`);
 }
 function initCard() {
   $('#mCard').addEventListener('click', e => { const a = e.target.closest('[data-a]'); if (!a) return; const act = a.dataset.a;
     if (act === 'ax') { Area.hideList = true; hideCard(); return; } if (act === 'ap') { selectPlace(a.dataset.id, true); return; } if (act === 'al') { Area.hideList = false; Area.card(); return; }
     if (act === 'x') { clearSel(); return; }
-    if (M.sel) { const p = DB.places.find(x => x.id === M.sel); if (!p) return; if (act === 'open') openPlace(p.id); else if (act === 'nav') navTo(p); else if (act === 'menu') openPlace(p.id, true); return; }
+    if (M.sel) { const p = DB.places.find(x => x.id === M.sel); if (!p) return; if (act === 'open') openPlace(p.id); else if (act === 'nav') navTo(p); else if (act === 'menu') openPlace(p.id, true); else if (act === 'recs') openPlace(p.id, 'recs'); return; }
     if (M.draft) { const d = M.draft; if (act === 'add') addDraft(d); else if (act === 'nav') navTo(d); else if (act === 'gm') openUrl(gmUrl(d)); } });
 }
 const gmUrl = p => p.gurl || (p.gid ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.name || '')}&query_place_id=${p.gid}` : `https://www.google.com/maps/search/?api=1&query=${(+p.lat).toFixed(6)},${(+p.lon).toFixed(6)}`);

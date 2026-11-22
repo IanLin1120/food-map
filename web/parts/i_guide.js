@@ -2,7 +2,7 @@
    使用說明：給第一次用的人看的圖解（手機畫面示意圖＋白話說明）
    ============================================================ */
 const APP_ICON = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="54 54 324 324"><defs> <linearGradient id="gicv" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#E0844B"/><stop offset=".55" stop-color="#C2633A"/><stop offset="1" stop-color="#9A4226"/></linearGradient> <linearGradient id="gisp" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#7E321C"/><stop offset="1" stop-color="#9C4527"/></linearGradient> <linearGradient id="gipl" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFF9EC"/><stop offset="1" stop-color="#F2E2C2"/></linearGradient> <linearGradient id="gicn" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F7D27A"/><stop offset="1" stop-color="#DB9A33"/></linearGradient> <radialGradient id="gigl" cx=".35" cy=".25" r=".8"><stop offset="0" stop-color="#fff" stop-opacity=".22"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient> <filter id="gish" x="-30%" y="-30%" width="160%" height="170%"><feDropShadow dx="0" dy="8" stdDeviation="9" flood-color="#5A2410" flood-opacity=".35"/></filter></defs><rect width="432" height="432" fill="url(#gicv)"/> <g opacity=".10" stroke="#FFF3DC" stroke-width="10" fill="none"><path d="M-10 120 L442 70"/><path d="M-10 350 L442 380"/><path d="M330 -10 L360 442"/></g> <rect x="0" y="0" width="112" height="432" fill="url(#gisp)"/><rect x="112" y="0" width="7" height="432" fill="#6E2A16" opacity=".45"/> <g stroke="#F4D9B6" stroke-width="5" stroke-linecap="round" stroke-dasharray="14 14" opacity=".75"><path d="M96 -6 V440"/></g> <path d="M286 0 h44 v150 l-22 -20 l-22 20z" fill="#7C8B4E"/><path d="M286 0 h44 v8 h-44z" fill="#5F6C39"/> <rect width="432" height="432" fill="url(#gigl)"/><g filter="url(#gish)"><circle cx="222" cy="210" r="102" fill="url(#gipl)"/><circle cx="222" cy="210" r="84" fill="none" stroke="#E4CDA4" stroke-width="4"/> <g fill="#A3482A"><path d="M178 150 h9 v46 h7 v-46 h9 v46 h7 v-46 h9 v55 a21 21 0 0 1 -16 20 v66 a8 8 0 0 1 -16 0 v-66 a21 21 0 0 1 -16 -20z"/> <ellipse cx="262" cy="182" rx="21" ry="31"/><rect x="254" y="206" width="16" height="85" rx="8"/></g></g> <g filter="url(#gish)"><circle cx="296" cy="290" r="40" fill="url(#gicn)" stroke="#FFF1CF" stroke-width="6"/><circle cx="296" cy="290" r="28" fill="none" stroke="#B5741C" stroke-width="3" opacity=".55"/> <text x="296" y="305" text-anchor="middle" font-family="DejaVu Sans, Arial" font-weight="700" font-size="40" fill="#8A5310">$</text></g></svg>';
-const PHT = {food: [['🗺️', '地圖'], ['📒', '日常'], ['📖', '食譜'], ['⚙️', '設定']], shop: [['🗺️', '地圖'], ['🧾', '分帳'], ['🎫', '發票'], ['⚙️', '設定']]};
+const PHT0 = [['🗺️', '地圖'], ['📒', '日常'], ['🧾', '分帳'], ['🎫', '發票'], ['⚙️', '設定']], PHT = {food: PHT0, shop: PHT0, inv: PHT0};
 /* 一支小手機：title 標題、body 內容、tab 亮起哪一個分頁、area 美食或購物 */
 const phone = (title, body, tab, area) => `<div class="ph"><div class="phIn"><div class="phNotch"></div><div class="phTop">${title}</div><div class="phBd">${body}</div>
   <div class="phTab">${PHT[area || 'food'].map(([i, t]) => `<span class="${t === tab ? 'on' : ''}"><i>${i}</i>${t}</span>`).join('')}</div></div></div>`;
@@ -11,9 +11,9 @@ const pc = (h, cls) => `<div class="pc ${cls || ''}">${h}</div>`, pb = (t, cls) 
 const pRow = (a, b, cls) => `<div class="pRw ${cls || ''}"><span>${a}</span><b>${b}</b></div>`;
 const tip = t => `<div class="gTip">💡 ${t}</div>`;
 const GUIDE = {
-  food: {title: '🍽️ 美食・日常 使用說明', steps: [
+  food: {title: '🍽️ 地圖・日常・食譜 使用說明', steps: [
     {t: '歡迎使用日日帳本', h: `<div class="gHero"><div class="gIcon">${APP_ICON}</div><b>收藏愛店・菜單・記帳分帳</b></div>
-      <div class="gGrid"><div><i>🗺️</i><b>地圖</b>找店、插旗收藏</div><div><i>🔖</i><b>收藏</b>地圖右上角，店家和菜單</div><div><i>📒</i><b>日常</b>記一餐、購物清單</div><div><i>📖</i><b>食譜</b>記錄拿手菜</div></div>
+      <div class="gGrid"><div><i>🗺️</i><b>地圖</b>找店、插旗收藏</div><div><i>🔖</i><b>收藏</b>地圖右上角，店家和菜單</div><div><i>📒</i><b>日常</b>記一餐、購物清單</div><div><i>🧾</i><b>分帳</b>購物明細誰付多少</div><div><i>🎫</i><b>發票</b>手機條碼、掃描、匯入</div><div><i>📖</i><b>食譜</b>在設定頁裡</div></div>
       <p>跟著這份說明走一遍，大約 2 分鐘。看完可以隨時到 <b>設定 → 使用說明</b> 再打開。購物分帳和發票另外有自己的說明。</p>`},
     {t: '① 找到店家，按收藏', h: phone('🔍 搜尋店家', `<div class="pSrch">🔍 晨曦早午餐</div><div class="pMap"><span class="flag">🚩</span><span class="flag f2">🚩</span></div>${pc(`<b>晨曦早午餐 幸福店</b><small>早午餐・距離 350 公尺</small><div class="pBtns">${pb('導航')}${pb('⭐ 收藏', 'pri hl') + tap}</div>`)}`, '地圖') +
       `<ul><li>在地圖頁上方的搜尋框輸入店名</li><li>點選搜尋結果，按 <b>⭐ 收藏</b>，選一個分類（早餐、飲料…）</li><li>也可以<b>長按地圖</b>任何地方直接插旗</li></ul>${tip('有填 Google 金鑰的話，地址、電話、營業時間會自動帶入。')}`},
@@ -29,8 +29,8 @@ const GUIDE = {
       `<ul><li><b>🔍</b>：輸入店名，看哪幾天吃過、吃什麼、花多少</li><li><b>⚙️ 設定</b>：新增人名（媽媽、同事…）、餐別和圖示</li></ul>`},
     {t: '⑦ 購物清單', h: phone('今天的安排', `<div class="pBtns">${pb('🍱 記一餐')}${pb('🛒 購物清單', 'pri hl') + tap}</div><div class="pc"><b>🛒 量販店</b><small>還要買 3 項・已買 2</small><div class="pList"><span><i></i>雞蛋 <em>×2</em></span><span><i></i>雞胸肉</span><span class="ck"><i></i>蒲瓜</span></div><small>＋ 新增品項</small></div>`, '日常') +
       `<ul><li>按 <b>🛒 購物清單</b>，選店家（可以不選），清單會記在月曆那一天</li><li>在下面輸入要買的東西，按 Enter 加入；可以一次貼好幾行，「雞蛋 ×2」會記數量；下方「常買」可以一鍵加入</li><li><b>勾選＝買到了</b>，會移到「已買」，按「放回清單」可以復原；按住 ☰ 拖曳排序</li><li>⋯ 可以換店家、改日期、複製清單文字貼 LINE、複製成今天的新清單</li></ul>${tip('🔍 搜尋可以切換「餐點」「購物清單」，找哪天買過什麼。')}`},
-    {t: '⑧ 食譜', h: phone('食譜', `<div class="pWho"><i class="on">全部</i><i>🍳 煎</i><i>🥘 炒</i><i>🍚 電鍋</i></div>${pc('<b>電鍋蒸飯</b><small>米 1 杯：水 1 杯・外鍋 1 杯水</small>')}${pc('<b>番茄炒蛋</b><small>2 人份・5 個步驟</small>')}${pb('＋ 新增食譜', 'pri wide hl') + tap}`, '食譜') +
-      `<ul><li>記錄拿手菜：食材表格＋自己的步驟</li><li>可以用「比例表」模板（例如電鍋蒸飯幾杯米配幾杯水）</li><li>自訂資料夾（煎、炒、電鍋、湯…），按住拖曳排序或移到其他資料夾</li></ul>`},
+    {t: '⑧ 食譜（在設定頁）', h: phone('設定', `<div class="pWho"><i class="on">全部</i><i>🍳 煎</i><i>🥘 炒</i><i>🍚 電鍋</i></div>${pc('<b>電鍋蒸飯</b><small>米 1 杯：水 1 杯・外鍋 1 杯水</small>')}${pc('<b>番茄炒蛋</b><small>2 人份・5 個步驟</small>')}${pb('＋ 新增食譜', 'pri wide hl') + tap}`, '設定') +
+      `<ul><li>到 <b>設定</b> 頁的「食譜」按 <b>進入食譜 ›</b>，左上角 ‹ 回設定</li><li>記錄拿手菜：食材表格＋自己的步驟</li><li>可以用「比例表」模板（例如電鍋蒸飯幾杯米配幾杯水）</li><li>自訂資料夾（煎、炒、電鍋、湯…），按住拖曳排序或移到其他資料夾</li></ul>`},
     {t: '⑨ 備份和外觀', h: phone('設定', `${pc('<b>外觀</b><small>主題：跟隨系統／淺色／深色・重點顏色・介面大小・震動強度</small>')}${pc('<b>資料</b><div class="pBtns">' + pb('📤 匯出備份', 'pri hl') + pb('📥 匯入備份') + '</div>' + tap)}`, '設定') +
       `<ul><li><b>匯出備份</b>：收藏、菜單、點餐、購物分帳、發票、食譜全部存成一個檔案，換手機時再<b>匯入備份</b></li><li>外觀可以換主題、重點顏色、介面大小和震動強度</li><li>有新版本時 App 會提醒，按一下就能更新</li></ul>`},
     {t: '⑩ 先設定金鑰（只要一次）', h: `<div class="gKeys"><div><i>🔑</i><b>AI 辨識金鑰（建議）</b><small>菜單照片、購物明細變成表格都靠它。免費申請，不用信用卡。</small><button class="btn sm pri" data-tut="ai">📘 看教學</button></div>
@@ -40,8 +40,8 @@ const GUIDE = {
     {t: '購物分帳是什麼？', h: `<div class="gHero"><div class="gIcon">${APP_ICON}</div><b>一張明細，自動算出每個人要付多少</b></div>
       <div class="gFlow"><span>🧾<small>拍明細</small></span><em>➜</em><span>🤖<small>AI 讀出品項</small></span><em>➜</em><span>👥<small>選誰付</small></span><em>➜</em><span>💰<small>每人金額</small></span></div>
       <p>適合全聯、量販店、超商一起買東西，或 Foodpanda 一起訂外送的時候。</p>`},
-    {t: '① 切換到購物分帳', h: phone('設定', `${pc('<b>功能區</b><small>量販店、超商、Foodpanda 的購物明細…</small>' + pb('🛒 切換到購物分帳', 'pri wide hl') + tap)}${pc('<b>📘 使用說明</b><small>美食・日常・購物分帳・發票</small>')}`, '設定') +
-      `<ul><li>到 <b>設定</b> 頁最上面的「功能區」，按 <b>🛒 切換到購物分帳</b></li><li>下面的分頁會換成 <b>地圖、分帳、發票、設定</b>，收藏在地圖右上角的 <b>🔖</b></li><li>想回去點餐，同一個位置按 <b>🍽️ 切換到美食・日常</b>；關掉 App 再打開會回到上次的功能區</li></ul>${tip('美食・日常和購物分帳<b>共用同一份收藏</b>，分類也是同一份（早餐、午餐、晚餐、量販店、超市、超商…）。')}`},
+    {t: '① 打開分帳', h: phone('分帳', `${pc('<b>購物分帳</b><small>11月22日（日）・1 筆</small>' + pb('📷 上傳明細', 'pri wide hl') + tap)}${pc('<b>好鄰居超市 中央店</b><small>11 項・$652</small>')}`, '分帳') +
+      `<ul><li>下面的分頁按 <b>🧾 分帳</b>（順序是地圖、日常、分帳、發票、設定）</li><li>收藏在地圖右上角的 <b>🔖</b>；點地圖上的店家，可以在 <b>📋 菜單</b> 和 <b>🧾 購物紀錄</b> 兩個分頁之間切換</li></ul>${tip('美食和購物<b>共用同一份收藏</b>，分類也是同一份（早餐、午餐、晚餐、量販店、超市、超商…）。')}`},
     {t: '② 收藏常去的店', h: phone('🔍 搜尋', `<div class="pSrch">🔍 好鄰居超市</div><div class="pMap"><span class="flag">🛒</span><span class="flag f2">🍱</span></div>${pc(`<b>好鄰居超市 中央店</b><small>量販店</small><div class="pBtns">${pb('🧾 購物紀錄')}${pb('⭐ 收藏', 'pri hl') + tap}</div>`)}`, '地圖', 'shop') +
       `<ul><li>在地圖搜尋全聯、全家、常叫外送的餐廳…按收藏，選一個分類</li><li>外送的餐廳就照早餐、午餐、晚餐分類；是不是外送，改在每一筆明細選「購物方式」</li><li>店家卡片上的 <b>🧾 購物紀錄</b> 可以看這家店所有的明細</li></ul>`},
     {t: '③ 上傳明細，AI 幫你讀', h: phone('購物分帳', `<div class="pBtns">${pb('📷 上傳明細', 'pri hl') + tap}${pb('✏️ 手動輸入')}</div><div class="pc" style="border-color:var(--accent)"><b>🤖 AI 辨識中・11/08</b><small>Flash-Lite 已讀到 5 項…（12 秒）</small></div><div class="pCal">${Array.from({length: 7}, (_, i) => `<i class="${i === 3 ? 'on' : ''}">${i + 5}${i === 3 ? '<em></em>' : ''}</i>`).join('')}</div>`, '分帳', 'shop') +
@@ -59,7 +59,7 @@ const GUIDE = {
   inv: {title: '🎫 發票 使用說明', steps: [
     {t: '發票區可以做什麼？', h: `<div class="gHero"><div class="gIcon">${APP_ICON}</div><b>把發票收進來，一鍵拿去分帳</b></div>
       <div class="gFlow"><span>📷<small>掃 QR</small></span><em>＋</em><span>🖼️<small>截圖</small></span><em>＋</em><span>🤖<small>協助工具</small></span><em>➜</em><span>🧾<small>拿去分帳</small></span></div>
-      <p>在購物分帳功能區，下面的分頁按 <b>🎫 發票</b>。可以掃紙本電子發票的 QR Code、匯入發票大師的截圖，或用協助工具直接讀發票大師的畫面。</p>${tip('用手機條碼直接同步載具需要財政部核發的 API 帳號（只給營業人或組織），所以改用這些方式。')}`},
+      <p>下面的分頁按 <b>🎫 發票</b>。可以掃紙本電子發票的 QR Code、匯入發票大師的截圖，或用協助工具直接讀發票大師的畫面。</p>${tip('用手機條碼直接同步載具需要財政部核發的 API 帳號（只給營業人或組織），所以改用這些方式。')}`},
     {t: '① 我的手機條碼', h: phone('發票', `<div class="pc" style="background:#fff"><b>📱 我的手機條碼</b><div class="pBar"></div><small style="text-align:center;letter-spacing:.3em">/ABC+123</small></div>${pc('<b>2026/11/20(五)</b><small>月光拉麵・XY-20481357</small>')}`, '發票', 'shop') +
       `<ul><li>第一次按「📱 設定我的手機條碼」輸入載具號碼（斜線開頭共 8 碼）</li><li>之後發票區最上面會顯示條碼，<b>點一下放大</b>給店員掃，發票就會存進你的載具</li></ul>`},
     {t: '② 掃描紙本發票 QR Code', h: phone('📷 掃描發票', `<div class="pScan"><i></i><i></i></div><div class="pWho"><i class="on">左邊 QR ✓</i><i class="on">右邊 QR ✓</i></div>${pc('<b>✅ 已存入 QT-36925814</b><small>2026/11/18・5 項　$108</small>')}`, '發票', 'shop') +

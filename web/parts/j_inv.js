@@ -519,7 +519,7 @@ function invPullAcc() {
   let nNew = 0; L.forEach(v => { if (invPut(v) === 'new') nNew++; if (v.sellerId && v.seller) { DB.scfg.sellers = DB.scfg.sellers || {}; if (!DB.scfg.sellers[v.sellerId]) DB.scfg.sellers[v.sellerId] = v.seller; } else if (v.sellerId) lookupSeller(v.sellerId); });
   saveScfg(); invChanged(); buzz(40); const wi = L.filter(v => v.items && v.items.length).length;
   const lastD = L.map(v => v.date).filter(Boolean).sort().pop(); if (lastD) { const d = ymdDate(lastD); Inv.ym = [d.getFullYear(), d.getMonth()]; }
-  if (S.mode === 'shop' && curTab !== 'Inv') showTab('Inv'); else renderInv();
+  if (curTab !== 'Inv') showTab('Inv'); else renderInv();
   toast(`✅ 協助工具讀到 ${L.length} 張發票（${wi} 張有品項），新增 ${nNew} 張${L.length - nNew ? `，${L.length - nNew} 張已經有了（不重複新增，只補上缺的資料）` : ''}`, 5000);
 }
 /* 把一頁畫面文字（每行用 tab 分欄）解析成發票：明細頁或列表頁 */

@@ -550,13 +550,16 @@ function gmMenuGuide(p) {
   sh.foot.onclick = () => { Share.expect(p.id); sh.close(); const u = gmUrl(p); if (IS_APP && NB.openNav) NB.openNav('com.google.android.apps.maps', u, u); else openUrl(u); };
 }
 /* ---------- 接收其他 App「分享」過來的圖片（截圖、相簿） ---------- */
+/* 分享進來的圖片要做什麼 */
+function shareKind(n) { return new Promise(res => { let done = false; const sh = sheet({title: `收到 ${n} 張圖片，要拿來做什麼？`, onClose() { if (!done) res(null); }, html: `<div class="actList"><button data-k="menu">📋 店家的菜單（存到收藏的店家，可以 AI 辨識成表格）</button><button data-k="shop">🧾 購物明細（AI 辨識品項，拿來分帳）</button><button data-k="inv">🎫 發票截圖（AI 讀發票號碼和品項）</button></div>`});
+  sh.body.onclick = e => { const t = e.target.closest('[data-k]'); if (!t) return; buzz(10); done = true; sh.close(); res(t.dataset.k); }; }); }
 var Share = {
   expect(id) { lsSet('fm.shareFor', {id, t: Date.now()}); },
   onNative() { this.check(); },
   async check() {
     if (!IS_APP || !NB.sharedTake || this.running) return; let L = []; try { L = JSON.parse(NB.sharedTake() || '[]'); } catch (e) {} if (!L.length) return; this.running = true;
     try { const blobs = []; for (const n of L) { try { const r = await fetch(location.origin + '/shared/' + encodeURIComponent(n)); if (r.ok) blobs.push(await r.blob()); } catch (e) {} try { NB.sharedDone(n); } catch (e) {} }
-      if (!blobs.length) { toast('沒有收到可以用的圖片'); return; } while (sheets.length) sheets[sheets.length - 1].close(); if (S.mode === 'shop') { showTab('Shop'); shopFromBlobs(blobs); return; } if (curTab !== 'Fav' && curTab !== 'Map') showTab('Fav'); this.ask(blobs); }
+      if (!blobs.length) { toast('沒有收到可以用的圖片'); return; } while (sheets.length) sheets[sheets.length - 1].close(); const k = await shareKind(blobs.length); if (!k) return; if (k === 'shop') { showTab('Shop'); shopFromBlobs(blobs); return; } if (k === 'inv') { showTab('Inv'); invShots(blobs); return; } if (curTab !== 'Fav' && curTab !== 'Map') showTab('Fav'); this.ask(blobs); }
     finally { this.running = false; } },
   ask(blobs) {
     const f = lsGet('fm.shareFor', null); let pid = f && Date.now() - f.t < 2 * 3600e3 && DB.places.some(x => x.id === f.id) ? f.id : (M.sel || ''); let q = '';
@@ -661,6 +664,9 @@ function openMenuImgs(p) { const items = []; albumsOf(p).forEach((a, i) => a.img
 /* ---------- 收藏地點：明細 ---------- */
 function openPlace(id, toMenu) {
   const p = DB.places.find(x => x.id === id); if (!p) return; let editT = false, mq = '', mc = '';
+  /* 店家頁下面分兩個分頁：📋 菜單（美食）／🧾 購物紀錄（分帳），互不干擾 */
+  const nBills = () => Object.values(DB.bills || {}).reduce((t, L) => t + L.filter(b => b.place === p.id).length, 0);
+  let ptab = toMenu === 'recs' ? 'recs' : toMenu ? 'menu' : ((p.menu || []).length || (p.albums || []).some(a => (a.imgs || []).length) || !nBills() ? 'menu' : 'recs');
   /* 區域：目前選的區域＋不分區的列 */
   if ((p.menu || []).some(r => r.g)) { const f = fixRegions(p.menu); if (f !== p.menu) { p.menu = f; savePlace(p); } }
   const regsOf = () => { const r = []; (p.menu || []).forEach(x => { if (x.g && !r.includes(x.g)) r.push(x.g); }); return rgSorted(r); };
@@ -752,7 +758,8 @@ function openPlace(id, toMenu) {
         <div class="ln"><span class="k">🕒</span><span class="v hours">${(p.hours || []).length ? p.hours.map((h, i) => `<div class="${i === hi ? 'td' : ''}">${esc(h)}</div>`).join('') : '<span class="muted">（尚未填寫營業時間' + (S.gkey ? '，可按上方「更新資訊」從 Google 帶入' : '') + '）</span>'}</span></div>
         ${p.phone ? `<div class="ln"><span class="k">📞</span><span class="v">${esc(p.phone)}</span></div>` : ''}
         ${p.note ? `<div class="ln"><span class="k">📝</span><span class="v" style="white-space:pre-wrap">${esc(p.note)}</span></div>` : ''}</div>
-      ${S.mode === 'shop' ? shopPlaceHtml(p) : `      <div class="h3" id="menuTop"><span class="grow">📋 菜單 <span class="muted small" style="font-weight:600">${(p.menu || []).length ? p.menu.length + ' 個品項' : ''}</span></span></div>
+      <div class="pTabs" id="menuTop"><button data-pt="menu" class="${ptab === 'menu' ? 'on' : ''}">📋 菜單<em>${(p.menu || []).length || ''}</em></button><button data-pt="recs" class="${ptab === 'recs' ? 'on' : ''}">🧾 購物紀錄<em>${nBills() || ''}</em></button></div>
+      ${ptab === 'recs' ? shopPlaceHtml(p) : `      <div class="h3 pTabH"><span class="grow">📋 菜單 <span class="muted small" style="font-weight:600">${(p.menu || []).length ? p.menu.length + ' 個品項' : ''}</span></span></div>
       ${job ? `<div class="jobBar"><span class="spin"></span><span class="grow">${esc(job.msg || 'AI 處理中…')}<small>在背景執行中，完成後會自動帶入，可以先離開這個畫面</small></span></div>` : ''}
       <div class="mBtns"><button class="btn pri" data-a="imgs" ${ni ? '' : 'disabled'}>🖼️ 打開菜單圖檔${ni ? `（${nv > 1 ? nv + ' 個版本・' : ''}${ni} 張）` : ''}</button><button class="btn" data-a="albums">🗂️ ${ni ? '管理圖檔' : '加入菜單圖片'}</button>
         <button class="btn olive" data-a="ai" ${job ? 'disabled' : ''}>✨ AI 辨識成表格</button><button class="btn olive" data-a="webm" ${job ? 'disabled' : ''}>🌐 上網找菜單</button></div>${S.aikey && aiLeftText() ? `<div class="small muted" style="margin:-.3rem 0 .7rem">${esc(aiLeftText())}（每天 ${AIQ.resetAt()} 重置）</div>` : ''}
@@ -762,7 +769,7 @@ function openPlace(id, toMenu) {
   sh.body.addEventListener('input', e => { const t = e.target; if (t.id === 'mq') { mq = t.value; $('#mBody', sh.body).innerHTML = rowsHtml(); return; }
     if (t.dataset.k) { p.menu[+t.dataset.i][t.dataset.k] = t.value; save(); } });
   sh.body.addEventListener('change', e => { const t = e.target; if (t.dataset.k === 't') { p.menu[+t.dataset.i].t = t.value; save(); } });
-  sh.body.addEventListener('click', async e => { const b = e.target.closest('[data-a]'); if (!b) return; const a = b.dataset.a, i = +b.dataset.i;
+  sh.body.addEventListener('click', async e => { const pt = e.target.closest('[data-pt]'); if (pt) { buzz(10); if (ptab !== pt.dataset.pt) { ptab = pt.dataset.pt; render(); } return; } const b = e.target.closest('[data-a]'); if (!b) return; const a = b.dataset.a, i = +b.dataset.i;
     if (a === 'nav') navTo(p); else if (a === 'gm') openUrl(gmUrl(p)); else if (a === 'tel') openUrl('tel:' + p.phone.replace(/[^\d+]/g, '')); else if (a === 'web') openUrl(p.web);
     else if (a === 'show') { while (sheets.length) sheets[sheets.length - 1].close(); selectPlace(p.id, true); }
     else if (a === 'sbNew') { while (sheets.length) sheets[sheets.length - 1].close(); newBill(p); }
