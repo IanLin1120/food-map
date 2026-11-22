@@ -538,8 +538,15 @@ table.piv td.dup{color:var(--danger);font-size:.8rem;line-height:1.25}
 .typeGrid button span{font-size:1.7rem;line-height:1}
 .typeGrid button.on{border:2px solid var(--accent)}
 .typeGrid button.add{color:var(--muted);border-style:dashed}
-.psSec{margin-bottom:.8rem}
-.psSH{display:flex;gap:.4rem;align-items:center;font-weight:800;font-size:.86rem;padding:.3rem .5rem;border-left:4px solid var(--c);background:color-mix(in srgb,var(--c) 14%,var(--surface));border-radius:4px;margin-bottom:.35rem}
+.psHint{font-size:.74rem;font-weight:700;color:var(--muted);margin:0 0 .45rem .15rem}
+.psSec{margin-bottom:.55rem;border-radius:var(--r-sm);background:var(--surface-3);border:1px solid var(--border-soft);overflow:hidden}
+.psSec.open{border-color:color-mix(in srgb,var(--c) 45%,var(--border))}
+.psSH{display:flex;gap:.55rem;align-items:center;width:100%;text-align:left;font-size:.95rem;padding:.75rem .85rem .75rem .75rem;border:0;border-left:5px solid var(--c);background:color-mix(in srgb,var(--c) 12%,var(--surface));color:var(--text)}
+.psSH span{font-size:1.2rem;flex:none}.psSH b{flex:1;min-width:0;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.psSH em{flex:none;font-style:normal;font-size:.76rem;font-weight:800;color:var(--text-2);background:var(--surface);border:1px solid var(--border-soft);border-radius:6px;padding:.05rem .45rem;min-width:1.6rem;text-align:center}
+.psSH .psCv{flex:none;font-style:normal;color:var(--c);transition:transform .2s;font-size:.85rem}
+.psSec.open .psSH .psCv{transform:rotate(180deg)}
+.psPL{padding:.5rem .5rem .15rem}
 .psP{display:block;width:100%;text-align:left;padding:.6rem .75rem;border-radius:6px;background:var(--surface-3);border:1px solid var(--border-soft);margin-bottom:.35rem}
 .psP small{display:block;color:var(--muted);font-size:.74rem;margin-top:.15rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .psP.on{border:2px solid var(--accent)}
@@ -719,7 +726,7 @@ body.mShop #tabbar [data-tab="Meal"],body.mShop #tabbar [data-tab="Rec"]{display
 .pWho i,.pSeg i{font-style:normal;border:1px solid var(--border);background:var(--surface);border-radius:6px;padding:.2rem .4rem;font-size:.64rem;font-weight:700}
 .pWho i.on,.pSeg i.on{background:var(--accent);color:#fff;border-color:transparent}.pSeg i{flex:1;text-align:center}
 .pText{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:.4rem .5rem;font-size:.62rem;line-height:1.5;font-family:ui-monospace,monospace}
-.pr{display:flex;justify-content:space-between;gap:.4rem;font-size:.7rem;padding:.08rem 0}.pr.tot{border-top:1px solid var(--border-soft);margin-top:.15rem;padding-top:.2rem;font-weight:800}
+.pRw{display:flex;justify-content:space-between;gap:.4rem;font-size:.7rem;padding:.08rem 0}.pRw.tot{border-top:1px solid var(--border-soft);margin-top:.15rem;padding-top:.2rem;font-weight:800}
 .pTag{display:inline-block;margin-top:.25rem;font-size:.62rem;font-weight:700;background:color-mix(in srgb,var(--accent) 16%,var(--surface));border:1px solid color-mix(in srgb,var(--accent) 40%,transparent);border-radius:6px;padding:.12rem .35rem;position:relative}
 .pTag.warn{background:none;color:var(--danger);border:1px dashed var(--danger)}
 .pQuick{font-size:.6rem;color:var(--text-2);display:flex;gap:.2rem;align-items:center;flex-wrap:wrap}.pQuick i{font-style:normal;border:1px solid var(--border);border-radius:6px;padding:.1rem .3rem;background:var(--surface)}
@@ -961,3 +968,9 @@ h1,h2,h3,.gTitle,.wlSub{text-wrap:balance}
 .gHero b{text-wrap:balance}
 .pgHead.two{flex-wrap:nowrap}
 @media (max-width:400px){#pgRec .pgInner>.row .searchBox{flex-basis:100%}#pgRec .pgInner>.row .btn{flex:1}}
+/* 發票月曆：當天張數直接寫在原本紅點的位置 */
+.cd .cdC{display:block;margin-top:.22rem;min-width:1.15rem;height:1.15rem;padding:0 .3rem;border-radius:999px;background:#c8553f;color:#fff;font-style:normal;font-size:.7rem;font-weight:800;line-height:1.15rem;text-align:center;font-variant-numeric:tabular-nums;box-shadow:0 0 0 2px color-mix(in srgb,#c8553f 22%,transparent)}
+.cd.sel .cdC{background:#fff;color:#c8553f;box-shadow:none}
+/* 常買：標籤自己一行，下面的品項從左邊對齊排列 */
+.slSug>span{flex:0 0 100%;font-weight:700;margin-bottom:.05rem}
+.slSug button{max-width:100%;text-align:left}

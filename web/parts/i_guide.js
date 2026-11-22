@@ -8,7 +8,7 @@ const phone = (title, body, tab, area) => `<div class="ph"><div class="phIn"><di
   <div class="phTab">${PHT[area || 'food'].map(([i, t]) => `<span class="${t === tab ? 'on' : ''}"><i>${i}</i>${t}</span>`).join('')}</div></div></div>`;
 const tap = '<span class="phTap">👆</span>';
 const pc = (h, cls) => `<div class="pc ${cls || ''}">${h}</div>`, pb = (t, cls) => `<span class="pb ${cls || ''}">${t}</span>`;
-const pRow = (a, b, cls) => `<div class="pr ${cls || ''}"><span>${a}</span><b>${b}</b></div>`;
+const pRow = (a, b, cls) => `<div class="pRw ${cls || ''}"><span>${a}</span><b>${b}</b></div>`;
 const tip = t => `<div class="gTip">💡 ${t}</div>`;
 const GUIDE = {
   food: {title: '🍽️ 美食・日常 使用說明', steps: [

@@ -342,13 +342,15 @@ function matchShopStore(name) {
 /* ---------- 選店家、選人 ---------- */
 function pickShopStore(cur) {
   return new Promise(res => { let done = false, q = ''; const sh = sheet({title: '選擇店家', full: true, onClose() { if (!done) res(undefined); }}); const fin = v => { done = true; sh.close(); res(v); };
+    const curP = shopPlaces().find(p => p.id === cur), open = new Set(); if (curP) open.add(curP.cat || '');
     const draw = () => { const hit = p => !q || (p.name + ' ' + (p.addr || '')).toLowerCase().includes(q), cats = DB.side.shop.cats.concat([UNCAT]);
       const secs = cats.map(c => ({c, ps: shopPlaces().filter(p => (c.id ? p.cat === c.id : !cats.some(x => x.id && x.id === p.cat)) && hit(p))})).filter(s => s.ps.length);
-      $('#psL', sh.body).innerHTML = secs.map(({c, ps}) => `<div class="psSec" style="--c:${c.color}"><div class="psSH"><span>${esc(c.icon)}</span>${esc(c.name)}</div>${ps.map(p => `<button class="psP ${p.id === cur ? 'on' : ''}" data-id="${p.id}"><b>${esc(p.name)}</b><small>${esc(p.addr || '')}</small></button>`).join('')}</div>`).join('')
+      $('#psL', sh.body).innerHTML = secs.map(({c, ps}) => { const on = q || open.has(c.id || ''); return `<div class="psSec ${on ? 'open' : ''}" style="--c:${c.color}"><button class="psSH" data-cat="${c.id || ''}"><span>${esc(c.icon)}</span><b>${esc(c.name)}</b><em>${ps.length}</em><i class="psCv">▾</i></button>${on ? `<div class="psPL">${ps.map(p => `<button class="psP ${p.id === cur ? 'on' : ''}" data-id="${p.id}"><b>${esc(p.name)}</b><small>${esc(p.addr || '')}</small></button>`).join('')}</div>` : ''}</div>`; }).join('')
         || `<div class="empty">${shopPlaces().length ? '找不到符合的店家' : '還沒有收藏店家<br><span class="small">可以到地圖頁搜尋全聯、全家…加入「我的店家」，或用上面的「自己輸入店名」</span>'}</div>`; };
-    sh.body.innerHTML = `<div class="searchBox" style="margin-bottom:.7rem"><input id="psQ" type="search" placeholder="搜尋我的店家…"></div><div class="row" style="margin-bottom:.7rem;gap:.5rem"><button class="btn sm" data-a="free">✏️ 自己輸入店名</button><button class="btn sm" data-a="none">先不選店家</button></div><div id="psL"></div>`;
+    sh.body.innerHTML = `<div class="searchBox" style="margin-bottom:.7rem"><input id="psQ" type="search" placeholder="搜尋我的店家…"></div><div class="row" style="margin-bottom:.8rem;gap:.5rem"><button class="btn sm" data-a="free">✏️ 自己輸入店名</button><button class="btn sm" data-a="none">先不選店家</button></div><div class="psHint">點分類展開店家</div><div id="psL"></div>`;
     draw(); $('#psQ', sh.body).oninput = e => { q = e.target.value.trim().toLowerCase(); draw(); };
-    sh.body.addEventListener('click', async e => { const t = e.target.closest('button'); if (!t) return;
+    sh.body.addEventListener('click', async e => { const t = e.target.closest('button'); if (!t) return; buzz(8);
+      if (t.dataset.cat != null) { const k = t.dataset.cat; if (open.has(k)) open.delete(k); else open.add(k); draw(); if (open.has(k)) { const el = $(`.psSH[data-cat="${k}"]`, sh.body); if (el) el.scrollIntoView({behavior: 'smooth', block: 'nearest'}); } return; }
       if (t.dataset.id) fin(shopPlaces().find(p => p.id === t.dataset.id)); else if (t.dataset.a === 'none') fin(null);
       else if (t.dataset.a === 'free') { const v = ((await askText('店名', '', '例如：好鄰居超市 中央店')) || '').trim(); if (v) fin({id: '', name: v.slice(0, 40)}); } }); });
 }
@@ -368,17 +370,17 @@ function pickPeople(cur, title, allowNone) {
 function editBill(b) {
   let qs = null; const sh = sheet({title: '🧾 ' + (billStore(b) || '購物明細'), full: true, foot: '<div class="grow ordTot" id="ebT"></div><button class="btn pri" data-a="done" style="flex:0 0 auto">完成</button>', onClose() { shopChanged(); }});
   const chips = ids => (ids || []).length ? `<span class="pplC">${ids.map(id => `<i>${esc(mWho(id).icon)}${esc(mWho(id).name)}</i>`).join('')}</span>` : '<span class="pplC none">選誰付</span>';
-  const draw = () => { const c = billCalc(b), ids = pOrder(Object.keys(c.per)), top = sh.body.scrollTop;
+  const draw = () => { discSync(b); const c = billCalc(b), ids = pOrder(Object.keys(c.per)), top = sh.body.scrollTop;
     sh.body.innerHTML = `${b.aiBusy ? `<div class="jobBar"><span class="spin"></span><span class="grow">AI 辨識中…<small class="rcMsg" data-b="${b.id}">${esc(b.aiMsg || '')}</small></span></div>` : ''}
       <div class="ebHead"><button class="ebF" data-a="store"><small>店家</small><b>${esc(billStore(b) || '未選店家')}</b></button>${wayBox(b.way)}<div class="ebF ebDate"><small>日期</small><div class="edRow"><button class="edGo" data-a="goDay"><b>${dayLabel(billKey(b) || Shop.sel)}</b><span>到月曆 ›</span></button><button class="edPick" data-a="pickDate">更改 ${TRI_D}</button></div></div><button class="ebF ebTimeB" data-a="pickTime"><small>時間</small><span class="tv ${b.time ? '' : 'none'}">🕒 ${esc(b.time || '未填')}</span></button><label class="ebF"><small>明細上的實付金額</small><input id="ebTotal" inputmode="decimal" placeholder="選填，用來驗算" value="${b.total == null ? '' : esc(b.total)}"></label></div>
       ${(b.imgs || []).length ? `<div class="ebImgs">${b.imgs.map((id, i) => `<button class="ebImg" data-a="img" data-i="${i}"><img data-img="${id}" alt=""></button>`).join('')}<button class="btn sm" data-a="reAI" ${b.aiBusy ? 'disabled' : ''}>🔄 重新辨識</button></div>` : ''}
       <div class="ebSec"><div class="msH"><b class="grow">🛍️ 品項（${b.items.length}）</b><button class="btn sm" data-a="addItem">＋ 品項</button></div>
         ${b.items.length ? `<div class="ebQuick"><span>還沒選人的全部給：</span>${DB.mcfg.people.map(u => `<button data-a="qAll" data-id="${u.id}">${esc(u.icon)}${esc(u.name)}</button>`).join('')}<button data-a="qShare">👥 大家一起分</button></div>` : ''}
         ${b.items.map(x => { const dsc = c.itemDisc[x.id] || 0; return `<div class="ebR ${(x.ppl || []).length ? '' : 'warn'}" data-x="${x.id}"><div class="grow" data-a="editItem"><b>${esc(x.n)}</b>${x.o ? `<small>${esc(x.o)}</small>` : ''}<small>${x.q > 1 ? `${x.q} × ${money(numP(x.amt) / x.q)} = ` : ''}${money(x.amt)}${dsc ? ` <span class="dscT">折 -${money(dsc)}</span> → <b>${money(numP(x.amt) - dsc)}</b>` : ''}</small></div><button class="ebW" data-a="who">${chips(x.ppl)}</button></div>`; }).join('') || '<div class="empty" style="padding:.8rem">還沒有品項，按「＋ 品項」手動輸入</div>'}</div>
-      <div class="ebSec"><div class="msH"><b class="grow">🏷️ 品項折扣（${(b.disc || []).length}）</b><button class="btn sm" data-a="addDisc">＋ 折扣</button></div><div class="small muted" style="margin:-.2rem 0 .4rem">例如「任買2組229元 -138」：勾選套用的品項，折扣會平均分到那些品項</div>
-        ${(b.disc || []).map(d => `<div class="ebR ${(d.items || []).length ? '' : 'warn'}" data-d="${d.id}"><div class="grow" data-a="editDisc"><b>${esc(d.n)}</b><small class="dscT">-${money(d.amt)}</small>${d.auto ? '<small class="muted">AI 自動配對，請確認</small>' : ''}</div><button class="ebW" data-a="discItems">${(d.items || []).length ? `<span class="pplC">${d.items.map(id => { const x = b.items.find(y => y.id === id); return x ? `<i>${esc(x.n.slice(0, 8))}</i>` : ''; }).join('')}</span>` : '<span class="pplC none">勾選品項</span>'}</button></div>`).join('')}</div>
+      <div class="ebSec"><div class="msH"><b class="grow">🏷️ 品項折扣（${(b.disc || []).length}）</b><button class="btn sm" data-a="addDisc">＋ 折扣</button></div><div class="small muted" style="margin:-.2rem 0 .4rem">可以選折扣金額、組合價（例如 2件49）或打折（例如 8 折），勾選套用的品項</div>
+        ${(b.disc || []).map(d => `<div class="ebR ${(d.items || []).length ? '' : 'warn'}" data-d="${d.id}"><div class="grow" data-a="editDisc"><b>${esc(d.n)}</b><small class="dscT">${d.kind && d.kind !== 'amt' ? esc(discLabel(d)) + '・' : ''}-${money(d.amt)}</small>${d.auto ? '<small class="muted">AI 自動配對，請確認</small>' : ''}</div><button class="ebW" data-a="discItems">${(d.items || []).length ? `<span class="pplC">${d.items.map(id => { const x = b.items.find(y => y.id === id); return x ? `<i>${esc(x.n.slice(0, 8))}</i>` : ''; }).join('')}</span>` : '<span class="pplC none">勾選品項</span>'}</button></div>`).join('')}</div>
       <div class="ebSec"><div class="msH"><b class="grow">🎟️ 整單折扣・優惠券（${(b.odisc || []).length}）</b><button class="btn sm" data-a="addOd">＋</button></div>
-        ${(b.odisc || []).map(d => `<div class="ebR ${(d.ppl || []).length ? '' : 'warn'}" data-o="${d.id}"><div class="grow" data-a="editOd"><b>${esc(d.n)}</b><small class="dscT">-${money(d.amt)}${(d.ppl || []).length > 1 ? `（每人 -${money(d.amt / d.ppl.length)}）` : ''}</small></div><button class="ebW" data-a="odWho">${chips(d.ppl)}</button></div>`).join('')}</div>
+        ${(b.odisc || []).map(d => `<div class="ebR ${(d.ppl || []).length ? '' : 'warn'}" data-o="${d.id}"><div class="grow" data-a="editOd"><b>${esc(d.n)}</b><small class="dscT">${d.kind && d.kind !== 'amt' ? esc(discLabel(d)) + '・' : ''}-${money(d.amt)}${(d.ppl || []).length > 1 ? `（每人 -${money(d.amt / d.ppl.length)}）` : ''}</small></div><button class="ebW" data-a="odWho">${chips(d.ppl)}</button></div>`).join('')}</div>
       <div class="ebSec"><div class="msH"><b class="grow">🛵 費用（平台費、外送費、包材費…）（${(b.fees || []).length}）</b><button class="btn sm" data-a="addFee">＋</button></div>
         ${(b.fees || []).map(d => `<div class="ebR ${(d.ppl || []).length ? '' : 'warn'}" data-f="${d.id}"><div class="grow" data-a="editFee"><b>${esc(d.n)}</b><small>${money(d.amt)}${(d.ppl || []).length > 1 ? `（每人 ${money(d.amt / d.ppl.length)}）` : ''}</small></div><button class="ebW" data-a="feeWho">${chips(d.ppl)}</button></div>`).join('')}</div>
       <div class="ebSum card"><div class="psR"><span class="grow">品項合計</span><span>${money(c.sumItems)}</span></div>${c.sumDisc ? `<div class="psR"><span class="grow">品項折扣</span><span class="dscT">-${money(c.sumDisc)}</span></div>` : ''}${c.sumOd ? `<div class="psR"><span class="grow">整單折扣</span><span class="dscT">-${money(c.sumOd)}</span></div>` : ''}${c.sumFee ? `<div class="psR"><span class="grow">費用</span><span>+${money(c.sumFee)}</span></div>` : ''}
@@ -408,7 +410,7 @@ function editBill(b) {
     else if (a === 'feeWho' && F) { const L = await pickPeople(F.ppl, `「${F.n}」由誰均攤？`); if (L) { F.ppl = L; draw(); } }
     else if (a === 'discItems' && D) { const L = await pickItems(b, D); if (L) { D.items = L; D.auto = false; draw(); } }
     else if (a === 'addItem' || (a === 'editItem' && X)) { await editBillItem(b, X); draw(); }
-    else if (a === 'addDisc' || (a === 'editDisc' && D)) { await editAmtRow(b, 'disc', D); draw(); }
+    else if (a === 'addDisc' || (a === 'editDisc' && D)) { b.disc = b.disc || []; await invDiscEdit(b, D ? b.disc.indexOf(D) : -1, '品項折扣'); draw(); }
     else if (a === 'addOd' || (a === 'editOd' && O)) { await editAmtRow(b, 'odisc', O); draw(); }
     else if (a === 'addFee' || (a === 'editFee' && F)) { await editAmtRow(b, 'fees', F); draw(); } });
   sh.foot.addEventListener('click', e => { if (e.target.closest('[data-a="done"]')) sh.close(); });
@@ -437,24 +439,33 @@ function editBillItem(b, x) {
       const o = {n, q: Math.max(1, numP($('#iQ', sh.body).value) || 1), amt: numP($('#iA', sh.body).value), o: $('#iO', sh.body).value.trim(), ppl: pOrder([...ws])};
       if (isNew) b.items.push(Object.assign({id: 'x' + uid()}, o)); else Object.assign(x, o); sh.close(); }; });
 }
+/* 組合價／打折的折扣金額跟著品項變動重算 */
+const odBase = b => (b.items || []).reduce((t, x) => t + numP(x.amt), 0) - (b.disc || []).reduce((t, d) => t + numP(d.amt), 0);
+function odCalc(b, kind, val) { const base = odBase(b), v = +val || 0; if (kind === 'bundle') return Math.max(0, Math.round((base - v) * 100) / 100); if (kind === 'pct') { const r = v > 10 ? v / 10 : v; return r > 0 && r < 10 ? Math.round(base * (1 - r / 10) * 100) / 100 : 0; } return Math.abs(v); }
+function discSync(b) { (b.disc || []).forEach(d => { if (d.kind && d.kind !== 'amt') d.amt = discCalc(b, d); }); (b.odisc || []).forEach(d => { if (d.kind && d.kind !== 'amt') d.amt = odCalc(b, d.kind, d.val); }); }
 function editAmtRow(b, key, r) {
   const L = b[key] = b[key] || [], isNew = !r, presets = key === 'fees' ? DB.scfg.fees : key === 'odisc' ? DB.scfg.odisc : [], title = {disc: '品項折扣', odisc: '整單折扣・優惠券', fees: '費用'}[key];
-  return new Promise(res => { const d = r ? Object.assign({}, r) : {n: presets[0] || '', amt: ''};
+  const isOd = key === 'odisc', OD_L = {amt: '折扣金額（折掉多少，填正數）', bundle: '組合價格（整單合起來賣多少）', pct: '打幾折'}, OD_H = {amt: '例如 50', bundle: '例如 199', pct: '例如 9 或 8.5（9 折、85 折）'};
+  return new Promise(res => { const d = r ? Object.assign({}, r) : {n: presets[0] || '', amt: ''}; let kind = d.kind || 'amt'; const oldAmt = r ? numP(r.amt) : 0;
+    if (d.kind && d.kind !== 'amt') d.amt = d.val;
     const sh = sheet({title: (isNew ? '新增' : '編輯') + title, foot: `${isNew ? '' : '<button class="btn danger" data-a="del" style="flex:0 0 auto">刪除</button>'}<button class="btn pri" data-a="ok">${isNew ? '新增' : '儲存'}</button>`, onClose() { res(); }});
     const canP = key !== 'disc', draw = () => { const nv = $('#aN', sh.body) ? $('#aN', sh.body).value : d.n, av = $('#aA', sh.body) ? $('#aA', sh.body).value : d.amt;
-      sh.body.innerHTML = `${canP ? `<div class="lbl">常用名稱<span class="muted small">（長按可刪除）</span></div><div class="whoRow presetRow" style="margin-bottom:.7rem">${presets.map((p, i) => `<button data-p="${esc(p)}" data-i="${i}" class="${p === nv ? 'on' : ''}">${esc(p)}</button>`).join('')}<button class="add" data-a="addP">＋ 自訂名稱</button></div>` : ''}<div class="field"><label>名稱</label><input id="aN" value="${esc(nv)}" maxlength="60"></div>${canP ? `<label class="row small" style="gap:.4rem;margin:-.3rem 0 .7rem;color:var(--text-2)"><input type="checkbox" id="aKeep" style="width:auto" checked>沒有在常用名稱裡的，自動加進去</label>` : ''}<div class="field"><label>金額${key === 'fees' ? '' : '（折掉多少，填正數）'}</label><input id="aA" value="${esc(av)}" inputmode="decimal"></div>`; };
-    draw();
-    sh.body.addEventListener('click', async e => { const t = e.target.closest('[data-p],[data-a="addP"]'); if (!t) return; buzz(8);
+      sh.body.innerHTML = `${canP ? `<div class="lbl">常用名稱<span class="muted small">（長按可刪除）</span></div><div class="whoRow presetRow" style="margin-bottom:.7rem">${presets.map((p, i) => `<button data-p="${esc(p)}" data-i="${i}" class="${p === nv ? 'on' : ''}">${esc(p)}</button>`).join('')}<button class="add" data-a="addP">＋ 自訂名稱</button></div>` : ''}<div class="field"><label>名稱</label><input id="aN" value="${esc(nv)}" maxlength="60"></div>${canP ? `<label class="row small" style="gap:.4rem;margin:-.3rem 0 .7rem;color:var(--text-2)"><input type="checkbox" id="aKeep" style="width:auto" checked>沒有在常用名稱裡的，自動加進去</label>` : ''}${isOd ? `<div class="lbl">折扣方式</div><div class="dkSeg">${Object.entries(DK).map(([kk, t]) => `<button data-k="${kk}" class="${kk === kind ? 'on' : ''}">${t}</button>`).join('')}</div>` : ''}<div class="field"><label id="aL">${isOd ? OD_L[kind] : '金額' + (key === 'fees' ? '' : '（折掉多少，填正數）')}</label><input id="aA" value="${esc(av)}" inputmode="decimal" ${isOd ? `placeholder="${OD_H[kind]}"` : ''}></div>${isOd ? '<div class="dkRes" id="aR"></div>' : ''}`; odUpd(); };
+    const odUpd = () => { if (!isOd) return; const v = parseFloat(String($('#aA', sh.body).value).replace(/[^\d.]/g, '')) || 0, base = odBase(b);
+      $('#aR', sh.body).innerHTML = kind === 'amt' ? (v ? `折扣 <b>-${money(v)}</b>` : '　') : !v ? `整單品項合計 ${money(base)}（扣掉品項折扣後）` : `整單 ${money(base)} → ${kind === 'bundle' ? '組合價 ' + money(v) : discLabel({kind, val: v})}，折扣 <b>-${money(odCalc(b, kind, v))}</b>`; };
+    draw(); sh.body.addEventListener('input', odUpd);
+    sh.body.addEventListener('click', async e => { const kb = e.target.closest('[data-k]'); if (kb) { buzz(8); kind = kb.dataset.k; draw(); return; } const t = e.target.closest('[data-p],[data-a="addP"]'); if (!t) return; buzz(8);
       if (t.dataset.a === 'addP') { const v = ((await askText('自訂名稱', '', '例如：福利扣點、會員折扣')) || '').trim(); if (!v) return; if (!presets.includes(v)) { presets.push(v); saveScfg(); } $('#aN', sh.body).value = v; draw(); return; }
       $('#aN', sh.body).value = t.dataset.p; draw(); });
     let lpT = null; sh.body.addEventListener('pointerdown', e => { const t = e.target.closest('[data-p]'); if (!t) return; lpT = setTimeout(async () => { lpT = null; buzz(30); if (!await ask(`從常用名稱刪除「${t.dataset.p}」？`, '刪除', true)) return; presets.splice(+t.dataset.i, 1); saveScfg(); draw(); }, 600); });
     ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => sh.body.addEventListener(ev, () => { clearTimeout(lpT); }));
     sh.foot.onclick = async e => { const t = e.target.closest('[data-a]'); if (!t) return;
       if (t.dataset.a === 'del') { L.splice(L.indexOf(r), 1); sh.close(); return; }
-      const n = $('#aN', sh.body).value.trim(), amt = Math.abs(numP($('#aA', sh.body).value)); if (!n || !amt) { toast('請輸入名稱和金額'); return; }
+      const n = $('#aN', sh.body).value.trim(), raw = Math.abs(numP($('#aA', sh.body).value)), amt = isOd ? odCalc(b, kind, raw) : raw; if (!n || !raw) { toast('請輸入名稱和' + (isOd ? OD_L[kind].replace(/（.*/, '') : '金額')); return; } if (!amt) { toast(kind === 'pct' ? '折數要在 0～10 之間，例如 9 或 8.5' : '組合價要比整單合計低'); return; }
+      const kx = isOd ? (kind === 'amt' ? {kind: undefined, val: undefined} : {kind, val: raw}) : {};
       if (canP && $('#aKeep', sh.body) && $('#aKeep', sh.body).checked && !presets.includes(n)) { presets.push(n); saveScfg(); }
-      if (isNew) L.push(Object.assign({id: key[0] + uid(), n, amt}, key === 'disc' ? {items: []} : {ppl: []})); else Object.assign(r, {n, amt});
-      if (key === 'odisc' && /福利|點數|扣點/.test(n)) ptFix(b, isNew ? 0 : numP(d.amt));
+      if (isNew) L.push(Object.assign({id: key[0] + uid(), n, amt}, kx, key === 'disc' ? {items: []} : {ppl: []})); else Object.assign(r, {n, amt}, kx);
+      if (key === 'odisc' && /福利|點數|扣點/.test(n)) ptFix(b, oldAmt);
       sh.close(); }; });
 }
 

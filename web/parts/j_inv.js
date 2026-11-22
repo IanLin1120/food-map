@@ -33,7 +33,7 @@ function renderInv() {
   if (Inv.day && !Inv.day.startsWith(pre)) Inv.day = ''; const L = Inv.day ? M.filter(v => v.date === Inv.day) : M, cnt = {}; M.forEach(v => { cnt[v.date] = (cnt[v.date] || 0) + 1; });
   const first = new Date(Y, Mo, 1), nd = new Date(Y, Mo + 1, 0).getDate(), today = ymd(new Date()); let cells = '';
   for (let i = 0; i < first.getDay(); i++) cells += '<span class="cd emp"></span>';
-  for (let d = 1; d <= nd; d++) { const k = ymd(new Date(Y, Mo, d)), dow = (first.getDay() + d - 1) % 7; cells += `<button class="cd ${k === Inv.day ? 'sel' : ''} ${k === today ? 'tdy' : ''} ${dow === 0 || dow === 6 ? 'we' : ''}" data-d="${k}"><b>${d}</b>${cnt[k] ? `<em class="dot"></em><i class="cdN">${cnt[k]}</i>` : ''}</button>`; }
+  for (let d = 1; d <= nd; d++) { const k = ymd(new Date(Y, Mo, d)), dow = (first.getDay() + d - 1) % 7; cells += `<button class="cd ${k === Inv.day ? 'sel' : ''} ${k === today ? 'tdy' : ''} ${dow === 0 || dow === 6 ? 'we' : ''}" data-d="${k}"><b>${d}</b>${cnt[k] ? `<em class="cdC">${cnt[k]}</em>` : ''}</button>`; }
   const tot = L.reduce((s, v) => s + numP(v.total), 0), done = L.filter(v => invBill(v)).length;
   $('#invSub').textContent = `${Y}年${Mo + 1}月・${M.length} 張`;
   const car = DB.scfg.carrier || '';
@@ -298,10 +298,10 @@ function discCalc(v, d) {
   return Math.abs(+d.amt || val || 0);
 }
 const discLabel = d => d.kind === 'bundle' ? `組合價 $${d.val}` : d.kind === 'pct' ? `${d.val > 10 ? d.val / 10 : d.val} 折` : '';
-function invDiscEdit(v, k) {
-  return new Promise(res => { invIds(v); const isNew = k < 0, d0 = isNew ? {n: '', kind: 'amt', val: '', items: []} : v.disc[k], sel = new Set(d0.items || []), its = (v.items || []).filter(x => +x.amt > 0);
+function invDiscEdit(v, k, title) {
+  return new Promise(res => { invIds(v); v.disc = v.disc || []; const isNew = k < 0, d0 = isNew ? {n: '', kind: 'amt', val: '', items: []} : v.disc[k], sel = new Set(d0.items || []), its = (v.items || []).filter(x => +x.amt > 0);
     let kind = d0.kind || 'amt';
-    const sh = sheet({title: isNew ? '新增折扣' : '編輯折扣', full: true, foot: `${isNew ? '' : '<button class="btn danger" data-a="del" style="flex:0 0 auto">刪除</button>'}<button class="btn pri" data-a="ok">${isNew ? '新增' : '儲存'}</button>`, onClose() { res(); }});
+    const sh = sheet({title: (isNew ? '新增' : '編輯') + (title || '折扣'), full: true, foot: `${isNew ? '' : '<button class="btn danger" data-a="del" style="flex:0 0 auto">刪除</button>'}<button class="btn pri" data-a="ok">${isNew ? '新增' : '儲存'}</button>`, onClose() { res(); }});
     const presets = [...new Set(['鮮食促', '組合優惠', '第二件折扣', '會員折扣'].concat((DB.scfg.invDisc || [])))], hint = {amt: '例如 21（直接折掉的金額）', bundle: '例如 49（勾選的品項合起來賣多少錢）', pct: '例如 8 或 6.5（8 折、6.5 折）'};
     sh.body.innerHTML = `<div class="whoRow presetRow" style="margin-bottom:.6rem">${presets.map(p => `<button data-p="${esc(p)}">${esc(p)}</button>`).join('')}</div>
       <div class="field"><label>折扣名稱</label><input id="idN" value="${esc(d0.n)}" maxlength="40" placeholder="例如 鮮食促、組合優惠"></div>
@@ -324,8 +324,8 @@ function invDiscEdit(v, k) {
       if (t.dataset.a === 'del') { v.disc.splice(k, 1); sh.close(); return; }
       const c = cur(), n = $('#idN', sh.body).value.trim() || (kind === 'bundle' ? '組合優惠' : '折扣'); if (!c.val) { toast('請輸入' + {amt: '折扣金額', bundle: '組合價格', pct: '折數'}[kind]); return; }
       if (kind !== 'amt' && !c.items.length) { toast('組合價和打折要勾選套用的品項'); return; }
-      const o = Object.assign({id: d0.id || 'v' + uid(), n}, c); o.amt = discCalc(v, Object.assign({amt: c.val}, o)); if (kind === 'amt') o.amt = c.val;
-      v.disc = v.disc || []; if (isNew) v.disc.push(o); else v.disc[k] = o;
+      const o = Object.assign({id: d0.id || 'v' + uid(), n}, c, d0.auto ? {auto: false} : {}); o.amt = discCalc(v, Object.assign({amt: c.val}, o)); if (kind === 'amt') o.amt = c.val;
+      if (isNew) v.disc.push(o); else v.disc[k] = o;
       if (!presets.includes(n)) { DB.scfg.invDisc = (DB.scfg.invDisc || []).concat(n).slice(-12); saveScfg(); } sh.close(); }; });
 }
 /* 名稱選擇：輸入關鍵字（任何位置都可以），列出以前用過的店名讓你選 */

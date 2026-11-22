@@ -19,7 +19,7 @@ function listCard(l) {
     <div class="slH"><span class="slIc">🛒</span><div class="grow" data-a="lStore"><b>${esc(listStore(l) || '購物清單')}</b><small>${its.length ? `還要買 ${its.length} 項` : bt.length ? '✅ 全部買齊了' : '還沒有品項'}${bt.length ? `・已買 ${bt.length}` : ''}</small></div><button class="ic" data-a="lMore" aria-label="更多">⋯</button></div>
     <div class="slItems">${its.map(x => `<div class="slR" data-i="${x.id}"><button class="slCk" data-a="lCheck" aria-label="買到了"></button><span class="slN" data-a="lEdit">${esc(x.n)}${x.note ? `<small>${esc(x.note)}</small>` : ''}</span><span class="grip" aria-label="拖曳排序"></span></div>`).join('') || '<div class="slEmpty">在下面輸入要買的東西</div>'}</div>
     <div class="slAdd"><input class="slIn" placeholder="＋ 新增品項（可以一次貼好幾行）" enterkeyhint="done"><button class="btn pri" data-a="lAdd">加入</button></div>
-    ${hist.length ? `<div class="slSug"><span>常買：</span>${hist.map(n => `<button data-a="lSug" data-n="${esc(n)}">${esc(n)}</button>`).join('')}</div>` : ''}
+    ${hist.length ? `<div class="slSug"><span>⭐ 常買</span>${hist.map(n => `<button data-a="lSug" data-n="${esc(n)}">${esc(n)}</button>`).join('')}</div>` : ''}
     ${bt.length ? `<details class="slDone"><summary>✅ 已買 ${bt.length} 項</summary>${bt.map(x => `<div class="slR done" data-b="${x.id}"><span class="slCk on"></span><span class="slN">${esc(x.n)}</span><button class="btn sm" data-a="lUndo">放回清單</button></div>`).join('')}</details>` : ''}
   </div>`;
 }

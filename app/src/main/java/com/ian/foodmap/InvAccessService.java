@@ -238,6 +238,40 @@ public class InvAccessService extends AccessibilityService {
         } catch (Exception x) { }
     }
 
+
+    interface Cb { void done(List<String> all, int pages); }
+
+    /* 明細：先捲回最上面，再一頁一頁往下捲到底，把每一頁接起來（去掉固定的標題列、底部按鈕和重疊的部分） */
+    void readDetail(final Cb cb) {
+        final Runnable[] up = new Runnable[1], down = new Runnable[1];
+        final List<String> acc = new ArrayList<>(); final List<String>[] prev = new List[1]; final int[] foot = {0}, pages = {0};
+        down[0] = new Runnable() { int i = 0, same = 0; public void run() {
+            List<String> P = lines();
+            if (prev[0] == null) { acc.addAll(P); pages[0] = 1; }
+            else if (P.equals(prev[0])) same++;
+            else {
+                List<String> Q = prev[0]; int pre = 0, suf = 0;
+                while (pre < Q.size() && pre < P.size() && Q.get(pre).equals(P.get(pre))) pre++;
+                while (suf < Q.size() - pre && suf < P.size() - pre && Q.get(Q.size() - 1 - suf).equals(P.get(P.size() - 1 - suf))) suf++;
+                if (pages[0] == 1) foot[0] = suf;
+                List<String> q = Q.subList(pre, Q.size() - suf), p = P.subList(pre, P.size() - suf); int k = Math.min(q.size(), p.size());
+                for (; k > 0; k--) { boolean ok = true; for (int j = 0; j < k; j++) if (!q.get(q.size() - k + j).equals(p.get(j))) { ok = false; break; } if (ok) break; }
+                int at = acc.size() - Math.min(foot[0], acc.size());
+                acc.addAll(at, p.subList(k, p.size())); pages[0]++; same = 0;
+            }
+            prev[0] = P;
+            AccessibilityNodeInfo sc = scroller(getRootInActiveWindow(), 0);
+            boolean ok = same < 1 && i++ < 25 && sc != null && sc.performAction(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD);
+            if (ok) { h.postDelayed(down[0], 600); return; }
+            cb.done(acc, pages[0]);
+        } };
+        up[0] = new Runnable() { int i = 0; public void run() {
+            AccessibilityNodeInfo sc = scroller(getRootInActiveWindow(), 0);
+            if (sc != null && i++ < 12 && sc.performAction(AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD)) h.postDelayed(up[0], 300); else h.postDelayed(down[0], 350);
+        } };
+        h.post(up[0]);
+    }
+
     final Runnable back = new Runnable() { public void run() { finishAll(); } };
 
     /* ---------- 按一下：偵測 → 明細讀一張／列表捲到底 ---------- */
@@ -251,8 +285,11 @@ public class InvAccessService extends AccessibilityService {
             return;
         }
         if (isDetail(L, s.size())) {
-            List<List<String>> P = new ArrayList<>(); P.add(L); save("detail", P); vib(40);
-            showCard("✅ 已讀取 1 張發票明細", s.iterator().next(), new String[]{"✓ 返回日日帳本", "繼續讀取其他發票"}, new Runnable[]{back, null});
+            final String no = s.iterator().next(); busy = true; fabText("讀取中");
+            readDetail(new Cb() { public void done(List<String> all, int pages) {
+                List<List<String>> P = new ArrayList<>(); P.add(all); save("detail", P); vib(40); busy = false; fabText("🧾");
+                showCard("✅ 已讀取 1 張發票明細", no + (pages > 1 ? "（往下捲了 " + (pages - 1) + " 次，讀到最下面）" : ""), new String[]{"✓ 返回日日帳本", "繼續讀取其他發票"}, new Runnable[]{back, null});
+            } });
             return;
         }
         scrollAll();
@@ -330,9 +367,12 @@ public class InvAccessService extends AccessibilityService {
                 h.postDelayed(new Runnable() {
                     public void run() {
                         if (!autoRun) return;
-                        List<List<String>> P = new ArrayList<>(); P.add(lines()); save("detail", P); autoCount++; fabText(autoCount + "張");
-                        performGlobalAction(GLOBAL_ACTION_BACK);
-                        h.postDelayed(autoStep, 1100);
+                        readDetail(new Cb() { public void done(List<String> all, int pages) {
+                            if (!autoRun) return;
+                            List<List<String>> P = new ArrayList<>(); P.add(all); save("detail", P); autoCount++; fabText(autoCount + "張");
+                            performGlobalAction(GLOBAL_ACTION_BACK);
+                            h.postDelayed(autoStep, 1100);
+                        } });
                     }
                 }, 1500);
                 return;
