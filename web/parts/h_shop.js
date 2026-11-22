@@ -142,9 +142,10 @@ function initShop() {
   box.addEventListener('click', e => { const card = e.target.closest('.bill'); if (card && !e.target.closest('button')) { const b = curBill(card.dataset.b); if (b) editBill(b); } });
 }
 function billMore(b) {
-  const sh = sheet({title: '🧾 ' + (billStore(b) || '購物明細'), html: `<div class="actList"><button data-a="exp">📤 匯出這筆（文字／Excel）</button>${(b.imgs || []).length ? '<button data-a="imgs">🖼️ 看明細圖片</button>' : ''}${shopPlaces().some(p => p.id === b.place) ? '<button data-a="open">🏪 打開店家</button>' : ''}<button data-a="move">📅 改到其他日期</button><button data-a="del" class="dng">🗑 刪除這筆</button></div>`});
+  const sh = sheet({title: '🧾 ' + (billStore(b) || '購物明細'), html: `<div class="actList"><button data-a="exp">📤 匯出這筆（文字／Excel）</button>${(b.imgs || []).length ? '<button data-a="imgs">🖼️ 看明細圖片</button>' : ''}${shopPlaces().some(p => p.id === b.place) ? '<button data-a="open">🏪 打開店家</button>' : ''}<button data-a="toInv">🧾 套用到發票（取代發票的品項和折扣）</button><button data-a="move">📅 改到其他日期</button><button data-a="del" class="dng">🗑 刪除這筆</button></div>`});
   sh.body.onclick = async e => { const t = e.target.closest('[data-a]'); if (!t) return; const a = t.dataset.a; sh.close();
     if (a === 'exp') openShopExport(Shop.sel, b.id);
+    else if (a === 'toInv') billToInv(b);
     else if (a === 'imgs') Viewer.open(b.imgs.map((id, i) => ({id, label: `明細圖片 ${i + 1}/${b.imgs.length}`})), 0, billStore(b));
     else if (a === 'open') openPlace(b.place);
     else if (a === 'move') { const v = await askText('改到哪一天？（年-月-日）', Shop.sel); if (!v) return; const k = v.trim().replace(/[/.]/g, '-'), d = new Date(k + 'T00:00'); if (isNaN(d)) { toast('日期格式不正確'); return; }
@@ -465,7 +466,7 @@ function editAmtRow(b, key, r) {
       const kx = isOd ? (kind === 'amt' ? {kind: undefined, val: undefined} : {kind, val: raw}) : {};
       if (canP && $('#aKeep', sh.body) && $('#aKeep', sh.body).checked && !presets.includes(n)) { presets.push(n); saveScfg(); }
       if (isNew) L.push(Object.assign({id: key[0] + uid(), n, amt}, kx, key === 'disc' ? {items: []} : {ppl: []})); else Object.assign(r, {n, amt}, kx);
-      if (key === 'odisc' && /福利|點數|扣點/.test(n)) ptFix(b, oldAmt);
+      if (key === 'odisc' && !b.no && /福利|點數|扣點/.test(n)) ptFix(b, oldAmt);
       sh.close(); }; });
 }
 

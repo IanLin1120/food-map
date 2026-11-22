@@ -1,6 +1,9 @@
 package com.ian.foodmap;
 
 import android.accessibilityservice.AccessibilityService;
+import android.accessibilityservice.GestureDescription;
+import android.graphics.Path;
+import android.util.DisplayMetrics;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -196,6 +199,7 @@ public class InvAccessService extends AccessibilityService {
                 CharSequence cs = n.getText(); if (cs == null || cs.length() == 0) cs = n.getContentDescription();
                 if (cs != null && cs.toString().trim().length() > 0) {
                     Rect r = new Rect(); n.getBoundsInScreen(r);
+                    int sw = getResources().getDisplayMetrics().widthPixels; if (r.centerX() < 0 || r.centerX() > sw) { for (int i = 0; i < n.getChildCount(); i++) collect(n.getChild(i), out, depth + 1); return; }
                     T t = new T(); t.t = cs.toString().replace('\n', ' ').trim(); t.x = r.left; t.y = r.centerY(); t.h = Math.max(1, r.height()); out.add(t);
                 }
             }
@@ -245,7 +249,7 @@ public class InvAccessService extends AccessibilityService {
     void readDetail(final Cb cb) {
         final Runnable[] up = new Runnable[1], down = new Runnable[1];
         final List<String> acc = new ArrayList<>(); final List<String>[] prev = new List[1]; final int[] foot = {0}, pages = {0};
-        down[0] = new Runnable() { int i = 0, same = 0; public void run() {
+        down[0] = new Runnable() { int i = 0, same = 0; boolean gest = false; public void run() {
             List<String> P = lines();
             if (prev[0] == null) { acc.addAll(P); pages[0] = 1; }
             else if (P.equals(prev[0])) same++;
@@ -260,16 +264,42 @@ public class InvAccessService extends AccessibilityService {
                 acc.addAll(at, p.subList(k, p.size())); pages[0]++; same = 0;
             }
             prev[0] = P;
-            AccessibilityNodeInfo sc = scroller(getRootInActiveWindow(), 0);
-            boolean ok = same < 1 && i++ < 25 && sc != null && sc.performAction(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD);
-            if (ok) { h.postDelayed(down[0], 600); return; }
-            cb.done(acc, pages[0]);
+            if (i++ >= 30 || same >= 2 || (same >= 1 && gest)) { cb.done(acc, pages[0]); return; }
+            /* 只捲直向的；捲不動（或沒有直向捲動區）就改用手指往上滑一次確認是不是真的到底了 */
+            AccessibilityNodeInfo sc = same == 0 ? scrollerOf(getRootInActiveWindow(), 0, 1) : null;
+            if (sc != null && sc.performAction(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD)) { gest = false; h.postDelayed(down[0], 600); }
+            else { gest = true; swipeV(true); h.postDelayed(down[0], 900); }
         } };
-        up[0] = new Runnable() { int i = 0; public void run() {
-            AccessibilityNodeInfo sc = scroller(getRootInActiveWindow(), 0);
-            if (sc != null && i++ < 12 && sc.performAction(AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD)) h.postDelayed(up[0], 300); else h.postDelayed(down[0], 350);
+        up[0] = new Runnable() { int i = 0; String last = ""; public void run() {
+            AccessibilityNodeInfo sc = scrollerOf(getRootInActiveWindow(), 0, 1);
+            if (sc != null) { if (i++ < 12 && sc.performAction(AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD)) h.postDelayed(up[0], 300); else h.postDelayed(down[0], 350); return; }
+            String sig = lines().toString(); if (i++ < 6 && !sig.equals(last)) { last = sig; swipeV(false); h.postDelayed(up[0], 650); } else h.postDelayed(down[0], 300);
         } };
         h.post(up[0]);
+    }
+
+    /* ---------- 左右滑動換下一張的 App（例如發票存摺）：讀完一張（上下捲到底）→ 往右滑到下一張 → 再讀 ---------- */
+    void startPager() {
+        autoRun = true; busy = true; autoCount = 0; fabText("⏹");
+        final Runnable[] step = new Runnable[1];
+        step[0] = new Runnable() { String lastNo = ""; boolean triedG = false; public void run() {
+            if (!autoRun) return;
+            List<String> L = lines(); Set<String> s = nos(L); String no = s.isEmpty() ? "" : s.iterator().next();
+            if (no.isEmpty() || no.equals(lastNo)) {
+                if (!triedG && !lastNo.isEmpty()) { triedG = true; swipeNext(); h.postDelayed(step[0], 1100); return; }
+                autoRun = false; busy = false; fabText("🧾"); vib(60); doneCard(no.isEmpty() ? "⚠ 這一頁不是發票明細" : "✅ 已經到最後一張"); return;
+            }
+            if (autoCount >= 300) { autoRun = false; busy = false; fabText("🧾"); doneCard("已達 300 張上限"); return; }
+            lastNo = no; triedG = false;
+            readDetail(new Cb() { public void done(List<String> all, int pages) {
+                if (!autoRun) return;
+                List<List<String>> P = new ArrayList<>(); P.add(all); save("detail", P); autoCount++; fabText(autoCount + "張");
+                AccessibilityNodeInfo pg = scrollerOf(getRootInActiveWindow(), 0, 2);
+                if (!(pg != null && pg.performAction(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD))) swipeNext();
+                h.postDelayed(step[0], 1100);
+            } });
+        } };
+        h.post(step[0]);
     }
 
     final Runnable back = new Runnable() { public void run() { finishAll(); } };
@@ -288,12 +318,48 @@ public class InvAccessService extends AccessibilityService {
             final String no = s.iterator().next(); busy = true; fabText("讀取中");
             readDetail(new Cb() { public void done(List<String> all, int pages) {
                 List<List<String>> P = new ArrayList<>(); P.add(all); save("detail", P); vib(40); busy = false; fabText("🧾");
-                showCard("✅ 已讀取 1 張發票明細", no + (pages > 1 ? "（往下捲了 " + (pages - 1) + " 次，讀到最下面）" : ""), new String[]{"✓ 返回日日帳本", "繼續讀取其他發票"}, new Runnable[]{back, null});
+                showCard("✅ 已讀取 1 張發票明細", no + (pages > 1 ? "（往下捲了 " + (pages - 1) + " 次，讀到最下面）" : ""), new String[]{"✓ 返回日日帳本", "➡️ 往右滑，自動讀下一張", "繼續讀取其他發票"}, new Runnable[]{back, new Runnable() { public void run() { startPager(); } }, null});
             } });
             return;
         }
         scrollAll();
     }
+
+    /* 橫向的（ViewPager、左右滑換下一張）還是直向的捲動區 */
+    static boolean isHoriz(AccessibilityNodeInfo n) {
+        try {
+            String c = String.valueOf(n.getClassName());
+            if (c.contains("ViewPager") || c.contains("HorizontalScrollView") || c.contains("Carousel")) return true;
+            AccessibilityNodeInfo.CollectionInfo ci = n.getCollectionInfo();
+            if (ci != null && ci.getColumnCount() > 1 && ci.getRowCount() <= 1) return true;
+            boolean lr = false, ud = false;
+            for (AccessibilityNodeInfo.AccessibilityAction a : n.getActionList()) {
+                int id = a.getId();
+                if (id == android.R.id.accessibilityActionScrollLeft || id == android.R.id.accessibilityActionScrollRight) lr = true;
+                if (id == android.R.id.accessibilityActionScrollUp || id == android.R.id.accessibilityActionScrollDown) ud = true;
+            }
+            return lr && !ud;
+        } catch (Exception x) { return false; }
+    }
+    /* mode 1 = 只要直向、2 = 只要橫向 */
+    AccessibilityNodeInfo scrollerOf(AccessibilityNodeInfo n, int depth, int mode) {
+        if (n == null || depth > 60) return null; AccessibilityNodeInfo best = null; int area = 0;
+        try {
+            if (n.isScrollable() && n.isVisibleToUser() && (isHoriz(n) == (mode == 2))) { Rect r = new Rect(); n.getBoundsInScreen(r); area = r.width() * r.height(); best = n; }
+            for (int i = 0; i < n.getChildCount(); i++) {
+                AccessibilityNodeInfo c = scrollerOf(n.getChild(i), depth + 1, mode);
+                if (c != null) { Rect r = new Rect(); c.getBoundsInScreen(r); int a = r.width() * r.height(); if (a > area) { area = a; best = c; } }
+            }
+        } catch (Exception x) { }
+        return best;
+    }
+    /* 用手勢滑動（找不到可以捲的元件時，像手指滑一樣） */
+    void swipe(float x1, float y1, float x2, float y2, long ms) {
+        try { Path p = new Path(); p.moveTo(x1, y1); p.lineTo(x2, y2);
+            dispatchGesture(new GestureDescription.Builder().addStroke(new GestureDescription.StrokeDescription(p, 0, ms)).build(), null, null); } catch (Exception x) { }
+    }
+    void swipeV(boolean down) { DisplayMetrics d = getResources().getDisplayMetrics(); float x = d.widthPixels * 0.5f; if (down) swipe(x, d.heightPixels * 0.72f, x, d.heightPixels * 0.34f, 550); else swipe(x, d.heightPixels * 0.3f, x, d.heightPixels * 0.75f, 300); }
+    void swipeNext() { DisplayMetrics d = getResources().getDisplayMetrics(); float y = d.heightPixels * 0.5f; swipe(d.widthPixels * 0.85f, y, d.widthPixels * 0.12f, y, 280); }
 
     AccessibilityNodeInfo scroller(AccessibilityNodeInfo n, int depth) {
         if (n == null || depth > 60) return null; AccessibilityNodeInfo best = null; int area = 0;
