@@ -861,7 +861,7 @@ function renderFav() {
   foldBtn('fav');
 }
 function initFav() {
-  const box = $('#favList'); $('#favQ').addEventListener('input', debounce(renderFav, 150)); $('#favCats').onclick = () => openCats('place'); $('#favFold').onclick = () => foldAll('fav');
+  const box = $('#favList'); $('#favQ').addEventListener('input', debounce(renderFav, 150)); $('#favCats').onclick = () => openCats('place'); $('#favBtn').onclick = () => { buzz(15); showTab('Fav'); }; $('#favBack').onclick = () => { buzz(10); showTab('Map'); }; $('#favFold').onclick = () => foldAll('fav');
   box.addEventListener('click', e => { const b = e.target.closest('[data-a]'); if (!b) return; const a = b.dataset.a;
     if (a === 'fold') { const s = b.closest('.sec'), id = s.dataset.cat; S.fold[id] = !S.fold[id]; saveS(); s.classList.toggle('fold', !!S.fold[id]); foldBtn('fav'); return; }
     const p = DB.places.find(x => x.id === b.closest('.pl').dataset.id); if (!p) return; if (a === 'open') openPlace(p.id); else if (a === 'nav') navTo(p); else if (a === 'map') selectPlace(p.id, true); });
@@ -870,4 +870,4 @@ function initFav() {
     const idx = []; DB.places.forEach((p, i) => { if (ids.includes(p.id)) idx.push(i); }); const by = new Map(DB.places.map(p => [p.id, p])); idx.forEach((i, k) => { DB.places[i] = by.get(ids[k]); });
     DB.places.forEach((p, i) => { if (p.ord !== i) { p.ord = i; savePlace(p); } }); renderFav(); }});
 }
-function updCounts() { $('#favSub').textContent = `共 ${DB.places.length} 間收藏 · ${DB.cats.length} 個分類`; $('#recSub').textContent = `共 ${DB.recipes.length} 道食譜`; }
+function updCounts() { const fb = $('#favBadge'); if (fb) fb.textContent = DB.places.length ? (DB.places.length > 99 ? '99+' : DB.places.length) : ''; $('#favSub').textContent = `共 ${DB.places.length} 間收藏 · ${DB.cats.length} 個分類`; $('#recSub').textContent = `共 ${DB.recipes.length} 道食譜`; }

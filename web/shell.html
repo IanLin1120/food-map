@@ -3,11 +3,11 @@
   <section class="page on" id="pgMap">
     <div id="map"></div>
     <div class="mapTop">
-      <div id="mSearch" class="glass">
+      <div class="mTopRow"><div id="mSearch" class="glass">
         <input id="mQ" type="search" placeholder="搜尋店家、地址…" autocomplete="off" enterkeyhint="search">
         <button class="ic" id="mQx" aria-label="清除" style="display:none">✕</button>
         <button class="ic" id="mQgo" aria-label="搜尋">🔍</button>
-      </div>
+      </div><button id="favBtn" class="glass" aria-label="收藏"><svg viewBox="0 0 24 24"><path d="M6.5 3.5h11v17l-5.5-3.8-5.5 3.8z"/></svg><span>收藏</span><em id="favBadge"></em></button></div>
       <div id="mResults" class="card hide"></div>
       <div id="chips" class="noSel"></div>
       <div id="areaBar"><select id="arC" class="glass" aria-label="縣市"></select><select id="arT" class="glass" aria-label="鄉鎮市區"></select><button class="ic glass" id="arMe" aria-label="我所在的鄉鎮市區">📍</button><button class="ic glass hide" id="arX" aria-label="取消區域">✕</button></div>
@@ -22,7 +22,7 @@
   </section>
 
   <section class="page" id="pgFav">
-    <div class="pgHead"><div class="grow"><h1 id="favTitle">收藏分類</h1><div class="sub" id="favSub"></div></div><div class="phBtns"><button class="btn sm foldAll" id="favFold">全部收合</button><button class="btn sm" id="favCats">管理分類</button></div></div>
+    <div class="pgHead"><button class="favBack" id="favBack" aria-label="回地圖"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button><div class="grow"><h1 id="favTitle">收藏分類</h1><div class="sub" id="favSub"></div></div><div class="phBtns"><button class="btn sm foldAll" id="favFold">全部收合</button><button class="btn sm" id="favCats">管理分類</button></div></div>
     <div class="pgBody"><div class="pgInner">
       <div class="searchBox" style="margin-bottom:.9rem"><input id="favQ" type="search" placeholder="搜尋店名、地址、菜單品項…"></div>
       <div id="favList" class="noSel"></div>
@@ -59,7 +59,6 @@
 
   <nav id="tabbar">
     <button data-tab="Map" class="on"><svg viewBox="0 0 24 24"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2zM9 4v14M15 6v14"/></svg>地圖</button>
-    <button data-tab="Fav"><svg viewBox="0 0 24 24"><path d="M6 3h12v18l-6-4-6 4z"/></svg>收藏</button>
     <button data-tab="Meal"><svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 9.5h17M8 3v4M16 3v4"/><path d="M8 14.5l2.4 2.3L16 12.5"/></svg>日常</button>
     <button data-tab="Shop"><svg viewBox="0 0 24 24"><path d="M6 3h12v18l-2-1.4-2 1.4-2-1.4-2 1.4-2-1.4L6 21z"/><path d="M9 8h6M9 12h6M9 16h3"/></svg>分帳</button>
     <button data-tab="Inv"><svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7h8M8 11h8"/><path d="M8 15h2M12 15h1M15 15h1M8 17.5h1M11 17.5h2M15 17.5h1"/></svg>發票</button>

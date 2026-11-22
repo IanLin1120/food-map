@@ -18,9 +18,14 @@ const invBill = v => { if (!v.bill) return null; const L = DB.bills[v.bill.k] ||
 /* ---------- 合併一張發票（同號碼會補齊缺的資料） ---------- */
 function invPut(v) {
   if (!v || !/^[A-Z]{2}\d{8}$/.test(v.no)) return false; const o = DB.invs[v.no];
-  if (!o) { DB.invs[v.no] = Object.assign({items: [], add: Date.now()}, v); return 'new'; }
+  if (!o) {
+    /* 號碼不同但同一天、同金額，而且其中一張是截圖 AI 讀的（號碼可能認錯）→ 當成同一張，號碼以比較可靠的來源為準 */
+    const dup = v.date && +v.total ? invList().find(x => x.date === v.date && +x.total === +v.total && (x.src === 'shot') !== (v.src === 'shot')) : null;
+    if (dup) { const keep = v.src === 'shot' ? dup.no : v.no; if (keep !== dup.no) { const old = dup.no; delete DB.invs[old]; dup.no = keep; DB.invs[keep] = dup; Object.values(DB.bills || {}).forEach(L => L.forEach(b => { if (b.inv === old) b.inv = keep; })); saveBills(); }
+      const src = v.src === 'shot' ? dup.src : v.src; v = Object.assign({}, v, {no: keep}); invPut(v); DB.invs[keep].src = src; return 'dup'; }
+    DB.invs[v.no] = Object.assign({items: [], add: Date.now()}, v); return 'new'; }
   ['date', 'time', 'sellerId', 'seller', 'total'].forEach(k => { if ((o[k] == null || o[k] === '') && v[k] != null && v[k] !== '') o[k] = v[k]; });
-  if (v.items && v.items.length && (!o.items || !o.items.length || v.src === 'qr' && o.src !== 'qr' && v.items.length >= o.items.length)) o.items = v.items;
+  if (v.items && v.items.length && (!o.items || !o.items.length || v.src === 'qr' && o.src !== 'qr' && v.items.length >= o.items.length || v.src !== 'shot' && o.src === 'shot')) o.items = v.items;
   if (v.seller && (!o.seller || v.seller.length > o.seller.length && v.seller.startsWith(o.seller.replace(/…$/, '')))) o.seller = v.seller; return 'upd';
 }
 function invChanged() { saveInvs(); if (curTab === 'Inv') renderInv(); }
@@ -472,7 +477,7 @@ function invPullAcc() {
   saveScfg(); invChanged(); buzz(40); const wi = L.filter(v => v.items && v.items.length).length;
   const lastD = L.map(v => v.date).filter(Boolean).sort().pop(); if (lastD) { const d = ymdDate(lastD); Inv.ym = [d.getFullYear(), d.getMonth()]; }
   if (S.mode === 'shop' && curTab !== 'Inv') showTab('Inv'); else renderInv();
-  toast(`✅ 協助工具讀到 ${L.length} 張發票（${wi} 張有品項），新增 ${nNew} 張`, 4500);
+  toast(`✅ 協助工具讀到 ${L.length} 張發票（${wi} 張有品項），新增 ${nNew} 張${L.length - nNew ? `，${L.length - nNew} 張已經有了（不重複新增，只補上缺的資料）` : ''}`, 5000);
 }
 /* 把一頁畫面文字（每行用 tab 分欄）解析成發票：明細頁或列表頁 */
 function invParseLines(lines) {
