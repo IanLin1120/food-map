@@ -112,7 +112,7 @@ h1,h2,h3{margin:0;line-height:1.25;text-wrap:balance}
 .fab{width:2.9rem;height:2.9rem;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:.9rem;color:var(--text)}
 .fab svg{width:1.35rem;height:1.35rem;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .fab.on{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
-.fab.big{width:3.4rem;height:3.4rem;background:var(--accent);color:var(--accent-fg);border-color:var(--accent);font-size:1.6rem}
+.fab.big{width:2.9rem;height:2.9rem;background:var(--accent);color:var(--accent-fg);border-color:var(--accent);font-size:1.45rem}
 #mCard{position:absolute;left:.7rem;right:.7rem;bottom:.8rem;z-index:6;border-radius:var(--r);padding:.85rem .95rem;max-width:40rem;margin:0 auto;background:var(--surface);box-shadow:var(--shadow);border:1px solid var(--border-soft);transform:translateY(130%);transition:transform .25s cubic-bezier(.2,.8,.2,1)}
 #mCard{pointer-events:none;transform:translateY(calc(100% + 2rem))!important;visibility:hidden;transition:transform .25s,visibility 0s .25s}#mCard.on{transform:none!important;pointer-events:auto;visibility:visible;transition:transform .25s}
 #mCard h3{font-size:1.08rem}
@@ -1300,11 +1300,7 @@ body.mAcc #tabbar button:not(.accT){display:none}
 .amTip{margin:0 0 .5rem;font-size:.74rem}
 .amSecH .grip{width:1.5rem;height:1.6rem;margin-left:-.3rem}
 .amSec.dragSrc{opacity:.35}
-.amCtl{position:absolute;left:.55rem;bottom:.55rem;display:flex;flex-direction:column;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.18);z-index:3}
-.amCtl.r{left:auto;right:.55rem;gap:.4rem;background:none;box-shadow:none;overflow:visible}
-.amCtl button{width:2.35rem;height:2.35rem;border:0;background:rgba(251,246,236,.96);color:#3a2c22;font-size:1.2rem;font-weight:800;display:grid;place-items:center}
-.amCtl:not(.r) button+button{border-top:1px solid #e3d6c0}
-.amCtl.r button{border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,.18)}
-#amNorth i{font-style:normal;display:block;transform-origin:center;color:#b5533c;font-size:1rem;line-height:1}#amNorth i{rotate:-90deg}
-#amNorth.on{background:var(--accent)}#amNorth.on i{color:#fff}
-#amMe{font-size:1.25rem;color:var(--accent)}#amMe.locating{animation:amPulse 1s infinite}@keyframes amPulse{50%{opacity:.4}}
+.amFabs{position:absolute;right:.6rem;bottom:.6rem;display:flex;flex-direction:column;gap:.5rem;z-index:3}
+
+#amNorth i{display:grid;place-items:center;transform-origin:center;line-height:0}
+#amMe.locating svg{animation:spin 1.2s linear infinite}

@@ -735,7 +735,7 @@ async function accMapInit() {
     AM.map.on('error', () => {}); AM.fit = true;
     if (S.amNorth !== false) AM.map.touchZoomRotate.disableRotation();
     AM.map.on('rotate', () => { const n = $('#amNorth i'); if (n) n.style.transform = `rotate(${-AM.map.getBearing()}deg)`; });
-    $('.amMapBox').insertAdjacentHTML('beforeend', `<div class="amCtl"><button data-m="in" aria-label="放大">＋</button><button data-m="out" aria-label="縮小">－</button></div><div class="amCtl r"><button data-m="north" id="amNorth" class="${S.amNorth !== false ? 'on' : ''}" aria-label="固定朝北"><i>➤</i></button><button data-m="me" id="amMe" aria-label="目前位置">◎</button></div>`);
+    $('.amMapBox').insertAdjacentHTML('beforeend', `<div class="amFabs"><button class="fab glass" data-m="in" aria-label="放大"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button><button class="fab glass" data-m="out" aria-label="縮小"><svg viewBox="0 0 24 24"><path d="M5 12h14"/></svg></button><button class="fab glass ${S.amNorth !== false ? 'on' : ''}" data-m="north" id="amNorth" aria-label="固定朝北"><i><svg viewBox="0 0 24 24"><path d="M12 3l4 9H8z" fill="currentColor"/><path d="M12 21l-4-9h8z"/></svg></i></button><button class="fab glass" data-m="me" id="amMe" aria-label="目前位置"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg></button></div>`);
     $('.amMapBox').addEventListener('click', e => { const b = e.target.closest('[data-m]'); if (!b) return; buzz(10); const m = b.dataset.m, M2 = AM.map;
       if (m === 'in') M2.zoomIn({duration: 250}); else if (m === 'out') M2.zoomOut({duration: 250});
       else if (m === 'north') { S.amNorth = S.amNorth === false; saveS(); b.classList.toggle('on', S.amNorth); M2.easeTo({bearing: 0, pitch: 0, duration: 400}); if (S.amNorth) M2.touchZoomRotate.disableRotation(); else M2.touchZoomRotate.enableRotation(); toast(S.amNorth ? '🧭 固定朝北' : '可以用兩指旋轉地圖'); }
@@ -751,6 +751,9 @@ function accMapMarks(L) { if (!AM.map) return; AM.marks.forEach(m => m.remove())
 function accMapLocate() { if (!AM.map) return; Loc.start(); const b = $('#amMe'); b && b.classList.add('locating'); let n = 0;
   const go = () => { const L = Loc.last; if (L && Date.now() - L.t < 120000) { b && b.classList.remove('locating');
       if (!AM.me) { const e = el('<div class="meWrap"><div class="meDot"></div></div>'); AM.me = new maplibregl.Marker({element: e}).setLngLat([L.lon, L.lat]).addTo(AM.map); } else AM.me.setLngLat([L.lon, L.lat]);
+      /* 依目前位置自動選縣市、鄉鎮市區，直接顯示那一區的收藏 */
+      const tw = TW.init() && TW.townAt(L.lon, L.lat);
+      if (tw && !(AM.area && AM.area.c === tw.county && AM.area.t === tw.name)) { AM.area = {c: tw.county, t: tw.name}; AM.f = 'all'; AM.q = ''; S.amFold = S.amFold || {}; Object.keys(S.amFold).forEach(k => { S.amFold[k] = false; }); DB.cats.map(c => c.id).concat(['', '_acc']).forEach(k => { S.amFold[k] = false; }); saveS(); AM.fit = false; renderAccMap(); toast(`📍 ${tw.county} ${tw.name}`); }
       AM.map.flyTo({center: [L.lon, L.lat], zoom: Math.max(AM.map.getZoom(), 15.5), duration: 700}); return; }
     if (++n > 30 || Loc.err === 'denied' || Loc.err === 'off') { b && b.classList.remove('locating'); toast(Loc.err === 'denied' ? '請允許定位權限才能顯示你的位置' : Loc.err === 'off' ? '手機的定位功能是關閉的' : '暫時抓不到位置，請到室外或確認已開啟定位', 3500); return; }
     setTimeout(go, 500); };
