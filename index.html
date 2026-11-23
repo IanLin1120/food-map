@@ -4,7 +4,7 @@
 <script>/* 線上更新開機程式：手機上若已下載比 APK 內建更新的介面版本，就改用新版（存在 IndexedDB）。
    新版連續兩次沒有正常開啟 → 自動退回 APK 內建版本。網址加上 #builtin 也會強制使用內建版本。 */
 (function () {
-  var B = '3.15.0'; if (!window.__OTA) window.APP_BUILTIN = B;
+  var B = '3.16.0'; if (!window.__OTA) window.APP_BUILTIN = B;
   if (window.__OTA || location.hash.indexOf('builtin') >= 0) return;
   var v = null; try { v = JSON.parse(localStorage.getItem('fm.ota') || 'null'); } catch (e) {}
   function gt(a, b) { a = String(a).split('.').map(Number); b = String(b).split('.').map(Number); for (var i = 0; i < Math.max(a.length, b.length); i++) { var p = a[i] || 0, q = b[i] || 0; if (p !== q) return p > q; } return false; }
@@ -156,7 +156,7 @@ h1,h2,h3{margin:0;line-height:1.25;text-wrap:balance}
 .fab.on{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
 .fab.big{width:3.4rem;height:3.4rem;background:var(--accent);color:var(--accent-fg);border-color:var(--accent);font-size:1.6rem}
 #mCard{position:absolute;left:.7rem;right:.7rem;bottom:.8rem;z-index:6;border-radius:var(--r);padding:.85rem .95rem;max-width:40rem;margin:0 auto;background:var(--surface);box-shadow:var(--shadow);border:1px solid var(--border-soft);transform:translateY(130%);transition:transform .25s cubic-bezier(.2,.8,.2,1)}
-#mCard{pointer-events:none}#mCard.on{transform:none;pointer-events:auto}
+#mCard{pointer-events:none;transform:translateY(calc(100% + 2rem))!important;visibility:hidden;transition:transform .25s,visibility 0s .25s}#mCard.on{transform:none!important;pointer-events:auto;visibility:visible;transition:transform .25s}
 #mCard h3{font-size:1.08rem}
 #mCard .acts{display:flex;gap:.45rem;margin-top:.65rem;flex-wrap:wrap}
 #mCard .acts .btn{flex:1}
@@ -3733,7 +3733,7 @@ var qrcode = function() {
 /* ============================================================
    日日帳本 — 核心：工具、資料儲存、主題、面板、拖曳排序、圖片
    ============================================================ */
-const APP_VERSION = '3.15.0';
+const APP_VERSION = '3.16.0';
 const APP_VER = APP_VERSION;
 /* 線上更新來源（GitHub Pages）：IanLin1120/food-map */
 const GH = {repo: 'https://github.com/IanLin1120/food-map', pages: 'https://ianlin1120.github.io/food-map/'};
@@ -6872,7 +6872,7 @@ const GUIDE = {
     {t: '⑦ 匯出、備份、換機', h: phone('記帳設定', `${pc('<b>📤 匯出 CSV</b><small>消費明細・資產明細</small>')}${pc('<b>☁️ Google 雲端・pCloud</b><small>上傳／還原・選資料夾</small>')}${pc('<b>📲 快速換機</b><small>舊手機顯示 QR，新手機掃描</small>')}`, '設定', 'acc') +
       `<ul><li><b>匯出 CSV</b>：選日期區間，消費明細（含品項、分帳）或資產明細</li><li><b>雲端備份</b>：整個日日帳本＋所有圖片；pCloud 用網頁登入</li><li><b>網頁版雲端硬碟</b>：在 App 裡打開 drive.google.com 登入，上傳時備份檔自動選好，下載備份檔就自動還原，不用任何設定</li><li><b>手機內建儲存</b>、<b>快速換機 QR Code</b>：同一個 Wi-Fi 直接傳到新手機</li><li>圖片會回到原本那一筆紀錄</li></ul>`},
     {t: '⑧ 小工具、通知欄、控制中心', h: phone('桌面', `${pc('<b>📒 日日帳本　11月</b><small>本月支出 $8,420・收入 $36,000・今天 $185</small><div class="pBtns">' + pb('＋ 支出', 'pri hl') + pb('＋ 收入') + pb('⭐ 常用') + '</div>' + tap)}${pc('<b>🔔 日日帳本・快速記帳</b><small>11月 支出 $8,420・今天 $185</small>')}`, '設定', 'acc') +
-      `<ul><li><b>桌面小工具</b>：長按桌面空白處 →「小工具」→ 日日帳本，按「＋ 支出」直接打開記一筆</li><li><b>通知欄</b>：記帳 → 設定 → 快速記帳，打開「通知欄快速記帳」，通知上就有支出、收入、常用按鈕</li><li><b>控制中心</b>：下拉兩次 → 編輯（鉛筆）→ 把「記一筆」拖進去</li><li>不想讓別人看到金額：關掉「小工具和通知顯示金額」</li></ul>`}]}
+      `<ul><li><b>桌面小工具</b>：長按桌面空白處 →「小工具」→ 日日帳本，按「＋ 支出」直接打開記一筆</li><li><b>通知欄</b>：記帳 → 設定 → 快速記帳，打開「通知欄快速記帳」，通知上就有跟小工具一樣的「＋ 支出／＋ 收入／⭐ 常用」三顆按鈕</li><li><b>控制中心</b>：下拉兩次 → 編輯（鉛筆）→ 把「記一筆」和「常用記帳」拖進去</li><li>不想讓別人看到金額：關掉「小工具和通知顯示金額」</li></ul>`}]}
 };
 function openGuide(kind) {
   const G = GUIDE[kind]; let i = 0; buzz(10);
@@ -8179,9 +8179,9 @@ function renderAccCfg() {
   const box = $('#accCBody'); if (!box || !DB.acc) return; const pc = S.pc || {}, gi = (() => { try { return JSON.parse(NB.gInfo ? NB.gInfo() : '{}'); } catch (e) { return {}; } })();
   box.innerHTML = `<div class="setG"><h3>功能區</h3><div class="setC"><button class="recCard" data-a="leave"><span class="rcI">🍽️</span><span class="rcT"><b>回到日日帳本</b><small>地圖、日常、分帳、發票</small></span><span class="rcGo">切換 ›</span></button></div></div>
     ${IS_APP && NB.widgetData ? `<div class="setG"><h3>快速記帳</h3><div class="setC">
-      <button class="setR" data-a="qNotif" style="width:100%;text-align:left"><span class="gRi">🔔</span><div class="t"><b>通知欄快速記帳</b><small>通知欄常駐一則通知，按「支出／收入／常用」直接記一筆</small></div><span class="sw2 ${S.qNotif ? 'on' : ''}"></span></button>
+      <button class="setR" data-a="qNotif" style="width:100%;text-align:left"><span class="gRi">🔔</span><div class="t"><b>通知欄快速記帳</b><small>通知欄常駐三顆按鈕（＋支出／＋收入／⭐常用），跟桌面小工具一樣</small></div><span class="sw2 ${S.qNotif ? 'on' : ''}"></span></button>
       <button class="setR" data-a="wHide" style="width:100%;text-align:left"><span class="gRi">👁</span><div class="t"><b>小工具和通知顯示金額</b><small>關掉後桌面小工具、通知只顯示 $ ••••</small></div><span class="sw2 ${S.wHide ? '' : 'on'}"></span></button>
-      <div class="setR" style="cursor:default"><span class="gRi">📱</span><div class="t"><b>桌面小工具、控制中心按鈕</b><small>桌面：長按空白處 →「小工具」→ 日日帳本。控制中心：下拉兩次 → 編輯（鉛筆）→ 把「記一筆」拖進去。</small></div></div></div></div>` : ''}
+      <div class="setR" style="cursor:default"><span class="gRi">📱</span><div class="t"><b>桌面小工具、控制中心按鈕</b><small>桌面：長按空白處 →「小工具」→ 日日帳本。控制中心：下拉兩次 → 編輯（鉛筆）→ 把「記一筆」「常用記帳」拖進去。</small></div></div></div></div>` : ''}
     <div class="setG"><h3>說明</h3><div class="setC"><button class="setR" data-a="guide" style="width:100%;text-align:left"><span class="gRi">📖</span><div class="t"><b>記帳 圖解說明</b><small>記一筆、常用、欠款對帳、資產、分析、備份換機</small></div><span class="chev">›</span></button></div></div>
     <div class="setG"><h3>分帳的人</h3><div class="setC"><div class="setR col"><div class="t"><b>我是誰</b><small>分帳、對帳時「我」是哪一個人（和日常點餐共用名單）</small></div><div class="whoRow">${DB.mcfg.people.map(u => `<button data-me="${u.id}" class="${accMe() === u.id ? 'on' : ''}">${esc(u.icon)} ${esc(u.name)}</button>`).join('')}</div></div></div></div>
     <div class="setG"><h3>分類</h3><div class="setC">
