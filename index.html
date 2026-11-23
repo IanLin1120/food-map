@@ -4,7 +4,7 @@
 <script>/* 線上更新開機程式：手機上若已下載比 APK 內建更新的介面版本，就改用新版（存在 IndexedDB）。
    新版連續兩次沒有正常開啟 → 自動退回 APK 內建版本。網址加上 #builtin 也會強制使用內建版本。 */
 (function () {
-  var B = '3.13.0'; if (!window.__OTA) window.APP_BUILTIN = B;
+  var B = '3.14.0'; if (!window.__OTA) window.APP_BUILTIN = B;
   if (window.__OTA || location.hash.indexOf('builtin') >= 0) return;
   var v = null; try { v = JSON.parse(localStorage.getItem('fm.ota') || 'null'); } catch (e) {}
   function gt(a, b) { a = String(a).split('.').map(Number); b = String(b).split('.').map(Number); for (var i = 0; i < Math.max(a.length, b.length); i++) { var p = a[i] || 0, q = b[i] || 0; if (p !== q) return p > q; } return false; }
@@ -1267,6 +1267,28 @@ body.mAcc #tabbar button:not(.accT){display:none}
 .acLogL .acIt{display:flex;align-items:center;gap:.5rem;font-size:.85rem}
 .dlg .dlgT{display:block;font-size:1.02rem;margin-bottom:.4rem;color:#a8472f}
 .gwBox{margin-top:.6rem;padding:.6rem .65rem;border-radius:6px;border:1px dashed var(--border);display:flex;flex-direction:column;gap:.3rem}.gwBox small{color:var(--muted);font-size:.76rem;line-height:1.5}
+/* ===== 滿版圖示：圖案填滿整個方塊，不留白邊 ===== */
+.acR .acI{width:2.8rem;height:2.8rem;border-radius:10px;border:0;font-size:2rem;line-height:1;overflow:hidden;background:linear-gradient(145deg,color-mix(in srgb,var(--accent) 22%,var(--surface)),color-mix(in srgb,var(--accent) 38%,var(--surface)))}
+.acR .acI.tr{background:linear-gradient(145deg,color-mix(in srgb,#5d7f86 26%,var(--surface)),color-mix(in srgb,#5d7f86 42%,var(--surface)))}
+.acR .acI.loss{background:linear-gradient(145deg,color-mix(in srgb,#7a4a8a 24%,var(--surface)),color-mix(in srgb,#7a4a8a 40%,var(--surface)))}
+.acR .acI:has(.aMono){background:none}.acR .acI .aMono{width:100%;height:100%;border-radius:10px;font-size:.95rem;min-width:0}
+.acR .acI img,.asI img{width:100%;height:100%;object-fit:cover;border-radius:inherit}
+.acCats button{padding:.4rem .2rem .45rem}
+.acCats button i{display:grid;place-items:center;width:2.7rem;height:2.7rem;border-radius:10px;font-size:1.95rem;line-height:1;overflow:hidden;background:linear-gradient(145deg,color-mix(in srgb,var(--accent) 16%,var(--surface)),color-mix(in srgb,var(--accent) 30%,var(--surface)))}
+.acCats button.on i{background:linear-gradient(145deg,color-mix(in srgb,var(--accent) 42%,var(--surface)),color-mix(in srgb,var(--accent) 62%,var(--surface)))}
+.asI{border-radius:10px;overflow:hidden;font-size:1.9rem!important;line-height:1}
+.asI .aMono,.niIc .aMono,.icCur>span .aMono{border-radius:10px;padding:0;letter-spacing:-.04em}
+.asI .aMono{font-size:1.08rem}.asI .aMono.sm{font-size:.8rem}
+.aMono{padding:0 .08em}
+.acAccts .aMono{font-size:.74rem;min-width:1.9em;height:1.9em;border-radius:6px}.acAccts .aMono.sm{font-size:.6rem}
+.icG.mono .aMono{width:100%;height:auto;aspect-ratio:1;font-size:.95rem;border-radius:9px}.icG.mono .aMono.sm{font-size:.72rem}.icG.mono button{padding:0;overflow:hidden}
+/* 底部分頁：圖示放在填滿的方塊裡，選到的是實心方塊 */
+#tabbar button{gap:.2rem}
+#tabbar svg{box-sizing:content-box;width:1.35rem;height:1.35rem;padding:.28rem .7rem;border-radius:8px;background:color-mix(in srgb,var(--accent) 9%,transparent);stroke-width:2}
+#tabbar button.on svg{background:var(--accent);color:#fff;stroke:#fff}
+#tabbar button.on::before{display:none}
+.asI{width:2.6rem;height:2.6rem;border:0;background:linear-gradient(145deg,color-mix(in srgb,var(--accent) 16%,var(--surface)),color-mix(in srgb,var(--accent) 30%,var(--surface)))}
+.asI .aMono{width:100%;height:100%}.asI .aLogo{width:100%;height:100%;border-radius:0}
 </style>
 </head>
 <body>
@@ -3733,7 +3755,7 @@ var qrcode = function() {
 /* ============================================================
    日日帳本 — 核心：工具、資料儲存、主題、面板、拖曳排序、圖片
    ============================================================ */
-const APP_VERSION = '3.13.0';
+const APP_VERSION = '3.14.0';
 const APP_VER = APP_VERSION;
 /* 線上更新來源（GitHub Pages）：IanLin1120/food-map */
 const GH = {repo: 'https://github.com/IanLin1120/food-map', pages: 'https://ianlin1120.github.io/food-map/'};
@@ -6847,11 +6869,11 @@ const GUIDE = {
       `<ul><li>第一次：發票區按 <b>🤖 協助工具</b> →「⚙️ 協助工具設定」→ 開啟「日日帳本 發票讀取」</li><li>之後按 🤖 協助工具會<b>自動打開發票 App</b>（優先發票載具，也支援發票大師、發票存摺），畫面上有一顆圓形按鈕 🧾（可以拖曳）</li><li><b>按一下</b>：明細頁會上下捲到底讀完這一張；列表頁自動捲到底讀全部，讀完可以選「🔁 也讀取每張明細」</li><li>發票存摺這種左右滑換發票的：讀完一張會問「➡️ 往右滑，讀下一張」，也可以選之後全部自動讀</li><li><b>長按</b>：取消偵測並關閉按鈕；讀完按「✓ 返回日日帳本」就會存進發票區</li></ul>${tip('只有按 🧾 時才會讀取畫面上的文字，讀到的內容只存在這支手機裡。')}`},
     {t: '⑤ 月曆和搜尋', h: phone('發票', `<div class="pCal">${Array.from({length: 14}, (_, i) => `<i class="${i === 10 ? 'on' : ''}">${i + 10}${[7, 8, 10].includes(i) ? '<em></em>' : ''}</i>`).join('')}</div><div class="pc" style="border-color:var(--accent)"><b>2026/11/20(五) 的發票（1 張）</b><small>顯示整個月</small></div>${pc('<b>月光拉麵 星河店</b><small>🐼 Foodpanda・XY-20481357　$435</small>')}`, '發票', 'shop') +
       `<ul><li>月曆上有紅點和張數的日子代表有發票，<b>點日期只看那天</b>；再點一次或按「顯示整個月」恢復</li><li><b>🔍 搜尋</b>：店家、品項或發票號碼</li><li><b>📥 其他匯入</b>：財政部「載具消費明細」CSV、App 內讀取財政部網站（實驗性）</li></ul>`},
-    {t: '⑥ 修改發票明細', h: phone('🧾 發票明細', `${pc('<b>XY-20481357 ✎</b><small>2026/11/20(五) ✎　19:40 ✎</small>')}${pc('<b>消費店家</b><small class="hl">🔍 星河 → 便利商店 星河二店</small>' + tap)}${pc(`<b>購物方式</b><div class="pWho"><i>🏬 實體店</i><i class="on">🐼 Foodpanda</i></div>`)}${pc(pRow('豚骨拉麵', '$278') + pRow('味噌拉麵', '$208'))}`, '發票', 'shop') +
+    {t: '⑥ 修改發票明細', h: phone('🧾 發票明細', `${pc('<b>XY-20481357 ✎</b><small>2026/11/20(五) ✎　19:40 ✎</small>')}${pc('<b>消費店家</b><small class="hl">🔍 星河 → 便利商店 星河二店</small>' + tap)}${pc(`<b>購物方式</b><div class="pWho"><i>🏬 實體店</i><i class="on">🐼 Foodpanda</i></div>`)}${pc(pRow('豚骨拉麵', '$245') + pRow('味噌拉麵', '$190'))}`, '發票', 'shop') +
       `<ul><li>點<b>發票號碼、日期、時間、店家、統編、金額</b>都可以改</li><li>改店家時輸入關鍵字（不用是開頭）就會列出以前用過的店名讓你點</li><li>可以選<b>購物方式</b>；品項點一下改品名、單價、數量、小計，或按「＋ 品項」新增</li></ul>`},
     {t: '⑦ 折扣：金額、組合價、打折', h: phone('新增折扣', `<div class="pSeg"><i>折扣金額</i><i class="on hl">組合價</i><i>打折</i></div>${pc('<b>組合優惠</b><small>組合價 $49</small>')}${pc('<b>☑ 罐裝拿鐵 $35</b><b>☑ 罐裝拿鐵 $35</b><small class="g">原價 $70 → 組合價 折扣 -$21</small>')}`, '發票', 'shop') +
       `<ul><li><b>折扣金額</b>：例如鮮食促 -21，直接填折掉多少</li><li><b>組合價</b>：例如任選 2 件 $49，勾 2 件填 49，自動算出折了多少</li><li><b>打折</b>：例如 8 折、6.5 折，勾選的品項乘上折數</li><li>勾好幾項會平均分；發票會自動驗算扣完折扣是否等於消費金額</li></ul>`},
-    {t: '⑧ 拿去分帳', h: phone('🧾 發票明細', `${pc(pRow('消費金額', '$486', 'tot') + '<div class="pOk">✅ 品項扣掉折扣後合計和消費金額一致</div>')}<div class="pBtns">${pb('刪除')}${pb('🧾 拿去分帳', 'pri wide hl') + tap}</div>${pc('<b>✓ 已拿去分帳</b><small>2026/11/20(五) 月光拉麵　打開 ›</small>')}`, '發票', 'shop') +
+    {t: '⑧ 拿去分帳', h: phone('🧾 發票明細', `${pc(pRow('消費金額', '$435', 'tot') + '<div class="pOk">✅ 品項扣掉折扣後合計和消費金額一致</div>')}<div class="pBtns">${pb('刪除')}${pb('🧾 拿去分帳', 'pri wide hl') + tap}</div>${pc('<b>✓ 已拿去分帳</b><small>2026/11/20(五) 月光拉麵　打開 ›</small>')}`, '發票', 'shop') +
       `<ul><li>按 <b>🧾 拿去分帳</b>，會在發票日期建立一筆分帳，品項、折扣（含勾選的品項）、購物方式都會帶過去</li><li>接著選每一項是誰付的就完成了</li><li>已分帳的發票會標示「✓ 已分帳」，點一下直接打開那筆分帳</li><li>反過來：發票明細最下面「📥 用購物明細的內容取代」，可以把分帳裡比較完整的品項、折扣、整單折扣、費用套用到這張發票</li></ul>`}]},
   acc: {title: '💰 記帳 使用說明', steps: [
     {t: '記帳區可以做什麼？', h: `<div class="gHero"><div class="gIcon">${APP_ICON}</div><b>收支・資產・分帳欠款・對帳</b></div>
@@ -8154,6 +8176,10 @@ function optCfg() {
 }
 
 /* ---------- ④ 設定 ---------- */
+function gwManual() { const sh = sheet({title: '🖥️ 電腦版雲端硬碟'}); sh.body.innerHTML = `<p style="color:var(--muted);font-size:.85rem;line-height:1.6;margin:0 0 .7rem">自動上傳不能用時，改開電腦版的雲端硬碟網頁，可以用手指放大縮小。</p>
+  <button class="card setR" data-m="up" style="width:100%;text-align:left;margin-bottom:.5rem"><span class="gRi">⬆️</span><div class="t"><b>上傳備份</b><small>按左上角「＋ 新增 → 檔案上傳」，備份檔會自動選好</small></div><span class="chev">›</span></button>
+  <button class="card setR" data-m="down" style="width:100%;text-align:left"><span class="gRi">⬇️</span><div class="t"><b>下載備份還原</b><small>找到備份檔，按「⋮ → 下載」就會自動還原</small></div><span class="chev">›</span></button>`;
+  sh.body.onclick = e => { const t = e.target.closest('[data-m]'); if (!t) return; buzz(8); sh.close(); gDriveWeb(t.dataset.m, true); }; }
 function renderAccCfg() {
   const box = $('#accCBody'); if (!box || !DB.acc) return; const pc = S.pc || {}, gi = (() => { try { return JSON.parse(NB.gInfo ? NB.gInfo() : '{}'); } catch (e) { return {}; } })();
   box.innerHTML = `<div class="setG"><h3>功能區</h3><div class="setC"><button class="recCard" data-a="leave"><span class="rcI">🍽️</span><span class="rcT"><b>回到日日帳本</b><small>地圖、日常、分帳、發票</small></span><span class="rcGo">切換 ›</span></button></div></div>
@@ -8170,7 +8196,7 @@ function renderAccCfg() {
     <div class="setG"><h3>匯出</h3><div class="setC"><button class="setR" data-a="csv" style="width:100%;text-align:left"><span class="gRi">📤</span><div class="t"><b>匯出 CSV</b><small>選日期區間：所有消費明細（含品項、分帳），以及資產明細</small></div><span class="chev">›</span></button></div></div>
     <div class="setG"><h3>備份與換機（整個日日帳本＋所有圖片）</h3><div class="setC">
       <div class="setR col"><div class="t"><b>☁️ Google 雲端硬碟</b><small>${(S.gd || {}).email || gi.email ? '帳戶：' + esc((S.gd || {}).email || gi.email) : '還沒登入（可以用瀏覽器登入，支援兩步驟驗證）'}・資料夾：${esc((S.gd || {}).folder || '日日帳本備份')}${S.gd && S.gd.last ? '・上次備份 ' + new Date(S.gd.last).toLocaleString('zh-TW') : ''}</small></div>
-        <div class="acRow2"><button class="btn pri" data-a="gUp">⬆️ 上傳備份</button><button class="btn" data-a="gDown">⬇️ 從雲端還原</button></div><div class="acRow2"><button class="btn sm" data-a="gFolder">📁 選擇資料夾</button>${gi.email || (S.gd || {}).rt ? '<button class="btn sm" data-a="gOut">換帳戶／登出</button>' : '<button class="btn sm" data-a="gIn">🌐 登入 Google</button>'}</div><div class="gwBox"><b>🌐 網頁版雲端硬碟（免設定）</b><small>在 App 裡打開 drive.google.com，跟用瀏覽器一樣登入。上傳時備份檔會自動選好；還原時在網頁上下載備份檔就會自動還原。</small><div class="acRow2"><button class="btn" data-a="gwUp">⬆️ 網頁上傳</button><button class="btn" data-a="gwDown">⬇️ 網頁下載還原</button></div></div></div>
+        <div class="acRow2"><button class="btn pri" data-a="gUp">⬆️ 上傳備份</button><button class="btn" data-a="gDown">⬇️ 從雲端還原</button></div><div class="acRow2"><button class="btn sm" data-a="gFolder">📁 選擇資料夾</button>${gi.email || (S.gd || {}).rt ? '<button class="btn sm" data-a="gOut">換帳戶／登出</button>' : '<button class="btn sm" data-a="gIn">🌐 登入 Google</button>'}</div><div class="gwBox"><b>🌐 網頁版雲端硬碟（免設定）</b><small>在 App 裡打開 drive.google.com，跟用瀏覽器一樣登入。登入後會自動建立「日日帳本備份」資料夾並上傳；還原時列出資料夾裡的備份讓你選。${S.gd && S.gd.wEmail ? '<br>已登入：' + esc(S.gd.wEmail) : ''}</small><div class="acRow2"><button class="btn" data-a="gwUp">⬆️ 上傳備份</button><button class="btn" data-a="gwDown">⬇️ 從雲端還原</button></div><button class="btn sm" data-a="gwMan" style="margin-top:.3rem">🖥️ 開電腦版網頁自己上傳／下載</button></div></div>
       <div class="setR col"><div class="t"><b>☁️ pCloud</b><small>${pc.auth ? '帳戶：' + esc(pc.email || '') + '・資料夾：' + esc((pc.folder || {}).path || '/日日帳本備份') + (pc.last ? '・上次備份 ' + new Date(pc.last).toLocaleString('zh-TW') : '') : '還沒登入（可以用 pCloud 網頁登入，支援 Google 登入、兩步驟驗證）'}</small></div>
         <div class="acRow2"><button class="btn pri" data-a="pUp">⬆️ 上傳備份</button><button class="btn" data-a="pDown">⬇️ 從雲端還原</button></div><div class="acRow2"><button class="btn sm" data-a="pFolder">📁 選擇資料夾</button>${pc.auth ? '<button class="btn sm" data-a="pOut">登出 pCloud</button>' : '<button class="btn sm" data-a="pIn">🌐 登入 pCloud</button>'}</div></div>
       <div class="setR col"><div class="t"><b>📱 手機內建儲存</b><small>把整個日日帳本存成一個備份檔放在手機的「下載」資料夾，或從備份檔還原</small></div>
@@ -8184,7 +8210,7 @@ async function accCfgClick(e) {
   if (t.dataset.me) { DB.acc.me = t.dataset.me; saveAcc(); renderAccCfg(); return; }
   if (a === 'leave') leaveAcc(); else if (a === 'guide') openGuide('acc'); else if (a === 'cats') editCatTree(t.dataset.ty); else if (a === 'opt') optCfg(); else if (a === 'payees') managePayees(); else if (a === 'accts') enterAcc('AccA'); else if (a === 'tpls') manageTpls(); else if (a === 'csv') accCsv();
   else if (a === 'gFolder') gPickFolder(); else if (a === 'pFolder') pPickFolder(); else if (a === 'pIn') pLogin(); else if (a === 'lUp') localBackup(); else if (a === 'lDown') localRestore(); else if (a === 'xSend') xferSend(); else if (a === 'xRecv') xferRecv();
-  else if (a === 'gwUp') gDriveWeb('up'); else if (a === 'gwDown') gDriveWeb('down');
+  else if (a === 'gwUp') gDriveWeb('up'); else if (a === 'gwDown') gDriveWeb('down'); else if (a === 'gwMan') gwManual();
   else if (a === 'gUp') cloudUp('g'); else if (a === 'gDown') cloudDown('g'); else if (a === 'pUp') cloudUp('p'); else if (a === 'pDown') cloudDown('p');
   else if (a === 'gIn') gChooseLogin().then(() => renderAccCfg()); else if (a === 'gOut') { if (NB.gSignOut) NB.gSignOut(); S.gd = {cid: (S.gd || {}).cid, csec: (S.gd || {}).csec}; saveS(); renderAccCfg(); } else if (a === 'pOut') { S.pc = {}; saveS(); renderAccCfg(); }
 }
@@ -8453,26 +8479,72 @@ async function cloudDown(kind) {
   } catch (e) { busy(false); cloudErr(kind, e); }
 }
 
-/* ---------- Google 雲端硬碟網頁版：在 App 裡打開 drive.google.com，像瀏覽器一樣登入，不用設定任何用戶端 ---------- */
-async function gDriveWeb(mode) {
+/* ---------- Google 雲端硬碟網頁版：在 App 裡打開 drive.google.com，像瀏覽器一樣登入，不用設定任何用戶端 ----------
+   登入後用網頁的登入狀態直接呼叫雲端硬碟：自動建立「日日帳本備份」資料夾、上傳或列出備份；
+   如果 Google 不讓這樣用，就改開電腦版網頁，用「新增 → 檔案上傳」手動上傳（備份檔會自動選好）。 */
+const GDW_FOLDER = '日日帳本備份', GDW_BASES = ['https://clients6.google.com', 'https://content.googleapis.com', 'https://www.googleapis.com'];
+let gdwSeq = 0; const gdwCb = {};
+window.__gdApi = (id, r) => { const f = gdwCb[id]; delete gdwCb[id]; if (f) f(r); };
+const gdwCall = (method, url, body, upFile, outFile) => new Promise(res => { const id = 'g' + (++gdwSeq); gdwCb[id] = res; NB.gdCall(id, method, url, '', body ? JSON.stringify(body) : '', upFile || '', outFile || ''); });
+/* 找出能用的金鑰和網址，記起來下次直接用 */
+async function gdwProbe(keys) {
+  const tries = []; if (S.gd && S.gd.wk) tries.push([S.gd.wb, S.gd.wk]); keys.forEach(k => GDW_BASES.forEach(b => tries.push([b, k])));
+  let last = '';
+  for (const [b, k] of tries) { const r = await gdwCall('GET', `${b}/drive/v3/about?fields=user(displayName,emailAddress)&key=${k}`);
+    if (r.status === 200) { S.gd = Object.assign(S.gd || {}, {wb: b, wk: k}); try { const u = JSON.parse(r.body).user || {}; S.gd.wEmail = u.emailAddress || u.displayName || ''; } catch (e) { } saveS(); return true; }
+    last = `${r.status} ${String(r.body || '').slice(0, 120)}`; }
+  console.log('[gdw] probe failed', last); return false;
+}
+async function gdwFolder() { const {wb, wk} = S.gd, q = encodeURIComponent(`name='${GDW_FOLDER}' and mimeType='application/vnd.google-apps.folder' and trashed=false`);
+  const r = await gdwCall('GET', `${wb}/drive/v3/files?q=${q}&fields=files(id,name)&key=${wk}`); if (r.status !== 200) throw new Error('讀取資料夾失敗 ' + r.status);
+  const f = (JSON.parse(r.body).files || [])[0]; if (f) return f.id;
+  const c = await gdwCall('POST', `${wb}/drive/v3/files?fields=id&key=${wk}`, {name: GDW_FOLDER, mimeType: 'application/vnd.google-apps.folder'}); if (c.status !== 200) throw new Error('建立資料夾失敗 ' + c.status);
+  return JSON.parse(c.body).id; }
+async function gdwPack() { busy('打包資料和圖片…'); const blob = await makeBackupBlob(), CH = 768 * 1024, name = backupName();
+  for (let off = 0, first = true; off < blob.size; off += CH, first = false) { busy(`準備備份檔…${Math.round(off / blob.size * 100)}%`); if (!NB.tmpWrite(name, await blobB64(blob.slice(off, off + CH)), !first)) throw new Error('寫入暫存檔失敗'); }
+  busy(false); return name; }
+async function gdwRestoreFile(fname, size) {
+  const CH = 768 * 1024, parts = []; for (let off = 0; off < size; off += CH) { busy(`讀取備份…${Math.round(off / size * 100)}%`); const b = atob(NB.tmpRead(fname, off, CH)), u = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); parts.push(u); }
+  let j; try { j = JSON.parse(await new Blob(parts).text()); } catch (e) { j = null; } busy(false);
+  if (!j || !j.places) { await alertBox('這個檔案不是日日帳本的備份檔，請選檔名是「日日帳本備份_日期.json」的檔案。'); return; }
+  if (!await ask(`下載好了（${(size / 1048576).toFixed(1)} MB${j.acc ? '、' + (j.acc.recs || []).length + ' 筆記帳' : ''}）。用它取代這台手機上的所有資料嗎？`, '還原', true)) return;
+  busy('還原中…'); await applyBackup(j); busy(false); toast('✅ 還原完成，重新開啟中…', 2000); setTimeout(() => location.reload(), 900); }
+/* 登入完成後：自動建立資料夾，上傳或選一個備份還原 */
+async function gdwRun(mode, keys) {
+  busy('連線 Google 雲端硬碟…');
+  if (!await gdwProbe(keys)) { busy(false); return false; }
+  try { const fid = await gdwFolder(), {wb, wk} = S.gd;
+    if (mode === 'up') { const name = await gdwPack(); busy('上傳到 Google 雲端硬碟…');
+      const r = await gdwCall('POST', `${wb}/upload/drive/v3/files?uploadType=multipart&fields=id,name,size&key=${wk}`, {name, parents: [fid], mimeType: 'application/json'}, name); busy(false);
+      if (r.status !== 200) throw new Error('上傳失敗 ' + r.status); S.gd.webLast = Date.now(); saveS(); buzz(40);
+      await alertBox(`✅ 已上傳到 Google 雲端硬碟「${GDW_FOLDER}」資料夾\n${name}${S.gd.wEmail ? '\n帳號：' + S.gd.wEmail : ''}`); return true; }
+    const q = encodeURIComponent(`'${fid}' in parents and trashed=false`), r = await gdwCall('GET', `${wb}/drive/v3/files?q=${q}&orderBy=modifiedTime desc&pageSize=30&fields=files(id,name,size,modifiedTime)&key=${wk}`); busy(false);
+    if (r.status !== 200) throw new Error('列出備份失敗 ' + r.status);
+    const L = (JSON.parse(r.body).files || []).filter(f => /\.json$/i.test(f.name)); if (!L.length) { await alertBox(`Google 雲端硬碟的「${GDW_FOLDER}」資料夾裡還沒有備份檔。`); return true; }
+    const pick = await new Promise(res => { let done = false; const sh = sheet({title: '選擇要還原的備份', onClose() { if (!done) res(null); }});
+      sh.body.innerHTML = L.map((f, i) => `<button class="card setR" data-i="${i}" style="width:100%;text-align:left;margin-bottom:.5rem"><span class="gRi">📦</span><div class="t"><b>${esc(f.name)}</b><small>${new Date(f.modifiedTime).toLocaleString('zh-TW')}・${(f.size / 1048576).toFixed(1)} MB</small></div><span class="chev">›</span></button>`).join('');
+      sh.body.onclick = e => { const t = e.target.closest('[data-i]'); if (!t) return; buzz(8); done = true; sh.close(); res(L[+t.dataset.i]); }; });
+    if (!pick) return true;
+    busy('從 Google 雲端下載備份…'); const d = await gdwCall('GET', `${wb}/drive/v3/files/${pick.id}?alt=media&key=${wk}`, null, '', 'gd_in.json'); busy(false);
+    if (d.status !== 200) throw new Error('下載失敗 ' + d.status); await gdwRestoreFile('gd_in.json', d.size); return true;
+  } catch (e) { busy(false); toast('❌ ' + e.message, 6000); return true; }
+}
+async function gDriveWeb(mode, manual) {
   if (!(IS_APP && NB.gdWeb)) { window.open('https://drive.google.com/drive/my-drive', '_blank'); return; }
+  const auto = !!NB.gdCall && !manual;
   let name = '';
-  if (mode === 'up') { try { busy('打包資料和圖片…'); const blob = await makeBackupBlob(), CH = 768 * 1024; name = backupName();
-      for (let off = 0, first = true; off < blob.size; off += CH, first = false) { busy(`準備備份檔…${Math.round(off / blob.size * 100)}%`); if (!NB.tmpWrite(name, await blobB64(blob.slice(off, off + CH)), !first)) throw new Error('寫入暫存檔失敗'); }
-      busy(false); } catch (e) { busy(false); toast('❌ ' + e.message, 5000); return; } }
+  if (!auto && mode === 'up') { try { name = await gdwPack(); } catch (e) { busy(false); toast('❌ ' + e.message, 5000); return; } }
   window.__gdWeb = async m => {
+    if (m.login && auto) { NB.pcWebClose(); const ok = await gdwRun(mode, m.keys || []); if (!ok) { await alertBox('Google 不允許直接自動上傳到這個帳號。改用電腦版網頁：' + (mode === 'up' ? '按左上角「＋ 新增 → 檔案上傳」，備份檔會自動選好。' : '找到備份檔，按右鍵選單或「⋮ → 下載」就會自動還原。')); gDriveWeb(mode, true); } return; }
     if (m.picked) { buzz(30); toast('✅ 已自動選好備份檔，等它上傳完成再按「✕ 關閉」', 5000); return; }
     if (m.dl === 'start') { busy('從 Google 雲端下載備份…'); return; }
     if (m.dl === 'err') { busy(false); toast('❌ 下載失敗：' + (m.msg || ''), 6000); return; }
-    if (m.dl === 'ok') { NB.pcWebClose(); try { const CH = 768 * 1024, parts = []; for (let off = 0; off < m.size; off += CH) { busy(`讀取備份…${Math.round(off / m.size * 100)}%`); const b = atob(NB.tmpRead('gd_in.json', off, CH)), u = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); parts.push(u); }
-        let j; try { j = JSON.parse(await new Blob(parts).text()); } catch (e) { j = null; } busy(false);
-        if (!j || !j.places) { await alertBox('這個檔案不是日日帳本的備份檔，請選檔名是「日日帳本備份_日期.json」的檔案。'); return; }
-        if (!await ask(`下載好了（${(m.size / 1048576).toFixed(1)} MB${j.acc ? '、' + (j.acc.recs || []).length + ' 筆記帳' : ''}）。用它取代這台手機上的所有資料嗎？`, '還原', true)) return;
-        busy('還原中…'); await applyBackup(j); busy(false); toast('✅ 還原完成，重新開啟中…', 2000); setTimeout(() => location.reload(), 900);
-      } catch (e) { busy(false); toast('❌ ' + e.message, 5000); } }
-    if (m.cancel && mode === 'up') { S.gd = Object.assign(S.gd || {}, {webLast: Date.now()}); saveS(); }
+    if (m.dl === 'ok') { NB.pcWebClose(); try { await gdwRestoreFile('gd_in.json', m.size); } catch (e) { busy(false); toast('❌ ' + e.message, 5000); } }
   };
-  NB.gdWeb(name, mode === 'up' ? '登入後按「＋ 新增 → 檔案上傳」，備份檔會自動選好' : '登入後找到備份檔，按「⋮ → 下載」就會自動還原');
+  if (auto && NB.gdLogin && NB.gdLogin() && S.gd && S.gd.wk) { const ok = await gdwRun(mode, []); if (ok) return; }
+  if (auto) NB.gdWeb2('', '登入 Google 帳號，登入完成會自動建立「日日帳本備份」資料夾並' + (mode === 'up' ? '上傳' : '列出備份'), false, true);
+  else if (NB.gdWeb2) NB.gdWeb2(name, mode === 'up' ? '電腦版畫面：按左上角「＋ 新增 → 檔案上傳」，備份檔會自動選好' : '找到備份檔，按「⋮ → 下載」就會自動還原', true, false);
+  else NB.gdWeb(name, mode === 'up' ? '登入後按「＋ 新增 → 檔案上傳」，備份檔會自動選好' : '登入後找到備份檔，按「⋮ → 下載」就會自動還原');
 }
 
 /* ---------- 手機內建儲存：完整備份／還原 ---------- */
