@@ -1296,3 +1296,15 @@ body.mAcc #tabbar button:not(.accT){display:none}
 .amPin span{background:var(--c,#fff)!important;border-color:#fff!important}
 .amPin.sel{z-index:5}.amPin.sel span{width:2.5rem;height:2.5rem;font-size:1.5rem}.amPin.sel b{background:var(--accent);color:#fff;font-size:.78rem;max-width:10rem}
 .amChips .chip.on{background:var(--c,var(--accent));border-color:var(--c,var(--accent));color:#fff}.amChips .chip.on .n{color:rgba(255,255,255,.85)}
+.amBar{display:flex;gap:.45rem;align-items:center;margin-bottom:.35rem}.amBar .amQ{flex:1;margin:0}.amFoldAll{flex:none;white-space:nowrap;border-radius:6px}
+.amTip{margin:0 0 .5rem;font-size:.74rem}
+.amSecH .grip{width:1.5rem;height:1.6rem;margin-left:-.3rem}
+.amSec.dragSrc{opacity:.35}
+.amCtl{position:absolute;left:.55rem;bottom:.55rem;display:flex;flex-direction:column;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.18);z-index:3}
+.amCtl.r{left:auto;right:.55rem;gap:.4rem;background:none;box-shadow:none;overflow:visible}
+.amCtl button{width:2.35rem;height:2.35rem;border:0;background:rgba(251,246,236,.96);color:#3a2c22;font-size:1.2rem;font-weight:800;display:grid;place-items:center}
+.amCtl:not(.r) button+button{border-top:1px solid #e3d6c0}
+.amCtl.r button{border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,.18)}
+#amNorth i{font-style:normal;display:block;transform-origin:center;color:#b5533c;font-size:1rem;line-height:1}#amNorth i{rotate:-90deg}
+#amNorth.on{background:var(--accent)}#amNorth.on i{color:#fff}
+#amMe{font-size:1.25rem;color:var(--accent)}#amMe.locating{animation:amPulse 1s infinite}@keyframes amPulse{50%{opacity:.4}}
