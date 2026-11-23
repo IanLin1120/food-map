@@ -1304,3 +1304,4 @@ body.mAcc #tabbar button:not(.accT){display:none}
 
 #amNorth i{display:grid;place-items:center;transform-origin:center;line-height:0}
 #amMe.locating svg{animation:spin 1.2s linear infinite}
+.amFabs.l{right:auto;left:.6rem}
