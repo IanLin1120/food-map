@@ -4,7 +4,7 @@
 <script>/* 線上更新開機程式：手機上若已下載比 APK 內建更新的介面版本，就改用新版（存在 IndexedDB）。
    新版連續兩次沒有正常開啟 → 自動退回 APK 內建版本。網址加上 #builtin 也會強制使用內建版本。 */
 (function () {
-  var B = '3.20.0'; if (!window.__OTA) window.APP_BUILTIN = B;
+  var B = '3.21.0'; if (!window.__OTA) window.APP_BUILTIN = B;
   if (window.__OTA || location.hash.indexOf('builtin') >= 0) return;
   var v = null; try { v = JSON.parse(localStorage.getItem('fm.ota') || 'null'); } catch (e) {}
   function gt(a, b) { a = String(a).split('.').map(Number); b = String(b).split('.').map(Number); for (var i = 0; i < Math.max(a.length, b.length); i++) { var p = a[i] || 0, q = b[i] || 0; if (p !== q) return p > q; } return false; }
@@ -1338,6 +1338,18 @@ body.mAcc #tabbar button:not(.accT){display:none}
 .amPin span{background:var(--c,#fff)!important;border-color:#fff!important}
 .amPin.sel{z-index:5}.amPin.sel span{width:2.5rem;height:2.5rem;font-size:1.5rem}.amPin.sel b{background:var(--accent);color:#fff;font-size:.78rem;max-width:10rem}
 .amChips .chip.on{background:var(--c,var(--accent));border-color:var(--c,var(--accent));color:#fff}.amChips .chip.on .n{color:rgba(255,255,255,.85)}
+.amBar{display:flex;gap:.45rem;align-items:center;margin-bottom:.35rem}.amBar .amQ{flex:1;margin:0}.amFoldAll{flex:none;white-space:nowrap;border-radius:6px}
+.amTip{margin:0 0 .5rem;font-size:.74rem}
+.amSecH .grip{width:1.5rem;height:1.6rem;margin-left:-.3rem}
+.amSec.dragSrc{opacity:.35}
+.amCtl{position:absolute;left:.55rem;bottom:.55rem;display:flex;flex-direction:column;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.18);z-index:3}
+.amCtl.r{left:auto;right:.55rem;gap:.4rem;background:none;box-shadow:none;overflow:visible}
+.amCtl button{width:2.35rem;height:2.35rem;border:0;background:rgba(251,246,236,.96);color:#3a2c22;font-size:1.2rem;font-weight:800;display:grid;place-items:center}
+.amCtl:not(.r) button+button{border-top:1px solid #e3d6c0}
+.amCtl.r button{border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,.18)}
+#amNorth i{font-style:normal;display:block;transform-origin:center;color:#b5533c;font-size:1rem;line-height:1}#amNorth i{rotate:-90deg}
+#amNorth.on{background:var(--accent)}#amNorth.on i{color:#fff}
+#amMe{font-size:1.25rem;color:var(--accent)}#amMe.locating{animation:amPulse 1s infinite}@keyframes amPulse{50%{opacity:.4}}
 </style>
 </head>
 <body>
@@ -3809,7 +3821,7 @@ var qrcode = function() {
 /* ============================================================
    日日帳本 — 核心：工具、資料儲存、主題、面板、拖曳排序、圖片
    ============================================================ */
-const APP_VERSION = '3.20.0';
+const APP_VERSION = '3.21.0';
 const APP_VER = APP_VERSION;
 /* 線上更新來源（GitHub Pages）：IanLin1120/food-map */
 const GH = {repo: 'https://github.com/IanLin1120/food-map', pages: 'https://ianlin1120.github.io/food-map/'};
@@ -6953,7 +6965,7 @@ const GUIDE = {
     {t: '⑦ 匯出、備份、換機', h: phone('記帳設定', `${pc('<b>📤 匯出 CSV</b><small>消費明細・資產明細</small>')}${pc('<b>☁️ Google 雲端・pCloud</b><small>上傳／還原・選資料夾</small>')}${pc('<b>📲 快速換機</b><small>舊手機顯示 QR，新手機掃描</small>')}`, '設定', 'acc') +
       `<ul><li><b>匯出 CSV</b>：選日期區間，消費明細（含品項、分帳）或資產明細</li><li><b>雲端備份</b>：整個日日帳本＋所有圖片；pCloud 用網頁登入</li><li><b>網頁版雲端硬碟</b>：在 App 裡打開 drive.google.com 登入，上傳時備份檔自動選好，下載備份檔就自動還原，不用任何設定</li><li><b>手機內建儲存</b>、<b>快速換機 QR Code</b>：同一個 Wi-Fi 直接傳到新手機</li><li>圖片會回到原本那一筆紀錄</li></ul>`},
     {t: '⑨ 店家地圖、分帳的人', h: phone('地圖', `${pc('<b>📍 晨曦早午餐</b><small>星河路1號・消費 3 次・$420</small>' + tap)}${pc('<b>📌 好鄰居超市 中央店</b><small>還沒有位置</small><div class="pBtns">' + pb('📍 釘選', 'pri hl') + '</div>')}`, '地圖', 'acc') +
-      `<ul><li>記帳區最左邊的 <b>地圖</b>：列出記過帳的店家，點店家看地址、位置和每一筆消費紀錄</li><li>地圖下面是所有收藏的清冊，依早餐、午餐…分類；點上面的分類按鈕，地圖只顯示那一類，也可以選縣市、鄉鎮市區篩選</li><li>點店家會在地圖上標出來，下面顯示地址、分類和記帳明細，按「✎ 改店名」會同步到所有區</li><li>日日帳本地圖上的收藏都會顯示；只在記帳出現的店家按「📍 釘選」，用 Google 地圖搜尋找到位置</li><li>在記帳設定的「商家／對象名稱」點收藏店家，會直接跳到這張地圖</li><li>記一筆、商家名單裡有 📍 的就是已經連結地圖的店家</li><li>在發票、地圖、記帳任何一區<b>改店名</b>，會問要不要一起改其他區；台灣電力公司這類「只用在記帳」的名稱不會跟著改</li><li><b>分帳的人</b>：記帳 → 設定 →「管理名單」，名單只用在記帳，和日常點餐分開</li></ul>`},
+      `<ul><li>記帳區最左邊的 <b>地圖</b>：列出記過帳的店家，點店家看地址、位置和每一筆消費紀錄</li><li>地圖下面是所有收藏的清冊，依早餐、午餐…分類；點上面的分類按鈕，地圖只顯示那一類，也可以選縣市、鄉鎮市區篩選</li><li>分類預設收合，「全部展開／全部收合」一鍵切換；按住分類標題可以上下移動，展開後按住店家可以排序</li><li>地圖左下 ＋／－ 放大縮小，右下 ➤ 固定朝北、◎ 移到目前位置</li><li>點店家會在地圖上標出來，下面顯示地址、分類和記帳明細，按「✎ 改店名」會同步到所有區</li><li>日日帳本地圖上的收藏都會顯示；只在記帳出現的店家按「📍 釘選」，用 Google 地圖搜尋找到位置</li><li>在記帳設定的「商家／對象名稱」點收藏店家，會直接跳到這張地圖</li><li>記一筆、商家名單裡有 📍 的就是已經連結地圖的店家</li><li>在發票、地圖、記帳任何一區<b>改店名</b>，會問要不要一起改其他區；台灣電力公司這類「只用在記帳」的名稱不會跟著改</li><li><b>分帳的人</b>：記帳 → 設定 →「管理名單」，名單只用在記帳，和日常點餐分開</li></ul>`},
     {t: '⑧ 小工具、通知欄、控制中心', h: phone('桌面', `${pc('<b>📒 日日帳本　11月</b><small>本月支出 $8,420・收入 $36,000・今天 $185</small><div class="pBtns">' + pb('＋ 支出', 'pri hl') + pb('＋ 收入') + pb('⭐ 常用') + '</div>' + tap)}${pc('<b>🔔 日日帳本・快速記帳</b><small>11月 支出 $8,420・今天 $185</small>')}`, '設定', 'acc') +
       `<ul><li><b>桌面小工具</b>：長按桌面空白處 →「小工具」→ 日日帳本，按「＋ 支出」直接打開記一筆</li><li><b>通知欄</b>：記帳 → 設定 → 快速記帳，打開「通知欄快速記帳」，通知上就有跟小工具一樣的「＋ 支出／＋ 收入／⭐ 常用」三顆按鈕</li><li><b>控制中心</b>：下拉兩次 → 編輯（鉛筆）→ 把「記一筆」和「常用記帳」拖進去</li><li>不想讓別人看到金額：關掉「小工具和通知顯示金額」</li></ul>`}]}
 };
@@ -8325,7 +8337,9 @@ function gwManual() { const sh = sheet({title: '🖥️ 電腦版雲端硬碟'})
   sh.body.onclick = e => { const t = e.target.closest('[data-m]'); if (!t) return; buzz(8); sh.close(); gDriveWeb(t.dataset.m, true); }; }
 /* ---------- 記帳區的店家地圖：只顯示店名、地址、位置和消費紀錄；跟日日帳本的地圖分開，只共用店名 ----------
    位置來源：日日帳本地圖上的收藏（同名就算連結）＞ 在記帳這邊自己釘選的位置 DB.acc.locs[店名] */
-const AM = {map: null, marks: [], q: '', f: 'all', area: null, sel: '', fold: {}, tw: new Map()};
+const AM = {map: null, marks: [], q: '', f: 'all', area: null, sel: '', tw: new Map(), me: null};
+/* 收合狀態記在 S.amFold（沒記過的分類預設收合） */
+const amFolded = k => { const F = S.amFold || {}; return F[k] !== false; };
 function storeLoc(n) { n = String(n || '').trim(); if (!n) return null; const p = (DB.places || []).find(x => x.name === n && x.lat != null);
   if (p) return {lat: p.lat, lon: p.lon, addr: p.addr || '', fav: true, pid: p.id}; const l = (DB.acc.locs || {})[n]; return l ? Object.assign({own: true}, l) : null; }
 /* 記帳的消費統計（依店名） */
@@ -8346,15 +8360,23 @@ async function renderAccMap() {
   if (AM.f !== 'all' && !cnt(AM.f)) AM.f = 'all';
   const V = base.filter(o => AM.f === 'all' || o.cat === AM.f), pinned = all.filter(o => o.loc).length;
   $('#accMSub').textContent = `${all.length} 間店・${pinned} 間在地圖上`;
-  const cats = DB.cats.map(c => c.id).concat(['', '_acc']).filter(k => cnt(k));
+  const co = DB.acc.amCord || [], cats0 = DB.cats.map(c => c.id).concat(['', '_acc']), cats = cats0.map((k, i) => [k, co.indexOf(k) < 0 ? 1e4 + i : co.indexOf(k)]).sort((a, b) => a[1] - b[1]).map(x => x[0]).filter(k => cnt(k));
+  const ordOf = k => ((DB.acc.amOrd || {})[k]) || [], anyOpen = AM.f === 'all' && cats.some(k => !amFolded(k));
   const towns = AM.area && TW.counties[AM.area.c] ? TW.counties[AM.area.c].towns : [];
   $('#accMList').innerHTML = `<div class="amChips">${[['all', '🗺️ 全部', '']].concat(cats.map(k => { const c = amCat(k); return [k, `${c.icon} ${c.name}`, c.color]; })).map(([k, t, c]) => `<button class="chip ${AM.f === k ? 'on' : ''}" data-f="${k}" ${c ? `style="--c:${c}"` : ''}>${esc(t)} <span class="n">${cnt(k)}</span></button>`).join('')}</div>
     ${TW.ready ? `<div class="amArea"><select id="amC"><option value="">全部縣市</option>${TW.names.map(n => `<option ${AM.area && AM.area.c === n ? 'selected' : ''}>${n}</option>`).join('')}</select><select id="amT" ${AM.area ? '' : 'disabled'}><option value="">全部鄉鎮市區</option>${towns.map(t => `<option ${AM.area && AM.area.t === t.name ? 'selected' : ''}>${t.name}</option>`).join('')}</select>${AM.area ? '<button class="ic" data-a="arX" aria-label="取消區域">✕</button>' : ''}</div>` : ''}
-    <div class="searchBox amQ"><input id="amQ" type="search" placeholder="搜尋店名或地址" value="${esc(AM.q)}"></div>
-    ${(AM.f === 'all' ? cats : [AM.f]).map(k => { const c = amCat(k), L = V.filter(o => o.cat === k).sort((a, b) => ((b.st || {}).last || '').localeCompare((a.st || {}).last || '') || a.n.localeCompare(b.n, 'zh-Hant')); if (!L.length) return '';
-      const fd = AM.fold[k] && AM.f === 'all';
-      return `<div class="amSec ${fd ? 'fold' : ''}"><button class="amSecH" data-fold="${k}" style="--c:${c.color}"><span>${esc(c.icon)}</span><b>${esc(c.name)}</b><em>${L.length}</em>${AM.f === 'all' ? `<i>${fd ? '▸' : '▾'}</i>` : ''}</button>
-        ${fd ? '' : L.map(o => `<button class="amR card ${AM.sel === o.n ? 'sel' : ''}" data-st="${esc(o.n)}"><span class="amPinI ${o.loc ? 'on' : ''}">${o.loc ? '📍' : '📌'}</span><span class="grow"><b>${esc(o.n)}</b><small>${o.loc ? esc(o.loc.addr || '已釘選位置') : '還沒有位置'}</small><small>${o.st ? `記帳 ${o.st.cnt} 筆・${money(o.st.sum)}・最近 ${o.st.last.slice(5).replace('-', '/')}` : '還沒有記帳紀錄'}</small></span>${o.loc ? '<span class="chev">›</span>' : `<span class="btn sm" data-pin="${esc(o.n)}">📍 釘選</span>`}</button>`).join('')}</div>`; }).join('') || '<div class="empty">沒有符合的店家</div>'}`;
+    <div class="amBar"><div class="searchBox amQ"><input id="amQ" type="search" placeholder="搜尋店名或地址" value="${esc(AM.q)}"></div>${AM.f === 'all' && cats.length > 1 ? `<button class="btn sm amFoldAll" data-a="foldAll">${anyOpen ? '⊟ 全部收合' : '⊞ 全部展開'}</button>` : ''}</div>
+    <div class="small muted amTip">按住分類標題可以上下移動；展開後按住店家可以排序</div><div id="amSecs">
+    ${(AM.f === 'all' ? cats : [AM.f]).map(k => { const c = amCat(k), od = ordOf(k), oi = o => { const i = od.indexOf(o.n); return i < 0 ? 1e6 : i; }, L = V.filter(o => o.cat === k).sort((a, b) => oi(a) - oi(b) || ((b.st || {}).last || '').localeCompare((a.st || {}).last || '') || a.n.localeCompare(b.n, 'zh-Hant')); if (!L.length) return '';
+      const fd = AM.f === 'all' && amFolded(k) && !AM.q;
+      return `<div class="amSec ${fd ? 'fold' : ''}" data-k="${k}"><button class="amSecH" data-fold="${k}" style="--c:${c.color}"><span class="grip"></span><span>${esc(c.icon)}</span><b>${esc(c.name)}</b><em>${L.length}</em>${AM.f === 'all' ? `<i>${fd ? '▸' : '▾'}</i>` : ''}</button>
+        ${fd ? '' : L.map(o => `<button class="amR card ${AM.sel === o.n ? 'sel' : ''}" data-st="${esc(o.n)}"><span class="amPinI ${o.loc ? 'on' : ''}">${o.loc ? '📍' : '📌'}</span><span class="grow"><b>${esc(o.n)}</b><small>${o.loc ? esc(o.loc.addr || '已釘選位置') : '還沒有位置'}</small><small>${o.st ? `記帳 ${o.st.cnt} 筆・${money(o.st.sum)}・最近 ${o.st.last.slice(5).replace('-', '/')}` : '還沒有記帳紀錄'}</small></span>${o.loc ? '<span class="chev">›</span>' : `<span class="btn sm" data-pin="${esc(o.n)}">📍 釘選</span>`}</button>`).join('')}</div>`; }).join('') || '<div class="empty">沒有符合的店家</div>'}</div>`;
+  /* 長按拖曳：分類整組上下移動、分類裡的店家排序（只影響記帳這張地圖的順序） */
+  const secs = $('#amSecs');
+  if (AM.f === 'all' && cats.length > 1) sortable(secs, {item: '.amSec', handle: '.amSecH', handleOnly: true, scroller: $('#pgAccM .pgBody'), onSort(f, t) { const ks = $$('.amSec', secs).map(e => e.dataset.k), m = ks.splice(f, 1)[0]; ks.splice(t, 0, m);
+    DB.acc.amCord = ks.concat(cats0.filter(k => !ks.includes(k))); saveAcc(); renderAccMap(); }});
+  sortable(secs, {item: '.amR', scope: '.amSec', scroller: $('#pgAccM .pgBody'), onSort(f, t, scope) { const k = scope.dataset.k, ns = $$('.amR', scope).map(e => e.dataset.st), m = ns.splice(f, 1)[0]; ns.splice(t, 0, m);
+    DB.acc.amOrd = DB.acc.amOrd || {}; DB.acc.amOrd[k] = ns; saveAcc(); renderAccMap(); }});
   const inp = $('#amQ'); inp.oninput = debounce(() => { AM.q = inp.value.trim(); const pos = inp.selectionStart; renderAccMap().then(() => { const n = $('#amQ'); n.focus(); try { n.setSelectionRange(pos, pos); } catch (e) {} }); }, 300);
   const cs = $('#amC'), ts = $('#amT'); if (cs) { cs.onchange = () => { AM.area = cs.value ? {c: cs.value, t: ''} : null; AM.fit = true; buzz(10); renderAccMap(); }; ts.onchange = () => { AM.area = cs.value ? {c: cs.value, t: ts.value} : null; AM.fit = true; buzz(10); renderAccMap(); }; }
   await accMapInit(); accMapMarks(V);
@@ -8363,7 +8385,8 @@ function initAccMap() {
   $('#accMList').addEventListener('click', async e => { const t = e.target.closest('[data-f],[data-fold],[data-pin],[data-st],[data-a]'); if (!t) return; buzz(8); const d = t.dataset;
     if (d.f != null) { AM.f = d.f; AM.fit = true; renderAccMap(); return; }
     if (d.a === 'arX') { AM.area = null; AM.fit = true; renderAccMap(); return; }
-    if (d.fold != null) { AM.fold[d.fold] = !AM.fold[d.fold]; renderAccMap(); return; }
+    if (d.fold != null) { if (AM.f !== 'all' || AM.q) return; S.amFold = S.amFold || {}; S.amFold[d.fold] = !amFolded(d.fold); saveS(); renderAccMap(); return; }
+    if (d.a === 'foldAll') { const ks = $$('#amSecs .amSec').map(e => e.dataset.k), open = ks.some(k => !amFolded(k)); S.amFold = S.amFold || {}; ks.forEach(k => { S.amFold[k] = open; }); saveS(); renderAccMap(); return; }
     if (d.pin) { e.stopPropagation(); if (await accPinStore(d.pin)) { AM.sel = d.pin; renderAccMap(); } return; }
     if (d.st) accMapSelect(d.st, true); });
 }
@@ -8372,6 +8395,13 @@ async function accMapInit() {
   try { const st = await mapStyle(), v = S.view || {c: [120.96, 23.75], z: 6.6};
     AM.map = new maplibregl.Map({container: 'accMap', style: st, center: v.c, zoom: Math.min(v.z, 12), attributionControl: false, dragRotate: false, pitchWithRotate: false, localIdeographFontFamily: '"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif', fadeDuration: 0});
     AM.map.on('error', () => {}); AM.fit = true;
+    if (S.amNorth !== false) AM.map.touchZoomRotate.disableRotation();
+    AM.map.on('rotate', () => { const n = $('#amNorth i'); if (n) n.style.transform = `rotate(${-AM.map.getBearing()}deg)`; });
+    $('.amMapBox').insertAdjacentHTML('beforeend', `<div class="amCtl"><button data-m="in" aria-label="放大">＋</button><button data-m="out" aria-label="縮小">－</button></div><div class="amCtl r"><button data-m="north" id="amNorth" class="${S.amNorth !== false ? 'on' : ''}" aria-label="固定朝北"><i>➤</i></button><button data-m="me" id="amMe" aria-label="目前位置">◎</button></div>`);
+    $('.amMapBox').addEventListener('click', e => { const b = e.target.closest('[data-m]'); if (!b) return; buzz(10); const m = b.dataset.m, M2 = AM.map;
+      if (m === 'in') M2.zoomIn({duration: 250}); else if (m === 'out') M2.zoomOut({duration: 250});
+      else if (m === 'north') { S.amNorth = S.amNorth === false; saveS(); b.classList.toggle('on', S.amNorth); M2.easeTo({bearing: 0, pitch: 0, duration: 400}); if (S.amNorth) M2.touchZoomRotate.disableRotation(); else M2.touchZoomRotate.enableRotation(); toast(S.amNorth ? '🧭 固定朝北' : '可以用兩指旋轉地圖'); }
+      else if (m === 'me') accMapLocate(); });
   } catch (e) { $('#accMap').innerHTML = '<div class="empty">這台裝置不支援地圖</div>'; }
 }
 function accMapMarks(L) { if (!AM.map) return; AM.marks.forEach(m => m.remove()); AM.marks = [];
@@ -8379,6 +8409,14 @@ function accMapMarks(L) { if (!AM.map) return; AM.marks.forEach(m => m.remove())
     e.onclick = ev => { ev.stopPropagation(); buzz(10); accMapSelect(o.n, false); };
     const mk = new maplibregl.Marker({element: e, anchor: 'bottom'}).setLngLat([o.loc.lon, o.loc.lat]).addTo(AM.map); mk._n = o.n; AM.marks.push(mk); });
   if (AM.fit && P.length) { AM.fit = false; const bb = new maplibregl.LngLatBounds(); P.forEach(o => bb.extend([o.loc.lon, o.loc.lat])); setTimeout(() => { try { AM.map.resize(); AM.map.fitBounds(bb, {padding: 50, maxZoom: 15, duration: 500}); } catch (e) {} }, 60); } }
+/* 目前位置：沿用日日帳本的定位（已經在定位就直接飛過去） */
+function accMapLocate() { if (!AM.map) return; Loc.start(); const b = $('#amMe'); b && b.classList.add('locating'); let n = 0;
+  const go = () => { const L = Loc.last; if (L && Date.now() - L.t < 120000) { b && b.classList.remove('locating');
+      if (!AM.me) { const e = el('<div class="meWrap"><div class="meDot"></div></div>'); AM.me = new maplibregl.Marker({element: e}).setLngLat([L.lon, L.lat]).addTo(AM.map); } else AM.me.setLngLat([L.lon, L.lat]);
+      AM.map.flyTo({center: [L.lon, L.lat], zoom: Math.max(AM.map.getZoom(), 15.5), duration: 700}); return; }
+    if (++n > 30 || Loc.err === 'denied' || Loc.err === 'off') { b && b.classList.remove('locating'); toast(Loc.err === 'denied' ? '請允許定位權限才能顯示你的位置' : Loc.err === 'off' ? '手機的定位功能是關閉的' : '暫時抓不到位置，請到室外或確認已開啟定位', 3500); return; }
+    setTimeout(go, 500); };
+  go(); }
 /* 選一間店：地圖上標出來（標籤放大），再打開店家卡片 */
 function accMapSelect(n, fly) { AM.sel = n; AM.marks.forEach(m => m.getElement().classList.toggle('sel', m._n === n)); $$('#accMList .amR').forEach(r => r.classList.toggle('sel', r.dataset.st === n));
   const lc = storeLoc(n); if (lc && AM.map && fly !== false) { $('#pgAccM .pgBody').scrollTo({top: 0, behavior: 'smooth'}); AM.map.flyTo({center: [lc.lon, lc.lat], zoom: Math.max(AM.map.getZoom(), 16), duration: 650}); }
