@@ -1196,3 +1196,12 @@ body.mAcc #tabbar button:not(.accT){display:none}
 .xfSt{margin-top:.8rem;padding:.7rem;border-radius:10px;background:var(--surface-3);font-weight:800;text-align:center}
 .pyCat .pyCH{min-height:2.35rem;padding:.35rem .55rem;margin-bottom:.35rem;box-shadow:none}
 .pyCat .pyCH .grip{flex:none;width:1.1rem;height:1.1rem;padding:0;margin:0 .1rem 0 0;transform:none;background-size:contain}
+.aLogo.own{border-radius:22%;object-fit:cover}.asI .aLogo.own{width:2.4rem;height:2.4rem;border-radius:11px}.niIc .aLogo.own{width:2.8rem;height:2.8rem;border-radius:12px}.icCur .aLogo.own{width:2.4rem;height:2.4rem}
+.pyOnly{font-size:.62rem;font-weight:700;color:var(--muted);background:var(--surface);border-radius:5px;padding:.05rem .35rem;margin-left:.2rem;white-space:nowrap}
+.acPy i{font-style:normal;margin-left:.3rem;color:var(--muted);font-size:.75rem}
+.pgPick{display:flex;flex-wrap:wrap;gap:.35rem;margin-bottom:.5rem}.pgPick button{padding:.45rem .65rem;border-radius:8px;border:1.5px solid var(--border-soft);border-left:4px solid var(--c);background:var(--surface);font-size:.86rem;font-weight:700}
+.pgPick button small{margin-left:.3rem;font-size:.62rem;color:var(--muted)}.pgPick button.on{background:color-mix(in srgb,var(--c) 16%,var(--surface));border-color:var(--c)}.pgPick button.add{border-style:dashed;border-left-width:1.5px;color:var(--muted)}
+/* 常用紀錄：固定寬度、名稱可換行、金額在最下面 */
+.tpR{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:.5rem;width:100%;box-sizing:border-box}
+.tpUse{gap:.12rem}.tpUse b{white-space:normal;word-break:break-word;line-height:1.35}.tpUse small{white-space:normal;line-height:1.35}
+.tpUse .tpV{display:block;margin-top:.25rem;font-size:1.02rem;font-weight:900;font-variant-numeric:tabular-nums}.tpUse .tpV:not(.pos):not(.neg){font-size:.8rem;color:var(--muted);font-weight:700}

@@ -30,8 +30,9 @@ const ACCT_PRESET = {
 const mono = (t, c) => `m:${t}:${c}`;
 const lightBg = c => { const n = parseInt(String(c).slice(1), 16), r = n >> 16, g = (n >> 8) & 255, b = n & 255; return r * .299 + g * .587 + b * .114 > 170; };
 const monoHtml = s2 => { const [, t, c] = String(s2).split(':'); return `<span class="aMono ${[...t].length > 2 ? 'sm' : ''} ${lightBg(c) ? 'dk' : ''}" style="--m:${c}">${esc(t)}</span>`; };
+const icoHtml = e => { e = String(e || ''); return e.startsWith('m:') ? monoHtml(e) : e.startsWith('img:') ? `<img class="aLogo own" src="${e.slice(4)}" alt="">` : esc(e); };
 const logoURL = d => `https://www.google.com/s2/favicons?domain=${encodeURIComponent(d)}&sz=64`;
-const aIco = a => !a ? '' : String(a.i || '').startsWith('m:') ? monoHtml(a.i) : a.logo ? `<img class="aLogo" src="${logoURL(a.logo)}" alt="" onerror="this.replaceWith(document.createTextNode('${AK[a.kind] ? AK[a.kind][1] : '🏦'}'))">` : esc(a.i || '');
+const aIco = a => !a ? '' : /^(m|img):/.test(String(a.i || '')) ? icoHtml(a.i) : a.logo ? `<img class="aLogo" src="${logoURL(a.logo)}" alt="" onerror="this.replaceWith(document.createTextNode('${AK[a.kind] ? AK[a.kind][1] : '🏦'}'))">` : esc(a.i || '');
 const ICONS = {'常用': '🍳🍱🍲🍜🍣🍔🍕🥗🧋☕🍰🍪🥕🧻🛍️👕📱💄🚌⛽🅿️🚕🚄🏠💧💡🔥📶🎬🎮📺🏃🏨🎫🎁✈️📚🎓✏️💊🩺📈🛡️🧧🍻📦💰🎉',
   '餐飲': '🍳🥐🥞🍞🥪🌮🍱🍙🍛🍜🍝🍲🍣🍤🍔🍟🍕🌭🥗🥘🍗🍖🥩🥟🦞🍦🍰🧁🍩🍪🍫🍬🍡🍧🍉🍎🍌🍇🥕🥦🧄🥚🥛🧋☕🍵🧃🥤🍺🍷🍶',
   '購物': '🛍️🛒👕👖👗👟👜👓💍💄🧴🧼🧻🧽🪥🧺📱💻🖥️⌨️🎧📷🔌🔋🛋️🛏️🪑🧸🪴🎁📦🏷️',
@@ -44,15 +45,16 @@ const ICONS_FIN = {'帳戶': '💵🪙💴💶💷💱🏦🏧💳🎫📲👛�
 function iconPick(cur, lib) {
   return new Promise(res => { let done = false, monoC = '#5a7a44'; const fin = lib === 'fin', rk = fin ? 'iconsF' : 'icons', rec = (DB.acc[rk] || []).slice(0, 16), sh = sheet({title: fin ? '選擇帳戶圖示' : '選擇圖示', full: true, onClose() { if (!done) res(null); }});
     const seg = v => [...new Set(Array.from(new Intl.Segmenter().segment(v), x => x.segment))];
-    const curH = String(cur || '').startsWith('m:') ? monoHtml(cur) : esc(cur || '？');
+    const curH = cur ? icoHtml(cur) : '？';
     const monos = fin ? Object.entries({bank: '銀行', card: '信用卡', pay: '行動支付', stored: '儲值'}).map(([k, n]) => `<div class="lbl">${n}</div><div class="icG mono">${ACCT_PRESET[k].map(([nm, t, c]) => `<button data-e="${esc(mono(t, c))}" title="${esc(nm)}">${monoHtml(mono(t, c))}</button>`).join('')}</div>`).join('') : '';
     sh.body.innerHTML = `<div class="icCur"><span>${curH}</span><input id="icIn" placeholder="${fin ? '輸入簡稱做成徽章（例如 合庫）或貼表情符號' : '或輸入／貼上任何表情符號'}" maxlength="8"><button class="btn sm pri" data-a="use">使用</button></div>
-      ${fin ? `<div class="icColors">${['#0f8f74', '#2e8b3d', '#d7282f', '#1a5fa8', '#0067b1', '#c8102e', '#f39800', '#7a1f2b', '#5a7a44', '#1d1d1f', '#00a0e9', '#e4007f'].map(c => `<button data-c="${c}" style="background:${c}" class="${c === monoC ? 'on' : ''}"></button>`).join('')}</div>` : ''}
-      ${rec.length ? `<div class="lbl">最近用過</div><div class="icG ${fin ? 'mono' : ''}">${rec.map(e => `<button data-e="${esc(e)}">${String(e).startsWith('m:') ? monoHtml(e) : e}</button>`).join('')}</div>` : ''}
+      ${fin ? '<button class="btn block" data-a="img" style="margin-bottom:.6rem">🖼️ 用自己的圖片（例如銀行 App 的截圖）</button>' : ''}${fin ? `<div class="icColors">${['#0f8f74', '#2e8b3d', '#d7282f', '#1a5fa8', '#0067b1', '#c8102e', '#f39800', '#7a1f2b', '#5a7a44', '#1d1d1f', '#00a0e9', '#e4007f'].map(c => `<button data-c="${c}" style="background:${c}" class="${c === monoC ? 'on' : ''}"></button>`).join('')}</div>` : ''}
+      ${rec.length ? `<div class="lbl">最近用過</div><div class="icG ${fin ? 'mono' : ''}">${rec.map(e => `<button data-e="${esc(e)}">${icoHtml(e)}</button>`).join('')}</div>` : ''}
       ${monos}${Object.entries(fin ? ICONS_FIN : ICONS).map(([k, v]) => `<div class="lbl">${k}</div><div class="icG">${seg(v).map(e => `<button data-e="${e}" class="${e === cur ? 'on' : ''}">${e}</button>`).join('')}</div>`).join('')}`;
     const finish = e => { if (!e) return; DB.acc[rk] = [e].concat((DB.acc[rk] || []).filter(x => x !== e)).slice(0, 24); saveAcc(); done = true; sh.close(); res(e); };
     sh.body.onclick = e => { const t = e.target.closest('button'); if (!t) return; buzz(8);
       if (t.dataset.c) { monoC = t.dataset.c; $$('[data-c]', sh.body).forEach(b => b.classList.toggle('on', b === t)); return; }
+      if (t.dataset.a === 'img') { (async () => { const fs = await pickImages(false); if (!fs.length) return; const u = URL.createObjectURL(fs[0]), im = new Image(); im.onload = () => { const c = document.createElement('canvas'), n = 96, sc = Math.max(n / im.width, n / im.height); c.width = c.height = n; const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, n, n); g.drawImage(im, (n - im.width * sc) / 2, (n - im.height * sc) / 2, im.width * sc, im.height * sc); URL.revokeObjectURL(u); finish('img:' + c.toDataURL('image/jpeg', .85)); }; im.src = u; })(); return; }
       if (t.dataset.e) finish(t.dataset.e);
       else if (t.dataset.a === 'use') { const v = $('#icIn', sh.body).value.trim(); if (!v) return; const first = Array.from(new Intl.Segmenter().segment(v), x => x.segment)[0];
         finish(fin && !/\p{Extended_Pictographic}/u.test(first) ? mono(v.slice(0, 4), monoC) : first); } }; });
@@ -60,8 +62,8 @@ function iconPick(cur, lib) {
 /* 名稱和圖示分開設定（類別、帳戶共用） */
 function nameIcon(title, o, opts = {}) {
   return new Promise(res => { let done = false, ic = o.i || opts.icon || '📁'; const sh = sheet({title, onClose() { if (!done) res(null); }, foot: `${opts.del ? '<button class="btn danger" data-a="del" style="flex:0 0 auto">刪除</button>' : ''}<button class="btn pri" data-a="ok">儲存</button>`});
-    sh.body.innerHTML = `<div class="niRow"><button class="niIc" data-a="ic">${String(ic).startsWith('m:') ? monoHtml(ic) : esc(ic)}<small>換圖示</small></button><div class="field grow" style="margin:0"><label>名稱</label><input id="niN" value="${esc(o.n || '')}" placeholder="${esc(opts.ph || '')}"></div></div>${opts.extra || ''}`;
-    sh.body.onclick = async e => { const t = e.target.closest('[data-a="ic"]'); if (!t) return; buzz(8); const v = await iconPick(ic, opts.lib); if (v) { ic = v; t.innerHTML = (String(v).startsWith('m:') ? monoHtml(v) : esc(v)) + '<small>換圖示</small>'; } };
+    sh.body.innerHTML = `<div class="niRow"><button class="niIc" data-a="ic">${icoHtml(ic)}<small>換圖示</small></button><div class="field grow" style="margin:0"><label>名稱</label><input id="niN" value="${esc(o.n || '')}" placeholder="${esc(opts.ph || '')}"></div></div>${opts.extra || ''}`;
+    sh.body.onclick = async e => { const t = e.target.closest('[data-a="ic"]'); if (!t) return; buzz(8); const v = await iconPick(ic, opts.lib); if (v) { ic = v; t.innerHTML = icoHtml(v) + '<small>換圖示</small>'; } };
     sh.foot.onclick = e => { const b = e.target.closest('[data-a]'); if (!b) return; buzz(10); if (b.dataset.a === 'del') { done = true; sh.close(); res({del: true}); return; }
       const n = $('#niN', sh.body).value.trim(); if (!n) { toast('請輸入名稱'); return; } const extra = opts.read ? opts.read(sh.body) : {}; done = true; sh.close(); res(Object.assign({n: n.slice(0, 14), i: ic}, extra)); };
     setTimeout(() => { const i = $('#niN', sh.body); if (i && !o.n) i.focus(); }, 250); });
@@ -86,7 +88,7 @@ const accMe = () => { const P = DB.mcfg.people; if (DB.acc.me && P.some(u => u.i
 function catFind(type, id) { const L = DB.acc.cats[type === 'in' ? 'in' : 'out'] || []; for (const p of L) { if (p.id === id) return {p, s: null}; const s = (p.subs || []).find(x => x.id === id); if (s) return {p, s}; } return {p: null, s: null}; }
 const accCat = r => { if (r.type === 'tr') return {n: r.from === '' && r.settle ? '收回欠款' : '轉帳', i: '🔄'}; const f = catFind(r.type, r.cat); return f.s ? {n: f.s.n, i: f.s.i || f.p.i, pn: f.p.n} : f.p ? {n: f.p.n, i: f.p.i, pn: f.p.n} : {n: r.type === 'in' ? '收入' : '支出', i: r.type === 'in' ? '💵' : '📦', pn: '其他'}; };
 const accAcct = id => DB.acc.accts.find(a => a.id === id);
-const acctName = id => { const a = accAcct(id); return a ? (String(a.i).startsWith('m:') || a.logo ? (AK[a.kind] || ['', '🏦'])[1] : a.i) + ' ' + a.n : ''; };
+const acctName = id => { const a = accAcct(id); return a ? (/^(m|img):/.test(String(a.i)) || a.logo ? (AK[a.kind] || ['', '🏦'])[1] : a.i) + ' ' + a.n : ''; };
 /* 行動支付本身沒有餘額，實際扣款的是它綁定的銀行／信用卡／儲值帳戶（每筆也可以另外指定） */
 const realAcct = (id, fund) => { const a = accAcct(id); if (a && a.kind === 'pay') return fund || a.fund || ''; return id; };
 const firstCat = ty => { const p = DB.acc.cats[ty][0]; return p ? ((p.subs || [])[0] || p).id : ''; };
@@ -210,50 +212,84 @@ function newAcct(kind) {
 }
 
 /* ---------- 商家／對象 ---------- */
+/* ---------- 商家／對象：和收藏的店家整合成同一份清單 ----------
+   分類 = 收藏分類（早餐、午餐、量販店…，和購物分帳共用）＋ 只用在記帳的分類（生活繳費：台電、台水…）
+   payee = {id, n, g: 分類 id, cat: 記帳類別}；放在收藏分類裡的名稱也會出現在購物分帳的「選擇店家」 */
+const payGroups = () => { const A = DB.acc; A.pcats = A.pcats || []; A.gord = A.gord || [];
+  const L = DB.cats.map(c => ({id: c.id, name: c.name, icon: c.icon, color: c.color, shop: 1})).concat(A.pcats.map(c => Object.assign({shop: 0}, c)));
+  const ix = id => { const i = A.gord.indexOf(id); return i < 0 ? 1e4 + L.findIndex(x => x.id === id) : i; }; return L.sort((x, y) => ix(x.id) - ix(y.id)); };
+const isShopG = g => DB.cats.some(c => c.id === g);
+const autoCat = (gname, type = 'out') => { let id = ''; (DB.acc.cats[type] || []).forEach(P => (P.subs || []).forEach(sc => { if (!id && sc.n === gname) id = sc.id; })); return id; };
+/* 舊的商家名稱（沒有分類）：同名的收藏店家就跟著它，其他依記帳母分類建一個「只用在記帳」的分類 */
+function payMigrate() { const A = DB.acc; A.pcats = A.pcats || []; A.iord = A.iord || {}; let ch = 0;
+  A.payees.forEach(py => { if (py.g !== undefined) return; const P = (DB.places || []).find(x => x.name === py.n); if (P) { py.g = P.cat || ''; py.dupe = 1; ch++; return; }
+    const f = catFind('out', py.cat).p ? catFind('out', py.cat) : catFind('in', py.cat), sameC = f.s && DB.cats.find(c => c.name === f.s.n); if (sameC) { py.g = sameC.id; ch++; return; } const nm = f.p ? f.p.n + (f.p.n === '生活' ? '繳費' : '') : '其他';
+    let g = A.pcats.find(x => x.name === nm); if (!g) { g = {id: 'g' + uid(), name: nm, icon: f.p ? f.p.i : '🏷️', color: '#8a6a4a'}; A.pcats.push(g); } py.g = g.id; ch++; });
+  const n0 = A.payees.length; A.payees = A.payees.filter(py => !py.dupe); if (ch || A.payees.length !== n0) saveAcc(); }
+/* 某個分類裡的所有項目（收藏店家＋自訂名稱），依自訂順序 */
+function payItems(g, hit) { const A = DB.acc, ord = (A.iord || {})[g || '_'] || [];
+  const pl = (DB.places || []).filter(p => (g ? p.cat === g : !DB.cats.some(c => c.id === p.cat)) && (!hit || hit(p.name))).map(p => ({k: 'p:' + p.id, n: p.name, pl: p}));
+  const py = A.payees.filter(x => (x.g || '') === (g || '') && (!hit || hit(x.n)) && !pl.some(z => z.n === x.n)).map(x => ({k: 'y:' + x.id, n: x.n, py: x}));
+  const all = pl.concat(py), ix = it => { const i = ord.indexOf(it.k); return i < 0 ? 1e4 + all.indexOf(it) : i; }; return all.sort((x, y) => ix(x) - ix(y)); }
+function payGroupSort(ids) { const A = DB.acc; A.gord = ids.slice(); const order = ids.map(id => DB.cats.find(c => c.id === id)).filter(Boolean), pos = DB.cats.map((c, i) => order.includes(c) ? i : -1).filter(i => i >= 0); pos.forEach((p, i) => { DB.cats[p] = order[i]; }); saveCats(); saveAcc(); }
+function payItemSort(g, keys) { const A = DB.acc; A.iord = A.iord || {}; A.iord[g || '_'] = keys.slice(); saveAcc();
+  const pids = keys.filter(k => k[0] === 'p').map(k => k.slice(2)), pos = DB.places.map((x, i) => pids.includes(x.id) ? i : -1).filter(i => i >= 0), objs = pids.map(id => DB.places.find(x => x.id === id)); pos.forEach((p, i) => { DB.places[p] = objs[i]; });
+  DB.places.forEach((p, i) => { if (p.ord !== i) { p.ord = i; savePlace(p); } }); }
+function payListHtml(q, cur, sub) {
+  const hit = q ? n => n.toLowerCase().includes(q) : null, F = S.pyFold = S.pyFold || {}, G = payGroups().concat([{id: '', name: '未分類', icon: '📍', color: '#7d6c57', shop: 1}]).map(g => Object.assign(g, {L: payItems(g.id, hit)})).filter(g => g.L.length || (!q && g.id && !g.shop && false));
+  const allFold = G.length && G.every(g => F[g.id || '_']);
+  return {G, html: (G.length && !q ? `<div class="pyTop"><span class="small muted grow">按住 ☰ 拖曳分類、按住名稱拖曳排序</span><button class="btn sm" data-a="foldAll">${allFold ? '⊞ 全部展開' : '⊟ 全部收合'}</button></div>` : '')
+    + `<div class="pyCats">${G.map(g => { const k = g.id || '_', shut = !q && F[k]; return `<div class="pyCat ${shut ? 'shut' : ''}" data-g="${k}"><button class="pyCH" data-fold="${k}" style="--c:${g.color}">${q || !g.id ? '' : '<span class="grip"></span>'}<span>${esc(g.icon)}</span><b>${esc(g.name)}</b>${g.shop ? '' : '<span class="pyOnly">只用在記帳</span>'}<em>${g.L.length}</em><i class="psCv">▾</i></button>${shut ? '' : `<div class="acPyG pyS">${g.L.map(it => `<button class="acPy ${it.n === cur ? 'on' : ''}" data-k="${it.k}">${esc(it.n)}${sub && it.py ? '<i>✎</i>' : ''}</button>`).join('')}</div>`}</div>`; }).join('')}</div>`
+    + (G.length ? '' : '<div class="empty">還沒有名稱，按「＋ 新增名稱」建立</div>')};
+}
+function payBindSort(root, scroller, redraw) {
+  sortable(root, {item: '.acPy[data-k]', scope: '.pyS', axis: 'grid', scroller, onSort(f, t, scope) { const keys = $$('.acPy', scope).map(e => e.dataset.k), mv = keys.splice(f, 1)[0]; keys.splice(t, 0, mv); const g = scope.closest('.pyCat').dataset.g; payItemSort(g === '_' ? '' : g, keys); redraw(); }});
+  const CW = $('.pyCats', root); if (CW) sortable(CW, {item: '.pyCat', handle: '.grip', handleOnly: true, scroller, onSort(f, t) { const ids = $$('.pyCat', CW).map(e => e.dataset.g).filter(x => x !== '_'), mv = ids.splice(f, 1)[0]; ids.splice(t, 0, mv); payGroupSort(ids); redraw(); }});
+}
+function payFold(t, root, redraw) { const F = S.pyFold = S.pyFold || {};
+  if (t.dataset.fold) { F[t.dataset.fold] = F[t.dataset.fold] ? 0 : 1; saveS(); redraw(); return true; }
+  if (t.dataset.a === 'foldAll') { const ks = $$('.pyCat', root).map(e => e.dataset.g), all = ks.every(k => F[k]); ks.forEach(k => { F[k] = all ? 0 : 1; }); saveS(); redraw(); return true; } return false; }
+const payFromKey = (k, type) => { if (k[0] === 'p') { const P = DB.places.find(x => x.id === k.slice(2)); if (!P) return null; const gn = (DB.cats.find(c => c.id === P.cat) || {}).name || ''; return {n: P.name, cat: autoCat(gn, type), place: P.id}; } return DB.acc.payees.find(x => x.id === k.slice(2)) || null; };
 function pickPayee(type, cur) {
+  payMigrate();
   return new Promise(res => { let done = false, q = ''; const sh = sheet({title: '🏪 商家／對象', full: true, onClose() { if (!done) res(undefined); }});
-    sh.body.innerHTML = `<div class="searchBox" style="margin-bottom:.6rem"><input id="pyQ" type="search" placeholder="搜尋或直接輸入新名稱"></div><div class="row" style="gap:.5rem;margin-bottom:.7rem"><button class="btn sm" data-a="new">＋ 新增名稱</button><button class="btn sm" data-a="none">不填</button></div><div id="pyL"></div>`;
-    /* 全部用同一種分組：自訂名稱依記帳母分類（生活：台電、台水…），收藏店家依收藏分類（早餐、午餐…）；每組可以收合 */
-    const fold = () => (S.pyFold = S.pyFold || {});
-    const draw = () => { const hit = n => !q || n.toLowerCase().includes(q), mine = DB.acc.payees.filter(p => hit(p.n)), places = (DB.places || []).filter(p => hit(p.name) && !DB.acc.payees.some(x => x.n === p.name));
-      const G = []; DB.acc.cats[type].forEach(P => { const L = mine.filter(p => { const f = catFind(type, p.cat); return f.p && f.p.id === P.id; }); if (L.length) G.push({k: 'y' + P.id, ic: P.i, n: P.n, color: '#8a6a4a', L, kind: 'py'}); });
-      const un = mine.filter(p => !catFind(type, p.cat).p); if (un.length) G.push({k: 'y_', ic: '🏷️', n: '其他名稱', color: '#8a6a4a', L: un, kind: 'py'});
-      DB.cats.concat([UNCAT]).forEach(c => { const L = places.filter(p => c.id ? p.cat === c.id : !DB.cats.some(x => x.id === p.cat)); if (L.length) G.push({k: 'c' + (c.id || '_'), cid: c.id || '', ic: c.icon, n: c.name, color: c.color, L, kind: 'pl'}); });
-      const F = fold(), allFold = G.length && G.every(g => F[g.k]);
-      $('#pyL', sh.body).innerHTML = `<div class="pyW">${(q && !mine.some(p => p.n === q) ? `<button class="acPy new" data-add="${esc(q)}">＋ 新增「${esc($('#pyQ', sh.body).value.trim())}」</button>` : '')
-        + (G.length && !q ? `<div class="pyTop"><span class="small muted grow">按住 ☰ 拖曳分類、按住名稱拖曳排序</span><button class="btn sm" data-a="foldAll">${allFold ? '⊞ 全部展開' : '⊟ 全部收合'}</button></div>` : '')
-        + `<div class="pyCats">${G.map(g => { const shut = !q && F[g.k]; return `<div class="pyCat k${g.kind} ${shut ? 'shut' : ''}" data-k="${g.k}" data-cid="${g.cid || ''}"><button class="pyCH" data-fold="${g.k}" style="--c:${g.color}">${q || g.kind !== 'pl' ? '' : '<span class="grip"></span>'}<span>${esc(g.ic)}</span><b>${esc(g.n)}</b><em>${g.L.length}</em><i class="psCv">▾</i></button>${shut ? '' : `<div class="acPyG ${g.kind === 'pl' ? 'pyPl' : 'pyS'}">${g.L.map(p => g.kind === 'pl' ? `<button class="acPy ${p.name === cur ? 'on' : ''}" data-pl="${p.id}">${esc(p.name)}</button>` : `<button class="acPy ${p.n === cur ? 'on' : ''}" data-py="${p.id}">${esc(p.n)}${(() => { const f = catFind(type, p.cat); return f.s ? `<small>${esc(f.s.n)}</small>` : ''; })()}</button>`).join('')}</div>`}</div>`; }).join('')}</div>`
-        + (G.length ? '' : '<div class="empty">還沒有名稱，按「＋ 新增名稱」建立（例如：台灣自來水公司、台灣電力公司）</div>')}</div>`;
-      if (q) return; const W = $('.pyW', sh.body);
-      sortable(W, {item: '.acPy[data-py]', scope: '.pyS', axis: 'grid', scroller: sh.body, onSort(f, t, scope) { const ids = $$('.acPy', scope).map(e => e.dataset.py), mv = ids.splice(f, 1)[0]; ids.splice(t, 0, mv); const pos = DB.acc.payees.map((x, i) => ids.includes(x.id) ? i : -1).filter(i => i >= 0), objs = ids.map(id => DB.acc.payees.find(x => x.id === id)); pos.forEach((p, i) => { DB.acc.payees[p] = objs[i]; }); saveAcc(); draw(); }});
-      sortable(W, {item: '.acPy[data-pl]', scope: '.pyPl', axis: 'grid', scroller: sh.body, onSort(f, t, scope) { const ids = $$('.acPy', scope).map(e => e.dataset.pl), mv = ids.splice(f, 1)[0]; ids.splice(t, 0, mv);
-        const pos = DB.places.map((x, i) => ids.includes(x.id) ? i : -1).filter(i => i >= 0), objs = ids.map(id => DB.places.find(x => x.id === id)); pos.forEach((p, i) => { DB.places[p] = objs[i]; });
-        DB.places.forEach((p, i) => { if (p.ord !== i) { p.ord = i; savePlace(p); } }); draw(); }});
-      const CW = $('.pyCats', sh.body); if (CW) sortable(CW, {item: '.pyCat.kpl', handle: '.grip', handleOnly: true, scroller: sh.body, onSort(f, t) { const els = $$('.pyCat.kpl', CW), ids = els.map(e => e.dataset.cid), real = ids.filter(Boolean).map(id => DB.cats.find(c => c.id === id));
-        const mv = ids.splice(f, 1)[0]; ids.splice(t, 0, mv); const order = ids.filter(Boolean).map(id => DB.cats.find(c => c.id === id)), pos = DB.cats.map((c, i) => real.includes(c) ? i : -1).filter(i => i >= 0); pos.forEach((p, i) => { DB.cats[p] = order[i]; }); saveCats(); draw(); }}); };
+    sh.body.innerHTML = `<div class="searchBox" style="margin-bottom:.6rem"><input id="pyQ" type="search" placeholder="搜尋或直接輸入新名稱"></div><div class="row" style="gap:.5rem;margin-bottom:.7rem"><button class="btn sm" data-a="new">＋ 新增名稱</button><button class="btn sm" data-a="none">不填</button><button class="btn sm" data-a="mng">⚙️ 管理</button></div><div id="pyL"></div>`;
+    const draw = () => { const r = payListHtml(q, cur); $('#pyL', sh.body).innerHTML = `<div class="pyW">${q && !r.G.some(g => g.L.some(it => it.n.toLowerCase() === q)) ? `<button class="acPy new" data-add="1">＋ 新增「${esc($('#pyQ', sh.body).value.trim())}」</button>` : ''}${r.html}</div>`; if (!q) payBindSort($('.pyW', sh.body), sh.body, draw); };
     draw(); $('#pyQ', sh.body).oninput = e => { q = e.target.value.trim().toLowerCase(); draw(); };
     const fin = v => { done = true; sh.close(); res(v); };
     sh.body.addEventListener('click', async e => { const t = e.target.closest('button'); if (!t) return; buzz(8);
-      if (t.dataset.fold) { const F = fold(); F[t.dataset.fold] = F[t.dataset.fold] ? 0 : 1; saveS(); draw(); return; }
-      if (t.dataset.a === 'foldAll') { const F = fold(), ks = $$('.pyCat', sh.body).map(e => e.dataset.k), all = ks.every(k => F[k]); ks.forEach(k => { F[k] = all ? 0 : 1; }); saveS(); draw(); return; }
-      if (t.dataset.py) { fin(DB.acc.payees.find(p => p.id === t.dataset.py)); return; }
-      if (t.dataset.pl) { const P = DB.places.find(p => p.id === t.dataset.pl), cn = (DB.cats.find(c => c.id === P.cat) || {}).name || ''; let cat = ''; DB.acc.cats[type].forEach(pp => (pp.subs || []).forEach(s => { if (s.n === cn) cat = s.id; }));
-        const py = {id: 'y' + uid(), n: P.name, cat}; DB.acc.payees.push(py); saveAcc(); fin(py); return; }
+      if (payFold(t, sh.body, draw)) return;
+      if (t.dataset.k) { const v = payFromKey(t.dataset.k, type); if (v) fin(v); return; }
       if (t.dataset.a === 'none') { fin(null); return; }
-      if (t.dataset.add != null || t.dataset.a === 'new') { const py = await editPayee(type, {n: t.dataset.add != null ? $('#pyQ', sh.body).value.trim() : ''}); if (py) fin(py); } }); });
+      if (t.dataset.a === 'mng') { await managePayees(); draw(); return; }
+      if (t.dataset.add || t.dataset.a === 'new') { const py = await editPayee(type, {n: t.dataset.add ? $('#pyQ', sh.body).value.trim() : ''}); if (py) fin(py); } }); });
 }
+/* 新分類：可以選要不要也放進收藏分類（購物分帳的店家會用到） */
+async function newPayGroup() {
+  const v = await nameIcon('新增分類', {n: '', i: '🏷️'}, {ph: '例如：早午餐、生活繳費', extra: `<button class="ckRow on" data-a="shopck" id="pgShop"><span class="acCk"></span>也當成收藏店家的分類（購物分帳選店家時看得到）</button><div class="small muted">像台電、台水這種只在記帳用的，就把勾勾拿掉。</div>`, read: b => ({shop: $('#pgShop', b).classList.contains('on')})});
+  if (!v) return null;
+  if (v.shop) { const c = {id: 'c' + uid(), name: v.n, icon: v.i, color: CAT_COLORS.find(x => !DB.cats.some(y => y.color.toLowerCase() === x.toLowerCase())) || CAT_COLORS[DB.cats.length % CAT_COLORS.length]}; DB.cats.push(c); saveCats(); return c.id; }
+  const g = {id: 'g' + uid(), name: v.n, icon: v.i, color: '#8a6a4a'}; (DB.acc.pcats = DB.acc.pcats || []).push(g); saveAcc(); return g.id;
+}
+document.addEventListener('click', e => { const t = e.target.closest('#pgShop'); if (t) { buzz(8); t.classList.toggle('on'); } }, true);
 function editPayee(type, p0) {
-  return new Promise(res => { const isNew = !p0.id, p = Object.assign({id: 'y' + uid(), n: '', cat: ''}, p0); let ty = type, openP = '', done = false;
+  return new Promise(res => { const isNew = !p0.id, p = Object.assign({id: 'y' + uid(), n: '', cat: '', g: undefined}, p0); let ty = type, openP = '', done = false;
+    if (p.g === undefined) { const G = payGroups(); p.g = (G.find(g => !g.shop) || G[0] || {}).id || ''; }
     const sh = sheet({title: isNew ? '新增商家／對象' : '編輯商家／對象', full: true, foot: `${isNew ? '' : '<button class="btn danger" data-a="del" style="flex:0 0 auto">刪除</button>'}<button class="btn pri" data-a="ok">儲存</button>`, onClose() { if (!done) res(null); }});
-    const draw = () => { sh.body.innerHTML = `<div class="field"><label>名稱</label><input id="pyN" value="${esc(p.n)}" placeholder="例如：台灣自來水公司、好鄰居超市 中央店"></div><div class="lbl">歸到哪個分類（記帳時選這個名稱會自動帶入）</div><div class="acType"><button data-ty="out" class="${ty === 'out' ? 'on' : ''}">支出</button><button data-ty="in" class="${ty === 'in' ? 'on' : ''}">收入</button></div>${catPickerHtml(ty, p.cat, openP)}`; };
+    const draw = () => { const G = payGroups(), gs = isShopG(p.g);
+      sh.body.innerHTML = `<div class="field"><label>名稱</label><input id="pyN" value="${esc(p.n)}" placeholder="例如：台灣電力公司、好鄰居超市"></div>
+        <div class="lbl">放在哪個分類</div><div class="pgPick">${G.map(g => `<button data-g="${g.id}" class="${g.id === p.g ? 'on' : ''}" style="--c:${g.color}">${esc(g.icon)} ${esc(g.name)}${g.shop ? '' : '<small>記帳</small>'}</button>`).join('')}<button data-a="newG" class="add">＋ 新分類</button></div>
+        <div class="small muted" style="margin:-.2rem 0 .8rem">${gs ? '🛒 這個分類是收藏店家的分類，購物分帳「選擇店家」時也看得到這個名稱。' : '📒 只用在記帳，不會出現在購物分帳。'}</div>
+        <div class="lbl">記帳時自動帶入的類別</div><div class="acType"><button data-ty="out" class="${ty === 'out' ? 'on' : ''}">支出</button><button data-ty="in" class="${ty === 'in' ? 'on' : ''}">收入</button></div>${catPickerHtml(ty, p.cat, openP)}`; };
     draw();
-    sh.body.addEventListener('click', e => { const t = e.target.closest('button'); if (!t) return; buzz(8); p.n = $('#pyN', sh.body).value.trim();
-      if (t.dataset.ty) { ty = t.dataset.ty; openP = ''; draw(); } else if (t.dataset.par) { openP = t.dataset.par; draw(); } else if (t.dataset.cat) { p.cat = t.dataset.cat; draw(); } });
+    sh.body.addEventListener('click', async e => { const t = e.target.closest('button'); if (!t) return; buzz(8); p.n = $('#pyN', sh.body).value.trim();
+      if (t.dataset.g != null) { p.g = t.dataset.g; if (!p.cat) { const gn = (payGroups().find(g => g.id === p.g) || {}).name; p.cat = autoCat(gn, ty) || p.cat; } draw(); }
+      else if (t.dataset.a === 'newG') { const id = await newPayGroup(); if (id) { p.g = id; draw(); } }
+      else if (t.dataset.ty) { ty = t.dataset.ty; openP = ''; draw(); } else if (t.dataset.par) { openP = t.dataset.par; draw(); } else if (t.dataset.cat) { p.cat = t.dataset.cat; draw(); } });
     sh.foot.onclick = async e => { const b = e.target.closest('[data-a]'); if (!b) return; p.n = $('#pyN', sh.body).value.trim();
       if (b.dataset.a === 'del') { if (!await ask(`刪除「${p.n}」？`, '刪除', true)) return; DB.acc.payees = DB.acc.payees.filter(x => x.id !== p.id); saveAcc(); done = true; sh.close(); res(null); return; }
       if (!p.n) { toast('請輸入名稱'); return; } const i = DB.acc.payees.findIndex(x => x.id === p.id); if (i >= 0) DB.acc.payees[i] = p; else DB.acc.payees.push(p); saveAcc(); done = true; sh.close(); res(p); }; });
 }
-
 /* ---------- 記一筆／編輯 ---------- */
 function accEdit(r0, preset, opt = {}) {
   return new Promise(res => {
@@ -594,12 +630,13 @@ function editCatTree(ty) {
   sh.foot.onclick = async () => { const v = await nameIcon('新增母分類', {n: '', i: '📁'}); if (!v) return; L.push({id: 'p' + uid(), n: v.n.slice(0, 10), i: v.i, subs: []}); saveAcc(); draw(); };
 }
 function managePayees() {
-  let draw; const sh = sheet({title: '🏪 商家／對象名稱', full: true, foot: '<button class="btn pri" data-a="add">＋ 新增名稱</button>'});
-  draw = () => { const groups = {}; DB.acc.payees.forEach(p => { const f = catFind('out', p.cat).p ? catFind('out', p.cat) : catFind('in', p.cat), k = f.s ? f.p.i + ' ' + f.p.n + '・' + f.s.n : f.p ? f.p.i + ' ' + f.p.n : '未分類'; (groups[k] = groups[k] || []).push(p); });
-    sh.body.innerHTML = Object.keys(groups).map(k => `<div class="lbl">${esc(k)}</div><div class="acPyG pyS">${groups[k].map(p => `<button class="acPy" data-py="${p.id}">${esc(p.n)}</button>`).join('')}</div>`).join('') + (DB.acc.payees.length ? '<div class="small muted" style="margin-top:.6rem">按住名稱拖曳可以排序</div>' : '') || '<div class="empty">還沒有名稱。可以建立「台灣自來水公司、台灣電力公司、房東」等，並歸到分類，記帳時選它就會自動帶入分類。</div>'; };
-  const draw0 = draw; draw = () => { draw0(); const w = document.createElement('div'); w.append(...sh.body.childNodes); sh.body.append(w); sortable(w, {item: '.acPy', scope: '.pyS', axis: 'grid', onSort(f, t, scope) { const ids = $$('.acPy', scope).map(e => e.dataset.py), mv = ids.splice(f, 1)[0]; ids.splice(t, 0, mv); const pos = DB.acc.payees.map((x, i) => ids.includes(x.id) ? i : -1).filter(i => i >= 0), objs = ids.map(id => DB.acc.payees.find(x => x.id === id)); pos.forEach((p, i) => { DB.acc.payees[p] = objs[i]; }); saveAcc(); draw(); }}); };
-  draw(); sh.body.onclick = async e => { const t = e.target.closest('[data-py]'); if (!t) return; buzz(8); const p = DB.acc.payees.find(x => x.id === t.dataset.py); await editPayee(catFind('in', p.cat).p && !catFind('out', p.cat).p ? 'in' : 'out', p); draw(); };
-  sh.foot.onclick = async () => { await editPayee('out', {n: ''}); draw(); };
+  payMigrate();
+  return new Promise(res => { const sh = sheet({title: '🏪 商家／對象名稱', full: true, foot: '<button class="btn" data-a="newG">＋ 新分類</button><button class="btn pri" data-a="add">＋ 新增名稱</button>', onClose() { res(); }});
+    const draw = () => { const r = payListHtml('', '', true); sh.body.innerHTML = `<div class="small muted" style="margin:-.2rem 0 .6rem">收藏的店家和自訂名稱在同一份清單；點自訂名稱可以編輯，點分類名稱可以收合。收藏店家要在地圖或收藏頁編輯。</div><div class="pyW">${r.html}</div>`; payBindSort($('.pyW', sh.body), sh.body, draw); };
+    draw(); sh.body.onclick = async e => { const t = e.target.closest('button'); if (!t) return; buzz(8); if (payFold(t, sh.body, draw)) return;
+      if (t.dataset.k && t.dataset.k[0] === 'y') { const p = DB.acc.payees.find(x => x.id === t.dataset.k.slice(2)); await editPayee(catFind('in', p.cat).p && !catFind('out', p.cat).p ? 'in' : 'out', p); draw(); }
+      else if (t.dataset.k) toast('這是收藏的店家，請到收藏頁編輯'); };
+    sh.foot.onclick = async e => { const b = e.target.closest('[data-a]'); if (!b) return; buzz(10); if (b.dataset.a === 'newG') await newPayGroup(); else await editPayee('out', {n: ''}); draw(); }; });
 }
 function manageTpls() { tplList(); }
 /* 常用紀錄完整清單：支出／收入／轉帳，依分類排列；長按拖曳排序 */
@@ -612,7 +649,7 @@ function tplList() {
   const draw = () => { const G = groups(), n = k => DB.acc.tpls.filter(t => (t.type || 'out') === k).length;
     sh.body.innerHTML = `<div class="acType three"><button data-ty="out" class="${ty === 'out' ? 'on' : ''}">支出 ${n('out') || ''}</button><button data-ty="in" class="${ty === 'in' ? 'on' : ''}">收入 ${n('in') || ''}</button><button data-ty="tr" class="${ty === 'tr' ? 'on' : ''}">轉帳 ${n('tr') || ''}</button></div>
       <div class="small muted" style="margin:-.2rem 0 .7rem">點一下就用今天的日期記帳；按住拖曳可以排序；按 ✎ 編輯。</div>
-      <div id="tpL">${G.map(g => `<div class="tpG"><div class="lbl">${esc(g.n)}</div>${g.L.map(t => `<div class="tpR card" data-t="${t.id}"><span class="grip"></span><button class="tpUse" data-use="${t.id}"><b>${esc(t.name)}</b><small>${esc([t.payee, t.type === 'tr' ? acctName(t.acct) + ' → ' + acctName(t.to) : acctName(t.acct), (t.split || []).length ? '分帳 ' + t.split.length + ' 人' : ''].filter(Boolean).join('・'))}</small></button><b class="tpV ${t.type === 'in' ? 'pos' : t.type === 'out' ? 'neg' : ''}">${+t.amt ? money(t.amt) : '<small class="muted">每次輸入</small>'}</b><button class="ic" data-ed="${t.id}" aria-label="編輯">✎</button></div>`).join('')}</div>`).join('') || '<div class="empty">這一類還沒有常用紀錄<br><span class="small">按下面「＋ 新增常用紀錄」，或在記一筆時按「⭐ 存成常用」</span></div>'}</div>`;
+      <div id="tpL">${G.map(g => `<div class="tpG"><div class="lbl">${esc(g.n)}</div>${g.L.map(t => `<div class="tpR card" data-t="${t.id}"><span class="grip"></span><button class="tpUse" data-use="${t.id}"><b>${esc(t.name)}</b><small>${esc([t.payee, t.type === 'tr' ? acctName(t.acct) + ' → ' + acctName(t.to) : acctName(t.acct), (t.split || []).length ? '分帳 ' + t.split.length + ' 人' : ''].filter(Boolean).join('・'))}</small><span class="tpV ${!+t.amt ? '' : t.type === 'in' ? 'pos' : t.type === 'out' ? 'neg' : ''}">${+t.amt ? money(t.amt) : '💬 每次輸入金額'}</span></button><button class="ic" data-ed="${t.id}" aria-label="編輯">✎</button></div>`).join('')}</div>`).join('') || '<div class="empty">這一類還沒有常用紀錄<br><span class="small">按下面「＋ 新增常用紀錄」，或在記一筆時按「⭐ 存成常用」</span></div>'}</div>`;
     sortable($('#tpL', sh.body), {item: '.tpR', scope: '.tpG', scroller: sh.body, onSort(f, t, scope) { const ids = $$('.tpR', scope).map(e => e.dataset.t), mv = ids.splice(f, 1)[0]; ids.splice(t, 0, mv);
       const pos = DB.acc.tpls.map((x, i) => ids.includes(x.id) ? i : -1).filter(i => i >= 0), objs = ids.map(id => DB.acc.tpls.find(x => x.id === id)); pos.forEach((p, i) => { DB.acc.tpls[p] = objs[i]; }); saveAcc(); draw(); renderAcc(); }}); };
   draw();
