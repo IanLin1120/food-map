@@ -198,26 +198,72 @@ async function cloudDown(kind) {
   } catch (e) { busy(false); cloudErr(kind, e); }
 }
 
-/* ---------- Google 雲端硬碟網頁版：在 App 裡打開 drive.google.com，像瀏覽器一樣登入，不用設定任何用戶端 ---------- */
-async function gDriveWeb(mode) {
+/* ---------- Google 雲端硬碟網頁版：在 App 裡打開 drive.google.com，像瀏覽器一樣登入，不用設定任何用戶端 ----------
+   登入後用網頁的登入狀態直接呼叫雲端硬碟：自動建立「日日帳本備份」資料夾、上傳或列出備份；
+   如果 Google 不讓這樣用，就改開電腦版網頁，用「新增 → 檔案上傳」手動上傳（備份檔會自動選好）。 */
+const GDW_FOLDER = '日日帳本備份', GDW_BASES = ['https://clients6.google.com', 'https://content.googleapis.com', 'https://www.googleapis.com'];
+let gdwSeq = 0; const gdwCb = {};
+window.__gdApi = (id, r) => { const f = gdwCb[id]; delete gdwCb[id]; if (f) f(r); };
+const gdwCall = (method, url, body, upFile, outFile) => new Promise(res => { const id = 'g' + (++gdwSeq); gdwCb[id] = res; NB.gdCall(id, method, url, '', body ? JSON.stringify(body) : '', upFile || '', outFile || ''); });
+/* 找出能用的金鑰和網址，記起來下次直接用 */
+async function gdwProbe(keys) {
+  const tries = []; if (S.gd && S.gd.wk) tries.push([S.gd.wb, S.gd.wk]); keys.forEach(k => GDW_BASES.forEach(b => tries.push([b, k])));
+  let last = '';
+  for (const [b, k] of tries) { const r = await gdwCall('GET', `${b}/drive/v3/about?fields=user(displayName,emailAddress)&key=${k}`);
+    if (r.status === 200) { S.gd = Object.assign(S.gd || {}, {wb: b, wk: k}); try { const u = JSON.parse(r.body).user || {}; S.gd.wEmail = u.emailAddress || u.displayName || ''; } catch (e) { } saveS(); return true; }
+    last = `${r.status} ${String(r.body || '').slice(0, 120)}`; }
+  console.log('[gdw] probe failed', last); return false;
+}
+async function gdwFolder() { const {wb, wk} = S.gd, q = encodeURIComponent(`name='${GDW_FOLDER}' and mimeType='application/vnd.google-apps.folder' and trashed=false`);
+  const r = await gdwCall('GET', `${wb}/drive/v3/files?q=${q}&fields=files(id,name)&key=${wk}`); if (r.status !== 200) throw new Error('讀取資料夾失敗 ' + r.status);
+  const f = (JSON.parse(r.body).files || [])[0]; if (f) return f.id;
+  const c = await gdwCall('POST', `${wb}/drive/v3/files?fields=id&key=${wk}`, {name: GDW_FOLDER, mimeType: 'application/vnd.google-apps.folder'}); if (c.status !== 200) throw new Error('建立資料夾失敗 ' + c.status);
+  return JSON.parse(c.body).id; }
+async function gdwPack() { busy('打包資料和圖片…'); const blob = await makeBackupBlob(), CH = 768 * 1024, name = backupName();
+  for (let off = 0, first = true; off < blob.size; off += CH, first = false) { busy(`準備備份檔…${Math.round(off / blob.size * 100)}%`); if (!NB.tmpWrite(name, await blobB64(blob.slice(off, off + CH)), !first)) throw new Error('寫入暫存檔失敗'); }
+  busy(false); return name; }
+async function gdwRestoreFile(fname, size) {
+  const CH = 768 * 1024, parts = []; for (let off = 0; off < size; off += CH) { busy(`讀取備份…${Math.round(off / size * 100)}%`); const b = atob(NB.tmpRead(fname, off, CH)), u = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); parts.push(u); }
+  let j; try { j = JSON.parse(await new Blob(parts).text()); } catch (e) { j = null; } busy(false);
+  if (!j || !j.places) { await alertBox('這個檔案不是日日帳本的備份檔，請選檔名是「日日帳本備份_日期.json」的檔案。'); return; }
+  if (!await ask(`下載好了（${(size / 1048576).toFixed(1)} MB${j.acc ? '、' + (j.acc.recs || []).length + ' 筆記帳' : ''}）。用它取代這台手機上的所有資料嗎？`, '還原', true)) return;
+  busy('還原中…'); await applyBackup(j); busy(false); toast('✅ 還原完成，重新開啟中…', 2000); setTimeout(() => location.reload(), 900); }
+/* 登入完成後：自動建立資料夾，上傳或選一個備份還原 */
+async function gdwRun(mode, keys) {
+  busy('連線 Google 雲端硬碟…');
+  if (!await gdwProbe(keys)) { busy(false); return false; }
+  try { const fid = await gdwFolder(), {wb, wk} = S.gd;
+    if (mode === 'up') { const name = await gdwPack(); busy('上傳到 Google 雲端硬碟…');
+      const r = await gdwCall('POST', `${wb}/upload/drive/v3/files?uploadType=multipart&fields=id,name,size&key=${wk}`, {name, parents: [fid], mimeType: 'application/json'}, name); busy(false);
+      if (r.status !== 200) throw new Error('上傳失敗 ' + r.status); S.gd.webLast = Date.now(); saveS(); buzz(40);
+      await alertBox(`✅ 已上傳到 Google 雲端硬碟「${GDW_FOLDER}」資料夾\n${name}${S.gd.wEmail ? '\n帳號：' + S.gd.wEmail : ''}`); return true; }
+    const q = encodeURIComponent(`'${fid}' in parents and trashed=false`), r = await gdwCall('GET', `${wb}/drive/v3/files?q=${q}&orderBy=modifiedTime desc&pageSize=30&fields=files(id,name,size,modifiedTime)&key=${wk}`); busy(false);
+    if (r.status !== 200) throw new Error('列出備份失敗 ' + r.status);
+    const L = (JSON.parse(r.body).files || []).filter(f => /\.json$/i.test(f.name)); if (!L.length) { await alertBox(`Google 雲端硬碟的「${GDW_FOLDER}」資料夾裡還沒有備份檔。`); return true; }
+    const pick = await new Promise(res => { let done = false; const sh = sheet({title: '選擇要還原的備份', onClose() { if (!done) res(null); }});
+      sh.body.innerHTML = L.map((f, i) => `<button class="card setR" data-i="${i}" style="width:100%;text-align:left;margin-bottom:.5rem"><span class="gRi">📦</span><div class="t"><b>${esc(f.name)}</b><small>${new Date(f.modifiedTime).toLocaleString('zh-TW')}・${(f.size / 1048576).toFixed(1)} MB</small></div><span class="chev">›</span></button>`).join('');
+      sh.body.onclick = e => { const t = e.target.closest('[data-i]'); if (!t) return; buzz(8); done = true; sh.close(); res(L[+t.dataset.i]); }; });
+    if (!pick) return true;
+    busy('從 Google 雲端下載備份…'); const d = await gdwCall('GET', `${wb}/drive/v3/files/${pick.id}?alt=media&key=${wk}`, null, '', 'gd_in.json'); busy(false);
+    if (d.status !== 200) throw new Error('下載失敗 ' + d.status); await gdwRestoreFile('gd_in.json', d.size); return true;
+  } catch (e) { busy(false); toast('❌ ' + e.message, 6000); return true; }
+}
+async function gDriveWeb(mode, manual) {
   if (!(IS_APP && NB.gdWeb)) { window.open('https://drive.google.com/drive/my-drive', '_blank'); return; }
+  const auto = !!NB.gdCall && !manual;
   let name = '';
-  if (mode === 'up') { try { busy('打包資料和圖片…'); const blob = await makeBackupBlob(), CH = 768 * 1024; name = backupName();
-      for (let off = 0, first = true; off < blob.size; off += CH, first = false) { busy(`準備備份檔…${Math.round(off / blob.size * 100)}%`); if (!NB.tmpWrite(name, await blobB64(blob.slice(off, off + CH)), !first)) throw new Error('寫入暫存檔失敗'); }
-      busy(false); } catch (e) { busy(false); toast('❌ ' + e.message, 5000); return; } }
+  if (!auto && mode === 'up') { try { name = await gdwPack(); } catch (e) { busy(false); toast('❌ ' + e.message, 5000); return; } }
   window.__gdWeb = async m => {
+    if (m.login && auto) { NB.pcWebClose(); const ok = await gdwRun(mode, m.keys || []); if (!ok) { await alertBox('Google 不允許直接自動上傳到這個帳號。改用電腦版網頁：' + (mode === 'up' ? '按左上角「＋ 新增 → 檔案上傳」，備份檔會自動選好。' : '找到備份檔，按右鍵選單或「⋮ → 下載」就會自動還原。')); gDriveWeb(mode, true); } return; }
     if (m.picked) { buzz(30); toast('✅ 已自動選好備份檔，等它上傳完成再按「✕ 關閉」', 5000); return; }
     if (m.dl === 'start') { busy('從 Google 雲端下載備份…'); return; }
     if (m.dl === 'err') { busy(false); toast('❌ 下載失敗：' + (m.msg || ''), 6000); return; }
-    if (m.dl === 'ok') { NB.pcWebClose(); try { const CH = 768 * 1024, parts = []; for (let off = 0; off < m.size; off += CH) { busy(`讀取備份…${Math.round(off / m.size * 100)}%`); const b = atob(NB.tmpRead('gd_in.json', off, CH)), u = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); parts.push(u); }
-        let j; try { j = JSON.parse(await new Blob(parts).text()); } catch (e) { j = null; } busy(false);
-        if (!j || !j.places) { await alertBox('這個檔案不是日日帳本的備份檔，請選檔名是「日日帳本備份_日期.json」的檔案。'); return; }
-        if (!await ask(`下載好了（${(m.size / 1048576).toFixed(1)} MB${j.acc ? '、' + (j.acc.recs || []).length + ' 筆記帳' : ''}）。用它取代這台手機上的所有資料嗎？`, '還原', true)) return;
-        busy('還原中…'); await applyBackup(j); busy(false); toast('✅ 還原完成，重新開啟中…', 2000); setTimeout(() => location.reload(), 900);
-      } catch (e) { busy(false); toast('❌ ' + e.message, 5000); } }
-    if (m.cancel && mode === 'up') { S.gd = Object.assign(S.gd || {}, {webLast: Date.now()}); saveS(); }
+    if (m.dl === 'ok') { NB.pcWebClose(); try { await gdwRestoreFile('gd_in.json', m.size); } catch (e) { busy(false); toast('❌ ' + e.message, 5000); } }
   };
-  NB.gdWeb(name, mode === 'up' ? '登入後按「＋ 新增 → 檔案上傳」，備份檔會自動選好' : '登入後找到備份檔，按「⋮ → 下載」就會自動還原');
+  if (auto && NB.gdLogin && NB.gdLogin() && S.gd && S.gd.wk) { const ok = await gdwRun(mode, []); if (ok) return; }
+  if (auto) NB.gdWeb2('', '登入 Google 帳號，登入完成會自動建立「日日帳本備份」資料夾並' + (mode === 'up' ? '上傳' : '列出備份'), false, true);
+  else if (NB.gdWeb2) NB.gdWeb2(name, mode === 'up' ? '電腦版畫面：按左上角「＋ 新增 → 檔案上傳」，備份檔會自動選好' : '找到備份檔，按「⋮ → 下載」就會自動還原', true, false);
+  else NB.gdWeb(name, mode === 'up' ? '登入後按「＋ 新增 → 檔案上傳」，備份檔會自動選好' : '登入後找到備份檔，按「⋮ → 下載」就會自動還原');
 }
 
 /* ---------- 手機內建儲存：完整備份／還原 ---------- */

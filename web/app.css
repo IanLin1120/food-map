@@ -1225,3 +1225,25 @@ body.mAcc #tabbar button:not(.accT){display:none}
 .acLogL .acIt{display:flex;align-items:center;gap:.5rem;font-size:.85rem}
 .dlg .dlgT{display:block;font-size:1.02rem;margin-bottom:.4rem;color:#a8472f}
 .gwBox{margin-top:.6rem;padding:.6rem .65rem;border-radius:6px;border:1px dashed var(--border);display:flex;flex-direction:column;gap:.3rem}.gwBox small{color:var(--muted);font-size:.76rem;line-height:1.5}
+/* ===== 滿版圖示：圖案填滿整個方塊，不留白邊 ===== */
+.acR .acI{width:2.8rem;height:2.8rem;border-radius:10px;border:0;font-size:2rem;line-height:1;overflow:hidden;background:linear-gradient(145deg,color-mix(in srgb,var(--accent) 22%,var(--surface)),color-mix(in srgb,var(--accent) 38%,var(--surface)))}
+.acR .acI.tr{background:linear-gradient(145deg,color-mix(in srgb,#5d7f86 26%,var(--surface)),color-mix(in srgb,#5d7f86 42%,var(--surface)))}
+.acR .acI.loss{background:linear-gradient(145deg,color-mix(in srgb,#7a4a8a 24%,var(--surface)),color-mix(in srgb,#7a4a8a 40%,var(--surface)))}
+.acR .acI:has(.aMono){background:none}.acR .acI .aMono{width:100%;height:100%;border-radius:10px;font-size:.95rem;min-width:0}
+.acR .acI img,.asI img{width:100%;height:100%;object-fit:cover;border-radius:inherit}
+.acCats button{padding:.4rem .2rem .45rem}
+.acCats button i{display:grid;place-items:center;width:2.7rem;height:2.7rem;border-radius:10px;font-size:1.95rem;line-height:1;overflow:hidden;background:linear-gradient(145deg,color-mix(in srgb,var(--accent) 16%,var(--surface)),color-mix(in srgb,var(--accent) 30%,var(--surface)))}
+.acCats button.on i{background:linear-gradient(145deg,color-mix(in srgb,var(--accent) 42%,var(--surface)),color-mix(in srgb,var(--accent) 62%,var(--surface)))}
+.asI{border-radius:10px;overflow:hidden;font-size:1.9rem!important;line-height:1}
+.asI .aMono,.niIc .aMono,.icCur>span .aMono{border-radius:10px;padding:0;letter-spacing:-.04em}
+.asI .aMono{font-size:1.08rem}.asI .aMono.sm{font-size:.8rem}
+.aMono{padding:0 .08em}
+.acAccts .aMono{font-size:.74rem;min-width:1.9em;height:1.9em;border-radius:6px}.acAccts .aMono.sm{font-size:.6rem}
+.icG.mono .aMono{width:100%;height:auto;aspect-ratio:1;font-size:.95rem;border-radius:9px}.icG.mono .aMono.sm{font-size:.72rem}.icG.mono button{padding:0;overflow:hidden}
+/* 底部分頁：圖示放在填滿的方塊裡，選到的是實心方塊 */
+#tabbar button{gap:.2rem}
+#tabbar svg{box-sizing:content-box;width:1.35rem;height:1.35rem;padding:.28rem .7rem;border-radius:8px;background:color-mix(in srgb,var(--accent) 9%,transparent);stroke-width:2}
+#tabbar button.on svg{background:var(--accent);color:#fff;stroke:#fff}
+#tabbar button.on::before{display:none}
+.asI{width:2.6rem;height:2.6rem;border:0;background:linear-gradient(145deg,color-mix(in srgb,var(--accent) 16%,var(--surface)),color-mix(in srgb,var(--accent) 30%,var(--surface)))}
+.asI .aMono{width:100%;height:100%}.asI .aLogo{width:100%;height:100%;border-radius:0}

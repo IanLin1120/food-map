@@ -308,7 +308,7 @@ public class MainActivity extends Activity {
 
 
     /* ---------- pCloud 網頁登入：App 內打開 pCloud 官網，自己登入（支援兩步驟驗證、彈出視窗），登入後取出登入權杖 ---------- */
-    android.widget.FrameLayout pcBox; WebView pcWebV, pcPop; android.os.Handler pcH = new android.os.Handler(android.os.Looper.getMainLooper()); Runnable pcPoll; boolean pcDone; String pcKind = "pc"; File gdUp;
+    android.widget.FrameLayout pcBox; WebView pcWebV, pcPop; android.os.Handler pcH = new android.os.Handler(android.os.Looper.getMainLooper()); Runnable pcPoll; boolean pcDone; String pcKind = "pc"; File gdUp; boolean gdDesk, gdAuto;
     void closePcWeb() {
         if (pcBox == null) return; pcH.removeCallbacksAndMessages(null);
         try { ((ViewGroup) pcBox.getParent()).removeView(pcBox); if (pcWebV != null) pcWebV.destroy(); if (pcPop != null) pcPop.destroy(); } catch (Throwable t) { }
@@ -374,6 +374,7 @@ public class MainActivity extends Activity {
         final android.widget.TextView tip = new android.widget.TextView(this); tip.setText(tipText); tip.setTextSize(13); tip.setTextColor(Color.parseColor("#5b4a3a")); tip.setPadding(pd, 0, 0, 0);
         bar.addView(close, new android.widget.LinearLayout.LayoutParams((int) (90 * dp), (int) (42 * dp))); bar.addView(tip, new android.widget.LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         pcWebV = pcMakeWeb();
+        if ("gd".equals(kind) && gdDesk) { WebSettings ds = pcWebV.getSettings(); ds.setUserAgentString(GD_DESK_UA); ds.setUseWideViewPort(true); ds.setLoadWithOverviewMode(true); ds.setBuiltInZoomControls(true); ds.setDisplayZoomControls(false); }
         col.addView(bar, new android.widget.LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         col.addView(pcWebV, new android.widget.LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
         pcBox.addView(col, new android.widget.FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
@@ -396,6 +397,74 @@ public class MainActivity extends Activity {
             }); else pcH.postDelayed(pcPoll, 1200);
         } };
         pcWebV.loadUrl(startUrl); if ("pc".equals(kind)) pcH.postDelayed(pcPoll, 1500);
+        if ("gd".equals(kind) && gdAuto) pcH.postDelayed(gdPoll, 1500);
+    }
+    /* ---------- Google 雲端硬碟：在網頁登入後，用網頁的登入狀態直接呼叫雲端硬碟（自動建資料夾、上傳） ---------- */
+    static final String GD_DESK_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36";
+    final Runnable gdPoll = new Runnable() { public void run() {
+        if (pcBox == null || pcDone || !"gd".equals(pcKind) || pcWebV == null) return;
+        String u = pcWebV.getUrl();
+        if (gdLogged() && u != null && u.contains("drive.google.com")) { pcDone = true; gdFindKeys(); return; }
+        pcH.postDelayed(gdPoll, 1200);
+    } };
+    java.util.Map<String, String> gdCookies(String url) {
+        java.util.Map<String, String> m = new java.util.HashMap<String, String>(); String ck = android.webkit.CookieManager.getInstance().getCookie(url); if (ck == null) return m;
+        for (String kv : ck.split(";")) { String[] p = kv.trim().split("=", 2); if (p.length == 2) m.put(p[0], p[1]); } return m;
+    }
+    boolean gdLogged() { java.util.Map<String, String> m = gdCookies("https://drive.google.com"); return m.containsKey("SAPISID") || m.containsKey("__Secure-3PAPISID"); }
+    static String sha1(String t) { try { byte[] d = java.security.MessageDigest.getInstance("SHA-1").digest(t.getBytes("UTF-8")); StringBuilder b = new StringBuilder(); for (byte x : d) b.append(String.format("%02x", x)); return b.toString(); } catch (Exception e) { return ""; } }
+    String gdAuth() {
+        java.util.Map<String, String> m = gdCookies("https://drive.google.com"); long ts = System.currentTimeMillis() / 1000; String o = "https://drive.google.com"; StringBuilder a = new StringBuilder();
+        String[][] k = {{"SAPISID", "SAPISIDHASH"}, {"__Secure-1PAPISID", "SAPISID1PHASH"}, {"__Secure-3PAPISID", "SAPISID3PHASH"}};
+        for (String[] x : k) { String v = m.get(x[0]); if (v == null) continue; if (a.length() > 0) a.append(' '); a.append(x[1]).append(' ').append(ts).append('_').append(sha1(ts + " " + v + " " + o)); }
+        return a.toString();
+    }
+    /* 雲端硬碟網頁裡帶的 API 金鑰：先從畫面找，找不到再用電腦版網頁抓 */
+    void gdFindKeys() {
+        final String js = "(function(){var m=(document.documentElement.innerHTML.match(/AIza[0-9A-Za-z_\\-]{35}/g)||[]);return JSON.stringify(m.filter(function(x,i){return m.indexOf(x)===i}).slice(0,8));})()";
+        if (pcWebV == null) return;
+        pcWebV.evaluateJavascript(js, new ValueCallback<String>() { public void onReceiveValue(final String v) {
+            new Thread(new Runnable() { public void run() {
+                java.util.LinkedHashSet<String> keys = new java.util.LinkedHashSet<String>();
+                try { org.json.JSONArray a = new org.json.JSONArray(new org.json.JSONTokener(v).nextValue().toString()); for (int i = 0; i < a.length(); i++) keys.add(a.getString(i)); } catch (Exception e) { }
+                try {
+                    java.net.HttpURLConnection c = (java.net.HttpURLConnection) new java.net.URL("https://drive.google.com/drive/my-drive").openConnection();
+                    String ck = android.webkit.CookieManager.getInstance().getCookie("https://drive.google.com"); if (ck != null) c.setRequestProperty("Cookie", ck);
+                    c.setRequestProperty("User-Agent", GD_DESK_UA); c.setConnectTimeout(15000); c.setReadTimeout(20000);
+                    java.io.InputStream in = c.getInputStream(); java.io.ByteArrayOutputStream bo = new java.io.ByteArrayOutputStream(); byte[] b = new byte[65536]; int n; while ((n = in.read(b)) > 0 && bo.size() < 6000000) bo.write(b, 0, n); in.close();
+                    java.util.regex.Matcher mt = java.util.regex.Pattern.compile("AIza[0-9A-Za-z_\\-]{35}").matcher(bo.toString("UTF-8")); while (mt.find() && keys.size() < 12) keys.add(mt.group());
+                } catch (Exception e) { }
+                pcSend("{\"login\":1,\"keys\":" + new org.json.JSONArray(keys).toString() + "}");
+            } }).start();
+        } });
+    }
+    void gdCallRun(final String id, final String method, final String url, final String ctype, final String body, final String upFile, final String outFile) {
+        new Thread(new Runnable() { public void run() {
+            org.json.JSONObject r = new org.json.JSONObject();
+            try {
+                java.net.HttpURLConnection c = (java.net.HttpURLConnection) new java.net.URL(url).openConnection(); c.setRequestMethod(method);
+                String ck = android.webkit.CookieManager.getInstance().getCookie(url); if (ck == null || ck.isEmpty()) ck = android.webkit.CookieManager.getInstance().getCookie("https://drive.google.com");
+                if (ck != null) c.setRequestProperty("Cookie", ck);
+                c.setRequestProperty("Authorization", gdAuth()); c.setRequestProperty("X-Origin", "https://drive.google.com"); c.setRequestProperty("Origin", "https://drive.google.com");
+                c.setRequestProperty("Referer", "https://drive.google.com/"); c.setRequestProperty("X-Goog-AuthUser", "0"); c.setRequestProperty("User-Agent", GD_DESK_UA);
+                c.setConnectTimeout(20000); c.setReadTimeout(120000);
+                if (upFile != null && !upFile.isEmpty()) {
+                    String bd = "ddbk" + System.currentTimeMillis(); File f = xferFile(upFile);
+                    byte[] head = ("--" + bd + "\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n" + body + "\r\n--" + bd + "\r\nContent-Type: application/json\r\n\r\n").getBytes("UTF-8"), tail = ("\r\n--" + bd + "--\r\n").getBytes("UTF-8");
+                    c.setDoOutput(true); c.setRequestProperty("Content-Type", "multipart/related; boundary=" + bd); c.setFixedLengthStreamingMode(head.length + f.length() + tail.length);
+                    java.io.OutputStream o = c.getOutputStream(); o.write(head); java.io.FileInputStream fi = new java.io.FileInputStream(f); byte[] b = new byte[65536]; int n; while ((n = fi.read(b)) > 0) o.write(b, 0, n); fi.close(); o.write(tail); o.close();
+                } else if (body != null && !body.isEmpty()) { c.setDoOutput(true); c.setRequestProperty("Content-Type", ctype == null || ctype.isEmpty() ? "application/json; charset=UTF-8" : ctype); java.io.OutputStream o = c.getOutputStream(); o.write(body.getBytes("UTF-8")); o.close(); }
+                int code = c.getResponseCode(); r.put("status", code);
+                java.io.InputStream in = code >= 400 ? c.getErrorStream() : c.getInputStream();
+                if (in != null) {
+                    if (outFile != null && !outFile.isEmpty() && code < 400) { FileOutputStream o = new FileOutputStream(xferFile(outFile)); byte[] b = new byte[65536]; int n; long t = 0; while ((n = in.read(b)) > 0) { o.write(b, 0, n); t += n; } o.close(); r.put("size", t); }
+                    else { java.io.ByteArrayOutputStream bo = new java.io.ByteArrayOutputStream(); byte[] b = new byte[16384]; int n; while ((n = in.read(b)) > 0 && bo.size() < 2000000) bo.write(b, 0, n); r.put("body", bo.toString("UTF-8")); }
+                    in.close();
+                }
+            } catch (Exception e) { try { r.put("status", 0); r.put("body", String.valueOf(e.getMessage())); } catch (Exception e2) { } }
+            final String js = "window.__gdApi&&window.__gdApi(" + org.json.JSONObject.quote(id) + "," + r.toString() + ")";
+            runOnUiThread(new Runnable() { public void run() { web.evaluateJavascript(js, null); } });
+        } }).start();
     }
 
     /* ---------- 快速換機：用同一個 Wi-Fi，在手機上開一個小伺服器把備份檔傳給另一支手機 ---------- */
@@ -934,7 +1003,15 @@ public class MainActivity extends Activity {
         @JavascriptInterface
         public void pcWeb() { runOnUiThread(new Runnable() { public void run() { openPcWeb(); } }); }
         @JavascriptInterface
-        public void gdWeb(final String upName, final String tipText) { runOnUiThread(new Runnable() { public void run() { gdUp = upName == null || upName.isEmpty() ? null : xferFile(upName); openWebBox("gd", "https://drive.google.com/drive/my-drive", tipText); } }); }
+        public void gdWeb(final String upName, final String tipText) { gdWeb2(upName, tipText, false, false); }
+        @JavascriptInterface
+        public void gdWeb2(final String upName, final String tipText, final boolean desk, final boolean auto) { runOnUiThread(new Runnable() { public void run() { gdUp = upName == null || upName.isEmpty() ? null : xferFile(upName); gdDesk = desk; gdAuto = auto; openWebBox("gd", "https://drive.google.com/drive/my-drive", tipText); } }); }
+        @JavascriptInterface
+        public boolean gdLogin() { return gdLogged(); }
+        @JavascriptInterface
+        public void gdKeys() { runOnUiThread(new Runnable() { public void run() { if (pcWebV != null) gdFindKeys(); else { pcKind = "gd"; new Thread(new Runnable() { public void run() { pcSend("{\"login\":1,\"keys\":[]}"); } }).start(); } } }); }
+        @JavascriptInterface
+        public void gdCall(String id, String method, String url, String ctype, String body, String upFile, String outFile) { gdCallRun(id, method, url, ctype, body, upFile, outFile); }
         @JavascriptInterface
         public void pcWebClose() { runOnUiThread(new Runnable() { public void run() { pcDone = true; closePcWeb(); } }); }
 
