@@ -1225,3 +1225,6 @@ body.mAcc #tabbar button:not(.accT){display:none}
 .acLogL .acIt{display:flex;align-items:center;gap:.5rem;font-size:.85rem}
 .dlg .dlgT{display:block;font-size:1.02rem;margin-bottom:.4rem;color:#a8472f}
 .gwBox{margin-top:.6rem;padding:.6rem .65rem;border-radius:6px;border:1px dashed var(--border);display:flex;flex-direction:column;gap:.3rem}.gwBox small{color:var(--muted);font-size:.76rem;line-height:1.5}
+.pyEd{flex:none;display:inline-grid;place-items:center;width:1.7rem;height:1.7rem;margin-left:.15rem;border-radius:6px;background:var(--surface);border:1px solid var(--border-soft);font-size:.8rem;color:var(--muted)}
+.pyCat.flash{animation:pyFlash 1.4s ease}@keyframes pyFlash{0%,60%{box-shadow:0 0 0 3px var(--accent)}100%{box-shadow:none}}
+.acPy.new{border-style:dashed;color:var(--muted)}

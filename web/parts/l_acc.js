@@ -256,10 +256,10 @@ function payItemSort(g, keys) { const A = DB.acc; A.iord = A.iord || {}; A.iord[
   const pids = keys.filter(k => k[0] === 'p').map(k => k.slice(2)), pos = DB.places.map((x, i) => pids.includes(x.id) ? i : -1).filter(i => i >= 0), objs = pids.map(id => DB.places.find(x => x.id === id)); pos.forEach((p, i) => { DB.places[p] = objs[i]; });
   DB.places.forEach((p, i) => { if (p.ord !== i) { p.ord = i; savePlace(p); } }); }
 function payListHtml(q, cur, sub) {
-  const hit = q ? n => n.toLowerCase().includes(q) : null, F = S.pyFold = S.pyFold || {}, G = payGroups().concat([{id: '', name: '未分類', icon: '📍', color: '#7d6c57', shop: 1}]).map(g => Object.assign(g, {L: payItems(g.id, hit)})).filter(g => g.L.length || (!q && g.id && !g.shop && false));
+  const hit = q ? n => n.toLowerCase().includes(q) : null, F = S.pyFold = S.pyFold || {}, G = payGroups().concat([{id: '', name: '未分類', icon: '📍', color: '#7d6c57', shop: 1}]).map(g => Object.assign(g, {L: payItems(g.id, hit)})).filter(g => g.L.length || (!q && g.id));
   const allFold = G.length && G.every(g => F[g.id || '_']);
   return {G, html: (G.length && !q ? `<div class="pyTop"><span class="small muted grow">按住 ☰ 拖曳分類、按住名稱拖曳排序</span><button class="btn sm" data-a="foldAll">${allFold ? '⊞ 全部展開' : '⊟ 全部收合'}</button></div>` : '')
-    + `<div class="pyCats">${G.map(g => { const k = g.id || '_', shut = !q && F[k]; return `<div class="pyCat ${shut ? 'shut' : ''}" data-g="${k}"><button class="pyCH" data-fold="${k}" style="--c:${g.color}">${q || !g.id ? '' : '<span class="grip"></span>'}<span>${esc(g.icon)}</span><b>${esc(g.name)}</b>${g.shop ? '' : '<span class="pyOnly">只用在記帳</span>'}<em>${g.L.length}</em><i class="psCv">▾</i></button>${shut ? '' : `<div class="acPyG pyS">${g.L.map(it => `<button class="acPy ${it.n === cur ? 'on' : ''}" data-k="${it.k}">${esc(it.n)}${sub && it.py ? '<i>✎</i>' : ''}</button>`).join('')}</div>`}</div>`; }).join('')}</div>`
+    + `<div class="pyCats">${G.map(g => { const k = g.id || '_', shut = !q && F[k]; return `<div class="pyCat ${shut ? 'shut' : ''}" data-g="${k}"><button class="pyCH" data-fold="${k}" style="--c:${g.color}">${q || !g.id ? '' : '<span class="grip"></span>'}<span>${esc(g.icon)}</span><b>${esc(g.name)}</b>${g.shop ? '' : '<span class="pyOnly">只用在記帳</span>'}${sub && g.id && !g.shop ? `<span class="pyEd" data-gedit="${g.id}">✎</span>` : ''}<em>${g.L.length}</em><i class="psCv">▾</i></button>${shut ? '' : `<div class="acPyG pyS">${g.L.map(it => `<button class="acPy ${it.n === cur ? 'on' : ''}" data-k="${it.k}">${esc(it.n)}${sub && it.py ? '<i>✎</i>' : ''}</button>`).join('')}${g.L.length ? '' : `<button class="acPy new" data-addg="${g.id}">＋ 在這裡新增名稱</button>`}</div>`}</div>`; }).join('')}</div>`
     + (G.length ? '' : '<div class="empty">還沒有名稱，按「＋ 新增名稱」建立</div>')};
 }
 function payBindSort(root, scroller, redraw) {
@@ -282,6 +282,7 @@ function pickPayee(type, cur) {
       if (t.dataset.k) { const v = payFromKey(t.dataset.k, type); if (v) fin(v); return; }
       if (t.dataset.a === 'none') { fin(null); return; }
       if (t.dataset.a === 'mng') { await managePayees(); draw(); return; }
+      if (t.dataset.addg) { const py = await editPayee(type, {n: '', g: t.dataset.addg}); if (py) fin(py); else draw(); return; }
       if (t.dataset.add || t.dataset.a === 'new') { const py = await editPayee(type, {n: t.dataset.add ? $('#pyQ', sh.body).value.trim() : ''}); if (py) fin(py); } }); });
 }
 /* 新分類：可以選要不要也放進收藏分類（購物分帳的店家會用到） */
@@ -291,6 +292,12 @@ async function newPayGroup() {
   if (v.shop) { const c = {id: 'c' + uid(), name: v.n, icon: v.i, color: CAT_COLORS.find(x => !DB.cats.some(y => y.color.toLowerCase() === x.toLowerCase())) || CAT_COLORS[DB.cats.length % CAT_COLORS.length]}; DB.cats.push(c); saveCats(); return c.id; }
   const g = {id: 'g' + uid(), name: v.n, icon: v.i, color: '#8a6a4a'}; (DB.acc.pcats = DB.acc.pcats || []).push(g); saveAcc(); return g.id;
 }
+/* 只用在記帳的分類：改名、換圖示、刪除（裡面的名稱移到「未分類」） */
+async function editPayGroup(id) { const A = DB.acc, g = (A.pcats || []).find(x => x.id === id); if (!g) return;
+  const v = await nameIcon('編輯分類', {n: g.name, i: g.icon}, {del: true}); if (!v) return;
+  if (v.del) { const n = A.payees.filter(x => x.g === id).length; if (!await ask(n ? `刪除分類「${g.name}」？裡面的 ${n} 個名稱會移到「未分類」。` : `刪除分類「${g.name}」？`, '刪除', true)) return;
+    A.payees.forEach(x => { if (x.g === id) x.g = ''; }); A.pcats = A.pcats.filter(x => x !== g); A.gord = (A.gord || []).filter(x => x !== id); saveAcc(); toast('已刪除分類'); return; }
+  g.name = v.n; g.icon = v.i; saveAcc(); }
 document.addEventListener('click', e => { const t = e.target.closest('#pyShopCk'); if (t) { buzz(8); t.classList.toggle('on'); } }, true);
 function editPayee(type, p0) {
   return new Promise(res => { const isNew = !p0.id, p = Object.assign({id: 'y' + uid(), n: '', cat: '', g: undefined}, p0); let ty = type, openP = '', done = false;
@@ -697,10 +704,14 @@ function managePayees() {
   payMigrate();
   return new Promise(res => { const sh = sheet({title: '🏪 商家／對象名稱', full: true, foot: '<button class="btn" data-a="newG">＋ 新分類</button><button class="btn pri" data-a="add">＋ 新增名稱</button>', onClose() { res(); }});
     const draw = () => { const r = payListHtml('', '', true); sh.body.innerHTML = `<div class="small muted" style="margin:-.2rem 0 .6rem">收藏的店家和自訂名稱在同一份清單；點自訂名稱可以編輯，點分類名稱可以收合。收藏店家要在地圖或收藏頁編輯。</div><div class="pyW">${r.html}</div>`; payBindSort($('.pyW', sh.body), sh.body, draw); };
-    draw(); sh.body.onclick = async e => { const t = e.target.closest('button'); if (!t) return; buzz(8); if (payFold(t, sh.body, draw)) return;
+    draw(); sh.body.onclick = async e => { const ge = e.target.closest('[data-gedit]'); if (ge) { e.stopPropagation(); buzz(8); await editPayGroup(ge.dataset.gedit); draw(); return; }
+      const t = e.target.closest('button'); if (!t) return; buzz(8); if (payFold(t, sh.body, draw)) return;
       if (t.dataset.k && t.dataset.k[0] === 'y') { const p = DB.acc.payees.find(x => x.id === t.dataset.k.slice(2)); await editPayee(catFind('in', p.cat).p && !catFind('out', p.cat).p ? 'in' : 'out', p); draw(); }
+      else if (t.dataset.addg) { await editPayee('out', {n: '', g: t.dataset.addg}); draw(); }
       else if (t.dataset.k) toast('這是收藏的店家，請到收藏頁編輯'); };
-    sh.foot.onclick = async e => { const b = e.target.closest('[data-a]'); if (!b) return; buzz(10); if (b.dataset.a === 'newG') await newPayGroup(); else await editPayee('out', {n: ''}); draw(); }; });
+    sh.foot.onclick = async e => { const b = e.target.closest('[data-a]'); if (!b) return; buzz(10);
+      if (b.dataset.a === 'newG') { const id = await newPayGroup(); draw(); if (id) { const el = $(`.pyCat[data-g="${id}"]`, sh.body); if (el) { el.scrollIntoView({block: 'center', behavior: 'smooth'}); el.classList.add('flash'); toast('✅ 已新增分類'); } } return; }
+      await editPayee('out', {n: ''}); draw(); }; });
 }
 function manageTpls() { tplList(); }
 /* 常用紀錄完整清單：支出／收入／轉帳，依分類排列；長按拖曳排序 */
