@@ -198,6 +198,28 @@ async function cloudDown(kind) {
   } catch (e) { busy(false); cloudErr(kind, e); }
 }
 
+/* ---------- Google 雲端硬碟網頁版：在 App 裡打開 drive.google.com，像瀏覽器一樣登入，不用設定任何用戶端 ---------- */
+async function gDriveWeb(mode) {
+  if (!(IS_APP && NB.gdWeb)) { window.open('https://drive.google.com/drive/my-drive', '_blank'); return; }
+  let name = '';
+  if (mode === 'up') { try { busy('打包資料和圖片…'); const blob = await makeBackupBlob(), CH = 768 * 1024; name = backupName();
+      for (let off = 0, first = true; off < blob.size; off += CH, first = false) { busy(`準備備份檔…${Math.round(off / blob.size * 100)}%`); if (!NB.tmpWrite(name, await blobB64(blob.slice(off, off + CH)), !first)) throw new Error('寫入暫存檔失敗'); }
+      busy(false); } catch (e) { busy(false); toast('❌ ' + e.message, 5000); return; } }
+  window.__gdWeb = async m => {
+    if (m.picked) { buzz(30); toast('✅ 已自動選好備份檔，等它上傳完成再按「✕ 關閉」', 5000); return; }
+    if (m.dl === 'start') { busy('從 Google 雲端下載備份…'); return; }
+    if (m.dl === 'err') { busy(false); toast('❌ 下載失敗：' + (m.msg || ''), 6000); return; }
+    if (m.dl === 'ok') { NB.pcWebClose(); try { const CH = 768 * 1024, parts = []; for (let off = 0; off < m.size; off += CH) { busy(`讀取備份…${Math.round(off / m.size * 100)}%`); const b = atob(NB.tmpRead('gd_in.json', off, CH)), u = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); parts.push(u); }
+        let j; try { j = JSON.parse(await new Blob(parts).text()); } catch (e) { j = null; } busy(false);
+        if (!j || !j.places) { await alertBox('這個檔案不是日日帳本的備份檔，請選檔名是「日日帳本備份_日期.json」的檔案。'); return; }
+        if (!await ask(`下載好了（${(m.size / 1048576).toFixed(1)} MB${j.acc ? '、' + (j.acc.recs || []).length + ' 筆記帳' : ''}）。用它取代這台手機上的所有資料嗎？`, '還原', true)) return;
+        busy('還原中…'); await applyBackup(j); busy(false); toast('✅ 還原完成，重新開啟中…', 2000); setTimeout(() => location.reload(), 900);
+      } catch (e) { busy(false); toast('❌ ' + e.message, 5000); } }
+    if (m.cancel && mode === 'up') { S.gd = Object.assign(S.gd || {}, {webLast: Date.now()}); saveS(); }
+  };
+  NB.gdWeb(name, mode === 'up' ? '登入後按「＋ 新增 → 檔案上傳」，備份檔會自動選好' : '登入後找到備份檔，按「⋮ → 下載」就會自動還原');
+}
+
 /* ---------- 手機內建儲存：完整備份／還原 ---------- */
 function localBackup() { exportBackup(); }
 function localRestore() { importBackup(); }

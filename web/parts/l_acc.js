@@ -134,10 +134,10 @@ function renderAcc() {
   const box = $('#accBody'); if (!box || !DB.acc) return; accAutoPay(); const now = new Date(); if (!Acc.ym) Acc.ym = [now.getFullYear(), now.getMonth()];
   const [Y, Mo] = Acc.ym, pre = `${Y}-${String(Mo + 1).padStart(2, '0')}`, first = new Date(Y, Mo, 1), nd = new Date(Y, Mo + 1, 0).getDate(), today = ymd(now);
   const mon = DB.acc.recs.filter(r => r.d && r.d.startsWith(pre)), out = mon.reduce((s, r) => s + (r.type === 'out' ? accMine(r) : 0), 0), inc = mon.reduce((s, r) => s + (r.type === 'in' ? +r.amt || 0 : 0), 0);
-  const net = {}; mon.forEach(r => { if (r.type !== 'tr') net[r.d] = (net[r.d] || 0) + accSign(r) * accMine(r); });
+  const net = {}, trD = {}; mon.forEach(r => { if (r.type !== 'tr') net[r.d] = (net[r.d] || 0) + accSign(r) * accMine(r); else trD[r.d] = 1; });
   let cells = ''; for (let i = 0; i < first.getDay(); i++) cells += '<span class="cd emp"></span>';
   for (let d = 1; d <= nd; d++) { const k = ymd(new Date(Y, Mo, d)), dow = (first.getDay() + d - 1) % 7, v = net[k];
-    cells += `<button class="cd ${k === Acc.day ? 'sel' : ''} ${k === today ? 'tdy' : ''} ${dow === 0 || dow === 6 ? 'we' : ''}" data-d="${k}"><b>${d}</b>${v ? `<em class="acN ${v > 0 ? 'pos' : ''}">${v > 0 ? '+' : ''}${Math.round(v).toLocaleString('en-US')}</em>` : ''}</button>`; }
+    cells += `<button class="cd ${k === Acc.day ? 'sel' : ''} ${k === today ? 'tdy' : ''} ${dow === 0 || dow === 6 ? 'we' : ''}" data-d="${k}"><b>${d}</b>${v ? `<em class="acN ${v > 0 ? 'pos' : ''}">${v > 0 ? '+' : ''}${Math.abs(v) >= 100000 ? +(v / 10000).toFixed(Math.abs(v) >= 1000000 ? 0 : 1) + '萬' : Math.round(v).toLocaleString('en-US')}</em>` : trD[k] ? '<em class="acN tr">轉帳</em>' : ''}</button>`; }
   const debts = accDebts(), dIds = pOrder(Object.keys(debts)), lossM = mon.filter(r => r.type === 'loss').reduce((t, r) => t + (+r.amt || 0), 0);
   const L = (Acc.day ? mon.filter(r => r.d === Acc.day) : mon).slice().sort(recSort);
   const days = []; L.forEach(r => { let g = days.find(x => x.d === r.d); if (!g) days.push(g = {d: r.d, L: []}); g.L.push(r); });
@@ -153,7 +153,8 @@ function renderAcc() {
 function accCard(r) {
   const c = accCat(r), me = accMe(), sp = (r.split || []).filter(s => s.p !== me), payer = r.payer || me;
   if (r.type === 'loss') return `<button class="acR card" data-r="${r.id}"><span class="acI loss">💸</span><span class="acM"><b>金額遺失${r.note ? `<em>${esc(String(r.note).split('\n')[0])}</em>` : ''}</b><small>${esc([r.t, acctName(r.acct)].filter(Boolean).join('・'))}</small></span><span class="acV neg">-${money(r.amt)}</span></button>`;
-  if (r.type === 'tr') return `<button class="acR card" data-r="${r.id}"><span class="acI tr">🔄</span><span class="acM"><b>${esc(r.note || c.n)}</b><small>${esc([r.t, (r.acct ? acctName(r.acct) : esc('外部')) + ' → ' + (acctName(r.to) || '外部'), +r.fee ? '手續費 ' + money(r.fee) : ''].filter(Boolean).join('・'))}</small></span><span class="acV">${money(r.amt)}</span></button>`;
+  if (r.type === 'tr') { const nl = String(r.note || '').split('\n'), ext = '外部' + (r.via ? `（${r.via}）` : '');
+    return `<button class="acR card" data-r="${r.id}"><span class="acI tr">${r.settle ? '🤝' : '🔄'}</span><span class="acM"><b>${esc(nl[0] || c.n)}</b><small>${esc([r.t, (r.acct ? acctName(r.acct) : ext) + ' → ' + (acctName(r.to) || ext), +r.fee ? '手續費 ' + money(r.fee) : ''].filter(Boolean).join('・'))}</small>${nl.length > 1 ? `<span class="acNoteL">${esc(nl.slice(1).join('\n'))}</span>` : ''}</span><span class="acV ${r.settle && r.to ? 'pos' : ''}">${money(r.amt)}</span></button>`; }
   const chips = sp.length ? (payer === me ? sp.map(s => { const st = (r.settled || {})[s.p]; return `<span class="acChip ${st ? 'ok' : ''}">${esc(mWho(s.p).name)} 欠 ${money(s.amt)}${st ? ' ✓' : ''}</span>`; }).join('')
     : `<span class="acChip ${(r.settled || {})[payer] ? 'ok' : 'neg'}">${esc(mWho(payer).name)} 付・我欠 ${money(-accOwe(r, payer))}${(r.settled || {})[payer] ? ' ✓' : ''}</span>`) : '';
   const first = String(r.note || '').split('\n')[0];
@@ -314,11 +315,12 @@ function accEdit(r0, preset, opt = {}) {
         <div class="acKeys">${['AC', '⌫', '÷', '×', '7', '8', '9', '−', '4', '5', '6', '+', '1', '2', '3', '=', '00', '0', '.'].map(k => `<button data-k="${k}" class="${/[⌫+−×÷]|AC/.test(k) ? 'op' : k === '=' ? 'eq' : ''}">${k}</button>`).join('')}</div>
         ${TPL ? '<div class="small muted" style="margin:-.5rem 0 .8rem">常用紀錄的金額可以留 0（例如每期不一樣的電費），點常用紀錄時會先讓你輸入金額。</div>' : ''}
         ${TPL ? `<div class="field"><label>常用紀錄名稱</label><input id="acTn" value="${esc(r.name || '')}" placeholder="例如：房租、手機月租"></div>` : ''}<div class="acRow2 ${TPL ? 'hide' : ''}"><button class="btn" data-a="date">📅 ${r.d.replace(/-/g, '/')}（${MWD[ymdDate(r.d).getDay()]}）</button><button class="btn" data-a="time">🕒 ${esc(r.t || '時間')}</button></div>
-        ${tr ? `<div class="lbl">從哪個帳戶轉出</div>${acctPickerHtml(r.acct, 'acct', r.fund)}<div class="lbl">轉入哪個帳戶</div>${acctPickerHtml(r.to, 'to', r.fund2)}<div class="field" style="margin-top:.6rem"><label>手續費（沒有就留空）</label><input id="acFee" value="${+r.fee ? r.fee : ''}" inputmode="decimal" placeholder="0"></div>`
+        ${tr && r.settle ? (() => { const inn = !r.acct, k = inn ? 'to' : 'acct'; return `<div class="lbl">${inn ? '從哪裡轉進來' : '轉給對方'}</div><div class="acExt">🌐 外部（對方的帳戶／支付）</div><div class="lbl">付款方式</div><div class="acAccts">${SETTLE_VIA.map(v => `<button data-via="${v}" class="${v === r.via ? 'on' : ''}">${v}</button>`).join('')}</div><div class="lbl">${inn ? '收進我的哪個帳戶' : '從我的哪個帳戶付'}</div><div class="acAccts">${DB.acc.accts.filter(x => x.kind === 'bank' || x.kind === 'cash').map(x => `<button data-sacct="${k}:${x.id}" class="${x.id === r[k] ? 'on' : ''}">${aIco(x)} ${esc(x.n)}</button>`).join('')}</div>`; })() : tr ? `<div class="lbl">從哪個帳戶轉出</div>${acctPickerHtml(r.acct, 'acct', r.fund)}<div class="lbl">轉入哪個帳戶</div>${acctPickerHtml(r.to, 'to', r.fund2)}<div class="field" style="margin-top:.6rem"><label>手續費（沒有就留空）</label><input id="acFee" value="${+r.fee ? r.fee : ''}" inputmode="decimal" placeholder="0"></div>`
         : r.type === 'loss' ? `<div class="lbl">從哪裡遺失的（現金、銀行、卡片…）</div>${acctPickerHtml(r.acct, 'acct', r.fund)}<div class="small muted" style="margin:.2rem 0 .4rem">💸 金額遺失會從這個帳戶扣掉，另外統計，不算在支出裡。</div>`
         : `<div class="lbl">類別</div>${catPickerHtml(r.type, r.cat, openP)}
         <div class="lbl">商家／對象</div><button class="acPayee" data-a="payee">${r.payee ? `<b>${esc(r.payee)}</b>` : '<span class="muted">選擇店名，或自訂名稱（例如：台灣電力公司）</span>'}<i>›</i></button>
         <div class="lbl">${r.type === 'in' ? '收進哪個帳戶' : '付款帳戶'}</div>${acctPickerHtml(r.acct, 'acct', r.fund)}`}
+        ${r0 && Object.keys(r.settled || {}).length ? `<div class="acSetl">${Object.keys(r.settled).map(p => `<div class="row" style="gap:.5rem"><span class="grow">✓ 已和 ${esc(mWho(p).name)} 結清</span><button class="btn sm" data-unst="${p}">改回未結清</button></div>`).join('')}</div>` : ''}
         <div class="field" style="margin-top:.7rem"><label class="row" style="gap:.4rem"><span class="grow">備註／購物明細</span></label>${tr ? '' : `<div class="acRow2" style="margin-bottom:.5rem"><button class="btn" data-a="billEd">🧾 ${r.bill ? '編輯明細（' + (r.bill.items || []).length + ' 項）' : '用分帳方式輸入'}</button><button class="btn" data-a="fromBill">📥 從分帳帶入</button></div>`}<textarea id="acNote" rows="${Math.min(10, Math.max(3, String(r.note || '').split('\n').length + 1))}" placeholder="例如：\n鮮奶 ×2  $95\n雞蛋  $60">${esc(r.note || '')}</textarea></div>
         <div class="lbl">圖片</div><div class="acImgs">${r.imgs.map((id, i) => `<span class="acImg"><img data-img="${id}" data-i="${i}" alt=""><button data-rmimg="${i}" aria-label="移除">✕</button></span>`).join('')}<button class="acImgAdd" data-a="addImg">＋<small>加入圖片</small></button></div>
         ${r.type === 'out' ? `<div class="acSplit card"><div class="acSH"><b>🤝 分帳</b><small>${who.length ? '選了 ' + who.length + ' 人分' : '不分帳就不用選'}</small></div>
@@ -340,6 +342,9 @@ function accEdit(r0, preset, opt = {}) {
         if (k === 'AC') expr = ''; else if (k === '⌫') expr = expr.slice(0, -1); else if (k === '=') { const v = calc(); expr = v ? String(v) : ''; }
         else if (op) { if (expr && /[+\-×÷]$/.test(expr)) expr = expr.slice(0, -1) + op; else if (expr) expr += op; else if (op === '-') expr = ''; }
         else if (k === '.') { if (!/\./.test(expr.split(/[+\-×÷]/).pop() || '')) expr += (expr && !/[+\-×÷]$/.test(expr) ? '' : '0') + '.'; } else if (expr.replace(/[^\d]/g, '').length < 12) expr = (expr === '0' ? '' : expr) + k; draw(); return; }
+      if (d.via) { r.via = r.via === d.via ? '' : d.via; draw(); return; }
+      if (d.sacct) { const [k, id] = d.sacct.split(':'); r[k] = id; draw(); return; }
+      if (d.unst) { if (!await ask(`把這筆改回和 ${mWho(d.unst).name} 未結清？那次結清的還款金額會跟著減少。`, '改回未結清')) return; const db = DB.acc.recs.find(x => x.id === r.id); if (db) unsettleRec(db, d.unst); delete r.settled[d.unst]; r.settled = Object.assign({}, r.settled); renderAcc(); toast('已改回未結清'); draw(); return; }
       if (d.ty) { if (r.type !== d.ty) { r.type = d.ty; openP = ''; if (d.ty === 'out' || d.ty === 'in') r.cat = firstCat(d.ty); } draw(); return; }
       if (d.par) { openP = d.par; const P = DB.acc.cats[r.type].find(p => p.id === d.par); if (P && !(P.subs || []).length) r.cat = P.id; draw(); return; }
       if (d.cat) { r.cat = d.cat; draw(); return; }
@@ -373,7 +378,8 @@ function accEdit(r0, preset, opt = {}) {
         const i = DB.acc.tpls.findIndex(x => x.id === t.id); if (i >= 0) DB.acc.tpls[i] = t; else DB.acc.tpls.push(t); saveAcc(); saved = true; sh.close(); toast('⭐ 已儲存常用紀錄'); res(t); return; }
       if (b.dataset.a === 'del') { if (!await ask('確定要刪除這筆記帳嗎？', '刪除', true)) return; DB.acc.recs = DB.acc.recs.filter(x => x.id !== r.id); for (const id of r.imgs || []) imgDel(id); saveAcc(); saved = true; sh.close(); renderAcc(); toast('已刪除'); res(null); return; }
       const A = build(); if (!(A > 0)) { toast('請輸入金額'); return; }
-      if (r.type === 'tr' && (!r.to || r.to === r.acct)) { toast('請選擇不同的轉出、轉入帳戶'); return; }
+      if (r.type === 'tr' && !r.settle && (!r.to || r.to === r.acct)) { toast('請選擇不同的轉出、轉入帳戶'); return; }
+      if (r.type === 'tr' && r.settle && !(r.to || r.acct)) { await alertBox('請選擇收進哪個帳戶（銀行或現金）'); return; }
       if (b.dataset.a === 'tpl') { const nm = ((await askText('常用紀錄的名稱（例如：房租、手機月租）', r.payee || accCat(r).n)) || '').trim(); if (!nm) return;
         const t = JSON.parse(JSON.stringify(r)); ['id', 'd', 't', 'settled', 'imgs', 'src', 'items'].forEach(k => delete t[k]); t.id = 'T' + uid(); t.name = nm.slice(0, 20); DB.acc.tpls.push(t); saveAcc(); toast(`⭐ 已存成常用「${t.name}」，在記帳頁「常用紀錄」點一下就會記帳`); return; }
       if (mode === 'custom' && r.split.length && Math.abs(r.split.reduce((s, x) => s + x.amt, 0) - A) > 0.01 && !await ask('分攤金額加起來和總金額不一樣，還是要儲存嗎？', '儲存')) return;
@@ -391,11 +397,27 @@ function accPickSettle() {
   sh.body.onclick = e => { const t = e.target.closest('[data-p]'); if (!t) return; buzz(10); sh.close(); accSettle(t.dataset.p); };
 }
 /* 對帳：每一筆可以勾選要不要這次結清（有的先還、有的之後還），勾選的這幾筆可以選錢進出哪個帳戶；結清後畫面留著，剩下的可以再選別的帳戶結清 */
+const SETTLE_VIA = ['LINE Pay', '台灣 Pay', '街口支付', '銀行轉帳', '現金面交', '其他'];
+function alertBox(msg) { setTimeout(() => buzz(40), 60); return new Promise(res => { let done = false; const w = el(`<div class="shWrap center"><div class="shBg"></div><div class="dlg warn"><b class="dlgT">⚠️ 提醒</b><p></p><div class="row"><button class="btn pri" style="flex:1">知道了</button></div></div></div>`);
+  $('p', w).textContent = msg; const me = {el: w, closed: false, close() { if (done) return; done = true; me.closed = true; const i = sheets.indexOf(me); if (i >= 0) sheets.splice(i, 1); w.classList.remove('on'); setTimeout(() => w.remove(), 220); res(); }};
+  $('.shBg', w).onclick = () => me.close(); $('button', w).onclick = () => me.close(); document.body.append(w); w.offsetHeight; w.classList.add('on'); sheets.push(me); }); }
+/* 結清的備註：日期、店家、欠款多少，合計和結算日期 */
+function settleNote(st, L, u) { u = u || mWho(st.p); const T = st.amt;
+  return [`${T >= 0 ? u.name + ' 還款' : '還給 ' + u.name}（${st.d.replace(/-/g, '/')} 結算）`].concat(L.map(r => `・${r.d.slice(5).replace('-', '/')} ${r.payee || accCat(r).n}　${money(Math.abs(accOwe(r, st.p)))}`)).concat([`合計：${money(Math.abs(T))}`]).join('\n'); }
+/* 單獨把一筆改回未結清：從那次結清拿掉，還款金額跟著調整 */
+function unsettleRec(r, p) {
+  const st = DB.acc.settles.find(x => x.id === (r.settled || {})[p]); delete r.settled[p]; if (!st) { saveAcc(); return; }
+  st.recs = st.recs.filter(id => id !== r.id); const L = st.recs.map(id => DB.acc.recs.find(x => x.id === id)).filter(Boolean); st.amt = r2(L.reduce((t, x) => t + accOwe(x, p), 0));
+  const tr = DB.acc.recs.find(x => x.settle === st.id);
+  if (!L.length) { DB.acc.settles = DB.acc.settles.filter(x => x !== st); DB.acc.recs = DB.acc.recs.filter(x => x !== tr); }
+  else if (tr) { tr.amt = Math.abs(st.amt); tr.note = settleNote(st, L); }
+  saveAcc();
+}
 function accSettle(p) {
   const u = mWho(p), pend = () => DB.acc.recs.filter(r => !(r.settled || {})[p] && accOwe(r, p)).sort((a, b) => (a.d + (a.t || '')).localeCompare(b.d + (b.t || '')));
   if (!pend().length) { toast(`和 ${u.name} 沒有還沒結清的帳`); return; }
-  let from = pend()[0].d, to = ymd(new Date()), open = new Set(), into = '', off = new Set();
-  const sh = sheet({title: `🤝 和 ${u.icon} ${u.name} 對帳`, full: true, foot: '<button class="btn" data-a="copy">📋 複製明細</button><button class="btn" data-a="csv">📤 CSV</button><button class="btn pri" data-a="ok">✅ 結清勾選的</button>'});
+  let from = pend()[0].d, to = ymd(new Date()), open = new Set(), into = '', off = new Set(), via = '';
+  const sh = sheet({title: `🤝 和 ${u.icon} ${u.name} 對帳`, full: true, foot: '<div class="stFoot"><button class="btn" data-a="copy">📋 複製</button><button class="btn" data-a="csv">📤 CSV</button><button class="btn pri" data-a="ok">✅ 結清</button></div>'});
   const list = () => pend().filter(r => r.d >= from && r.d <= to), picked = () => list().filter(r => !off.has(r.id));
   const sum = L => r2(L.reduce((s, r) => s + accOwe(r, p), 0));
   const draw = () => { const L = list(), P = picked(), T = sum(L), TP = sum(P), top = sh.body.scrollTop;
@@ -405,15 +427,18 @@ function accSettle(p) {
       <div class="row" style="gap:.4rem;margin:-.3rem 0 .5rem"><button class="btn sm" data-a="all">全選</button><button class="btn sm" data-a="none">全不選</button><span class="small muted grow" style="text-align:right">勾選這次要結清的</span></div>
       <div class="acStL card">${L.map(r => { const c = accCat(r), o = accOwe(r, p), on = !off.has(r.id), its = (r.items || []).filter(x => (x.ppl || []).includes(p) || (r.payer === p && (x.ppl || []).includes(accMe()))); return `<div class="acStR ${on ? '' : 'dim'}"><button class="acCk2 ${on ? 'on' : ''}" data-ck="${r.id}" aria-label="勾選"></button><span class="acStD">${r.d.slice(5).replace('-', '/')}</span><span class="grow" data-o="${r.id}"><b>${esc(c.i)} ${esc(r.payee || c.n)}</b><small>總額 ${money(r.amt)}・${r.payer === p ? esc(u.name) + ' 付' : '我付'}${its.length ? '・' + its.length + ' 個品項 ' + (open.has(r.id) ? '▴' : '▾') : ''}</small>
         ${open.has(r.id) && its.length ? `<span class="acStIt">${its.map(x => `<span>${esc(x.n)}<em>${money(x.amt / ((x.ppl || []).length || 1))}</em></span>`).join('')}</span>` : ''}</span><b class="${o >= 0 ? 'pos' : 'neg'}">${o >= 0 ? '' : '-'}${money(Math.abs(o))}</b></div>`; }).join('') || '<div class="empty">這段期間沒有紀錄</div>'}</div>
-      <div class="lbl" style="margin-top:.8rem">勾選的這 ${P.length} 筆：${TP >= 0 ? '錢收進哪個帳戶' : '從哪個帳戶付給他'}（可以不選；選了會同步資產餘額）</div>${acctPickerHtml(into, 'into')}
+      <div class="lbl" style="margin-top:.8rem">勾選的這 ${P.length} 筆：${TP >= 0 ? '錢收進哪個帳戶' : '從哪個帳戶付給他'}<span class="req">必選</span></div>
+      <div class="acAccts">${DB.acc.accts.filter(x => x.kind === 'bank' || x.kind === 'cash').map(x => `<button data-acct="${x.id}" class="${x.id === into ? 'on' : ''}">${aIco(x)} ${esc(x.n)}</button>`).join('')}<button data-a="addAcct" data-kind="bank" class="add">＋ 新增銀行</button></div>
+      <div class="lbl">${TP >= 0 ? '對方怎麼付給我的' : '我怎麼付給他的'}（選填）</div><div class="acAccts">${SETTLE_VIA.map(v => `<button data-via="${v}" class="${v === via ? 'on' : ''}">${v}</button>`).join('')}</div>
       <div class="small muted" style="margin-top:.6rem">結清後這幾筆就不會再算進欠款，剩下沒勾的會留著，可以之後再結清、或選別的帳戶。在「對帳紀錄」可以取消結清。</div>`;
     sh.body.scrollTop = top; };
   const text = () => { const L = picked(), T = sum(L); return [`🤝 ${u.name} 對帳（${from.replace(/-/g, '/')}～${to.replace(/-/g, '/')}）`, ''].concat(L.map(r => { const c = accCat(r), o = accOwe(r, p), its = (r.items || []).filter(x => (x.ppl || []).includes(p)); return `${r.d.slice(5).replace('-', '/')} ${r.payee || c.n}　${o >= 0 ? '' : '-'}${money(Math.abs(o))}` + (its.length ? '\n' + its.map(x => `　・${x.n} ${money(x.amt / ((x.ppl || []).length || 1))}`).join('\n') : ''); })).concat(['', T >= 0 ? `合計：${u.name} 欠我 ${money(T)}` : `合計：我欠 ${u.name} ${money(-T)}`]).join('\n'); };
   draw();
-  sh.body.addEventListener('click', async e => { const t = e.target.closest('[data-a],[data-o],[data-ck],[data-acct],[data-kind],[data-fund]'); if (!t) return; buzz(8); const d = t.dataset;
+  sh.body.addEventListener('click', async e => { const t = e.target.closest('[data-a],[data-o],[data-ck],[data-acct],[data-kind],[data-fund],[data-via]'); if (!t) return; buzz(8); const d = t.dataset;
+    if (d.via) { via = via === d.via ? '' : d.via; draw(); return; }
     if (d.ck) { if (off.has(d.ck)) off.delete(d.ck); else off.add(d.ck); draw(); return; }
     if (d.o) { if (open.has(d.o)) open.delete(d.o); else open.add(d.o); draw(); return; }
-    if (d.acct) { into = into === d.acct ? '' : d.acct; draw(); return; }
+    if (d.acct) { into = d.acct; draw(); return; }
     if (d.kind && !d.a) { acctPickerHtml.k.into = d.kind; draw(); return; }
     if (d.a === 'addAcct') { const a = await newAcct(d.kind); if (a) { into = a.id; draw(); } return; }
     if (d.a === 'all') { off.clear(); draw(); return; } if (d.a === 'none') { list().forEach(r => off.add(r.id)); draw(); return; }
@@ -422,17 +447,22 @@ function accSettle(p) {
     if (a === 'copy') copyText(text());
     else if (a === 'csv') { const rows = [['日期', '類別', '商家／對象', '總額', '誰付', '欠款', '品項']].concat(L.map(r => [r.d, accCat(r).n, r.payee || '', r.amt, r.payer === p ? u.name : '我', accOwe(r, p), (r.items || []).filter(x => (x.ppl || []).includes(p)).map(x => x.n + ' ' + r2(x.amt / ((x.ppl || []).length || 1))).join('；')])).concat([[], [T >= 0 ? `${u.name} 欠我` : `我欠 ${u.name}`, '', '', '', '', Math.abs(T)]]);
       await saveCsv(`對帳_${u.name}_${from}_${to}.csv`, rows); }
-    else if (a === 'ok') { if (!L.length) { toast('請先勾選要結清的紀錄'); return; } const ac = accAcct(into);
-      if (!await ask(`${T >= 0 ? `${u.name} 還我` : `我還 ${u.name}`} ${money(Math.abs(T))}（${L.length} 筆）${ac ? `，${T >= 0 ? '收進' : '從'}「${ac.n}」` : ''}，標記為已結清？`, '結清')) return;
+    else if (a === 'ok') { if (!L.length) { await alertBox('請先勾選要結清的紀錄'); return; } const ac = accAcct(into); if (!ac) { await alertBox(`請先選擇${T >= 0 ? '錢收進哪個帳戶' : '從哪個帳戶付給他'}（銀行或現金），一次結清只能選一個帳戶。`); return; }
+      if (!await ask(`${T >= 0 ? `${u.name} 還我` : `我還 ${u.name}`} ${money(Math.abs(T))}（${L.length} 筆），${T >= 0 ? '收進' : '從'}「${ac.n}」${via ? '（' + via + '）' : ''}，標記為已結清？`, '結清')) return;
       const st = {id: 's' + uid(), p, d: ymd(new Date()), from: L[0].d, to: L[L.length - 1].d, amt: T, recs: L.map(r => r.id)}; DB.acc.settles.push(st); L.forEach(r => { r.settled = r.settled || {}; r.settled[p] = st.id; });
-      if (into && Math.abs(T) > 0) { const now = new Date(), rr = {id: 'r' + uid(), d: st.d, t: String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0'), type: 'tr', amt: Math.abs(T), acct: T >= 0 ? '' : into, to: T >= 0 ? into : '', fee: 0, note: T >= 0 ? `${u.name} 還款` : `還給 ${u.name}`, settle: st.id}; DB.acc.recs.push(rr); st.rec = rr.id; }
-      saveAcc(); renderAcc(); buzz(40); off.clear(); into = ''; toast(`✅ 已結清 ${L.length} 筆${pend().length ? `，還有 ${pend().length} 筆沒結清` : ''}`); draw(); } };
+      if (Math.abs(T) > 0) { const now = new Date(), rr = {id: 'r' + uid(), d: st.d, t: String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0'), type: 'tr', amt: Math.abs(T), acct: T >= 0 ? '' : into, to: T >= 0 ? into : '', fee: 0, note: settleNote(st, L, u), via, settle: st.id}; DB.acc.recs.push(rr); st.rec = rr.id; }
+      Acc.day = null; Acc.ym = null; saveAcc(); renderAcc(); buzz(40); off.clear(); into = ''; via = ''; toast(`✅ 已結清 ${L.length} 筆${pend().length ? `，還有 ${pend().length} 筆沒結清` : ''}`); draw(); } };
 }
 function accSettleLog() {
-  const sh = sheet({title: '📜 對帳紀錄', full: true}); const draw = () => { const L = DB.acc.settles.slice().reverse();
-    sh.body.innerHTML = L.map(s => `<div class="acLog card"><span class="acDI">${esc(mWho(s.p).icon)}</span><span class="grow"><b>${esc(mWho(s.p).name)}・${s.amt >= 0 ? '他還我' : '我還他'} ${money(Math.abs(s.amt))}</b><small>${s.d} 結清・${s.from.slice(5)}～${s.to.slice(5)}・${s.recs.length} 筆</small></span><button class="btn sm" data-u="${s.id}">取消結清</button></div>`).join('') || '<div class="empty">還沒有對帳紀錄</div>'; };
-  draw(); sh.body.onclick = async e => { const t = e.target.closest('[data-u]'); if (!t) return; if (!await ask('取消這次結清？這些紀錄會回到「未結清」。', '取消結清', true)) return;
-    const s = DB.acc.settles.find(x => x.id === t.dataset.u); DB.acc.recs.forEach(r => { if (r.settled && r.settled[s.p] === s.id) delete r.settled[s.p]; }); DB.acc.recs = DB.acc.recs.filter(r => r.settle !== s.id); DB.acc.settles = DB.acc.settles.filter(x => x !== s); saveAcc(); draw(); renderAcc(); };
+  const sh = sheet({title: '📜 對帳紀錄', full: true}), open = new Set(); const draw = () => { const L = DB.acc.settles.slice().reverse();
+    sh.body.innerHTML = L.map(st => { const R = st.recs.map(id => DB.acc.recs.find(x => x.id === id)).filter(Boolean), tr = DB.acc.recs.find(x => x.settle === st.id);
+      return `<div class="acLog card col"><div class="row" style="gap:.6rem;width:100%"><span class="acDI">${esc(mWho(st.p).icon)}</span><button class="grow acLogT" data-o="${st.id}"><b>${esc(mWho(st.p).name)}・${st.amt >= 0 ? '他還我' : '我還他'} ${money(Math.abs(st.amt))}</b><small>${st.d} 結清・${R.length} 筆${tr ? '・' + esc(acctName(tr.to || tr.acct)) : ''}${tr && tr.via ? '・' + esc(tr.via) : ''} ${open.has(st.id) ? '▴' : '▾'}</small></button><button class="btn sm" data-u="${st.id}">全部取消</button></div>
+        ${open.has(st.id) ? `<div class="acLogL">${R.map(r => `<div class="acIt"><span class="grow">${r.d.slice(5).replace('-', '/')} ${esc(r.payee || accCat(r).n)}</span><b>${money(Math.abs(accOwe(r, st.p)))}</b><button class="btn sm" data-x="${st.id}:${r.id}">改回未結清</button></div>`).join('')}</div>` : ''}</div>`; }).join('') || '<div class="empty">還沒有對帳紀錄</div>'; };
+  draw(); sh.body.onclick = async e => { const t = e.target.closest('[data-u],[data-o],[data-x]'); if (!t) return; buzz(8);
+    if (t.dataset.o) { if (open.has(t.dataset.o)) open.delete(t.dataset.o); else open.add(t.dataset.o); draw(); return; }
+    if (t.dataset.x) { const [sid, rid] = t.dataset.x.split(':'), st = DB.acc.settles.find(x => x.id === sid), r = DB.acc.recs.find(x => x.id === rid); if (!st || !r) return; if (!await ask(`把「${r.payee || accCat(r).n}」改回未結清？這次結清的還款金額會跟著減少。`, '改回未結清')) return; unsettleRec(r, st.p); draw(); renderAcc(); toast('已改回未結清'); return; }
+    if (!await ask('取消這次結清？這些紀錄會全部回到「未結清」，那筆還款也會刪除。', '取消結清', true)) return;
+    const st = DB.acc.settles.find(x => x.id === t.dataset.u); DB.acc.recs.forEach(r => { if (r.settled && r.settled[st.p] === st.id) delete r.settled[st.p]; }); DB.acc.recs = DB.acc.recs.filter(r => r.settle !== st.id); DB.acc.settles = DB.acc.settles.filter(x => x !== st); saveAcc(); draw(); renderAcc(); };
 }
 
 /* ---------- 從分帳匯入 ---------- */
@@ -597,6 +627,7 @@ function optCfg() {
 function renderAccCfg() {
   const box = $('#accCBody'); if (!box || !DB.acc) return; const pc = S.pc || {}, gi = (() => { try { return JSON.parse(NB.gInfo ? NB.gInfo() : '{}'); } catch (e) { return {}; } })();
   box.innerHTML = `<div class="setG"><h3>功能區</h3><div class="setC"><button class="recCard" data-a="leave"><span class="rcI">🍽️</span><span class="rcT"><b>回到日日帳本</b><small>地圖、日常、分帳、發票</small></span><span class="rcGo">切換 ›</span></button></div></div>
+    <div class="setG"><h3>說明</h3><div class="setC"><button class="setR" data-a="guide" style="width:100%;text-align:left"><span class="gRi">📖</span><div class="t"><b>記帳 圖解說明</b><small>記一筆、常用、欠款對帳、資產、分析、備份換機</small></div><span class="chev">›</span></button></div></div>
     <div class="setG"><h3>分帳的人</h3><div class="setC"><div class="setR col"><div class="t"><b>我是誰</b><small>分帳、對帳時「我」是哪一個人（和日常點餐共用名單）</small></div><div class="whoRow">${DB.mcfg.people.map(u => `<button data-me="${u.id}" class="${accMe() === u.id ? 'on' : ''}">${esc(u.icon)} ${esc(u.name)}</button>`).join('')}</div></div></div></div>
     <div class="setG"><h3>分類</h3><div class="setC">
       <button class="setR" data-a="cats" data-ty="out" style="width:100%;text-align:left"><span class="gRi">📂</span><div class="t"><b>支出分類</b><small>${DB.acc.cats.out.map(p => p.n).join('、')}</small></div><span class="chev">›</span></button>
@@ -609,7 +640,7 @@ function renderAccCfg() {
     <div class="setG"><h3>匯出</h3><div class="setC"><button class="setR" data-a="csv" style="width:100%;text-align:left"><span class="gRi">📤</span><div class="t"><b>匯出 CSV</b><small>選日期區間：所有消費明細（含品項、分帳），以及資產明細</small></div><span class="chev">›</span></button></div></div>
     <div class="setG"><h3>備份與換機（整個日日帳本＋所有圖片）</h3><div class="setC">
       <div class="setR col"><div class="t"><b>☁️ Google 雲端硬碟</b><small>${(S.gd || {}).email || gi.email ? '帳戶：' + esc((S.gd || {}).email || gi.email) : '還沒登入（可以用瀏覽器登入，支援兩步驟驗證）'}・資料夾：${esc((S.gd || {}).folder || '日日帳本備份')}${S.gd && S.gd.last ? '・上次備份 ' + new Date(S.gd.last).toLocaleString('zh-TW') : ''}</small></div>
-        <div class="acRow2"><button class="btn pri" data-a="gUp">⬆️ 上傳備份</button><button class="btn" data-a="gDown">⬇️ 從雲端還原</button></div><div class="acRow2"><button class="btn sm" data-a="gFolder">📁 選擇資料夾</button>${gi.email || (S.gd || {}).rt ? '<button class="btn sm" data-a="gOut">換帳戶／登出</button>' : '<button class="btn sm" data-a="gIn">🌐 登入 Google</button>'}</div></div>
+        <div class="acRow2"><button class="btn pri" data-a="gUp">⬆️ 上傳備份</button><button class="btn" data-a="gDown">⬇️ 從雲端還原</button></div><div class="acRow2"><button class="btn sm" data-a="gFolder">📁 選擇資料夾</button>${gi.email || (S.gd || {}).rt ? '<button class="btn sm" data-a="gOut">換帳戶／登出</button>' : '<button class="btn sm" data-a="gIn">🌐 登入 Google</button>'}</div><div class="gwBox"><b>🌐 網頁版雲端硬碟（免設定）</b><small>在 App 裡打開 drive.google.com，跟用瀏覽器一樣登入。上傳時備份檔會自動選好；還原時在網頁上下載備份檔就會自動還原。</small><div class="acRow2"><button class="btn" data-a="gwUp">⬆️ 網頁上傳</button><button class="btn" data-a="gwDown">⬇️ 網頁下載還原</button></div></div></div>
       <div class="setR col"><div class="t"><b>☁️ pCloud</b><small>${pc.auth ? '帳戶：' + esc(pc.email || '') + '・資料夾：' + esc((pc.folder || {}).path || '/日日帳本備份') + (pc.last ? '・上次備份 ' + new Date(pc.last).toLocaleString('zh-TW') : '') : '還沒登入（可以用 pCloud 網頁登入，支援 Google 登入、兩步驟驗證）'}</small></div>
         <div class="acRow2"><button class="btn pri" data-a="pUp">⬆️ 上傳備份</button><button class="btn" data-a="pDown">⬇️ 從雲端還原</button></div><div class="acRow2"><button class="btn sm" data-a="pFolder">📁 選擇資料夾</button>${pc.auth ? '<button class="btn sm" data-a="pOut">登出 pCloud</button>' : '<button class="btn sm" data-a="pIn">🌐 登入 pCloud</button>'}</div></div>
       <div class="setR col"><div class="t"><b>📱 手機內建儲存</b><small>把整個日日帳本存成一個備份檔放在手機的「下載」資料夾，或從備份檔還原</small></div>
@@ -621,8 +652,9 @@ function renderAccCfg() {
 async function accCfgClick(e) {
   const t = e.target.closest('[data-a],[data-me]'); if (!t) return; buzz(8); const a = t.dataset.a;
   if (t.dataset.me) { DB.acc.me = t.dataset.me; saveAcc(); renderAccCfg(); return; }
-  if (a === 'leave') leaveAcc(); else if (a === 'cats') editCatTree(t.dataset.ty); else if (a === 'opt') optCfg(); else if (a === 'payees') managePayees(); else if (a === 'accts') enterAcc('AccA'); else if (a === 'tpls') manageTpls(); else if (a === 'csv') accCsv();
+  if (a === 'leave') leaveAcc(); else if (a === 'guide') openGuide('acc'); else if (a === 'cats') editCatTree(t.dataset.ty); else if (a === 'opt') optCfg(); else if (a === 'payees') managePayees(); else if (a === 'accts') enterAcc('AccA'); else if (a === 'tpls') manageTpls(); else if (a === 'csv') accCsv();
   else if (a === 'gFolder') gPickFolder(); else if (a === 'pFolder') pPickFolder(); else if (a === 'pIn') pLogin(); else if (a === 'lUp') localBackup(); else if (a === 'lDown') localRestore(); else if (a === 'xSend') xferSend(); else if (a === 'xRecv') xferRecv();
+  else if (a === 'gwUp') gDriveWeb('up'); else if (a === 'gwDown') gDriveWeb('down');
   else if (a === 'gUp') cloudUp('g'); else if (a === 'gDown') cloudDown('g'); else if (a === 'pUp') cloudUp('p'); else if (a === 'pDown') cloudDown('p');
   else if (a === 'gIn') gChooseLogin().then(() => renderAccCfg()); else if (a === 'gOut') { if (NB.gSignOut) NB.gSignOut(); S.gd = {cid: (S.gd || {}).cid, csec: (S.gd || {}).csec}; saveS(); renderAccCfg(); } else if (a === 'pOut') { S.pc = {}; saveS(); renderAccCfg(); }
 }

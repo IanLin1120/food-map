@@ -308,13 +308,33 @@ public class MainActivity extends Activity {
 
 
     /* ---------- pCloud 網頁登入：App 內打開 pCloud 官網，自己登入（支援兩步驟驗證、彈出視窗），登入後取出登入權杖 ---------- */
-    android.widget.FrameLayout pcBox; WebView pcWebV, pcPop; android.os.Handler pcH = new android.os.Handler(android.os.Looper.getMainLooper()); Runnable pcPoll; boolean pcDone;
+    android.widget.FrameLayout pcBox; WebView pcWebV, pcPop; android.os.Handler pcH = new android.os.Handler(android.os.Looper.getMainLooper()); Runnable pcPoll; boolean pcDone; String pcKind = "pc"; File gdUp;
     void closePcWeb() {
         if (pcBox == null) return; pcH.removeCallbacksAndMessages(null);
         try { ((ViewGroup) pcBox.getParent()).removeView(pcBox); if (pcWebV != null) pcWebV.destroy(); if (pcPop != null) pcPop.destroy(); } catch (Throwable t) { }
         pcBox = null; pcWebV = null; pcPop = null;
     }
-    void pcSend(String json) { final String js = "window.__pcWeb&&window.__pcWeb(" + json + ")"; web.evaluateJavascript(js, null); }
+    void pcSend(String json) { final String fn = "window.__" + pcKind + "Web", js = fn + "&&" + fn + "(" + json + ")"; runOnUiThread(new Runnable() { public void run() { web.evaluateJavascript(js, null); } }); }
+    /* Google 雲端硬碟網頁版：下載的備份檔帶著網頁的登入 cookie 抓下來，交給日日帳本還原 */
+    void gdDownload(final String url0, final String ua) {
+        pcSend("{\"dl\":\"start\"}");
+        new Thread(new Runnable() { public void run() {
+            try {
+                String url = url0; java.net.HttpURLConnection c = null;
+                for (int i = 0; i < 8; i++) {
+                    c = (java.net.HttpURLConnection) new java.net.URL(url).openConnection(); c.setInstanceFollowRedirects(false);
+                    String ck = android.webkit.CookieManager.getInstance().getCookie(url); if (ck != null) c.setRequestProperty("Cookie", ck);
+                    if (ua != null) c.setRequestProperty("User-Agent", ua); c.setConnectTimeout(20000); c.setReadTimeout(60000);
+                    int code = c.getResponseCode(); if (code >= 300 && code < 400 && c.getHeaderField("Location") != null) { url = new java.net.URL(new java.net.URL(url), c.getHeaderField("Location")).toString(); c.disconnect(); continue; }
+                    break;
+                }
+                if (c.getResponseCode() != 200) throw new Exception("HTTP " + c.getResponseCode());
+                java.io.InputStream in = c.getInputStream(); FileOutputStream o = new FileOutputStream(xferFile("gd_in.json")); byte[] b = new byte[65536]; int n; long t = 0;
+                while ((n = in.read(b)) > 0) { o.write(b, 0, n); t += n; } o.close(); in.close();
+                pcSend("{\"dl\":\"ok\",\"size\":" + t + "}");
+            } catch (Exception e) { pcSend("{\"dl\":\"err\",\"msg\":" + org.json.JSONObject.quote(String.valueOf(e.getMessage())) + "}"); }
+        } }).start();
+    }
     WebView pcMakeWeb() {
         WebView w = new WebView(this); WebSettings ws = w.getSettings();
         ws.setJavaScriptEnabled(true); ws.setDomStorageEnabled(true); ws.setDatabaseEnabled(true); ws.setSupportMultipleWindows(true); ws.setJavaScriptCanOpenWindowsAutomatically(true);
@@ -328,19 +348,30 @@ public class MainActivity extends Activity {
                 pcPop = pcMakeWeb(); pcBox.addView(pcPop, new android.widget.FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
                 ((WebView.WebViewTransport) msg.obj).setWebView(pcPop); msg.sendToTarget(); return true;
             }
+            @Override public boolean onShowFileChooser(WebView v, ValueCallback<Uri[]> cb, FileChooserParams p) {
+                /* 網頁要選檔案上傳時，直接交出剛打包好的備份檔，不用自己去找 */
+                if ("gd".equals(pcKind) && gdUp != null && gdUp.exists()) { cb.onReceiveValue(new Uri[]{Uri.fromFile(gdUp)}); pcSend("{\"picked\":1}"); }
+                else cb.onReceiveValue(null);
+                return true;
+            }
             @Override public void onCloseWindow(WebView w2) { if (w2 == pcPop) { try { pcBox.removeView(pcPop); pcPop.destroy(); } catch (Throwable t) { } pcPop = null; } }
         });
+        w.setDownloadListener(new android.webkit.DownloadListener() { public void onDownloadStart(String url, String ua, String cd, String mime, long len) {
+            if (!"gd".equals(pcKind)) return;
+            if (url.startsWith("http")) gdDownload(url, ua); else pcSend("{\"dl\":\"err\",\"msg\":\"這種下載方式不支援\"}");
+        } });
         return w;
     }
-    void openPcWeb() {
-        closePcWeb(); pcDone = false;
+    void openPcWeb() { openWebBox("pc", "https://my.pcloud.com/#page=login", "請登入 pCloud，登入完成會自動回到日日帳本"); }
+    void openWebBox(String kind, String startUrl, String tipText) {
+        closePcWeb(); pcDone = false; pcKind = kind;
         final float dp = getResources().getDisplayMetrics().density;
         final android.widget.FrameLayout host = (android.widget.FrameLayout) findViewById(android.R.id.content);
         android.widget.LinearLayout col = new android.widget.LinearLayout(this); col.setOrientation(android.widget.LinearLayout.VERTICAL); col.setBackgroundColor(Color.parseColor("#efe5d3"));
         pcBox = new android.widget.FrameLayout(this); pcBox.setClickable(true);
         android.widget.LinearLayout bar = new android.widget.LinearLayout(this); bar.setGravity(android.view.Gravity.CENTER_VERTICAL); int pd = (int) (8 * dp); bar.setPadding(pd, pd + (int) getStatusBarH(), pd, pd);
         android.widget.Button close = new android.widget.Button(this); close.setText("✕ 關閉"); close.setAllCaps(false); close.setTextColor(Color.parseColor("#3a2c22")); close.setBackground(rounded("#e6d8bf", "#cdb994", dp));
-        final android.widget.TextView tip = new android.widget.TextView(this); tip.setText("請登入 pCloud，登入完成會自動回到日日帳本"); tip.setTextColor(Color.parseColor("#5b4a3a")); tip.setPadding(pd, 0, 0, 0);
+        final android.widget.TextView tip = new android.widget.TextView(this); tip.setText(tipText); tip.setTextSize(13); tip.setTextColor(Color.parseColor("#5b4a3a")); tip.setPadding(pd, 0, 0, 0);
         bar.addView(close, new android.widget.LinearLayout.LayoutParams((int) (90 * dp), (int) (42 * dp))); bar.addView(tip, new android.widget.LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         pcWebV = pcMakeWeb();
         col.addView(bar, new android.widget.LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
@@ -350,7 +381,7 @@ public class MainActivity extends Activity {
         close.setOnClickListener(new View.OnClickListener() { public void onClick(View v) { closePcWeb(); pcSend("{\"cancel\":1}"); } });
         /* 每秒找一次登入權杖：網站的 cookie（含 httpOnly）和 localStorage */
         pcPoll = new Runnable() { public void run() {
-            if (pcBox == null || pcDone) return;
+            if (pcBox == null || pcDone || !"pc".equals(pcKind)) return;
             final org.json.JSONArray cand = new org.json.JSONArray(); android.webkit.CookieManager cm = android.webkit.CookieManager.getInstance();
             for (String u : new String[]{"https://my.pcloud.com", "https://e.pcloud.com", "https://www.pcloud.com", "https://api.pcloud.com", "https://eapi.pcloud.com", "https://u.pcloud.link"}) {
                 String ck = cm.getCookie(u); if (ck == null) continue;
@@ -364,7 +395,7 @@ public class MainActivity extends Activity {
                 }
             }); else pcH.postDelayed(pcPoll, 1200);
         } };
-        pcWebV.loadUrl("https://my.pcloud.com/#page=login"); pcH.postDelayed(pcPoll, 1500);
+        pcWebV.loadUrl(startUrl); if ("pc".equals(kind)) pcH.postDelayed(pcPoll, 1500);
     }
 
     /* ---------- 快速換機：用同一個 Wi-Fi，在手機上開一個小伺服器把備份檔傳給另一支手機 ---------- */
@@ -902,6 +933,8 @@ public class MainActivity extends Activity {
 
         @JavascriptInterface
         public void pcWeb() { runOnUiThread(new Runnable() { public void run() { openPcWeb(); } }); }
+        @JavascriptInterface
+        public void gdWeb(final String upName, final String tipText) { runOnUiThread(new Runnable() { public void run() { gdUp = upName == null || upName.isEmpty() ? null : xferFile(upName); openWebBox("gd", "https://drive.google.com/drive/my-drive", tipText); } }); }
         @JavascriptInterface
         public void pcWebClose() { runOnUiThread(new Runnable() { public void run() { pcDone = true; closePcWeb(); } }); }
 
