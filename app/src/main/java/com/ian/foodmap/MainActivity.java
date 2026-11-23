@@ -306,6 +306,71 @@ public class MainActivity extends Activity {
         invWebV.loadUrl(url);
     }
 
+
+    /* ---------- pCloud 網頁登入：App 內打開 pCloud 官網，自己登入（支援兩步驟驗證、彈出視窗），登入後取出登入權杖 ---------- */
+    android.widget.FrameLayout pcBox; WebView pcWebV, pcPop; android.os.Handler pcH = new android.os.Handler(android.os.Looper.getMainLooper()); Runnable pcPoll; boolean pcDone;
+    void closePcWeb() {
+        if (pcBox == null) return; pcH.removeCallbacksAndMessages(null);
+        try { ((ViewGroup) pcBox.getParent()).removeView(pcBox); if (pcWebV != null) pcWebV.destroy(); if (pcPop != null) pcPop.destroy(); } catch (Throwable t) { }
+        pcBox = null; pcWebV = null; pcPop = null;
+    }
+    void pcSend(String json) { final String js = "window.__pcWeb&&window.__pcWeb(" + json + ")"; web.evaluateJavascript(js, null); }
+    WebView pcMakeWeb() {
+        WebView w = new WebView(this); WebSettings ws = w.getSettings();
+        ws.setJavaScriptEnabled(true); ws.setDomStorageEnabled(true); ws.setDatabaseEnabled(true); ws.setSupportMultipleWindows(true); ws.setJavaScriptCanOpenWindowsAutomatically(true);
+        ws.setUserAgentString(ws.getUserAgentString().replace("; wv", ""));
+        android.webkit.CookieManager.getInstance().setAcceptCookie(true); android.webkit.CookieManager.getInstance().setAcceptThirdPartyCookies(w, true);
+        w.setWebViewClient(new WebViewClient() { @Override public boolean shouldOverrideUrlLoading(WebView v, WebResourceRequest r) { String sc = r.getUrl().getScheme(); return !("http".equals(sc) || "https".equals(sc)); } });
+        w.setWebChromeClient(new WebChromeClient() {
+            @Override public boolean onCreateWindow(WebView view, boolean dialog, boolean user, android.os.Message msg) {
+                /* 彈出視窗（例如 Google／Apple 登入）：疊一層新的 WebView 顯示，不阻擋 */
+                if (pcPop != null) { try { pcBox.removeView(pcPop); pcPop.destroy(); } catch (Throwable t) { } }
+                pcPop = pcMakeWeb(); pcBox.addView(pcPop, new android.widget.FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+                ((WebView.WebViewTransport) msg.obj).setWebView(pcPop); msg.sendToTarget(); return true;
+            }
+            @Override public void onCloseWindow(WebView w2) { if (w2 == pcPop) { try { pcBox.removeView(pcPop); pcPop.destroy(); } catch (Throwable t) { } pcPop = null; } }
+        });
+        return w;
+    }
+    void openPcWeb() {
+        closePcWeb(); pcDone = false;
+        final float dp = getResources().getDisplayMetrics().density;
+        final android.widget.FrameLayout host = (android.widget.FrameLayout) findViewById(android.R.id.content);
+        android.widget.LinearLayout col = new android.widget.LinearLayout(this); col.setOrientation(android.widget.LinearLayout.VERTICAL); col.setBackgroundColor(Color.parseColor("#efe5d3"));
+        pcBox = new android.widget.FrameLayout(this); pcBox.setClickable(true);
+        android.widget.LinearLayout bar = new android.widget.LinearLayout(this); bar.setGravity(android.view.Gravity.CENTER_VERTICAL); int pd = (int) (8 * dp); bar.setPadding(pd, pd + (int) getStatusBarH(), pd, pd);
+        android.widget.Button close = new android.widget.Button(this); close.setText("✕ 關閉"); close.setAllCaps(false); close.setTextColor(Color.parseColor("#3a2c22")); close.setBackground(rounded("#e6d8bf", "#cdb994", dp));
+        final android.widget.TextView tip = new android.widget.TextView(this); tip.setText("請登入 pCloud，登入完成會自動回到日日帳本"); tip.setTextColor(Color.parseColor("#5b4a3a")); tip.setPadding(pd, 0, 0, 0);
+        bar.addView(close, new android.widget.LinearLayout.LayoutParams((int) (90 * dp), (int) (42 * dp))); bar.addView(tip, new android.widget.LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        pcWebV = pcMakeWeb();
+        col.addView(bar, new android.widget.LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        col.addView(pcWebV, new android.widget.LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
+        pcBox.addView(col, new android.widget.FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        host.addView(pcBox, new android.widget.FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        close.setOnClickListener(new View.OnClickListener() { public void onClick(View v) { closePcWeb(); pcSend("{\"cancel\":1}"); } });
+        /* 每秒找一次登入權杖：網站的 cookie（含 httpOnly）和 localStorage */
+        pcPoll = new Runnable() { public void run() {
+            if (pcBox == null || pcDone) return;
+            final org.json.JSONArray cand = new org.json.JSONArray(); android.webkit.CookieManager cm = android.webkit.CookieManager.getInstance();
+            for (String u : new String[]{"https://my.pcloud.com", "https://e.pcloud.com", "https://www.pcloud.com", "https://api.pcloud.com", "https://eapi.pcloud.com", "https://u.pcloud.link"}) {
+                String ck = cm.getCookie(u); if (ck == null) continue;
+                for (String kv : ck.split(";")) { String[] p = kv.trim().split("=", 2); if (p.length == 2 && p[0].toLowerCase().contains("auth") && p[1].length() >= 20) cand.put(p[1]); }
+            }
+            if (pcWebV != null) pcWebV.evaluateJavascript("(function(){var o=[];try{for(var i=0;i<localStorage.length;i++){var k=localStorage.key(i),v=localStorage.getItem(k)||'';if(/auth/i.test(k)){var m=v.match(/[A-Za-z0-9]{20,}/g);if(m)o=o.concat(m);}}}catch(e){}return JSON.stringify(o);})()", new ValueCallback<String>() {
+                public void onReceiveValue(String v) {
+                    try { org.json.JSONArray a = new org.json.JSONArray(new org.json.JSONTokener(v).nextValue().toString()); for (int i = 0; i < a.length(); i++) cand.put(a.getString(i)); } catch (Exception e) { }
+                    if (cand.length() > 0) pcSend("{\"cands\":" + cand.toString() + "}");
+                    pcH.postDelayed(pcPoll, 1200);
+                }
+            }); else pcH.postDelayed(pcPoll, 1200);
+        } };
+        pcWebV.loadUrl("https://my.pcloud.com/#page=login"); pcH.postDelayed(pcPoll, 1500);
+    }
+
+    /* ---------- 快速換機：用同一個 Wi-Fi，在手機上開一個小伺服器把備份檔傳給另一支手機 ---------- */
+    java.net.ServerSocket xfer; String xferTok;
+    File xferFile(String n) { return new File(getCacheDir(), n); }
+
     android.graphics.drawable.GradientDrawable rounded(String fill, String stroke, float dp) {
         android.graphics.drawable.GradientDrawable g = new android.graphics.drawable.GradientDrawable();
         g.setColor(Color.parseColor(fill)); g.setCornerRadius(6 * dp); g.setStroke((int) Math.max(1, dp), Color.parseColor(stroke));
@@ -831,6 +896,61 @@ public class MainActivity extends Activity {
                     o.put("status", code); o.put("text", new String(bo.toByteArray(), "UTF-8"));
                 } catch (Exception e) { try { o.put("err", String.valueOf(e.getMessage())); } catch (Exception x) { } }
                 final String js = "window.__http&&window.__http(" + org.json.JSONObject.quote(id) + "," + o.toString() + ")";
+                runOnUiThread(new Runnable() { public void run() { web.evaluateJavascript(js, null); } });
+            } }).start();
+        }
+
+        @JavascriptInterface
+        public void pcWeb() { runOnUiThread(new Runnable() { public void run() { openPcWeb(); } }); }
+        @JavascriptInterface
+        public void pcWebClose() { runOnUiThread(new Runnable() { public void run() { pcDone = true; closePcWeb(); } }); }
+
+        /* 暫存檔：分段寫入／讀出（傳大檔用） */
+        @JavascriptInterface
+        public boolean tmpWrite(String name, String b64, boolean append) {
+            try { FileOutputStream o = new FileOutputStream(xferFile(name), append); o.write(Base64.decode(b64, Base64.NO_WRAP)); o.close(); return true; } catch (Exception e) { return false; } }
+        @JavascriptInterface
+        public long tmpSize(String name) { return xferFile(name).length(); }
+        @JavascriptInterface
+        public String tmpRead(String name, long off, int len) {
+            try { java.io.RandomAccessFile f = new java.io.RandomAccessFile(xferFile(name), "r"); f.seek(off); byte[] b = new byte[(int) Math.min(len, Math.max(0, f.length() - off))]; f.readFully(b); f.close(); return Base64.encodeToString(b, Base64.NO_WRAP); } catch (Exception e) { return ""; } }
+
+        @JavascriptInterface
+        public String xferStart() {
+            try {
+                if (xfer != null) try { xfer.close(); } catch (Exception e) { }
+                xfer = new java.net.ServerSocket(0); xferTok = Long.toHexString(new java.security.SecureRandom().nextLong()).replace("-", "");
+                final java.net.ServerSocket ss = xfer;
+                new Thread(new Runnable() { public void run() {
+                    while (!ss.isClosed()) { try { final java.net.Socket so = ss.accept(); new Thread(new Runnable() { public void run() {
+                        try { java.io.BufferedReader rd = new java.io.BufferedReader(new java.io.InputStreamReader(so.getInputStream())); String line = rd.readLine(); OutputStream os = so.getOutputStream();
+                            File f = xferFile("xfer_out.json");
+                            if (line != null && line.contains("/" + xferTok) && f.exists()) {
+                                os.write(("HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: " + f.length() + "\r\nConnection: close\r\n\r\n").getBytes("UTF-8"));
+                                java.io.FileInputStream in = new java.io.FileInputStream(f); byte[] b = new byte[65536]; int n; while ((n = in.read(b)) > 0) os.write(b, 0, n); in.close();
+                                runOnUiThread(new Runnable() { public void run() { web.evaluateJavascript("window.__xferSent&&window.__xferSent()", null); } });
+                            } else os.write("HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\n\r\n".getBytes("UTF-8"));
+                            os.flush(); so.close(); } catch (Exception e) { } } }).start(); } catch (Exception e) { break; } }
+                } }).start();
+                String ip = "";
+                for (java.net.NetworkInterface ni : java.util.Collections.list(java.net.NetworkInterface.getNetworkInterfaces())) {
+                    if (!ni.isUp() || ni.isLoopback()) continue;
+                    for (java.net.InetAddress a : java.util.Collections.list(ni.getInetAddresses())) if (a instanceof java.net.Inet4Address && a.isSiteLocalAddress()) { if (ip.isEmpty() || ni.getName().startsWith("wlan") || ni.getName().startsWith("ap")) ip = a.getHostAddress(); }
+                }
+                return "{\"ip\":\"" + ip + "\",\"port\":" + ss.getLocalPort() + ",\"tok\":\"" + xferTok + "\"}";
+            } catch (Exception e) { return "{\"err\":" + org.json.JSONObject.quote(String.valueOf(e.getMessage())) + "}"; }
+        }
+        @JavascriptInterface
+        public void xferStop() { try { if (xfer != null) xfer.close(); } catch (Exception e) { } xfer = null; xferFile("xfer_out.json").delete(); }
+        @JavascriptInterface
+        public void xferGet(final String id, final String url) {
+            new Thread(new Runnable() { public void run() {
+                String res;
+                try { java.net.HttpURLConnection c = (java.net.HttpURLConnection) new java.net.URL(url).openConnection(); c.setConnectTimeout(15000); c.setReadTimeout(120000);
+                    InputStream in = c.getInputStream(); FileOutputStream o = new FileOutputStream(xferFile("xfer_in.json")); byte[] b = new byte[65536]; int n; long tot = 0;
+                    while ((n = in.read(b)) > 0) { o.write(b, 0, n); tot += n; } o.close(); in.close(); res = "{\"size\":" + tot + "}";
+                } catch (Exception e) { res = "{\"err\":" + org.json.JSONObject.quote(String.valueOf(e.getMessage())) + "}"; }
+                final String js = "window.__xferGot&&window.__xferGot(" + org.json.JSONObject.quote(id) + "," + res + ")";
                 runOnUiThread(new Runnable() { public void run() { web.evaluateJavascript(js, null); } });
             } }).start();
         }

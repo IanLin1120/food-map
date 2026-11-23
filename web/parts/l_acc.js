@@ -20,35 +20,48 @@ const ACC_IN2 = [['工作', '💼', [['薪水', '💰'], ['獎金', '🎉'], ['�
   ['其他', '💵', [['退款', '🔁'], ['紅包', '🧧'], ['收回欠款', '↩️'], ['二手拍賣', '🏷️'], ['其他收入', '💵']]]];
 const AK = {cash: ['現金', '💵'], bank: ['銀行', '🏦'], card: ['信用卡', '💳'], stored: ['儲值', '🎫'], pay: ['行動支付', '📲']};
 /* 常見的銀行、行動支付、儲值帳戶（圖示用官網的網站圖示，沒有網路時顯示表情符號） */
+/* 資產區的圖示：自己畫的銀行／支付簡稱徽章（品牌色＋簡稱），和記帳區的美食、生活圖示分開 */
 const ACCT_PRESET = {
-  bank: [['玉山銀行', 'esunbank.com'], ['國泰世華', 'cathaybk.com.tw'], ['中國信託', 'ctbcbank.com'], ['台新銀行', 'taishinbank.com.tw'], ['富邦銀行', 'fubon.com'], ['永豐銀行', 'bank.sinopac.com'], ['兆豐銀行', 'megabank.com.tw'], ['第一銀行', 'firstbank.com.tw'], ['華南銀行', 'hncb.com.tw'], ['彰化銀行', 'bankchb.com'], ['合作金庫', 'tcb-bank.com.tw'], ['土地銀行', 'landbank.com.tw'], ['臺灣銀行', 'bot.com.tw'], ['上海商銀', 'scsb.com.tw'], ['中華郵政', 'post.gov.tw'], ['元大銀行', 'yuantabank.com.tw'], ['聯邦銀行', 'ubot.com.tw'], ['遠東商銀', 'feib.com.tw'], ['新光銀行', 'skbank.com.tw'], ['凱基銀行', 'kgibank.com.tw'], ['星展銀行', 'dbs.com.tw'], ['渣打銀行', 'sc.com'], ['匯豐銀行', 'hsbc.com.tw'], ['台中銀行', 'tcbbank.com.tw'], ['臺灣企銀', 'tbb.com.tw'], ['王道銀行', 'o-bank.com'], ['將來銀行', 'nextbank.com.tw'], ['LINE Bank', 'linebank.com.tw'], ['樂天銀行', 'rakuten-bank.com.tw'], ['陽信銀行', 'sunnybank.com.tw'], ['京城銀行', 'ktb.com.tw'], ['安泰銀行', 'entiebank.com.tw'], ['板信銀行', 'bop.com.tw'], ['高雄銀行', 'bok.com.tw']],
-  card: [['國泰世華信用卡', 'cathaybk.com.tw'], ['中信信用卡', 'ctbcbank.com'], ['台新信用卡', 'taishinbank.com.tw'], ['玉山信用卡', 'esunbank.com'], ['富邦信用卡', 'fubon.com'], ['永豐信用卡', 'bank.sinopac.com'], ['聯邦信用卡', 'ubot.com.tw'], ['滙豐信用卡', 'hsbc.com.tw'], ['兆豐信用卡', 'megabank.com.tw'], ['第一信用卡', 'firstbank.com.tw'], ['星展信用卡', 'dbs.com.tw'], ['遠東信用卡', 'feib.com.tw'], ['樂天信用卡', 'rakuten-bank.com.tw'], ['將來信用卡', 'nextbank.com.tw']],
-  pay: [['LINE Pay', 'pay.line.me'], ['街口支付', 'jkopay.com'], ['全支付', 'pxpayplus.com'], ['Apple Pay', 'apple.com'], ['Google Pay', 'pay.google.com'], ['Samsung Pay', 'samsung.com'], ['悠遊付', 'easywallet.easycard.com.tw'], ['icash Pay', 'icashpay.com.tw'], ['台灣 Pay', 'twpay.com.tw'], ['Pi 拍錢包', 'piapp.com.tw'], ['歐付寶', 'opay.tw'], ['OPEN 錢包', '7-11.com.tw'], ['全盈+PAY', 'pluspay.com.tw'], ['橘子支付', 'gamapay.com.tw']],
-  stored: [['悠遊卡', 'easycard.com.tw'], ['一卡通', 'i-pass.com.tw'], ['icash', 'icash.com.tw'], ['POYA Pay', 'poya.com.tw'], ['星巴克隨行卡', 'starbucks.com.tw'], ['全家 My FamiPay', 'family.com.tw'], ['有錢卡', 'happycash.com.tw'], ['麥當勞點點卡', 'mcdonalds.com.tw'], ['家樂福錢包', 'carrefour.com.tw'], ['高鐵 TGo', 'thsrc.com.tw']],
-  cash: [['錢包', ''], ['零錢罐', ''], ['外幣現金', '']]};
+  bank: [['玉山銀行', '玉山', '#0f8f74'], ['國泰世華', '國泰', '#2e8b3d'], ['中國信託', '中信', '#d7282f'], ['台新銀行', '台新', '#d71920'], ['富邦銀行', '富邦', '#1a5fa8'], ['永豐銀行', '永豐', '#c41e3a'], ['兆豐銀行', '兆豐', '#b8102b'], ['第一銀行', '一銀', '#0067b1'], ['華南銀行', '華南', '#d9282f'], ['彰化銀行', '彰銀', '#e60012'], ['合作金庫', '合庫', '#009b4c'], ['土地銀行', '土銀', '#008c5a'], ['臺灣銀行', '臺銀', '#a8792c'], ['上海商銀', '上海', '#b5122c'], ['中華郵政', '郵局', '#009944'], ['元大銀行', '元大', '#00489d'], ['聯邦銀行', '聯邦', '#e2001a'], ['遠東商銀', '遠銀', '#b8102b'], ['新光銀行', '新光', '#e60012'], ['凱基銀行', '凱基', '#003a70'], ['星展銀行', '星展', '#e3001b'], ['渣打銀行', '渣打', '#0072ce'], ['匯豐銀行', '匯豐', '#db0011'], ['台中銀行', '中銀', '#e1251b'], ['臺灣企銀', '企銀', '#00508f'], ['王道銀行', '王道', '#f39800'], ['將來銀行', '將來', '#1e2e5c'], ['LINE Bank', 'LINE', '#06c755'], ['樂天銀行', '樂天', '#bf0000'], ['陽信銀行', '陽信', '#f08200'], ['京城銀行', '京城', '#00539f'], ['安泰銀行', '安泰', '#b8102b'], ['板信銀行', '板信', '#0c6eb5'], ['高雄銀行', '高銀', '#0090d8'], ['三信銀行', '三信', '#2f6f3e'], ['華泰銀行', '華泰', '#003399'], ['瑞興銀行', '瑞興', '#7a1f2b'], ['農會', '農會', '#3f8f2f']],
+  card: [['國泰世華信用卡', '國泰', '#2e8b3d'], ['中信信用卡', '中信', '#d7282f'], ['台新信用卡', '台新', '#d71920'], ['玉山信用卡', '玉山', '#0f8f74'], ['富邦信用卡', '富邦', '#1a5fa8'], ['永豐信用卡', '永豐', '#c41e3a'], ['聯邦信用卡', '聯邦', '#e2001a'], ['匯豐信用卡', '匯豐', '#db0011'], ['兆豐信用卡', '兆豐', '#b8102b'], ['第一信用卡', '一銀', '#0067b1'], ['星展信用卡', '星展', '#e3001b'], ['遠東信用卡', '遠銀', '#b8102b'], ['樂天信用卡', '樂天', '#bf0000'], ['將來信用卡', '將來', '#1e2e5c'], ['華南信用卡', '華南', '#d9282f'], ['元大信用卡', '元大', '#00489d'], ['凱基信用卡', '凱基', '#003a70'], ['新光信用卡', '新光', '#e60012']],
+  pay: [['LINE Pay', 'LINE', '#06c755'], ['街口支付', '街口', '#c8102e'], ['全支付', '全支', '#f26a21'], ['Apple Pay', 'Pay', '#1d1d1f'], ['Google Pay', 'G', '#4285f4'], ['Samsung Pay', 'S', '#1428a0'], ['悠遊付', '悠遊付', '#0aa5e0'], ['icash Pay', 'icash', '#e3007f'], ['台灣 Pay', 'TW', '#0063b1'], ['Pi 拍錢包', 'Pi', '#00a0e9'], ['歐付寶', '歐付', '#00a0e9'], ['OPEN 錢包', 'OPEN', '#e60012'], ['全盈+PAY', '全盈', '#f5b400'], ['橘子支付', '橘子', '#ff7e00'], ['中油 Pay', '中油', '#0067b1'], ['萬家福 Pay', '萬家福', '#e94709'], ['Hami Pay', 'Hami', '#2aa1d3'], ['PayPal', 'PP', '#003087']],
+  stored: [['悠遊卡', '悠遊', '#00a0e9'], ['一卡通', '一卡通', '#e4007f'], ['icash', 'icash', '#e60012'], ['POYA Pay', 'POYA', '#e4007f'], ['星巴克隨行卡', '星巴克', '#00704a'], ['My FamiPay', 'Fami', '#00a6e2'], ['有錢卡', '有錢', '#f5b400'], ['麥當勞點點卡', 'M', '#da291c'], ['家樂福錢包', '家樂福', '#1f60a6'], ['高鐵 TGo', 'TGo', '#f28c00'], ['屈臣氏', '屈臣氏', '#00a99d'], ['康是美', '康是美', '#e5004f'], ['路易莎', '路易莎', '#5b3a29'], ['85度C', '85°C', '#7a1f2b']],
+  cash: [['錢包', '💵'], ['零錢罐', '🪙'], ['外幣現金', '💱'], ['紅包袋', '🧧']]};
+const mono = (t, c) => `m:${t}:${c}`;
+const lightBg = c => { const n = parseInt(String(c).slice(1), 16), r = n >> 16, g = (n >> 8) & 255, b = n & 255; return r * .299 + g * .587 + b * .114 > 170; };
+const monoHtml = s2 => { const [, t, c] = String(s2).split(':'); return `<span class="aMono ${[...t].length > 2 ? 'sm' : ''} ${lightBg(c) ? 'dk' : ''}" style="--m:${c}">${esc(t)}</span>`; };
 const logoURL = d => `https://www.google.com/s2/favicons?domain=${encodeURIComponent(d)}&sz=64`;
-const aIco = a => a && a.logo ? `<img class="aLogo" src="${logoURL(a.logo)}" alt="" onerror="this.replaceWith(document.createTextNode('${a.i}'))">` : esc((a && a.i) || '');
-const ICONS = {'常用': '🍳🍱🍲🍜🍣🍔🍕🥗🧋☕🍰🍪🥕🧻🛍️👕📱💄🚌⛽🅿️🚕🚄🏠💧💡🔥📶🎬🎮📺🏃🏨🎫🎁✈️📚🎓✏️💊🩺📈🛡️🧧🍻📦💰🎉🏦💵',
+const aIco = a => !a ? '' : String(a.i || '').startsWith('m:') ? monoHtml(a.i) : a.logo ? `<img class="aLogo" src="${logoURL(a.logo)}" alt="" onerror="this.replaceWith(document.createTextNode('${AK[a.kind] ? AK[a.kind][1] : '🏦'}'))">` : esc(a.i || '');
+const ICONS = {'常用': '🍳🍱🍲🍜🍣🍔🍕🥗🧋☕🍰🍪🥕🧻🛍️👕📱💄🚌⛽🅿️🚕🚄🏠💧💡🔥📶🎬🎮📺🏃🏨🎫🎁✈️📚🎓✏️💊🩺📈🛡️🧧🍻📦💰🎉',
   '餐飲': '🍳🥐🥞🍞🥪🌮🍱🍙🍛🍜🍝🍲🍣🍤🍔🍟🍕🌭🥗🥘🍗🍖🥩🥟🦞🍦🍰🧁🍩🍪🍫🍬🍡🍧🍉🍎🍌🍇🥕🥦🧄🥚🥛🧋☕🍵🧃🥤🍺🍷🍶',
   '購物': '🛍️🛒👕👖👗👟👜👓💍💄🧴🧼🧻🧽🪥🧺📱💻🖥️⌨️🎧📷🔌🔋🛋️🛏️🪑🧸🪴🎁📦🏷️',
   '交通': '🚌🚇🚆🚄🚕🚗🏍️🛵🚲🛴✈️🚢⛽🅿️🔧🛞🎫🛣️',
   '生活': '🏠🏢🏡💧💡🔥📶📞📺🧹🧺🐶🐱🐾👶💇💅🧖🏥💊🩺🦷👓',
   '娛樂': '🎬🎮🎤🎵🎸🎨📚📖🎓✏️🏃⚽🏀🏸🏊🧘🎳🎢🏕️🏖️🎪🃏',
-  '金融': '💰💵💴💳🏦📈📉💹🪙🧾🧧🎉🎁↩️🔁🔄🛡️📊🏧💸💲',
-  '其他': '⭐❤️🔥✨🌙☀️🌈🍀🌸🎯📌📍🏷️🔖📝📎🔑🎈🎀⚙️🧩❓'};
-function iconPick(cur) {
-  return new Promise(res => { let done = false; const rec = (DB.acc.icons || []).slice(0, 16), sh = sheet({title: '選擇圖示', full: true, onClose() { if (!done) res(null); }});
-    sh.body.innerHTML = `<div class="icCur"><span>${esc(cur || '？')}</span><input id="icIn" placeholder="或輸入／貼上任何表情符號" maxlength="8"><button class="btn sm pri" data-a="use">使用</button></div>
-      ${rec.length ? `<div class="lbl">最近用過</div><div class="icG">${rec.map(e => `<button data-e="${e}">${e}</button>`).join('')}</div>` : ''}
-      ${Object.entries(ICONS).map(([k, v]) => `<div class="lbl">${k}</div><div class="icG">${[...new Set(Array.from(new Intl.Segmenter().segment(v), x => x.segment))].map(e => `<button data-e="${e}" class="${e === cur ? 'on' : ''}">${e}</button>`).join('')}</div>`).join('')}`;
-    const fin = e => { if (!e) return; DB.acc.icons = [e].concat((DB.acc.icons || []).filter(x => x !== e)).slice(0, 24); saveAcc(); done = true; sh.close(); res(e); };
-    sh.body.onclick = e => { const t = e.target.closest('button'); if (!t) return; buzz(8); if (t.dataset.e) fin(t.dataset.e); else if (t.dataset.a === 'use') { const v = $('#icIn', sh.body).value.trim(); if (v) fin(Array.from(new Intl.Segmenter().segment(v), x => x.segment)[0]); } }; });
+  '收入': '💰💵🎉🎁🧧↩️🔁📈💹🏆💼⏰🧑‍💻🏷️',
+  '其他': '⭐❤️✨🌙☀️🌈🍀🌸🎯📌📍🔖📝📎🔑🎈🎀⚙️🧩❓'};
+const ICONS_FIN = {'帳戶': '💵🪙💴💶💷💱🏦🏧💳🎫📲👛💰🧧🐷📈📉💹🧾💸🔐🏠🚗'};
+function iconPick(cur, lib) {
+  return new Promise(res => { let done = false, monoC = '#5a7a44'; const fin = lib === 'fin', rk = fin ? 'iconsF' : 'icons', rec = (DB.acc[rk] || []).slice(0, 16), sh = sheet({title: fin ? '選擇帳戶圖示' : '選擇圖示', full: true, onClose() { if (!done) res(null); }});
+    const seg = v => [...new Set(Array.from(new Intl.Segmenter().segment(v), x => x.segment))];
+    const curH = String(cur || '').startsWith('m:') ? monoHtml(cur) : esc(cur || '？');
+    const monos = fin ? Object.entries({bank: '銀行', card: '信用卡', pay: '行動支付', stored: '儲值'}).map(([k, n]) => `<div class="lbl">${n}</div><div class="icG mono">${ACCT_PRESET[k].map(([nm, t, c]) => `<button data-e="${esc(mono(t, c))}" title="${esc(nm)}">${monoHtml(mono(t, c))}</button>`).join('')}</div>`).join('') : '';
+    sh.body.innerHTML = `<div class="icCur"><span>${curH}</span><input id="icIn" placeholder="${fin ? '輸入簡稱做成徽章（例如 合庫）或貼表情符號' : '或輸入／貼上任何表情符號'}" maxlength="8"><button class="btn sm pri" data-a="use">使用</button></div>
+      ${fin ? `<div class="icColors">${['#0f8f74', '#2e8b3d', '#d7282f', '#1a5fa8', '#0067b1', '#c8102e', '#f39800', '#7a1f2b', '#5a7a44', '#1d1d1f', '#00a0e9', '#e4007f'].map(c => `<button data-c="${c}" style="background:${c}" class="${c === monoC ? 'on' : ''}"></button>`).join('')}</div>` : ''}
+      ${rec.length ? `<div class="lbl">最近用過</div><div class="icG ${fin ? 'mono' : ''}">${rec.map(e => `<button data-e="${esc(e)}">${String(e).startsWith('m:') ? monoHtml(e) : e}</button>`).join('')}</div>` : ''}
+      ${monos}${Object.entries(fin ? ICONS_FIN : ICONS).map(([k, v]) => `<div class="lbl">${k}</div><div class="icG">${seg(v).map(e => `<button data-e="${e}" class="${e === cur ? 'on' : ''}">${e}</button>`).join('')}</div>`).join('')}`;
+    const finish = e => { if (!e) return; DB.acc[rk] = [e].concat((DB.acc[rk] || []).filter(x => x !== e)).slice(0, 24); saveAcc(); done = true; sh.close(); res(e); };
+    sh.body.onclick = e => { const t = e.target.closest('button'); if (!t) return; buzz(8);
+      if (t.dataset.c) { monoC = t.dataset.c; $$('[data-c]', sh.body).forEach(b => b.classList.toggle('on', b === t)); return; }
+      if (t.dataset.e) finish(t.dataset.e);
+      else if (t.dataset.a === 'use') { const v = $('#icIn', sh.body).value.trim(); if (!v) return; const first = Array.from(new Intl.Segmenter().segment(v), x => x.segment)[0];
+        finish(fin && !/\p{Extended_Pictographic}/u.test(first) ? mono(v.slice(0, 4), monoC) : first); } }; });
 }
 /* 名稱和圖示分開設定（類別、帳戶共用） */
 function nameIcon(title, o, opts = {}) {
   return new Promise(res => { let done = false, ic = o.i || opts.icon || '📁'; const sh = sheet({title, onClose() { if (!done) res(null); }, foot: `${opts.del ? '<button class="btn danger" data-a="del" style="flex:0 0 auto">刪除</button>' : ''}<button class="btn pri" data-a="ok">儲存</button>`});
-    sh.body.innerHTML = `<div class="niRow"><button class="niIc" data-a="ic">${esc(ic)}<small>換圖示</small></button><div class="field grow" style="margin:0"><label>名稱</label><input id="niN" value="${esc(o.n || '')}" placeholder="${esc(opts.ph || '')}"></div></div>${opts.extra || ''}`;
-    sh.body.onclick = async e => { const t = e.target.closest('[data-a="ic"]'); if (!t) return; buzz(8); const v = await iconPick(ic); if (v) { ic = v; t.firstChild.textContent = v; } };
+    sh.body.innerHTML = `<div class="niRow"><button class="niIc" data-a="ic">${String(ic).startsWith('m:') ? monoHtml(ic) : esc(ic)}<small>換圖示</small></button><div class="field grow" style="margin:0"><label>名稱</label><input id="niN" value="${esc(o.n || '')}" placeholder="${esc(opts.ph || '')}"></div></div>${opts.extra || ''}`;
+    sh.body.onclick = async e => { const t = e.target.closest('[data-a="ic"]'); if (!t) return; buzz(8); const v = await iconPick(ic, opts.lib); if (v) { ic = v; t.innerHTML = (String(v).startsWith('m:') ? monoHtml(v) : esc(v)) + '<small>換圖示</small>'; } };
     sh.foot.onclick = e => { const b = e.target.closest('[data-a]'); if (!b) return; buzz(10); if (b.dataset.a === 'del') { done = true; sh.close(); res({del: true}); return; }
       const n = $('#niN', sh.body).value.trim(); if (!n) { toast('請輸入名稱'); return; } const extra = opts.read ? opts.read(sh.body) : {}; done = true; sh.close(); res(Object.assign({n: n.slice(0, 14), i: ic}, extra)); };
     setTimeout(() => { const i = $('#niN', sh.body); if (i && !o.n) i.focus(); }, 250); });
@@ -73,7 +86,7 @@ const accMe = () => { const P = DB.mcfg.people; if (DB.acc.me && P.some(u => u.i
 function catFind(type, id) { const L = DB.acc.cats[type === 'in' ? 'in' : 'out'] || []; for (const p of L) { if (p.id === id) return {p, s: null}; const s = (p.subs || []).find(x => x.id === id); if (s) return {p, s}; } return {p: null, s: null}; }
 const accCat = r => { if (r.type === 'tr') return {n: r.from === '' && r.settle ? '收回欠款' : '轉帳', i: '🔄'}; const f = catFind(r.type, r.cat); return f.s ? {n: f.s.n, i: f.s.i || f.p.i, pn: f.p.n} : f.p ? {n: f.p.n, i: f.p.i, pn: f.p.n} : {n: r.type === 'in' ? '收入' : '支出', i: r.type === 'in' ? '💵' : '📦', pn: '其他'}; };
 const accAcct = id => DB.acc.accts.find(a => a.id === id);
-const acctName = id => { const a = accAcct(id); return a ? a.i + ' ' + a.n : ''; };
+const acctName = id => { const a = accAcct(id); return a ? (String(a.i).startsWith('m:') || a.logo ? (AK[a.kind] || ['', '🏦'])[1] : a.i) + ' ' + a.n : ''; };
 /* 行動支付本身沒有餘額，實際扣款的是它綁定的銀行／信用卡／儲值帳戶（每筆也可以另外指定） */
 const realAcct = (id, fund) => { const a = accAcct(id); if (a && a.kind === 'pay') return fund || a.fund || ''; return id; };
 const firstCat = ty => { const p = DB.acc.cats[ty][0]; return p ? ((p.subs || [])[0] || p).id : ''; };
@@ -142,6 +155,7 @@ function accCard(r) {
     <span class="acV ${r.type === 'in' ? 'pos' : 'neg'}">${r.type === 'in' ? '+' : '-'}${money(r.amt)}${sp.length && r.type === 'out' ? `<small>我 ${money(accMine(r))}</small>` : ''}</span></button>`;
 }
 async function useTpl(t) {
+  if (!(+t.amt > 0)) { const pre = JSON.parse(JSON.stringify(t)); delete pre.id; delete pre.name; pre.amt = 0; pre.split = (pre.split || []).map(s => ({p: s.p, amt: 0})); await accEdit(null, pre); return; }   /* 沒設金額（例如電費）：先輸入金額 */
   const now = new Date(), r = Object.assign(JSON.parse(JSON.stringify(t)), {id: 'r' + uid(), d: ymd(now), t: String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0'), settled: {}, imgs: []}); delete r.name;
   DB.acc.recs.push(r); saveAcc(); buzz(30); renderAcc();
   const T = $('#toast'); toast(`✅ 已記下「${t.name}」${money(t.amt)}（點這裡復原）`, 4000); T.onclick = () => { T.onclick = null; DB.acc.recs = DB.acc.recs.filter(x => x !== r); saveAcc(); renderAcc(); toast('已復原'); };
@@ -187,36 +201,41 @@ function acctPickerHtml(cur, key, fund) {
 acctPickerHtml.k = {};
 function newAcct(kind) {
   return new Promise(res => { let done = false; const P = (ACCT_PRESET[kind] || []).filter(([n]) => !DB.acc.accts.some(x => x.n === n)), sh = sheet({title: `新增${AK[kind][0]}`, full: true, onClose() { if (!done) res(null); }});
-    sh.body.innerHTML = `<button class="btn block" data-a="custom" style="margin-bottom:.8rem">✏️ 自己輸入名稱和圖示</button>${P.length ? `<div class="lbl">常見的${AK[kind][0]}</div><div class="acPre">${P.map(([n, d], i) => `<button data-i="${i}">${d ? `<img class="aLogo" src="${logoURL(d)}" alt="" onerror="this.replaceWith(document.createTextNode('${AK[kind][1]}'))">` : AK[kind][1]}<span>${esc(n)}</span></button>`).join('')}</div>` : ''}
-      <div class="small muted" style="margin-top:.7rem">${kind === 'pay' ? '行動支付沒有餘額，是付款方式；新增後請設定它綁定哪個銀行、信用卡或儲值帳戶，記帳時會從那個帳戶扣款。' : kind === 'stored' ? '儲值帳戶（悠遊卡、一卡通、POYA Pay…）有自己的餘額，可以用「轉帳」從銀行儲值。' : '圖示會用官網的網站圖示，沒有網路時顯示表情符號。'}</div>`;
+    sh.body.innerHTML = `<button class="btn block" data-a="custom" style="margin-bottom:.8rem">✏️ 自己輸入名稱和圖示</button>${P.length ? `<div class="lbl">常見的${AK[kind][0]}</div><div class="acPre">${P.map(([n, t, c], i) => `<button data-i="${i}">${c ? monoHtml(mono(t, c)) : t}<span>${esc(n)}</span></button>`).join('')}</div>` : ''}
+      <div class="small muted" style="margin-top:.7rem">${kind === 'pay' ? '行動支付沒有餘額，是付款方式；新增後請設定它綁定哪個銀行、信用卡或儲值帳戶，記帳時會從那個帳戶扣款。' : kind === 'stored' ? '儲值帳戶（悠遊卡、一卡通、POYA Pay…）有自己的餘額，可以用「轉帳」從銀行儲值。' : '選好之後可以在資產頁點帳戶換圖示。'}</div>`;
     const add = a => { DB.acc.accts.push(a); saveAcc(); done = true; sh.close(); res(a); };
     sh.body.onclick = async e => { const t = e.target.closest('button'); if (!t) return; buzz(8);
-      if (t.dataset.i != null) { const [n, d] = P[+t.dataset.i]; add({id: 'a' + uid(), n, i: AK[kind][1], logo: d || '', kind, bal0: 0}); return; }
-      if (t.dataset.a === 'custom') { const v = await nameIcon(`新增${AK[kind][0]}`, {n: '', i: AK[kind][1]}, {ph: {cash: '例如：錢包', bank: '例如：玉山銀行', card: '例如：CUBE 卡', stored: '例如：悠遊卡', pay: '例如：LINE Pay'}[kind]}); if (v) add({id: 'a' + uid(), n: v.n, i: v.i, kind, bal0: 0}); } }; });
+      if (t.dataset.i != null) { const [n, tt, c] = P[+t.dataset.i]; add({id: 'a' + uid(), n, i: c ? mono(tt, c) : tt, kind, bal0: 0}); return; }
+      if (t.dataset.a === 'custom') { const v = await nameIcon(`新增${AK[kind][0]}`, {n: '', i: AK[kind][1]}, {lib: 'fin', ph: {cash: '例如：錢包', bank: '例如：玉山銀行', card: '例如：CUBE 卡', stored: '例如：悠遊卡', pay: '例如：LINE Pay'}[kind]}); if (v) add({id: 'a' + uid(), n: v.n, i: v.i, kind, bal0: 0}); } }; });
 }
 
 /* ---------- 商家／對象 ---------- */
 function pickPayee(type, cur) {
   return new Promise(res => { let done = false, q = ''; const sh = sheet({title: '🏪 商家／對象', full: true, onClose() { if (!done) res(undefined); }});
     sh.body.innerHTML = `<div class="searchBox" style="margin-bottom:.6rem"><input id="pyQ" type="search" placeholder="搜尋或直接輸入新名稱"></div><div class="row" style="gap:.5rem;margin-bottom:.7rem"><button class="btn sm" data-a="new">＋ 新增名稱</button><button class="btn sm" data-a="none">不填</button></div><div id="pyL"></div>`;
+    /* 全部用同一種分組：自訂名稱依記帳母分類（生活：台電、台水…），收藏店家依收藏分類（早餐、午餐…）；每組可以收合 */
+    const fold = () => (S.pyFold = S.pyFold || {});
     const draw = () => { const hit = n => !q || n.toLowerCase().includes(q), mine = DB.acc.payees.filter(p => hit(p.n)), places = (DB.places || []).filter(p => hit(p.name) && !DB.acc.payees.some(x => x.n === p.name));
-      const groups = {}; mine.forEach(p => { const f = catFind(type, p.cat), k = f.s ? (f.p.i + ' ' + f.p.n + '・' + f.s.n) : '未分類'; (groups[k] = groups[k] || []).push(p); });
-      /* 收藏的店家：依收藏分類（早餐、午餐、晚餐…）分組；按住 ☰ 拖曳分類排序、按住店名拖曳店家排序（和收藏頁同步） */
-      const cats = DB.cats.concat([UNCAT]), pg = cats.map(c => ({c, L: places.filter(p => c.id ? p.cat === c.id : !DB.cats.some(x => x.id === p.cat))})).filter(g => g.L.length);
+      const G = []; DB.acc.cats[type].forEach(P => { const L = mine.filter(p => { const f = catFind(type, p.cat); return f.p && f.p.id === P.id; }); if (L.length) G.push({k: 'y' + P.id, ic: P.i, n: P.n, color: '#8a6a4a', L, kind: 'py'}); });
+      const un = mine.filter(p => !catFind(type, p.cat).p); if (un.length) G.push({k: 'y_', ic: '🏷️', n: '其他名稱', color: '#8a6a4a', L: un, kind: 'py'});
+      DB.cats.concat([UNCAT]).forEach(c => { const L = places.filter(p => c.id ? p.cat === c.id : !DB.cats.some(x => x.id === p.cat)); if (L.length) G.push({k: 'c' + (c.id || '_'), cid: c.id || '', ic: c.icon, n: c.name, color: c.color, L, kind: 'pl'}); });
+      const F = fold(), allFold = G.length && G.every(g => F[g.k]);
       $('#pyL', sh.body).innerHTML = `<div class="pyW">${(q && !mine.some(p => p.n === q) ? `<button class="acPy new" data-add="${esc(q)}">＋ 新增「${esc($('#pyQ', sh.body).value.trim())}」</button>` : '')
-        + Object.keys(groups).map(k => `<div class="lbl">${esc(k)}</div><div class="acPyG pyS">${groups[k].map(p => `<button class="acPy ${p.n === cur ? 'on' : ''}" data-py="${p.id}">${esc(p.n)}</button>`).join('')}</div>`).join('')
-        + (pg.length ? `<div class="lbl pyPlH">📍 收藏的店家${q ? '' : '<span>按住拖曳可以排序</span>'}</div><div class="pyCats">${pg.map(({c, L}) => `<div class="pyCat" data-cid="${c.id || ''}"><div class="pyCH" style="--c:${c.color}">${q ? '' : '<span class="grip"></span>'}<span>${esc(c.icon)}</span><b>${esc(c.name)}</b><em>${L.length}</em></div><div class="acPyG pyPl">${L.map(p => `<button class="acPy ${p.name === cur ? 'on' : ''}" data-pl="${p.id}">${esc(p.name)}</button>`).join('')}</div></div>`).join('')}</div>` : '')
-        || '<div class="empty">還沒有名稱，按「＋ 新增名稱」建立（例如：台灣自來水公司、台灣電力公司）</div>'}</div>`;
+        + (G.length && !q ? `<div class="pyTop"><span class="small muted grow">按住 ☰ 拖曳分類、按住名稱拖曳排序</span><button class="btn sm" data-a="foldAll">${allFold ? '⊞ 全部展開' : '⊟ 全部收合'}</button></div>` : '')
+        + `<div class="pyCats">${G.map(g => { const shut = !q && F[g.k]; return `<div class="pyCat k${g.kind} ${shut ? 'shut' : ''}" data-k="${g.k}" data-cid="${g.cid || ''}"><button class="pyCH" data-fold="${g.k}" style="--c:${g.color}">${q || g.kind !== 'pl' ? '' : '<span class="grip"></span>'}<span>${esc(g.ic)}</span><b>${esc(g.n)}</b><em>${g.L.length}</em><i class="psCv">▾</i></button>${shut ? '' : `<div class="acPyG ${g.kind === 'pl' ? 'pyPl' : 'pyS'}">${g.L.map(p => g.kind === 'pl' ? `<button class="acPy ${p.name === cur ? 'on' : ''}" data-pl="${p.id}">${esc(p.name)}</button>` : `<button class="acPy ${p.n === cur ? 'on' : ''}" data-py="${p.id}">${esc(p.n)}${(() => { const f = catFind(type, p.cat); return f.s ? `<small>${esc(f.s.n)}</small>` : ''; })()}</button>`).join('')}</div>`}</div>`; }).join('')}</div>`
+        + (G.length ? '' : '<div class="empty">還沒有名稱，按「＋ 新增名稱」建立（例如：台灣自來水公司、台灣電力公司）</div>')}</div>`;
       if (q) return; const W = $('.pyW', sh.body);
       sortable(W, {item: '.acPy[data-py]', scope: '.pyS', axis: 'grid', scroller: sh.body, onSort(f, t, scope) { const ids = $$('.acPy', scope).map(e => e.dataset.py), mv = ids.splice(f, 1)[0]; ids.splice(t, 0, mv); const pos = DB.acc.payees.map((x, i) => ids.includes(x.id) ? i : -1).filter(i => i >= 0), objs = ids.map(id => DB.acc.payees.find(x => x.id === id)); pos.forEach((p, i) => { DB.acc.payees[p] = objs[i]; }); saveAcc(); draw(); }});
       sortable(W, {item: '.acPy[data-pl]', scope: '.pyPl', axis: 'grid', scroller: sh.body, onSort(f, t, scope) { const ids = $$('.acPy', scope).map(e => e.dataset.pl), mv = ids.splice(f, 1)[0]; ids.splice(t, 0, mv);
         const pos = DB.places.map((x, i) => ids.includes(x.id) ? i : -1).filter(i => i >= 0), objs = ids.map(id => DB.places.find(x => x.id === id)); pos.forEach((p, i) => { DB.places[p] = objs[i]; });
         DB.places.forEach((p, i) => { if (p.ord !== i) { p.ord = i; savePlace(p); } }); draw(); }});
-      const CW = $('.pyCats', sh.body); if (CW) sortable(CW, {item: '.pyCat', handle: '.grip', handleOnly: true, scroller: sh.body, onSort(f, t) { const ids = $$('.pyCat', CW).map(e => e.dataset.cid).filter(Boolean), real = ids.map(id => DB.cats.find(c => c.id === id)).filter(Boolean);
-        const mv = ids.splice(f, 1)[0]; ids.splice(t, 0, mv); const order = ids.filter(Boolean).map(id => DB.cats.find(c => c.id === id)); const pos = DB.cats.map((c, i) => real.includes(c) ? i : -1).filter(i => i >= 0); pos.forEach((p, i) => { DB.cats[p] = order[i]; }); saveCats(); draw(); }}); };
+      const CW = $('.pyCats', sh.body); if (CW) sortable(CW, {item: '.pyCat.kpl', handle: '.grip', handleOnly: true, scroller: sh.body, onSort(f, t) { const els = $$('.pyCat.kpl', CW), ids = els.map(e => e.dataset.cid), real = ids.filter(Boolean).map(id => DB.cats.find(c => c.id === id));
+        const mv = ids.splice(f, 1)[0]; ids.splice(t, 0, mv); const order = ids.filter(Boolean).map(id => DB.cats.find(c => c.id === id)), pos = DB.cats.map((c, i) => real.includes(c) ? i : -1).filter(i => i >= 0); pos.forEach((p, i) => { DB.cats[p] = order[i]; }); saveCats(); draw(); }}); };
     draw(); $('#pyQ', sh.body).oninput = e => { q = e.target.value.trim().toLowerCase(); draw(); };
     const fin = v => { done = true; sh.close(); res(v); };
     sh.body.addEventListener('click', async e => { const t = e.target.closest('button'); if (!t) return; buzz(8);
+      if (t.dataset.fold) { const F = fold(); F[t.dataset.fold] = F[t.dataset.fold] ? 0 : 1; saveS(); draw(); return; }
+      if (t.dataset.a === 'foldAll') { const F = fold(), ks = $$('.pyCat', sh.body).map(e => e.dataset.k), all = ks.every(k => F[k]); ks.forEach(k => { F[k] = all ? 0 : 1; }); saveS(); draw(); return; }
       if (t.dataset.py) { fin(DB.acc.payees.find(p => p.id === t.dataset.py)); return; }
       if (t.dataset.pl) { const P = DB.places.find(p => p.id === t.dataset.pl), cn = (DB.cats.find(c => c.id === P.cat) || {}).name || ''; let cat = ''; DB.acc.cats[type].forEach(pp => (pp.subs || []).forEach(s => { if (s.n === cn) cat = s.id; }));
         const py = {id: 'y' + uid(), n: P.name, cat}; DB.acc.payees.push(py); saveAcc(); fin(py); return; }
@@ -245,19 +264,21 @@ function accEdit(r0, preset, opt = {}) {
     let expr = r.amt ? String(r.amt) : '', openP = '', mode = (r.split || []).length && r.split.some((s, i, A) => Math.abs(s.amt - A[0].amt) > 0.011) ? 'custom' : 'even', saved = false;
     let who = (r.split || []).map(s => s.p), custom = {}; (r.split || []).forEach(s => { custom[s.p] = s.amt; });
     const sh = sheet({title: TPL ? (isNew ? '⭐ 新增常用紀錄' : '⭐ 編輯常用紀錄') : isNew ? '📒 記一筆' : '📒 編輯記帳', full: true, foot: TPL ? `${isNew ? '' : '<button class="btn danger" data-a="del" style="flex:0 0 auto">刪除</button>'}<button class="btn pri" data-a="ok">儲存常用紀錄</button>` : `${isNew ? '' : '<button class="btn danger" data-a="del" style="flex:0 0 auto">刪除</button>'}<button class="btn" data-a="tpl" style="flex:0 0 auto">⭐ 存成常用</button><button class="btn pri" data-a="ok">儲存</button>`, onClose() { if (!saved) res(null); }});
-    const calc = () => { try { const s = expr.replace(/[^\d.+\-]/g, ''); if (!s) return 0; const v = Function('"use strict";return (' + s.replace(/[+\-.]+$/, '') + ')')(); return isFinite(v) ? r2(v) : 0; } catch (e) { return 0; } };
+    const evalX = e2 => { try { const s2 = String(e2).replace(/×/g, '*').replace(/÷/g, '/').replace(/[^\d.+\-*/]/g, '').replace(/[+\-*/.]+$/, ''); if (!s2) return 0; const v = Function('"use strict";return (' + s2 + ')')(); return isFinite(v) ? r2(v) : 0; } catch (e) { return 0; } };
+    const calc = () => evalX(expr);
     const shares = () => { const A = calc(); if (!who.length) return []; if (mode === 'custom') return who.map(p => ({p, amt: r2(+custom[p] || 0)}));
       const base = Math.floor(A / who.length * 100) / 100; let rest = r2(A - base * who.length); return who.map(p => { let v = base; if (rest > 0.001) { v = r2(v + 0.01); rest = r2(rest - 0.01); } return {p, amt: v}; }); };
     const draw = () => { const A = calc(), sp = shares(), sumSp = r2(sp.reduce((s, x) => s + x.amt, 0)), payer = r.payer || me, top = sh.body.scrollTop, tr = r.type === 'tr';
       sh.body.innerHTML = `<div class="acType three"><button data-ty="out" class="${r.type === 'out' ? 'on' : ''}">支出</button><button data-ty="in" class="${r.type === 'in' ? 'on' : ''}">收入</button><button data-ty="tr" class="${tr ? 'on' : ''}">轉帳</button></div>
-        <div class="acAmt ${r.type}"><span class="acCur">NT$</span><b id="acA">${expr ? esc(expr) : '0'}</b>${/[+\-]/.test(expr) ? `<small>= ${money(A)}</small>` : ''}</div>
-        <div class="acKeys">${['7', '8', '9', '⌫', '4', '5', '6', '+', '1', '2', '3', '−', '00', '0', '.', 'AC'].map(k => `<button data-k="${k}" class="${/[⌫+−]|AC/.test(k) ? 'op' : ''}">${k}</button>`).join('')}</div>
+        <div class="acAmt ${r.type}"><span class="acCur">NT$</span><b id="acA">${expr ? esc(expr) : '0'}</b>${/[+\-×÷]/.test(expr) ? `<small>= ${money(A)}</small>` : ''}</div>
+        <div class="acKeys">${['AC', '⌫', '÷', '×', '7', '8', '9', '−', '4', '5', '6', '+', '1', '2', '3', '=', '00', '0', '.'].map(k => `<button data-k="${k}" class="${/[⌫+−×÷]|AC/.test(k) ? 'op' : k === '=' ? 'eq' : ''}">${k}</button>`).join('')}</div>
+        ${TPL ? '<div class="small muted" style="margin:-.5rem 0 .8rem">常用紀錄的金額可以留 0（例如每期不一樣的電費），點常用紀錄時會先讓你輸入金額。</div>' : ''}
         ${TPL ? `<div class="field"><label>常用紀錄名稱</label><input id="acTn" value="${esc(r.name || '')}" placeholder="例如：房租、手機月租"></div>` : ''}<div class="acRow2 ${TPL ? 'hide' : ''}"><button class="btn" data-a="date">📅 ${r.d.replace(/-/g, '/')}（${MWD[ymdDate(r.d).getDay()]}）</button><button class="btn" data-a="time">🕒 ${esc(r.t || '時間')}</button></div>
         ${tr ? `<div class="lbl">從哪個帳戶轉出</div>${acctPickerHtml(r.acct, 'acct', r.fund)}<div class="lbl">轉入哪個帳戶</div>${acctPickerHtml(r.to, 'to', r.fund2)}<div class="field" style="margin-top:.6rem"><label>手續費（沒有就留空）</label><input id="acFee" value="${+r.fee ? r.fee : ''}" inputmode="decimal" placeholder="0"></div>`
         : `<div class="lbl">類別</div>${catPickerHtml(r.type, r.cat, openP)}
         <div class="lbl">商家／對象</div><button class="acPayee" data-a="payee">${r.payee ? `<b>${esc(r.payee)}</b>` : '<span class="muted">選擇店名，或自訂名稱（例如：台灣電力公司）</span>'}<i>›</i></button>
         <div class="lbl">${r.type === 'in' ? '收進哪個帳戶' : '付款帳戶'}</div>${acctPickerHtml(r.acct, 'acct', r.fund)}`}
-        <div class="field" style="margin-top:.7rem"><label class="row" style="gap:.4rem"><span class="grow">備註／購物明細</span>${tr ? '' : '<button class="btn sm" data-a="fromBill">📥 從分帳帶入</button>'}</label><textarea id="acNote" rows="${Math.min(10, Math.max(3, String(r.note || '').split('\n').length + 1))}" placeholder="例如：\n鮮奶 ×2  $95\n雞蛋  $60">${esc(r.note || '')}</textarea></div>
+        <div class="field" style="margin-top:.7rem"><label class="row" style="gap:.4rem"><span class="grow">備註／購物明細</span></label>${tr ? '' : `<div class="acRow2" style="margin-bottom:.5rem"><button class="btn" data-a="billEd">🧾 ${r.bill ? '編輯明細（' + (r.bill.items || []).length + ' 項）' : '用分帳方式輸入'}</button><button class="btn" data-a="fromBill">📥 從分帳帶入</button></div>`}<textarea id="acNote" rows="${Math.min(10, Math.max(3, String(r.note || '').split('\n').length + 1))}" placeholder="例如：\n鮮奶 ×2  $95\n雞蛋  $60">${esc(r.note || '')}</textarea></div>
         <div class="lbl">圖片</div><div class="acImgs">${r.imgs.map((id, i) => `<span class="acImg"><img data-img="${id}" data-i="${i}" alt=""><button data-rmimg="${i}" aria-label="移除">✕</button></span>`).join('')}<button class="acImgAdd" data-a="addImg">＋<small>加入圖片</small></button></div>
         ${r.type === 'out' ? `<div class="acSplit card"><div class="acSH"><b>🤝 分帳</b><small>${who.length ? '選了 ' + who.length + ' 人分' : '不分帳就不用選'}</small></div>
           <div class="lbl">誰付的錢</div><div class="whoRow">${DB.mcfg.people.map(u => `<button data-payer="${u.id}" class="${payer === u.id ? 'on' : ''}">${esc(u.icon)} ${esc(u.name)}</button>`).join('')}</div>
@@ -274,7 +295,10 @@ function accEdit(r0, preset, opt = {}) {
     sh.body.addEventListener('change', e => { if (e.target.dataset.cu) { keep(); draw(); } });
     sh.body.addEventListener('click', async e => { const im = e.target.closest('img[data-img]'); if (im) { Viewer.open(r.imgs.map((id, i) => ({id, label: `圖片 ${i + 1}/${r.imgs.length}`})), +im.dataset.i, r.payee || '記帳圖片'); return; }
       const t = e.target.closest('button'); if (!t) return; buzz(8); keep(); const d = t.dataset;
-      if (d.k) { const k = d.k; if (k === 'AC') expr = ''; else if (k === '⌫') expr = expr.slice(0, -1); else if (k === '+' || k === '−') { if (expr && !/[+\-]$/.test(expr)) expr += k === '+' ? '+' : '-'; } else if (k === '.') { if (!/\./.test(expr.split(/[+\-]/).pop() || '')) expr += (expr && !/[+\-]$/.test(expr) ? '' : '0') + '.'; } else if (expr.replace(/[^\d]/g, '').length < 10) expr = (expr === '0' ? '' : expr) + k; draw(); return; }
+      if (d.k) { const k = d.k, op = {'+': '+', '−': '-', '×': '×', '÷': '÷'}[k];
+        if (k === 'AC') expr = ''; else if (k === '⌫') expr = expr.slice(0, -1); else if (k === '=') { const v = calc(); expr = v ? String(v) : ''; }
+        else if (op) { if (expr && /[+\-×÷]$/.test(expr)) expr = expr.slice(0, -1) + op; else if (expr) expr += op; else if (op === '-') expr = ''; }
+        else if (k === '.') { if (!/\./.test(expr.split(/[+\-×÷]/).pop() || '')) expr += (expr && !/[+\-×÷]$/.test(expr) ? '' : '0') + '.'; } else if (expr.replace(/[^\d]/g, '').length < 12) expr = (expr === '0' ? '' : expr) + k; draw(); return; }
       if (d.ty) { if (r.type !== d.ty) { r.type = d.ty; openP = ''; if (d.ty !== 'tr') r.cat = firstCat(d.ty); } draw(); return; }
       if (d.par) { openP = d.par; const P = DB.acc.cats[r.type].find(p => p.id === d.par); if (P && !(P.subs || []).length) r.cat = P.id; draw(); return; }
       if (d.cat) { r.cat = d.cat; draw(); return; }
@@ -293,13 +317,17 @@ function accEdit(r0, preset, opt = {}) {
       else if (a === 'addImg') { const fs = await pickImages(true); if (!fs.length) return; busy('加入圖片…'); try { for (const f of fs) r.imgs.push(await imgStore(f, 2000)); } finally { busy(false); } draw(); }
       else if (a === 'addSub') { const P = DB.acc.cats[r.type].find(p => p.id === d.p), v = await nameIcon(`在「${P.n}」新增子分類`, {n: '', i: P.i}); if (!v) return; const c = {id: 'c' + uid(), n: v.n.slice(0, 10), i: v.i}; P.subs = P.subs || []; P.subs.push(c); r.cat = c.id; openP = P.id; saveAcc(); draw(); }
       else if (a === 'addP') { const n = ((await askText('新增人員名字', '')) || '').trim(); if (!n) return; const u = {id: 'u' + uid(), name: n.slice(0, 10), icon: PERSON_EMOJI[DB.mcfg.people.length % PERSON_EMOJI.length]}; DB.mcfg.people.push(u); saveMcfg(); who.push(u.id); draw(); }
+      else if (a === 'billEd') { const b = r.bill ? JSON.parse(JSON.stringify(r.bill)) : {id: 'x' + uid(), place: '', pname: r.payee || '', way: '', time: r.t || '', items: [], disc: [], odisc: [], fees: [], total: '', imgs: []};
+        editBill(b, {detached: true, onDone(bb) { if (!(bb.items || []).length && !(bb.fees || []).length) { delete r.bill; draw(); return; } const x = billToAccRec(bb, r.d); r.bill = bb; r.note = x.note; r.items = x.items; r.payee = billStore(bb) || r.payee; if (!r.cat || r.cat === firstCat(r.type)) r.cat = x.cat;
+          if (x.split.length) { r.split = x.split; who = x.split.map(s2 => s2.p); custom = {}; x.split.forEach(s2 => { custom[s2.p] = s2.amt; }); mode = x.split.some((s2, i, A2) => Math.abs(s2.amt - A2[0].amt) > 0.011) ? 'custom' : 'even'; }
+          expr = String(x.amt || ''); draw(); toast('已用模板二寫入備註'); }}); }
       else if (a === 'fromBill') { const pick = await pickBillForAcc(); if (!pick) return; const x = billToAccRec(pick.b, pick.k); x.imgs = await copyImgs(pick.b.imgs);
         Object.assign(r, {d: x.d, t: x.t || r.t, type: 'out', cat: x.cat, payee: x.payee, note: x.note, items: x.items, split: x.split, payer: me, src: x.src}); r.imgs = r.imgs.concat(x.imgs); expr = String(x.amt);
         who = x.split.map(s => s.p); custom = {}; x.split.forEach(s => { custom[s.p] = s.amt; }); mode = x.split.length && x.split.some((s, i, A2) => Math.abs(s.amt - A2[0].amt) > 0.011) ? 'custom' : 'even'; pick.b.acc = r.id; saveBills(); draw(); toast('已帶入分帳明細'); } });
     const build = () => { const A = calc(); r.amt = A; if (r.type === 'out') { r.split = shares(); if (r.split.length === 1 && r.split[0].p === (r.payer || me)) r.split = []; } else { r.split = []; r.payer = me; } if (r.type === 'tr') { r.cat = ''; r.payee = ''; } return A; };
     sh.foot.onclick = async e => { const b = e.target.closest('[data-a]'); if (!b) return; keep(); buzz(10);
       if (TPL) { if (b.dataset.a === 'del') { if (!await ask('刪除這個常用紀錄？', '刪除', true)) return; DB.acc.tpls = DB.acc.tpls.filter(x => x.id !== r.id); saveAcc(); saved = true; sh.close(); res(null); return; }
-        const A = build(); if (!(A > 0)) { toast('請輸入金額'); return; } if (!r.name) { toast('請輸入常用紀錄名稱'); return; } if (r.type === 'tr' && (!r.to || r.to === r.acct)) { toast('請選擇不同的轉出、轉入帳戶'); return; }
+        const A = build(); if (A < 0) { toast('金額不正確'); return; } if (!r.name) { toast('請輸入常用紀錄名稱'); return; } if (r.type === 'tr' && (!r.to || r.to === r.acct)) { toast('請選擇不同的轉出、轉入帳戶'); return; }
         const t = JSON.parse(JSON.stringify(r)); ['d', 't', 'settled', 'imgs', 'src', 'items'].forEach(k => delete t[k]); if (!t.id || t.id[0] !== 'T') t.id = 'T' + uid(); t.name = t.name.slice(0, 20);
         const i = DB.acc.tpls.findIndex(x => x.id === t.id); if (i >= 0) DB.acc.tpls[i] = t; else DB.acc.tpls.push(t); saveAcc(); saved = true; sh.close(); toast('⭐ 已儲存常用紀錄'); res(t); return; }
       if (b.dataset.a === 'del') { if (!await ask('確定要刪除這筆記帳嗎？', '刪除', true)) return; DB.acc.recs = DB.acc.recs.filter(x => x.id !== r.id); for (const id of r.imgs || []) imgDel(id); saveAcc(); saved = true; sh.close(); renderAcc(); toast('已刪除'); res(null); return; }
@@ -452,7 +480,7 @@ function editAcct(a) {
   if (!a) return; let kind = a.kind, pf = a.payFrom || '', fund = a.fund || '', ic = a.i, logo = a.logo || '';
   const sh = sheet({title: '編輯帳戶', full: true, foot: '<button class="btn danger" data-a="del" style="flex:0 0 auto">刪除</button><button class="btn pri" data-a="ok">儲存</button>'});
   const flows = DB.acc.recs.filter(r => acctFlow(r, a.id)).sort(recSort).slice(0, 120), payUse = DB.acc.recs.filter(r => r.acct === a.id).sort(recSort).slice(0, 60);
-  const draw = () => { const cur = acctBal(a); sh.body.innerHTML = `<div class="niRow"><button class="niIc" data-a="ic">${logo ? `<img class="aLogo" src="${logoURL(logo)}" alt="">` : esc(ic)}<small>換圖示</small></button><div class="field grow" style="margin:0"><label>名稱</label><input id="eaN" value="${esc(a.n)}"></div></div>
+  const draw = () => { const cur = acctBal(a); sh.body.innerHTML = `<div class="niRow"><button class="niIc" data-a="ic">${aIco({i: ic, logo, kind})}<small>換圖示</small></button><div class="field grow" style="margin:0"><label>名稱</label><input id="eaN" value="${esc(a.n)}"></div></div>
     <div class="lbl">種類</div><div class="dkSeg acKind">${Object.entries(AK).map(([k, [n, i]]) => `<button data-k="${k}" class="${kind === k ? 'on' : ''}">${i} ${n}</button>`).join('')}</div>
     ${kind === 'pay' ? `<div class="lbl" style="margin-top:.8rem">綁定哪個帳戶扣款（記帳時預設從這裡扣）</div><div class="acAccts">${DB.acc.accts.filter(x => x.kind === 'bank' || x.kind === 'card' || x.kind === 'stored').map(x => `<button data-fd="${x.id}" class="${fund === x.id ? 'on' : ''}">${aIco(x)} ${esc(x.n)}</button>`).join('') || '<span class="muted small">先新增銀行、信用卡或儲值帳戶</span>'}</div>`
       : `<div class="field" style="margin-top:.8rem"><label>目前餘額${kind === 'card' ? '（信用卡欠款請填負數，例如 -3500）' : ''}</label><input id="eaB" value="${cur}" inputmode="decimal"></div>`}
@@ -461,7 +489,7 @@ function editAcct(a) {
   draw();
   const keepN = () => { const n = $('#eaN', sh.body); if (n) a._n = n.value; const bb = $('#eaB', sh.body); if (bb) a._b = bb.value; const dd = $('#eaD', sh.body); if (dd) a._d = dd.value; };
   sh.body.onclick = async e => { const t = e.target.closest('button'); if (!t) return; buzz(8); keepN();
-    if (t.dataset.a === 'ic') { const v = await iconPick(ic); if (v) { ic = v; logo = ''; } }
+    if (t.dataset.a === 'ic') { const v = await iconPick(ic, 'fin'); if (v) { ic = v; logo = ''; } }
     else if (t.dataset.k) kind = t.dataset.k; else if (t.dataset.pf) pf = t.dataset.pf; else if (t.dataset.fd) fund = t.dataset.fd; else return;
     draw(); if (a._n != null) $('#eaN', sh.body).value = a._n; if (a._b != null && $('#eaB', sh.body)) $('#eaB', sh.body).value = a._b; if (a._d != null && $('#eaD', sh.body)) $('#eaD', sh.body).value = a._d; };
   sh.foot.onclick = async e => { const b = e.target.closest('[data-a]'); if (!b) return; buzz(10); keepN(); delete a._n; delete a._b; delete a._d;
@@ -534,17 +562,22 @@ function renderAccCfg() {
       <button class="setR" data-a="accts" style="width:100%;text-align:left"><span class="gRi">🏦</span><div class="t"><b>帳戶</b><small>${DB.acc.accts.length} 個・現金、銀行、信用卡、行動支付</small></div><span class="chev">›</span></button>
       <button class="setR" data-a="tpls" style="width:100%;text-align:left"><span class="gRi">⭐</span><div class="t"><b>常用紀錄</b><small>${DB.acc.tpls.length ? DB.acc.tpls.map(t => t.name).join('、') : '在「記一筆」按「⭐ 存成常用」建立'}</small></div><span class="chev">›</span></button></div></div>
     <div class="setG"><h3>匯出</h3><div class="setC"><button class="setR" data-a="csv" style="width:100%;text-align:left"><span class="gRi">📤</span><div class="t"><b>匯出 CSV</b><small>選日期區間：所有消費明細（含品項、分帳），以及資產明細</small></div><span class="chev">›</span></button></div></div>
-    <div class="setG"><h3>雲端備份（整個日日帳本＋所有圖片）</h3><div class="setC">
-      <div class="setR col"><div class="t"><b>☁️ Google 雲端硬碟</b><small>${gi.email || (S.gd && S.gd.email) ? '帳戶：' + esc(gi.email || S.gd.email) : '還沒登入'}${S.gd && S.gd.last ? '・上次備份 ' + new Date(S.gd.last).toLocaleString('zh-TW') : ''}</small></div>
-        <div class="acRow2"><button class="btn pri" data-a="gUp">⬆️ 上傳備份</button><button class="btn" data-a="gDown">⬇️ 從雲端還原</button></div>${gi.email ? '<button class="btn sm ghost" data-a="gOut">換帳戶／登出</button>' : ''}</div>
-      <div class="setR col"><div class="t"><b>☁️ pCloud</b><small>${pc.auth ? '帳戶：' + esc(pc.email || '') + (pc.last ? '・上次備份 ' + new Date(pc.last).toLocaleString('zh-TW') : '') : '還沒登入'}</small></div>
-        <div class="acRow2"><button class="btn pri" data-a="pUp">⬆️ 上傳備份</button><button class="btn" data-a="pDown">⬇️ 從雲端還原</button></div>${pc.auth ? '<button class="btn sm ghost" data-a="pOut">登出 pCloud</button>' : ''}</div>
-      <div class="setR col"><div class="t"><small>備份包含：收藏、菜單、點餐、分帳、發票、記帳、資產、食譜、設定和所有圖片。換新手機時，裝好日日帳本後登入同一個雲端帳戶按「從雲端還原」就能完整搬過去。</small></div></div></div></div>`;
+    <div class="setG"><h3>備份與換機（整個日日帳本＋所有圖片）</h3><div class="setC">
+      <div class="setR col"><div class="t"><b>☁️ Google 雲端硬碟</b><small>${gi.email || (S.gd && S.gd.email) ? '帳戶：' + esc(gi.email || S.gd.email) : '還沒登入'}・資料夾：${esc((S.gd || {}).folder || '日日帳本備份')}${S.gd && S.gd.last ? '・上次備份 ' + new Date(S.gd.last).toLocaleString('zh-TW') : ''}</small></div>
+        <div class="acRow2"><button class="btn pri" data-a="gUp">⬆️ 上傳備份</button><button class="btn" data-a="gDown">⬇️ 從雲端還原</button></div><div class="acRow2"><button class="btn sm" data-a="gFolder">📁 選擇資料夾</button>${gi.email ? '<button class="btn sm" data-a="gOut">換帳戶／登出</button>' : '<span></span>'}</div></div>
+      <div class="setR col"><div class="t"><b>☁️ pCloud</b><small>${pc.auth ? '帳戶：' + esc(pc.email || '') + '・資料夾：' + esc((pc.folder || {}).path || '/日日帳本備份') + (pc.last ? '・上次備份 ' + new Date(pc.last).toLocaleString('zh-TW') : '') : '還沒登入（可以用 pCloud 網頁登入，支援 Google 登入、兩步驟驗證）'}</small></div>
+        <div class="acRow2"><button class="btn pri" data-a="pUp">⬆️ 上傳備份</button><button class="btn" data-a="pDown">⬇️ 從雲端還原</button></div><div class="acRow2"><button class="btn sm" data-a="pFolder">📁 選擇資料夾</button>${pc.auth ? '<button class="btn sm" data-a="pOut">登出 pCloud</button>' : '<button class="btn sm" data-a="pIn">🌐 登入 pCloud</button>'}</div></div>
+      <div class="setR col"><div class="t"><b>📱 手機內建儲存</b><small>把整個日日帳本存成一個備份檔放在手機的「下載」資料夾，或從備份檔還原</small></div>
+        <div class="acRow2"><button class="btn" data-a="lUp">💾 備份到手機</button><button class="btn" data-a="lDown">📂 從手機還原</button></div></div>
+      <div class="setR col"><div class="t"><b>📲 快速換機（QR Code）</b><small>兩支手機連同一個 Wi-Fi：舊手機按「顯示 QR Code」，新手機按「掃描接收」，資料和圖片直接傳過去</small></div>
+        <div class="acRow2"><button class="btn" data-a="xSend">📤 顯示 QR Code</button><button class="btn" data-a="xRecv">📷 掃描接收</button></div></div>
+      <div class="setR col"><div class="t"><small>每張圖片都用自己的編號存在備份裡，記錄只記著圖片編號，所以還原後圖片會回到原本那一筆記帳、分帳明細、菜單和食譜，不會亂掉。</small></div></div></div></div>`;
 }
 async function accCfgClick(e) {
   const t = e.target.closest('[data-a],[data-me]'); if (!t) return; buzz(8); const a = t.dataset.a;
   if (t.dataset.me) { DB.acc.me = t.dataset.me; saveAcc(); renderAccCfg(); return; }
   if (a === 'leave') leaveAcc(); else if (a === 'cats') editCatTree(t.dataset.ty); else if (a === 'opt') optCfg(); else if (a === 'payees') managePayees(); else if (a === 'accts') enterAcc('AccA'); else if (a === 'tpls') manageTpls(); else if (a === 'csv') accCsv();
+  else if (a === 'gFolder') gPickFolder(); else if (a === 'pFolder') pPickFolder(); else if (a === 'pIn') pLogin(); else if (a === 'lUp') localBackup(); else if (a === 'lDown') localRestore(); else if (a === 'xSend') xferSend(); else if (a === 'xRecv') xferRecv();
   else if (a === 'gUp') cloudUp('g'); else if (a === 'gDown') cloudDown('g'); else if (a === 'pUp') cloudUp('p'); else if (a === 'pDown') cloudDown('p');
   else if (a === 'gOut') { if (NB.gSignOut) NB.gSignOut(); S.gd = {}; saveS(); renderAccCfg(); } else if (a === 'pOut') { S.pc = {}; saveS(); renderAccCfg(); }
 }
@@ -579,7 +612,7 @@ function tplList() {
   const draw = () => { const G = groups(), n = k => DB.acc.tpls.filter(t => (t.type || 'out') === k).length;
     sh.body.innerHTML = `<div class="acType three"><button data-ty="out" class="${ty === 'out' ? 'on' : ''}">支出 ${n('out') || ''}</button><button data-ty="in" class="${ty === 'in' ? 'on' : ''}">收入 ${n('in') || ''}</button><button data-ty="tr" class="${ty === 'tr' ? 'on' : ''}">轉帳 ${n('tr') || ''}</button></div>
       <div class="small muted" style="margin:-.2rem 0 .7rem">點一下就用今天的日期記帳；按住拖曳可以排序；按 ✎ 編輯。</div>
-      <div id="tpL">${G.map(g => `<div class="tpG"><div class="lbl">${esc(g.n)}</div>${g.L.map(t => `<div class="tpR card" data-t="${t.id}"><span class="grip"></span><button class="tpUse" data-use="${t.id}"><b>${esc(t.name)}</b><small>${esc([t.payee, t.type === 'tr' ? acctName(t.acct) + ' → ' + acctName(t.to) : acctName(t.acct), (t.split || []).length ? '分帳 ' + t.split.length + ' 人' : ''].filter(Boolean).join('・'))}</small></button><b class="tpV ${t.type === 'in' ? 'pos' : t.type === 'out' ? 'neg' : ''}">${money(t.amt)}</b><button class="ic" data-ed="${t.id}" aria-label="編輯">✎</button></div>`).join('')}</div>`).join('') || '<div class="empty">這一類還沒有常用紀錄<br><span class="small">按下面「＋ 新增常用紀錄」，或在記一筆時按「⭐ 存成常用」</span></div>'}</div>`;
+      <div id="tpL">${G.map(g => `<div class="tpG"><div class="lbl">${esc(g.n)}</div>${g.L.map(t => `<div class="tpR card" data-t="${t.id}"><span class="grip"></span><button class="tpUse" data-use="${t.id}"><b>${esc(t.name)}</b><small>${esc([t.payee, t.type === 'tr' ? acctName(t.acct) + ' → ' + acctName(t.to) : acctName(t.acct), (t.split || []).length ? '分帳 ' + t.split.length + ' 人' : ''].filter(Boolean).join('・'))}</small></button><b class="tpV ${t.type === 'in' ? 'pos' : t.type === 'out' ? 'neg' : ''}">${+t.amt ? money(t.amt) : '<small class="muted">每次輸入</small>'}</b><button class="ic" data-ed="${t.id}" aria-label="編輯">✎</button></div>`).join('')}</div>`).join('') || '<div class="empty">這一類還沒有常用紀錄<br><span class="small">按下面「＋ 新增常用紀錄」，或在記一筆時按「⭐ 存成常用」</span></div>'}</div>`;
     sortable($('#tpL', sh.body), {item: '.tpR', scope: '.tpG', scroller: sh.body, onSort(f, t, scope) { const ids = $$('.tpR', scope).map(e => e.dataset.t), mv = ids.splice(f, 1)[0]; ids.splice(t, 0, mv);
       const pos = DB.acc.tpls.map((x, i) => ids.includes(x.id) ? i : -1).filter(i => i >= 0), objs = ids.map(id => DB.acc.tpls.find(x => x.id === id)); pos.forEach((p, i) => { DB.acc.tpls[p] = objs[i]; }); saveAcc(); draw(); renderAcc(); }}); };
   draw();

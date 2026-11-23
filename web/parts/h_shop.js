@@ -368,12 +368,13 @@ function pickPeople(cur, title, allowNone) {
 }
 
 /* ---------- 編輯一筆明細 ---------- */
-function editBill(b) {
-  let qs = null; const sh = sheet({title: '🧾 ' + (billStore(b) || '購物明細'), full: true, foot: '<div class="grow ordTot" id="ebT"></div><button class="btn pri" data-a="done" style="flex:0 0 auto">完成</button>', onClose() { shopChanged(); }});
+function editBill(b, opt = {}) {
+  /* opt.detached：記帳裡用分帳的方式輸入明細（這筆明細不放進分帳），完成時交給 opt.onDone */
+  let qs = null; const DET = !!opt.detached, sh = sheet({title: '🧾 ' + (billStore(b) || (DET ? '輸入購物明細' : '購物明細')), full: true, foot: '<div class="grow ordTot" id="ebT"></div><button class="btn pri" data-a="done" style="flex:0 0 auto">完成</button>', onClose() { if (DET) opt.onDone && opt.onDone(b); else shopChanged(); }});
   const chips = ids => (ids || []).length ? `<span class="pplC">${ids.map(id => `<i>${esc(mWho(id).icon)}${esc(mWho(id).name)}</i>`).join('')}</span>` : '<span class="pplC none">選誰付</span>';
   const draw = () => { discSync(b); const c = billCalc(b), ids = pOrder(Object.keys(c.per)), top = sh.body.scrollTop;
     sh.body.innerHTML = `${b.aiBusy ? `<div class="jobBar"><span class="spin"></span><span class="grow">AI 辨識中…<small class="rcMsg" data-b="${b.id}">${esc(b.aiMsg || '')}</small></span></div>` : ''}
-      <div class="ebHead"><button class="ebF" data-a="store"><small>店家</small><b>${esc(billStore(b) || '未選店家')}</b></button>${wayBox(b.way)}<div class="ebF ebDate"><small>日期</small><div class="edRow"><button class="edGo" data-a="goDay"><b>${dayLabel(billKey(b) || Shop.sel)}</b><span>到月曆 ›</span></button><button class="edPick" data-a="pickDate">更改 ${TRI_D}</button></div></div><button class="ebF ebTimeB" data-a="pickTime"><small>時間</small><span class="tv ${b.time ? '' : 'none'}">🕒 ${esc(b.time || '未填')}</span></button><label class="ebF"><small>明細上的實付金額</small><input id="ebTotal" inputmode="decimal" placeholder="選填，用來驗算" value="${b.total == null ? '' : esc(b.total)}"></label></div>
+      <div class="ebHead"><button class="ebF" data-a="store"><small>店家</small><b>${esc(billStore(b) || '未選店家')}</b></button>${wayBox(b.way)}<div class="ebF ebDate ${DET ? 'hide' : ''}"><small>日期</small><div class="edRow"><button class="edGo" data-a="goDay"><b>${dayLabel(billKey(b) || Shop.sel)}</b><span>到月曆 ›</span></button><button class="edPick" data-a="pickDate">更改 ${TRI_D}</button></div></div><button class="ebF ebTimeB" data-a="pickTime"><small>時間</small><span class="tv ${b.time ? '' : 'none'}">🕒 ${esc(b.time || '未填')}</span></button><label class="ebF"><small>明細上的實付金額</small><input id="ebTotal" inputmode="decimal" placeholder="選填，用來驗算" value="${b.total == null ? '' : esc(b.total)}"></label></div>
       ${(b.imgs || []).length ? `<div class="ebImgs">${b.imgs.map((id, i) => `<button class="ebImg" data-a="img" data-i="${i}"><img data-img="${id}" alt=""></button>`).join('')}<button class="btn sm" data-a="reAI" ${b.aiBusy ? 'disabled' : ''}>🔄 重新辨識</button></div>` : ''}
       <div class="ebSec"><div class="msH"><b class="grow">🛍️ 品項（${b.items.length}）</b><button class="btn sm" data-a="addItem">＋ 品項</button></div>
         ${b.items.length ? `<div class="ebQuick"><span>還沒選人的全部給：</span>${DB.mcfg.people.map(u => `<button data-a="qAll" data-id="${u.id}">${esc(u.icon)}${esc(u.name)}</button>`).join('')}<button data-a="qShare">👥 大家一起分</button></div>` : ''}

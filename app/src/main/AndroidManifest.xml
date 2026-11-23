@@ -22,7 +22,7 @@
     </queries>
     <application android:label="@string/app_name" android:icon="@mipmap/ic_launcher" android:roundIcon="@mipmap/ic_launcher"
         android:theme="@android:style/Theme.Material.Light.NoActionBar" android:allowBackup="true"
-        android:hardwareAccelerated="true" android:largeHeap="true" android:usesCleartextTraffic="false">
+        android:hardwareAccelerated="true" android:largeHeap="true" android:usesCleartextTraffic="true">
         <activity android:name="com.ian.foodmap.MainActivity" android:exported="true" android:launchMode="singleTask"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboard|keyboardHidden|uiMode|density"
             android:windowSoftInputMode="adjustResize">

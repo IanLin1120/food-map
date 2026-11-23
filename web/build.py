@@ -16,7 +16,7 @@ html = ('<!DOCTYPE html>\n<html lang="zh-Hant" data-theme="light">\n<head>\n<scr
   '<meta charset="utf-8">\n<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">\n'
   '<meta name="theme-color" content="#efe5d3">\n<title>日日帳本</title>\n<link rel="icon" href="icon-192.png">\n'
   '<style>' + R('vendor', 'maplibre.css') + '</style>\n<style>' + R('app.css') + '</style>\n</head>\n' +
-  shell.replace('</body>', '') + '\n<script>' + R('vendor', 'maplibre.js') + '</script>\n<script>' + R('vendor', 'topojson.js') + '</script>\n<script>' + R('vendor', 'tw_topo.js') + '</script>\n<script>' + R('vendor', 'jsqr.js') + '</script>\n<script>' + app + '</script>\n</body>\n</html>\n')
+  shell.replace('</body>', '') + '\n<script>' + R('vendor', 'maplibre.js') + '</script>\n<script>' + R('vendor', 'topojson.js') + '</script>\n<script>' + R('vendor', 'tw_topo.js') + '</script>\n<script>' + R('vendor', 'jsqr.js') + '</script>\n<script>' + R('vendor', 'qrgen.js') + '</script>\n<script>' + app + '</script>\n</body>\n</html>\n')
 
 dist = os.path.join(here, 'dist'); os.makedirs(dist, exist_ok=True)
 open(os.path.join(dist, 'index.html'), 'w', encoding='utf-8').write(html)
