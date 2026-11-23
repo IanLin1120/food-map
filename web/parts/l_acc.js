@@ -647,9 +647,9 @@ function renderAccCfg() {
   const box = $('#accCBody'); if (!box || !DB.acc) return; const pc = S.pc || {}, gi = (() => { try { return JSON.parse(NB.gInfo ? NB.gInfo() : '{}'); } catch (e) { return {}; } })();
   box.innerHTML = `<div class="setG"><h3>功能區</h3><div class="setC"><button class="recCard" data-a="leave"><span class="rcI">🍽️</span><span class="rcT"><b>回到日日帳本</b><small>地圖、日常、分帳、發票</small></span><span class="rcGo">切換 ›</span></button></div></div>
     ${IS_APP && NB.widgetData ? `<div class="setG"><h3>快速記帳</h3><div class="setC">
-      <button class="setR" data-a="qNotif" style="width:100%;text-align:left"><span class="gRi">🔔</span><div class="t"><b>通知欄快速記帳</b><small>通知欄常駐一則通知，按「支出／收入／常用」直接記一筆</small></div><span class="sw2 ${S.qNotif ? 'on' : ''}"></span></button>
+      <button class="setR" data-a="qNotif" style="width:100%;text-align:left"><span class="gRi">🔔</span><div class="t"><b>通知欄快速記帳</b><small>通知欄常駐三顆按鈕（＋支出／＋收入／⭐常用），跟桌面小工具一樣</small></div><span class="sw2 ${S.qNotif ? 'on' : ''}"></span></button>
       <button class="setR" data-a="wHide" style="width:100%;text-align:left"><span class="gRi">👁</span><div class="t"><b>小工具和通知顯示金額</b><small>關掉後桌面小工具、通知只顯示 $ ••••</small></div><span class="sw2 ${S.wHide ? '' : 'on'}"></span></button>
-      <div class="setR" style="cursor:default"><span class="gRi">📱</span><div class="t"><b>桌面小工具、控制中心按鈕</b><small>桌面：長按空白處 →「小工具」→ 日日帳本。控制中心：下拉兩次 → 編輯（鉛筆）→ 把「記一筆」拖進去。</small></div></div></div></div>` : ''}
+      <div class="setR" style="cursor:default"><span class="gRi">📱</span><div class="t"><b>桌面小工具、控制中心按鈕</b><small>桌面：長按空白處 →「小工具」→ 日日帳本。控制中心：下拉兩次 → 編輯（鉛筆）→ 把「記一筆」「常用記帳」拖進去。</small></div></div></div></div>` : ''}
     <div class="setG"><h3>說明</h3><div class="setC"><button class="setR" data-a="guide" style="width:100%;text-align:left"><span class="gRi">📖</span><div class="t"><b>記帳 圖解說明</b><small>記一筆、常用、欠款對帳、資產、分析、備份換機</small></div><span class="chev">›</span></button></div></div>
     <div class="setG"><h3>分帳的人</h3><div class="setC"><div class="setR col"><div class="t"><b>我是誰</b><small>分帳、對帳時「我」是哪一個人（和日常點餐共用名單）</small></div><div class="whoRow">${DB.mcfg.people.map(u => `<button data-me="${u.id}" class="${accMe() === u.id ? 'on' : ''}">${esc(u.icon)} ${esc(u.name)}</button>`).join('')}</div></div></div></div>
     <div class="setG"><h3>分類</h3><div class="setC">

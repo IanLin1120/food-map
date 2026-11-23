@@ -10,7 +10,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Color;
-import android.graphics.drawable.Icon;
 import android.os.Build;
 import android.widget.RemoteViews;
 
@@ -56,17 +55,25 @@ public class Quick {
         if (Build.VERSION.SDK_INT >= 33 && c.checkSelfPermission("android.permission.POST_NOTIFICATIONS") != android.content.pm.PackageManager.PERMISSION_GRANTED) return;
         NotificationChannel ch = new NotificationChannel(CH, "快速記帳", NotificationManager.IMPORTANCE_LOW);
         ch.setDescription("通知欄的快速記帳按鈕"); ch.setShowBadge(false); nm.createNotificationChannel(ch);
-        Icon ic = Icon.createWithResource(c, R.drawable.ic_stat);
+        String stat = get(c, "m", "") + " 支出 " + get(c, "out", "$0") + "・收入 " + get(c, "inc", "$0") + "・今天 " + get(c, "today", "$0");
+        RemoteViews small = notifView(c, R.layout.notif_quick), big = notifView(c, R.layout.notif_quick_big);
+        big.setTextViewText(R.id.n_stat, stat);
         Notification n = new Notification.Builder(c, CH).setSmallIcon(R.drawable.ic_stat).setColor(accent(c))
-            .setContentTitle("日日帳本・快速記帳")
-            .setContentText(get(c, "m", "") + " 支出 " + get(c, "out", "$0") + "・今天 " + get(c, "today", "$0"))
+            .setContentTitle("日日帳本・快速記帳").setContentText(stat)
+            .setStyle(new Notification.DecoratedCustomViewStyle()).setCustomContentView(small).setCustomBigContentView(big)
             .setOngoing(true).setShowWhen(false).setOnlyAlertOnce(true).setVisibility(Notification.VISIBILITY_PRIVATE)
             .setContentIntent(open(c, "home", 11))
-            .addAction(new Notification.Action.Builder(ic, "＋ 支出", open(c, "out", 12)).build())
-            .addAction(new Notification.Action.Builder(ic, "＋ 收入", open(c, "in", 13)).build())
-            .addAction(new Notification.Action.Builder(ic, "⭐ 常用", open(c, "tpl", 14)).build())
             .build();
         nm.notify(NID, n);
+    }
+    /* 通知裡的三顆按鈕，跟桌面小工具一樣 */
+    static RemoteViews notifView(Context c, int layout) {
+        RemoteViews v = new RemoteViews(c.getPackageName(), layout);
+        v.setInt(R.id.n_b_out_bg, "setColorFilter", accent(c));
+        v.setOnClickPendingIntent(R.id.n_b_out, open(c, "out", 12));
+        v.setOnClickPendingIntent(R.id.n_b_in, open(c, "in", 13));
+        v.setOnClickPendingIntent(R.id.n_b_tpl, open(c, "tpl", 14));
+        return v;
     }
     static void cancelNotif(Context c) { NotificationManager nm = (NotificationManager) c.getSystemService(Context.NOTIFICATION_SERVICE); if (nm != null) nm.cancel(NID); }
 }

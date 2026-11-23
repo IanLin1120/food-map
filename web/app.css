@@ -114,7 +114,7 @@ h1,h2,h3{margin:0;line-height:1.25;text-wrap:balance}
 .fab.on{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
 .fab.big{width:3.4rem;height:3.4rem;background:var(--accent);color:var(--accent-fg);border-color:var(--accent);font-size:1.6rem}
 #mCard{position:absolute;left:.7rem;right:.7rem;bottom:.8rem;z-index:6;border-radius:var(--r);padding:.85rem .95rem;max-width:40rem;margin:0 auto;background:var(--surface);box-shadow:var(--shadow);border:1px solid var(--border-soft);transform:translateY(130%);transition:transform .25s cubic-bezier(.2,.8,.2,1)}
-#mCard{pointer-events:none}#mCard.on{transform:none;pointer-events:auto}
+#mCard{pointer-events:none;transform:translateY(calc(100% + 2rem))!important;visibility:hidden;transition:transform .25s,visibility 0s .25s}#mCard.on{transform:none!important;pointer-events:auto;visibility:visible;transition:transform .25s}
 #mCard h3{font-size:1.08rem}
 #mCard .acts{display:flex;gap:.45rem;margin-top:.65rem;flex-wrap:wrap}
 #mCard .acts .btn{flex:1}
