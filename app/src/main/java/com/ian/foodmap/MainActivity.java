@@ -39,7 +39,7 @@ import java.util.ArrayList;
 /** 日日帳本：把 assets/index.html 以 https://app.local/ 載入 WebView，並提供少量原生功能（震動、導航、選圖／拍照、定位、存檔）。 */
 public class MainActivity extends Activity {
     static final String HOST = "app.local";
-    static final int REQ_FILE = 11, REQ_GEO = 12, REQ_LOC = 13, REQ_CAM = 14, REQ_GACC = 15, REQ_GCONSENT = 16;
+    static final int REQ_NOTIF = 17, REQ_FILE = 11, REQ_GEO = 12, REQ_LOC = 13, REQ_CAM = 14, REQ_GACC = 15, REQ_GCONSENT = 16;
     static final String GSCOPE = "oauth2:https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.email";
     String gPendId = null;
     android.webkit.PermissionRequest camReq;
@@ -80,7 +80,14 @@ public class MainActivity extends Activity {
         web.setWebViewClient(new Client());
         web.setWebChromeClient(new Chrome());
         web.loadUrl("https://" + HOST + "/index.html");
-        handleShare(getIntent());
+        handleShare(getIntent()); handleQuick(getIntent());
+    }
+    /* 從小工具、通知欄、控制中心打開：記下要做的動作，網頁準備好就去拿 */
+    volatile String quickPending;
+    void handleQuick(Intent i) {
+        if (i == null) return; String q = i.getStringExtra("quick"); if (q == null) return;
+        quickPending = q; i.removeExtra("quick");
+        if (web != null) web.evaluateJavascript("typeof Quick!=='undefined'&&Quick.check()", null);
     }
 
     @Override
@@ -95,7 +102,7 @@ public class MainActivity extends Activity {
     protected void onNewIntent(Intent i) {
         super.onNewIntent(i);
         setIntent(i);
-        handleShare(i);
+        handleShare(i); handleQuick(i);
     }
 
     java.io.File sharedDir() {
@@ -743,6 +750,7 @@ public class MainActivity extends Activity {
 
     @Override
     public void onRequestPermissionsResult(int req, String[] perms, int[] res) {
+        if (req == REQ_NOTIF) { Quick.postNotif(this); return; }
         if (req == REQ_CAM) {
             boolean ok = res.length > 0 && res[0] == PackageManager.PERMISSION_GRANTED;
             if (camReq != null) { try { if (ok) camReq.grant(new String[]{android.webkit.PermissionRequest.RESOURCE_VIDEO_CAPTURE}); else camReq.deny(); } catch (Exception e) { } camReq = null; }
@@ -822,6 +830,19 @@ public class MainActivity extends Activity {
     }
 
     class Bridge {
+        @JavascriptInterface
+        public String quickTake() { String q = quickPending; quickPending = null; return q == null ? "" : q; }
+        @JavascriptInterface
+        public void widgetData(String json) { Quick.sp(MainActivity.this).edit().putString("data", json).apply(); try { Quick.updateWidgets(MainActivity.this); Quick.postNotif(MainActivity.this); } catch (Throwable t) { } }
+        @JavascriptInterface
+        public void quickNotif(final boolean on) {
+            Quick.sp(MainActivity.this).edit().putBoolean("qnotif", on).apply();
+            runOnUiThread(new Runnable() { public void run() {
+                if (!on) { Quick.cancelNotif(MainActivity.this); return; }
+                if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission("android.permission.POST_NOTIFICATIONS") != PackageManager.PERMISSION_GRANTED) requestPermissions(new String[]{"android.permission.POST_NOTIFICATIONS"}, REQ_NOTIF);
+                else Quick.postNotif(MainActivity.this);
+            } });
+        }
         @JavascriptInterface
         public void vibrate(int ms) {
             try {

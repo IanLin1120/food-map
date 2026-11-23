@@ -69,7 +69,22 @@ function nameIcon(title, o, opts = {}) {
     setTimeout(() => { const i = $('#niN', sh.body); if (i && !o.n) i.focus(); }, 250); });
 }
 const Acc = {ym: null, day: null, sym: null, statOpen: ''};
-const saveAcc = debounce(() => IDB.put('kv', 'acc', DB.acc).catch(saveErr), 200);
+const saveAcc = debounce(() => { IDB.put('kv', 'acc', DB.acc).catch(saveErr); accWidgetPush(); }, 200);
+/* 桌面小工具、通知欄：把本月支出、收入、今天支出交給 App 顯示 */
+function accWidgetPush() {
+  if (!(IS_APP && NB.widgetData) || !DB.acc) return;
+  try { const now = new Date(), ym = ymd(now).slice(0, 7), td = ymd(now); let o = 0, i = 0, t = 0;
+    DB.acc.recs.forEach(r => { if (!r.d || r.d.slice(0, 7) !== ym) return; const v = accMine(r);
+      if (r.type === 'out' || r.type === 'loss') { o += v; if (r.d === td) t += v; } else if (r.type === 'in') i += v; });
+    const show = !(S.wHide), f = v => show ? money(Math.round(v)) : '$ ••••';
+    NB.widgetData(JSON.stringify({m: (now.getMonth() + 1) + '月', out: f(o), inc: f(i), today: f(t), accent: getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#a0562f'}));
+  } catch (e) { console.log('widget', e); }
+}
+/* 從小工具、通知欄、控制中心打開：直接進記帳區開始記一筆 */
+const Quick = {check() { if (!(IS_APP && NB.quickTake)) return; const a = NB.quickTake(); if (!a) return;
+  while (sheets.length) sheets[sheets.length - 1].close();
+  if (!S.inAcc) enterAcc('Acc'); else showTab('Acc'); buzz(15);
+  setTimeout(() => { if (a === 'in') accEdit(null, {type: 'in'}); else if (a === 'tr') accEdit(null, {type: 'tr'}); else if (a === 'tpl') tplList(); else if (a === 'out') accEdit(null); }, 250); }};
 const mkCats = L => L.map(([n, i, subs], k) => ({id: 'p' + k + uid(), n, i, subs: subs.map(([sn, si, opt], j) => Object.assign({id: 'c' + k + j + uid(), n: sn, i: si}, opt ? {opt: 1} : {}))}));
 async function loadAcc() {
   const v = await IDB.get('kv', 'acc').catch(() => null);
@@ -631,6 +646,10 @@ function gwManual() { const sh = sheet({title: '🖥️ 電腦版雲端硬碟'})
 function renderAccCfg() {
   const box = $('#accCBody'); if (!box || !DB.acc) return; const pc = S.pc || {}, gi = (() => { try { return JSON.parse(NB.gInfo ? NB.gInfo() : '{}'); } catch (e) { return {}; } })();
   box.innerHTML = `<div class="setG"><h3>功能區</h3><div class="setC"><button class="recCard" data-a="leave"><span class="rcI">🍽️</span><span class="rcT"><b>回到日日帳本</b><small>地圖、日常、分帳、發票</small></span><span class="rcGo">切換 ›</span></button></div></div>
+    ${IS_APP && NB.widgetData ? `<div class="setG"><h3>快速記帳</h3><div class="setC">
+      <button class="setR" data-a="qNotif" style="width:100%;text-align:left"><span class="gRi">🔔</span><div class="t"><b>通知欄快速記帳</b><small>通知欄常駐一則通知，按「支出／收入／常用」直接記一筆</small></div><span class="sw2 ${S.qNotif ? 'on' : ''}"></span></button>
+      <button class="setR" data-a="wHide" style="width:100%;text-align:left"><span class="gRi">👁</span><div class="t"><b>小工具和通知顯示金額</b><small>關掉後桌面小工具、通知只顯示 $ ••••</small></div><span class="sw2 ${S.wHide ? '' : 'on'}"></span></button>
+      <div class="setR" style="cursor:default"><span class="gRi">📱</span><div class="t"><b>桌面小工具、控制中心按鈕</b><small>桌面：長按空白處 →「小工具」→ 日日帳本。控制中心：下拉兩次 → 編輯（鉛筆）→ 把「記一筆」拖進去。</small></div></div></div></div>` : ''}
     <div class="setG"><h3>說明</h3><div class="setC"><button class="setR" data-a="guide" style="width:100%;text-align:left"><span class="gRi">📖</span><div class="t"><b>記帳 圖解說明</b><small>記一筆、常用、欠款對帳、資產、分析、備份換機</small></div><span class="chev">›</span></button></div></div>
     <div class="setG"><h3>分帳的人</h3><div class="setC"><div class="setR col"><div class="t"><b>我是誰</b><small>分帳、對帳時「我」是哪一個人（和日常點餐共用名單）</small></div><div class="whoRow">${DB.mcfg.people.map(u => `<button data-me="${u.id}" class="${accMe() === u.id ? 'on' : ''}">${esc(u.icon)} ${esc(u.name)}</button>`).join('')}</div></div></div></div>
     <div class="setG"><h3>分類</h3><div class="setC">
@@ -656,7 +675,7 @@ function renderAccCfg() {
 async function accCfgClick(e) {
   const t = e.target.closest('[data-a],[data-me]'); if (!t) return; buzz(8); const a = t.dataset.a;
   if (t.dataset.me) { DB.acc.me = t.dataset.me; saveAcc(); renderAccCfg(); return; }
-  if (a === 'leave') leaveAcc(); else if (a === 'guide') openGuide('acc'); else if (a === 'cats') editCatTree(t.dataset.ty); else if (a === 'opt') optCfg(); else if (a === 'payees') managePayees(); else if (a === 'accts') enterAcc('AccA'); else if (a === 'tpls') manageTpls(); else if (a === 'csv') accCsv();
+  if (a === 'leave') leaveAcc(); else if (a === 'guide') openGuide('acc'); else if (a === 'qNotif') { S.qNotif = !S.qNotif; saveS(); NB.quickNotif(!!S.qNotif); accWidgetPush(); renderAccCfg(); toast(S.qNotif ? '🔔 已開啟通知欄快速記帳' : '已關閉通知欄快速記帳'); } else if (a === 'wHide') { S.wHide = !S.wHide; saveS(); accWidgetPush(); renderAccCfg(); } else if (a === 'cats') editCatTree(t.dataset.ty); else if (a === 'opt') optCfg(); else if (a === 'payees') managePayees(); else if (a === 'accts') enterAcc('AccA'); else if (a === 'tpls') manageTpls(); else if (a === 'csv') accCsv();
   else if (a === 'gFolder') gPickFolder(); else if (a === 'pFolder') pPickFolder(); else if (a === 'pIn') pLogin(); else if (a === 'lUp') localBackup(); else if (a === 'lDown') localRestore(); else if (a === 'xSend') xferSend(); else if (a === 'xRecv') xferRecv();
   else if (a === 'gwUp') gDriveWeb('up'); else if (a === 'gwDown') gDriveWeb('down'); else if (a === 'gwMan') gwManual();
   else if (a === 'gUp') cloudUp('g'); else if (a === 'gDown') cloudDown('g'); else if (a === 'pUp') cloudUp('p'); else if (a === 'pDown') cloudDown('p');

@@ -16,6 +16,7 @@
   if (S.inAcc) showTab('Acc');
   if (!S.onboard) welcome();
   Upd.boot();
-  Share.check(); document.addEventListener('visibilitychange', () => { if (!document.hidden) setTimeout(() => Share.check(), 300); });
+  Share.check(); document.addEventListener('visibilitychange', () => { if (!document.hidden) { setTimeout(() => Share.check(), 300); setTimeout(() => Quick.check(), 200); } });
+  setTimeout(() => { Quick.check(); accWidgetPush(); }, 400);
   window.__ready = true;
 })();

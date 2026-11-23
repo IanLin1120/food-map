@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent"
+    android:orientation="vertical" android:background="@drawable/w_bg" android:padding="12dp">
+    <LinearLayout android:id="@+id/w_head" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical">
+        <TextView android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="📒 日日帳本" android:textColor="#3A2C22" android:textSize="15sp" android:textStyle="bold" android:maxLines="1" />
+        <TextView android:id="@+id/w_month" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="" android:textColor="#8A7560" android:textSize="12sp" android:textStyle="bold" />
+    </LinearLayout>
+    <LinearLayout android:id="@+id/w_stats" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:layout_marginTop="8dp" android:orientation="horizontal">
+        <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="match_parent" android:orientation="vertical" android:gravity="center" android:background="@drawable/w_cell" android:layout_marginEnd="6dp">
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="本月支出" android:textColor="#8A7560" android:textSize="11sp" />
+            <TextView android:id="@+id/w_out" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="$0" android:textColor="#A8472F" android:textSize="15sp" android:textStyle="bold" android:maxLines="1" android:autoSizeTextType="uniform" android:autoSizeMinTextSize="9sp" android:autoSizeMaxTextSize="15sp" />
+        </LinearLayout>
+        <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="match_parent" android:orientation="vertical" android:gravity="center" android:background="@drawable/w_cell" android:layout_marginEnd="6dp">
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="本月收入" android:textColor="#8A7560" android:textSize="11sp" />
+            <TextView android:id="@+id/w_inc" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="$0" android:textColor="#5A7A44" android:textSize="15sp" android:textStyle="bold" android:maxLines="1" android:autoSizeTextType="uniform" android:autoSizeMinTextSize="9sp" android:autoSizeMaxTextSize="15sp" />
+        </LinearLayout>
+        <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="match_parent" android:orientation="vertical" android:gravity="center" android:background="@drawable/w_cell">
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="今天支出" android:textColor="#8A7560" android:textSize="11sp" />
+            <TextView android:id="@+id/w_today" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="$0" android:textColor="#3A2C22" android:textSize="15sp" android:textStyle="bold" android:maxLines="1" android:autoSizeTextType="uniform" android:autoSizeMinTextSize="9sp" android:autoSizeMaxTextSize="15sp" />
+        </LinearLayout>
+    </LinearLayout>
+    <LinearLayout android:layout_width="match_parent" android:layout_height="38dp" android:layout_marginTop="8dp" android:orientation="horizontal">
+        <FrameLayout android:id="@+id/w_b_out" android:layout_width="0dp" android:layout_weight="1" android:layout_height="match_parent" android:layout_marginEnd="6dp">
+            <ImageView android:id="@+id/w_b_out_bg" android:layout_width="match_parent" android:layout_height="match_parent" android:src="@drawable/w_pill" android:scaleType="fitXY" />
+            <TextView android:layout_width="match_parent" android:layout_height="match_parent" android:gravity="center" android:text="＋ 支出" android:textColor="#FFFFFF" android:textSize="14sp" android:textStyle="bold" />
+        </FrameLayout>
+        <FrameLayout android:id="@+id/w_b_in" android:layout_width="0dp" android:layout_weight="1" android:layout_height="match_parent" android:layout_marginEnd="6dp" android:background="@drawable/w_btn">
+            <TextView android:layout_width="match_parent" android:layout_height="match_parent" android:gravity="center" android:text="＋ 收入" android:textColor="#3A2C22" android:textSize="14sp" android:textStyle="bold" />
+        </FrameLayout>
+        <FrameLayout android:id="@+id/w_b_tpl" android:layout_width="0dp" android:layout_weight="1" android:layout_height="match_parent" android:background="@drawable/w_btn">
+            <TextView android:layout_width="match_parent" android:layout_height="match_parent" android:gravity="center" android:text="⭐ 常用" android:textColor="#3A2C22" android:textSize="14sp" android:textStyle="bold" />
+        </FrameLayout>
+    </LinearLayout>
+</LinearLayout>
