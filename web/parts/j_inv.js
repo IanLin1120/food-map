@@ -45,7 +45,7 @@ function renderInv() {
   const byDay = {}; L.forEach(v => { (byDay[v.date] = byDay[v.date] || []).push(v); });
   box.innerHTML = `${car ? `<button class="carCard card" data-a="carBig"><div class="carT"><b>📱 我的手機條碼</b><span>點一下放大給店員掃</span></div>${code39(car, 46)}<div class="carN">${esc(car)}</div></button>`
       : `<button class="carCard card empty" data-a="carSet"><b>📱 設定我的手機條碼</b><span>結帳時直接打開給店員掃，存進你的載具</span></button>`}
-    <div class="cal invCal">${calHead(Y, Mo)}<div class="calWd">${MWD.map((w, i) => `<span class="${i === 0 || i === 6 ? 'we' : ''}">${w}</span>`).join('')}</div><div class="calG">${cells}</div></div>
+    <div class="cal card invCal">${calHead(Y, Mo)}<div class="calWd">${MWD.map((w, i) => `<span class="${i === 0 || i === 6 ? 'we' : ''}">${w}</span>`).join('')}</div><div class="calG">${cells}</div></div>
     ${Inv.day ? `<div class="invDayBar"><b>${dayLabel(Inv.day)} 的發票（${L.length} 張）</b><button class="btn sm" data-a="allMonth">顯示整個月</button></div>` : ''}
     <div class="invSum"><span>${Inv.day ? '這天張數' : '本月張數'}<b>${L.length}</b></span><span>已分帳<b>${done}</b></span><span>${Inv.day ? '這天合計' : '本月合計'}<b>${money(tot)}</b></span></div>
     ${L.length ? Object.keys(byDay).map(k => `<div class="invDay">${dayLabel(k)}</div>${byDay[k].map(invCard).join('')}`).join('')
@@ -59,6 +59,7 @@ function invCard(v) {
 function initInv() {
   const box = $('#invBody');
   $('#invScan').onclick = () => openInvScan(); $('#invShot').onclick = () => $('#invShotPick').click(); $('#invAcc').onclick = () => openInvAcc();
+  $('#invToday').onclick = () => { buzz(10); const d = new Date(); Inv.ym = [d.getFullYear(), d.getMonth()]; Inv.day = ymd(d); renderInv(); const c = $('#invBody .invCal'); c && c.scrollIntoView({block: 'start', behavior: 'smooth'}); };
   $('#invMore').onclick = () => { const sh = sheet({title: '📥 其他匯入方式', html: `<div class="actList"><button data-a="csv">📄 匯入財政部「載具消費明細」CSV</button><button data-a="web">🌐 App 內打開財政部網站讀取（實驗性）</button></div>`});
     sh.body.onclick = e => { const t = e.target.closest('[data-a]'); if (!t) return; sh.close(); if (t.dataset.a === 'csv') $('#csvPick').click(); else openInvWeb(); }; };
   $('#invShotPick').onchange = e => { const fs = [...e.target.files]; e.target.value = ''; if (fs.length) invShots(fs); };

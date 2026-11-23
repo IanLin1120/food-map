@@ -49,10 +49,20 @@ function iconPick(cur, lib) {
     const monos = fin ? Object.entries({bank: '銀行', card: '信用卡', pay: '行動支付', stored: '儲值'}).map(([k, n]) => `<div class="lbl">${n}</div><div class="icG mono">${ACCT_PRESET[k].map(([nm, t, c, c2, fg]) => `<button data-e="${esc(mono(t, c, c2, fg))}" title="${esc(nm)}">${monoHtml(mono(t, c, c2, fg))}</button>`).join('')}</div>`).join('') : '';
     sh.body.innerHTML = `<div class="icCur"><span>${curH}</span><input id="icIn" placeholder="${fin ? '輸入簡稱做成徽章（例如 合庫）或貼表情符號' : '或輸入／貼上任何表情符號'}" maxlength="8"><button class="btn sm pri" data-a="use">使用</button></div>
       ${fin ? '<button class="btn block" data-a="img" style="margin-bottom:.6rem">🖼️ 用自己的圖片（例如銀行 App 的截圖）</button>' : ''}${fin ? `<div class="icColors">${['#0f8f74', '#2e8b3d', '#d7282f', '#1a5fa8', '#0067b1', '#c8102e', '#f39800', '#7a1f2b', '#5a7a44', '#1d1d1f', '#00a0e9', '#e4007f'].map(c => `<button data-c="${c}" style="background:${c}" class="${c === monoC ? 'on' : ''}"></button>`).join('')}</div>` : ''}
-      ${rec.length ? `<div class="lbl">最近用過</div><div class="icG ${fin ? 'mono' : ''}">${rec.map(e => `<button data-e="${esc(e)}">${icoHtml(e)}</button>`).join('')}</div>` : ''}
+      ${rec.length ? `<div class="lbl icRecL">最近用過<span class="muted small">（長按可刪除）</span></div><div class="icG icRec ${fin ? 'mono' : ''}">${rec.map(e => `<button data-e="${esc(e)}" data-rc="1">${icoHtml(e)}</button>`).join('')}</div>` : ''}
       ${monos}${Object.entries(fin ? ICONS_FIN : ICONS).map(([k, v]) => `<div class="lbl">${k}</div><div class="icG">${seg(v).map(e => `<button data-e="${e}" class="${e === cur ? 'on' : ''}">${e}</button>`).join('')}</div>`).join('')}`;
     const finish = e => { if (!e) return; DB.acc[rk] = [e].concat((DB.acc[rk] || []).filter(x => x !== e)).slice(0, 24); saveAcc(); done = true; sh.close(); res(e); };
-    sh.body.onclick = e => { const t = e.target.closest('button'); if (!t) return; buzz(8);
+    /* 長按「最近用過」的圖示可以刪掉（自己上傳的圖片也一樣） */
+    let lpT = null, lpDone = false;
+    sh.body.addEventListener('pointerdown', e => { const t = e.target.closest('[data-rc]'); if (!t) return; lpDone = false; t.classList.add('holding');
+      lpT = setTimeout(async () => { lpT = null; lpDone = true; t.classList.remove('holding'); buzz(35);
+        if (!await ask('從「最近用過」刪除這個圖示？\n（已經在用這個圖示的帳戶或分類不會改變）', '刪除', true)) return;
+        const v = t.dataset.e; DB.acc[rk] = (DB.acc[rk] || []).filter(x => x !== v); saveAcc(); const g = t.parentElement; t.remove(); buzz(20);
+        if (!g.children.length) { g.previousElementSibling && g.previousElementSibling.remove(); g.remove(); } toast('已刪除'); }, 550); });
+    ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => sh.body.addEventListener(ev, () => { if (lpT) { clearTimeout(lpT); lpT = null; } $$('[data-rc].holding', sh.body).forEach(b => b.classList.remove('holding')); }));
+    sh.body.addEventListener('scroll', () => { if (lpT) { clearTimeout(lpT); lpT = null; } }, {passive: true});
+    sh.body.addEventListener('contextmenu', e => { if (e.target.closest('[data-rc]')) e.preventDefault(); });
+    sh.body.onclick = e => { const t = e.target.closest('button'); if (!t) return; if (lpDone) { lpDone = false; return; } buzz(8);
       if (t.dataset.c) { monoC = t.dataset.c; $$('[data-c]', sh.body).forEach(b => b.classList.toggle('on', b === t)); return; }
       if (t.dataset.a === 'img') { (async () => { const fs = await pickImages(false); if (!fs.length) return; const u = URL.createObjectURL(fs[0]), im = new Image(); im.onload = () => { const c = document.createElement('canvas'), n = 96, sc = Math.max(n / im.width, n / im.height); c.width = c.height = n; const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, n, n); g.drawImage(im, (n - im.width * sc) / 2, (n - im.height * sc) / 2, im.width * sc, im.height * sc); URL.revokeObjectURL(u); finish('img:' + c.toDataURL('image/jpeg', .85)); }; im.src = u; })(); return; }
       if (t.dataset.e) finish(t.dataset.e);
@@ -187,6 +197,7 @@ function initAcc() {
   $('#accNew').onclick = () => { buzz(15); accEdit(null); };
   $('#accImp').onclick = () => { buzz(10); accImportBills(); };
   $('#accFind').onclick = () => { buzz(10); accSearch(); };
+  $('#accToday').onclick = () => { buzz(10); const d = new Date(); Acc.ym = [d.getFullYear(), d.getMonth()]; Acc.day = ymd(d); renderAcc(); };
   $('#accSettle').onclick = () => { buzz(10); accPickSettle(); };
   $('#accTr').onclick = () => { buzz(10); accEdit(null, {type: 'tr'}); };
   $('#accBody').addEventListener('click', async e => { const t = e.target.closest('[data-a],[data-d],[data-r],[data-settle],[data-tpl]'); if (!t) return; buzz(8);
@@ -720,13 +731,18 @@ function tplList() {
   const groups = () => { const L = DB.acc.tpls.filter(t => (t.type || 'out') === ty), G = [];
     if (ty === 'tr') { if (L.length) G.push({k: 'tr', n: '🔄 轉帳', L}); return G; }
     DB.acc.cats[ty].forEach(p => [{id: p.id, n: p.n, i: p.i}].concat(p.subs || []).forEach(sc => { const M = L.filter(t => t.cat === sc.id); if (M.length) G.push({k: sc.id, n: (sc.i || p.i) + ' ' + (sc.id === p.id ? p.n : p.n + '・' + sc.n), L: M}); }));
-    const rest = L.filter(t => !G.some(g => g.L.includes(t))); if (rest.length) G.push({k: '_', n: '📦 其他', L: rest}); return G; };
+    const rest = L.filter(t => !G.some(g => g.L.includes(t))); if (rest.length) G.push({k: '_', n: '📦 其他', L: rest});
+    const ord = ((DB.acc.tgord || {})[ty]) || [], at = k => { const i = ord.indexOf(k); return i < 0 ? 1e6 : i; };
+    return G.map((g, i) => [g, i]).sort((a, b) => at(a[0].k) - at(b[0].k) || a[1] - b[1]).map(x => x[0]); };
   const draw = () => { const G = groups(), n = k => DB.acc.tpls.filter(t => (t.type || 'out') === k).length;
     sh.body.innerHTML = `<div class="acType three"><button data-ty="out" class="${ty === 'out' ? 'on' : ''}">支出 ${n('out') || ''}</button><button data-ty="in" class="${ty === 'in' ? 'on' : ''}">收入 ${n('in') || ''}</button><button data-ty="tr" class="${ty === 'tr' ? 'on' : ''}">轉帳 ${n('tr') || ''}</button></div>
-      <div class="small muted" style="margin:-.2rem 0 .7rem">點一下就用今天的日期記帳；按住拖曳可以排序；按 ✎ 編輯。</div>
-      <div id="tpL">${G.map(g => `<div class="tpG"><div class="lbl">${esc(g.n)}</div>${g.L.map(t => `<div class="tpR card" data-t="${t.id}"><span class="grip"></span><button class="tpUse" data-use="${t.id}"><b>${esc(t.name)}</b><small>${esc([t.payee, t.type === 'tr' ? acctName(t.acct) + ' → ' + acctName(t.to) : acctName(t.acct), (t.split || []).length ? '分帳 ' + t.split.length + ' 人' : ''].filter(Boolean).join('・'))}</small><span class="tpV ${!+t.amt ? '' : t.type === 'in' ? 'pos' : t.type === 'out' ? 'neg' : ''}">${+t.amt ? money(t.amt) : '💬 每次輸入金額'}</span></button><button class="ic" data-ed="${t.id}" aria-label="編輯">✎</button></div>`).join('')}</div>`).join('') || '<div class="empty">這一類還沒有常用紀錄<br><span class="small">按下面「＋ 新增常用紀錄」，或在記一筆時按「⭐ 存成常用」</span></div>'}</div>`;
+      <div class="small muted" style="margin:-.2rem 0 .7rem">點一下就用今天的日期記帳；按住紀錄拖曳可以在分類裡排序，按住分類名稱可以整組上下移動；按 ✎ 編輯。</div>
+      <div id="tpL">${G.map(g => `<div class="tpG" data-g="${g.k}"><div class="tpGH">${G.length > 1 ? '<span class="grip"></span>' : ''}<span class="lbl">${esc(g.n)}</span><em>${g.L.length}</em></div>${g.L.map(t => `<div class="tpR card" data-t="${t.id}"><span class="grip"></span><button class="tpUse" data-use="${t.id}"><b>${esc(t.name)}</b><small>${esc([t.payee, t.type === 'tr' ? acctName(t.acct) + ' → ' + acctName(t.to) : acctName(t.acct), (t.split || []).length ? '分帳 ' + t.split.length + ' 人' : ''].filter(Boolean).join('・'))}</small><span class="tpV ${!+t.amt ? '' : t.type === 'in' ? 'pos' : t.type === 'out' ? 'neg' : ''}">${+t.amt ? money(t.amt) : '💬 每次輸入金額'}</span></button><button class="ic" data-ed="${t.id}" aria-label="編輯">✎</button></div>`).join('')}</div>`).join('') || '<div class="empty">這一類還沒有常用紀錄<br><span class="small">按下面「＋ 新增常用紀錄」，或在記一筆時按「⭐ 存成常用」</span></div>'}</div>`;
     sortable($('#tpL', sh.body), {item: '.tpR', scope: '.tpG', scroller: sh.body, onSort(f, t, scope) { const ids = $$('.tpR', scope).map(e => e.dataset.t), mv = ids.splice(f, 1)[0]; ids.splice(t, 0, mv);
-      const pos = DB.acc.tpls.map((x, i) => ids.includes(x.id) ? i : -1).filter(i => i >= 0), objs = ids.map(id => DB.acc.tpls.find(x => x.id === id)); pos.forEach((p, i) => { DB.acc.tpls[p] = objs[i]; }); saveAcc(); draw(); renderAcc(); }}); };
+      const pos = DB.acc.tpls.map((x, i) => ids.includes(x.id) ? i : -1).filter(i => i >= 0), objs = ids.map(id => DB.acc.tpls.find(x => x.id === id)); pos.forEach((p, i) => { DB.acc.tpls[p] = objs[i]; }); saveAcc(); draw(); renderAcc(); }});
+    /* 分類整組上下移動 */
+    if (G.length > 1) sortable($('#tpL', sh.body), {item: '.tpG', handle: '.tpGH', handleOnly: true, scroller: sh.body, onSort(f, t) { const ks = G.map(g => g.k), mv = ks.splice(f, 1)[0]; ks.splice(t, 0, mv);
+      DB.acc.tgord = DB.acc.tgord || {}; DB.acc.tgord[ty] = ks; saveAcc(); draw(); renderAcc(); }}); };
   draw();
   sh.body.addEventListener('click', async e => { const t = e.target.closest('button'); if (!t) return; buzz(8); const d = t.dataset;
     if (d.ty) { ty = d.ty; draw(); return; }
