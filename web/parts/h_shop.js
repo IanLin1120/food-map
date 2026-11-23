@@ -159,7 +159,7 @@ function newBill(p) { showTab('Shop'); const sh = sheet({title: '新增「' + p.
 async function newBillManual(p) {
   if (!p) { const st = await pickShopStore(); if (st === undefined) return; p = st; }
   const b = {id: 'b' + uid(), place: p && p.id || '', pname: p ? p.name : '', time: '', total: '', imgs: [], items: [], disc: [], odisc: [], fees: [], src: 'manual'};
-  (DB.bills[Shop.sel] = DB.bills[Shop.sel] || []).push(b); shopChanged(); editBill(b);
+  (DB.bills[Shop.sel] = DB.bills[Shop.sel] || []).push(b); shopChanged(); editBill(b, {dropEmpty: true});
 }
 async function newBillImg(p) { const fs = await pickImages(true); if (!fs.length) return; shopFromBlobs(fs, p); }
 async function shopFromBlobs(fs, p) {
@@ -372,7 +372,10 @@ function pickPeople(cur, title, allowNone) {
 /* ---------- 編輯一筆明細 ---------- */
 function editBill(b, opt = {}) {
   /* opt.detached：記帳裡用分帳的方式輸入明細（這筆明細不放進分帳），完成時交給 opt.onDone */
-  let qs = null; const DET = !!opt.detached, sh = sheet({title: '🧾 ' + (billStore(b) || (DET ? '輸入購物明細' : '購物明細')), full: true, foot: '<div class="grow ordTot" id="ebT"></div><button class="btn pri" data-a="done" style="flex:0 0 auto">完成</button>', onClose() { if (DET) opt.onDone && opt.onDone(b); else shopChanged(); }});
+  let qs = null; const DET = !!opt.detached, sh = sheet({title: '🧾 ' + (billStore(b) || (DET ? '輸入購物明細' : '購物明細')), full: true, foot: '<div class="grow ordTot" id="ebT"></div><button class="btn pri" data-a="done" style="flex:0 0 auto">完成</button>', onClose() { if (DET) { opt.onDone && opt.onDone(b); return; }
+    /* 手動新增後什麼都沒輸入就返回：不要留下空白明細 */
+    if (opt.dropEmpty && !(b.items || []).length && !(b.fees || []).length && !(b.odisc || []).length && !(b.disc || []).length && !numP(b.total) && !(b.imgs || []).length) { Object.keys(DB.bills).forEach(k => { const i = DB.bills[k].indexOf(b); if (i >= 0) DB.bills[k].splice(i, 1); if (!DB.bills[k].length) delete DB.bills[k]; }); }
+    shopChanged(); }});
   const chips = ids => (ids || []).length ? `<span class="pplC">${ids.map(id => `<i>${esc(mWho(id).icon)}${esc(mWho(id).name)}</i>`).join('')}</span>` : '<span class="pplC none">選誰付</span>';
   const draw = () => { discSync(b); const c = billCalc(b), ids = pOrder(Object.keys(c.per)), top = sh.body.scrollTop;
     sh.body.innerHTML = `${b.aiBusy ? `<div class="jobBar"><span class="spin"></span><span class="grow">AI 辨識中…<small class="rcMsg" data-b="${b.id}">${esc(b.aiMsg || '')}</small></span></div>` : ''}

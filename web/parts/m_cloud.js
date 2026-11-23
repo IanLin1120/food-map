@@ -4,13 +4,55 @@
    ============================================================ */
 const GCB = {}; let gcbN = 0;
 window.__gtok = (id, r) => { const f = GCB[id]; if (f) { delete GCB[id]; f(r || {}); } };
-function gToken() {
+const gLogged = () => { const g = S.gd || {}; if (g.web && g.rt) return true; try { return !!JSON.parse(NB.gInfo()).email; } catch (e) { return false; } };
+function gTokenAcct() {
   if (!(IS_APP && NB.gToken)) return Promise.reject(new Error('Google 雲端備份要在 Android App 裡使用'));
   return new Promise((ok, no) => { const id = 'g' + (++gcbN); GCB[id] = r => { if (r.email) { S.gd = Object.assign(S.gd || {}, {email: r.email}); saveS(); } r.token ? ok(r.token) : no(new Error(r.err || '無法取得授權')); }; NB.gToken(id); setTimeout(() => { if (GCB[id]) { delete GCB[id]; no(new Error('登入逾時，請再試一次')); } }, 120000); });
 }
+/* ---------- Google 用瀏覽器登入（像 pCloud 一樣在網頁登入，支援兩步驟驗證；需要一組「電腦版應用程式」OAuth 用戶端） ---------- */
+const GSCOPE = 'https://www.googleapis.com/auth/drive.file openid email';
+const b64url = buf => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+async function gPost(url, form) { const body = new URLSearchParams(form).toString();
+  let j; try { const r = await fetch(url, {method: 'POST', headers: {'Content-Type': 'application/x-www-form-urlencoded'}, body}); j = await r.json(); }
+  catch (e) { if (!(IS_APP && NB.http)) throw e; const r = await nativeHttp('POST', url, 'application/x-www-form-urlencoded', btoa(unescape(encodeURIComponent(body)))); j = JSON.parse(r.text); }
+  if (j.error) throw new Error('Google 登入：' + (j.error_description || j.error)); return j; }
+function gClientForm() {
+  return new Promise(res => { let done = false; const g = S.gd || {}, sh = sheet({title: '🌐 Google 用瀏覽器登入', full: true, onClose() { if (!done) res(false); }, foot: '<button class="btn pri" data-a="ok">儲存並登入</button>'});
+    sh.body.innerHTML = `<p class="small">Google 不允許 App 自己做登入頁，只能打開手機的瀏覽器登入（跟網頁一樣，可以兩步驟驗證、記住密碼）。這需要你在 Google Cloud 建立一組「電腦版應用程式」的用戶端，只要做一次：</p>
+      <ol class="invSteps"><li>打開 console.cloud.google.com，選或建立一個專案</li><li>「API 和服務 → 程式庫」啟用 <b>Google Drive API</b></li><li>「OAuth 同意畫面」設定好，狀態是「測試」的話把自己的 Gmail 加到測試使用者</li><li>「憑證 → 建立憑證 → OAuth 用戶端 ID」，應用程式類型選 <b>電腦版應用程式</b></li><li>把顯示的「用戶端 ID」和「用戶端密鑰」貼到下面</li></ol>
+      <div class="field"><label>用戶端 ID</label><input id="gcI" value="${esc(g.cid || '')}" placeholder="xxxx.apps.googleusercontent.com"></div><div class="field"><label>用戶端密鑰</label><input id="gcS" value="${esc(g.csec || '')}" placeholder="GOCSPX-…"></div>
+      <div class="small muted">這兩個值只存在這支手機，不會放進備份。</div>`;
+    sh.foot.onclick = () => { const cid = $('#gcI', sh.body).value.trim(), csec = $('#gcS', sh.body).value.trim(); if (!/apps\.googleusercontent\.com$/.test(cid)) { toast('用戶端 ID 不正確'); return; } S.gd = Object.assign(S.gd || {}, {cid, csec}); saveS(); done = true; sh.close(); res(true); }; });
+}
+async function gWebLogin() {
+  if (!(IS_APP && NB.loopStart)) throw new Error('要在 Android App 裡使用');
+  if (!(S.gd || {}).cid && !await gClientForm()) return false;
+  const g = S.gd, ver = b64url(crypto.getRandomValues(new Uint8Array(32))), chal = b64url(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(ver))), st = b64url(crypto.getRandomValues(new Uint8Array(12)));
+  const id = 'L' + Date.now(), port = NB.loopStart(id); if (port < 0) throw new Error('無法開始登入');
+  const redirect = `http://127.0.0.1:${port}`;
+  const q = await new Promise(ok => { window.__loop = (i, v) => { if (i === id) ok(v); }; openUrl(`https://accounts.google.com/o/oauth2/v2/auth?${new URLSearchParams({client_id: g.cid, redirect_uri: redirect, response_type: 'code', scope: GSCOPE, code_challenge: chal, code_challenge_method: 'S256', state: st, access_type: 'offline', prompt: 'consent select_account'})}`); toast('請在瀏覽器登入 Google，完成後會自動回來', 5000); });
+  const P = new URLSearchParams(q); if (P.get('error')) throw new Error('Google 登入：' + P.get('error')); if (P.get('state') !== st || !P.get('code')) throw new Error('登入沒有完成');
+  busy('完成 Google 登入…');
+  try { const j = await gPost('https://oauth2.googleapis.com/token', {code: P.get('code'), client_id: g.cid, client_secret: g.csec || '', redirect_uri: redirect, grant_type: 'authorization_code', code_verifier: ver});
+    S.gd = Object.assign(S.gd, {rt: j.refresh_token || S.gd.rt, at: j.access_token, exp: Date.now() + (j.expires_in || 3500) * 1000 - 60000, web: 1});
+    try { const u = await (await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {headers: {Authorization: 'Bearer ' + j.access_token}})).json(); if (u.email) S.gd.email = u.email; } catch (e) {}
+    saveS(); busy(false); buzz(40); toast('✅ 已登入 Google：' + (S.gd.email || '')); if (curTab === 'AccC') renderAccCfg(); return true; } catch (e) { busy(false); throw e; }
+}
+async function gToken() {
+  const g = S.gd || {};
+  if (g.web && g.rt) { if (g.at && Date.now() < g.exp) return g.at;
+    const j = await gPost('https://oauth2.googleapis.com/token', {client_id: g.cid, client_secret: g.csec || '', refresh_token: g.rt, grant_type: 'refresh_token'}); S.gd = Object.assign(g, {at: j.access_token, exp: Date.now() + (j.expires_in || 3500) * 1000 - 60000}); saveS(); return j.access_token; }
+  if (g.cid && IS_APP && NB.loopStart) { if (await gWebLogin()) return S.gd.at; throw new Error('已取消'); }
+  return gTokenAcct();
+}
+function gChooseLogin() {
+  return new Promise(res => { const sh = sheet({title: '☁️ 登入 Google 雲端', html: `<div class="actList"><button data-a="web">🌐 用瀏覽器登入（推薦）<small style="display:block;color:var(--muted)">跟 pCloud 一樣在網頁登入，可以兩步驟驗證；第一次要貼一組 Google Cloud 用戶端</small></button><button data-a="acct">📱 用手機上的 Google 帳戶<small style="display:block;color:var(--muted)">需要在 Google Cloud 登記 Android 用戶端（套件名稱＋SHA-1）</small></button></div>`});
+    sh.body.onclick = async e => { const t = e.target.closest('[data-a]'); if (!t) return; buzz(10); sh.close();
+      try { if (t.dataset.a === 'web') res(await gWebLogin()); else { S.gd = Object.assign(S.gd || {}, {web: 0, rt: '', at: ''}); saveS(); await gTokenAcct(); res(true); } } catch (er) { cloudErr('g', er); res(false); } }; });
+}
 async function gFetch(url, opt = {}, retry) {
   const t = await gToken(); const r = await fetch(url, Object.assign({}, opt, {headers: Object.assign({}, opt.headers || {}, {Authorization: 'Bearer ' + t})}));
-  if (r.status === 401 && !retry) { try { NB.gDrop(t); } catch (e) {} return gFetch(url, opt, true); }
+  if (r.status === 401 && !retry) { if ((S.gd || {}).web) { S.gd.at = ''; saveS(); } else try { NB.gDrop(t); } catch (e) {} return gFetch(url, opt, true); }
   if (!r.ok) { let m = r.status + ''; try { const j = await r.json(); m = (j.error && (j.error.message || j.error)) || m; } catch (e) {} throw new Error('Google 雲端：' + m); } return r;
 }
 const GFOLDER = '日日帳本備份', gFolderName = () => (S.gd || {}).folder || GFOLDER;
@@ -139,14 +181,14 @@ function cloudErr(kind, e) {
   toast('❌ ' + m, 5000);
 }
 async function cloudUp(kind) {
-  try { if (kind === 'p' && !(S.pc || {}).auth && !await pLogin()) return;
+  try { if (kind === 'p' && !(S.pc || {}).auth && !await pLogin()) return; if (kind === 'g' && !gLogged() && !await gChooseLogin()) return;
     busy('打包資料和圖片…'); const blob = await makeBackupBlob(), name = backupName(); busy(`上傳到 ${kind === 'g' ? 'Google 雲端' : 'pCloud'}…（${(blob.size / 1048576).toFixed(1)} MB）`);
     if (kind === 'g') await gUpload(blob, name); else await pUpload(blob, name);
     const k = kind === 'g' ? 'gd' : 'pc'; S[k] = Object.assign(S[k] || {}, {last: Date.now()}); saveS(); busy(false); buzz(40); toast(`✅ 已備份到 ${kind === 'g' ? 'Google 雲端' : 'pCloud'}：${name}`, 4500); if (curTab === 'AccC') renderAccCfg();
   } catch (e) { busy(false); cloudErr(kind, e); }
 }
 async function cloudDown(kind) {
-  try { if (kind === 'p' && !(S.pc || {}).auth && !await pLogin()) return;
+  try { if (kind === 'p' && !(S.pc || {}).auth && !await pLogin()) return; if (kind === 'g' && !gLogged() && !await gChooseLogin()) return;
     busy('讀取雲端的備份…'); const L = kind === 'g' ? await gList() : await pList(); busy(false);
     if (!L.length) { toast('雲端還沒有備份'); return; }
     const f = await new Promise(res => { let done = false; const sh = sheet({title: '選擇要還原的備份', onClose() { if (!done) res(null); }, html: `<div class="actList">${L.map((x, i) => `<button data-i="${i}">📦 ${esc(x.name.replace(/\.json$/, ''))}<small style="display:block;color:var(--muted)">${new Date(x.t).toLocaleString('zh-TW')}・${(x.size / 1048576).toFixed(1)} MB</small></button>`).join('')}</div>`});

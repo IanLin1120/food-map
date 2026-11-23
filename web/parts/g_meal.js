@@ -85,7 +85,7 @@ function initMeal() {
   $('#mealSet').onclick = () => openMealSettings(); $('#mealFind').onclick = () => openMealSearch();
   $('#mealAddBtn').onclick = () => { buzz(15); box.dispatchEvent(new CustomEvent('fm:addMeal')); }; $('#listAddBtn').onclick = () => { buzz(15); newList(); };
   box.addEventListener('fm:addMeal', async () => { const t = await pickMealType(); if (!t) return; const st = await pickStore(); if (st === undefined) return;
-    const nm = {id: 'm' + uid(), type: t.id, place: st ? st.id || '' : '', pname: st ? st.name : '', items: []}; (DB.days[Meal.sel] = DB.days[Meal.sel] || []).push(nm); mealChanged(); openOrder(nm); });
+    const nm = {id: 'm' + uid(), type: t.id, place: st ? st.id || '' : '', pname: st ? st.name : '', items: []}; (DB.days[Meal.sel] = DB.days[Meal.sel] || []).push(nm); mealChanged(); openOrder(nm, {dropEmpty: true}); });
   initLists();
   box.addEventListener('change', e => { if (e.target.id === 'calY') Meal.ym[0] = +e.target.value; else if (e.target.id === 'calM') Meal.ym[1] = +e.target.value; else return;
     const nd = new Date(Meal.ym[0], Meal.ym[1] + 1, 0).getDate(), d = Math.min(ymdDate(Meal.sel).getDate(), nd); Meal.sel = ymd(new Date(Meal.ym[0], Meal.ym[1], d)); renderMeal(); });
@@ -205,10 +205,13 @@ function pickOpts(o, v) {
 }
 const xTags = x => `${x.s ? ` <span class="szT">${esc(x.s)}</span>` : ''}${x.o ? ` <span class="opT">${esc(x.o)}</span>` : ''}`;
 const xParen = x => { const a = [x.s, x.o].filter(Boolean); return a.length ? '(' + a.join('、') + ')' : ''; };
-function openOrder(m) {
+function openOrder(m, opt = {}) {
   const P = FP().find(x => x.id === m.place), T = mType(m.type);
   let who = m.lastWho && keyIds(m.lastWho).every(id => DB.mcfg.people.some(u => u.id === id)) ? m.lastWho : (DB.mcfg.people[0] || {}).id, q = '', cat = '', rg = P ? P.rgSel : '';
-  const sh = sheet({title: `${T.icon} ${T.name}${P || m.pname ? ' · ' + (P ? P.name : m.pname) : ''}`, full: true, foot: '<div class="grow ordTot" id="oTot"></div><button class="btn pri" data-a="done" style="flex:0 0 auto">完成</button>', onClose() { renderMeal(); }});
+  const sh = sheet({title: `${T.icon} ${T.name}${P || m.pname ? ' · ' + (P ? P.name : m.pname) : ''}`, full: true, foot: '<div class="grow ordTot" id="oTot"></div><button class="btn pri" data-a="done" style="flex:0 0 auto">完成</button>', onClose() {
+    /* 新增後沒點任何東西就返回：不要留下空的一餐 */
+    if (opt.dropEmpty && !(m.items || []).length && !(m.imgs || []).length) { Object.keys(DB.days).forEach(k => { const i = (DB.days[k] || []).indexOf(m); if (i >= 0) DB.days[k].splice(i, 1); if (DB.days[k] && !DB.days[k].length) delete DB.days[k]; }); mealChanged(); }
+    renderMeal(); }});
   let LIST = [];
   const cnt = (n, s) => m.items.filter(x => wkey(x) === who && x.n === n && (x.s || '') === (s || '')).reduce((a, x) => a + x.q, 0);
   const add = (n, s, p, o) => { if (!who) { toast('請先新增要點餐的人'); return; } const pv = numP(p), x = m.items.find(i => wkey(i) === who && i.n === n && (i.s || '') === (s || '') && (i.o || '') === (o || '') && numP(i.p) === pv);

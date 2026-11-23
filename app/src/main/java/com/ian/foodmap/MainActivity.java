@@ -955,6 +955,30 @@ public class MainActivity extends Activity {
             } }).start();
         }
 
+        /* Google 用瀏覽器登入：在手機上開一個只給本機用的小伺服器接 Google 登入完成後的轉址 */
+        @JavascriptInterface
+        public int loopStart(final String id) {
+            try {
+                final java.net.ServerSocket ss = new java.net.ServerSocket(0, 1, java.net.InetAddress.getByName("127.0.0.1"));
+                new Thread(new Runnable() { public void run() {
+                    try { ss.setSoTimeout(600000);
+                        while (true) { java.net.Socket so = ss.accept(); java.io.BufferedReader rd = new java.io.BufferedReader(new java.io.InputStreamReader(so.getInputStream())); String line = rd.readLine(); OutputStream os = so.getOutputStream();
+                            if (line == null || !line.contains("?")) { os.write("HTTP/1.1 204 No Content\r\nConnection: close\r\n\r\n".getBytes("UTF-8")); so.close(); continue; }
+                            final String q = line.split(" ")[1].replaceFirst("^[^?]*\\?", "");
+                            String html = "<!doctype html><meta charset=utf-8><meta name=viewport content='width=device-width'><body style='font-family:sans-serif;background:#efe5d3;color:#3a2c22;text-align:center;padding:3em 1em'><h2>✅ 登入完成</h2><p>請回到「日日帳本」</p><script>setTimeout(function(){location.href='intent://open#Intent;package=" + getPackageName() + ";end'},400)</script>";
+                            byte[] b = html.getBytes("UTF-8"); os.write(("HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\nContent-Length: " + b.length + "\r\nConnection: close\r\n\r\n").getBytes("UTF-8")); os.write(b); os.flush(); so.close();
+                            runOnUiThread(new Runnable() { public void run() {
+                                web.evaluateJavascript("window.__loop&&window.__loop(" + org.json.JSONObject.quote(id) + "," + org.json.JSONObject.quote(q) + ")", null);
+                                try { Intent it = new Intent(MainActivity.this, MainActivity.class); it.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT | Intent.FLAG_ACTIVITY_SINGLE_TOP); startActivity(it); } catch (Exception e) { }
+                            } });
+                            break; }
+                    } catch (Exception e) { }
+                    try { ss.close(); } catch (Exception e) { }
+                } }).start();
+                return ss.getLocalPort();
+            } catch (Exception e) { return -1; }
+        }
+
         @JavascriptInterface
         public String gInfo() {
             try { org.json.JSONObject o = new org.json.JSONObject(); o.put("pkg", getPackageName()); o.put("email", getSharedPreferences("g", MODE_PRIVATE).getString("acc", ""));

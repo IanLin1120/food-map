@@ -5,7 +5,7 @@ let curTab = 'Map';
 /* 美食・日常和購物分帳已經合併成一個介面（底部：地圖、日常、分帳、發票、設定；食譜在設定裡） */
 function modeUI() { document.body.classList.remove('mShop'); $('#favTitle') && ($('#favTitle').textContent = '收藏分類'); $('#mQ') && ($('#mQ').placeholder = '搜尋店家、地址、量販店…'); }
 function setMode() { }
-function showTab(t) { curTab = t; $$('.page').forEach(p => p.classList.toggle('on', p.id === 'pg' + t)); $$('#tabbar button').forEach(b => b.classList.toggle('on', b.dataset.tab === (t === 'Fav' ? 'Map' : t === 'Rec' ? 'Set' : t))); document.body.classList.toggle('onFav', t === 'Fav');
+function showTab(t) { if (t === 'AccA' && curTab !== 'AccA' && typeof Acc !== 'undefined') Acc.showAmt = false; curTab = t; $$('.page').forEach(p => p.classList.toggle('on', p.id === 'pg' + t)); $$('#tabbar button').forEach(b => b.classList.toggle('on', b.dataset.tab === (t === 'Fav' ? 'Map' : t === 'Rec' ? 'Set' : t))); document.body.classList.toggle('onFav', t === 'Fav');
   if (t === 'Map') mapResize(); else if (t === 'Fav') renderFav(); else if (t === 'Rec') renderRec(); else if (t === 'Meal') renderMeal(); else if (t === 'Shop') renderShop(); else if (t === 'Inv') renderInv(); else if (t === 'Acc') renderAcc(); else if (t === 'AccA') renderAccAsset(); else if (t === 'AccS') renderAccStat(); else if (t === 'AccC') renderAccCfg(); else renderSet(); updCounts(); }
 
 /* ---------- 全部展開／收合（收藏、食譜共用） ---------- */
