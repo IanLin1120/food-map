@@ -109,7 +109,11 @@ function buzz(ms) { const lv = S.haptic === false ? 0 : (S.hapLv == null ? 2 : S
   try { if (IS_APP && NB.vibrate2) NB.vibrate2(Math.round(ms * [0, .8, 1, 1.4][lv]), [0, 70, 150, 255][lv]); else { const d = Math.max(1, Math.round(ms * [0, .5, 1, 2.2][lv])); if (IS_APP && NB.vibrate) NB.vibrate(d); else if (navigator.vibrate) navigator.vibrate(d); } } catch (e) {} }
 /* 所有可以點的按鈕、選項，點下去都震動一下 */
 document.addEventListener('click', e => { if (e.target.closest && e.target.closest('button,select,[data-a],.chip,.res,.pl,.rc,.rrow,.catRow,label.sw,input[type=checkbox],.pin,summary')) buzz(12); }, true);
-let toastT; function toast(msg, ms) { const t = $('#toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('on'), ms || 2400); }
+let toastT; function toast(msg, ms) { const t = $('#toast'); t.textContent = msg; t.classList.remove('undo'); t.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('on'), ms || 2400); }
+/* 有「復原」按鈕的提示（刪除後 5 秒內可以救回來） */
+function toastUndo(msg, undo) { const t = $('#toast'); t.innerHTML = `<span>${esc(msg)}</span><button class="tUndo">↩ 復原</button>`; t.classList.add('on', 'undo'); clearTimeout(toastT);
+  t.querySelector('.tUndo').onclick = e => { e.stopPropagation(); buzz(15); t.classList.remove('on', 'undo'); clearTimeout(toastT); undo(); };
+  toastT = setTimeout(() => t.classList.remove('on', 'undo'), 5000); }
 function busy(msg) { $('#busyT').textContent = msg || ''; $('#busy').classList.toggle('on', msg != null && msg !== false); }
 function openUrl(u) { if (IS_APP && NB.openUrl) NB.openUrl(u); else window.open(u, '_blank', 'noopener'); }
 async function copyText(t) { try { if (IS_APP && NB.copy) NB.copy(t); else await navigator.clipboard.writeText(t); toast('已複製'); } catch (e) { toast('無法複製'); } }

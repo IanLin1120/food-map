@@ -21,7 +21,7 @@ async function loadShop() {
 }
 const Shop = {sel: ymd(new Date()), ym: null};
 const shopPlaces = () => DB.side ? DB.side.shop.places : [];
-const billStore = b => { const P = shopPlaces().find(x => x.id === b.place); return P ? P.name : b.pname || ''; };
+const billStore = b => { const P = shopPlaces().find(x => x.id === b.place); return P ? P.name : storeAlias(b.pname || ''); };
 const pplNames = ids => (ids || []).map(id => mWho(id).name).join('、');
 const pOrder = ids => [...new Set(ids || [])].sort((a, b) => pOrd(a) - pOrd(b));
 

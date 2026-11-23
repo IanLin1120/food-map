@@ -1237,3 +1237,47 @@ body.mAcc #tabbar button:not(.accT){display:none}
 .icG button[data-rc].holding{transform:scale(.92);box-shadow:0 0 0 2px var(--danger,#b5533c)}
 .tpGH .grip{height:1.6rem;width:1.8rem}
 .pgTools.four{grid-template-columns:repeat(4,1fr);gap:.4rem}.pgTools.four .btn{padding:.5rem .15rem;font-size:.86rem;gap:.25rem}
+/* 復原提示 */
+#toast.undo{pointer-events:auto;display:flex;align-items:center;gap:.7rem;padding:.45rem .5rem .45rem 1rem}
+#toast .tUndo{border:0;background:#f3e2bf;color:#3a2e22;font-weight:800;border-radius:6px;padding:.35rem .7rem;font-size:.85rem}
+/* 購物清單：往左滑刪除、常買清單 */
+.slR.swp{position:relative;overflow:hidden;padding:0!important;display:block!important}
+.slR.swp .slRi{position:relative;z-index:1;display:flex;width:100%;box-sizing:border-box;align-items:center;gap:.6rem;padding:.55rem .2rem .55rem 0;background:inherit;background-color:var(--surface);transition:transform .2s ease;touch-action:pan-y}
+.slDone .slR.swp .slRi{background-color:transparent}
+.slR.swp .slDel{position:absolute;right:0;top:0;bottom:0;width:88px;border:0;background:#b5533c;color:#fff;font-weight:800;font-size:.86rem;border-radius:6px}
+.slR.swp:not(.open) .slDel{visibility:hidden}
+.slR.swp.open .slDel{visibility:visible}
+.slR.swp.open .slRi{width:calc(100% - 92px);transition:width .2s ease}.slR.swp .slDel{width:84px}
+.slSugBtn{display:flex;align-items:center;gap:.5rem;width:100%;margin-top:.6rem;padding:.6rem .75rem;border-radius:6px;border:1px dashed var(--border);background:color-mix(in srgb,var(--accent) 6%,var(--surface));text-align:left}
+.slSugBtn span{font-weight:800}.slSugBtn small{flex:1;color:var(--muted);font-size:.78rem}.slSugBtn i{font-style:normal;color:var(--muted)}
+.slHint{font-size:.72rem;color:var(--muted);margin-top:.4rem;text-align:right}
+.lhL{display:flex;flex-direction:column;gap:.35rem}
+.lhR{display:flex;align-items:center;gap:.6rem;padding:.6rem .7rem;border-radius:6px;border:1px solid var(--border-soft);background:var(--surface);text-align:left;font-size:.92rem}
+.lhR .lhCk{width:1.25rem;height:1.25rem;border-radius:5px;border:2px solid var(--border);flex:none;display:grid;place-items:center}
+.lhR.on{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 10%,var(--surface))}
+.lhR.on .lhCk{background:var(--accent);border-color:var(--accent)}.lhR.on .lhCk::after{content:'✓';color:#fff;font-size:.8rem;font-weight:900}
+/* 記帳：分帳的人名單 */
+#apL{display:flex;flex-direction:column;gap:.45rem}
+.apR{display:flex;align-items:center;gap:.6rem;padding:.4rem .5rem .4rem .1rem}
+.apR .apI{font-size:1.5rem}.apR b small{margin-left:.4rem;font-size:.7rem;background:var(--accent);color:#fff;border-radius:6px;padding:.05rem .4rem}
+/* 記帳：店家地圖 */
+.amMapBox{padding:0;overflow:hidden;height:min(46vh,360px);margin-bottom:.8rem;position:relative}
+#accMap{position:absolute;inset:0;background:#e6dcc6}
+.amQ{margin-bottom:.6rem}
+#accMList{display:flex;flex-direction:column;gap:.5rem}
+.amR{display:flex;align-items:center;gap:.65rem;padding:.65rem .75rem;text-align:left;width:100%}
+.amR b{display:block;font-size:.95rem}.amR small{display:block;color:var(--muted);font-size:.76rem;line-height:1.45}
+.amR .btn.sm{flex:none;white-space:nowrap}
+.amPinI{font-size:1.3rem;flex:none;opacity:.55}.amPinI.on{opacity:1}
+.amPin{display:flex;flex-direction:column;align-items:center;border:0;background:none;padding:0;filter:drop-shadow(0 2px 3px rgba(0,0,0,.25))}
+.amPin span{font-size:1.25rem;background:#fff;border:2px solid var(--accent);border-radius:50% 50% 50% 0;transform:rotate(-45deg);width:2rem;height:2rem;display:grid;place-items:center}
+.amPin span i{font-style:normal;transform:rotate(45deg);display:block;line-height:1}
+.amPin b{margin-top:.15rem;font-size:.68rem;background:rgba(255,250,240,.95);color:#3a2c22;border-radius:6px;padding:.05rem .35rem;max-width:7rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.amInfo{display:flex;flex-direction:column;gap:.45rem;padding:.75rem .85rem;margin-bottom:.8rem}
+.amInfo>div{display:flex;gap:.6rem;font-size:.88rem}.amInfo b{flex:none;width:4.2rem}.amInfo span{flex:1;min-width:0;color:var(--muted)}
+.lnk{border:0;background:none;color:var(--accent);font-weight:800;padding:0;text-decoration:underline}
+.pyLoc{font-style:normal;font-size:.7rem;margin-left:.15rem}
+.pyLocR{display:flex;align-items:center;gap:.6rem;padding:.55rem .7rem;margin:-.2rem 0 .9rem;font-size:.86rem}
+.pyLocR small{display:block;color:var(--muted);font-size:.74rem}
+.pyLocT{display:block;width:100%;margin-top:.35rem;padding:.4rem .6rem;border-radius:6px;border:1px dashed var(--border);background:none;text-align:left;font-size:.78rem;color:var(--muted)}
+.pyLocT.on{border-style:solid;border-color:color-mix(in srgb,var(--accent) 40%,transparent);color:var(--accent);font-weight:700}

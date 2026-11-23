@@ -11,7 +11,7 @@ const saveInvs = debounce(() => IDB.put('kv', 'invs', DB.invs).catch(saveErr), 2
 async function loadInv() { DB.invs = await IDB.get('kv', 'invs').catch(() => null) || {}; }
 const Inv = {ym: null, q: '', day: ''};
 const invList = () => Object.values(DB.invs || {});
-const invSeller = v => v.seller || (DB.scfg.sellers || {})[v.sellerId] || (v.sellerId ? '統編 ' + v.sellerId : '未知店家');
+const invSeller = v => storeAlias(v.seller || (DB.scfg.sellers || {})[v.sellerId] || '') || (v.sellerId ? '統編 ' + v.sellerId : '未知店家');
 const invNoFmt = n => String(n || '').replace(/^([A-Z]{2})(\d{8})$/, '$1-$2');
 const invBill = v => { if (!v.bill) return null; const L = DB.bills[v.bill.k] || []; const b = L.find(x => x.id === v.bill.id); if (b) return b; for (const k of Object.keys(DB.bills)) { const f = DB.bills[k].find(x => x.id === v.bill.id); if (f) { v.bill.k = k; return f; } } return null; };
 
@@ -277,7 +277,7 @@ function openInvDetail(no) {
       delete DB.invs[v.no]; v.no = nv; DB.invs[nv] = v; save(); }
     else if (a === 'date') { const k = await datePick(v.date || ymd(new Date())); if (k) { v.date = k; save(); } }
     else if (a === 'time') { const tv = await timePick(v.time); if (tv != null) { v.time = tv; save(); } }
-    else if (a === 'seller') { const nv = await pickName('消費店家', invSeller(v).replace(/^統編 \d+$/, '')); if (!nv) return; v.seller = nv; if (v.sellerId) { DB.scfg.sellers = DB.scfg.sellers || {}; DB.scfg.sellers[v.sellerId] = nv; saveScfg(); } save(); }
+    else if (a === 'seller') { const nv = await pickName('消費店家', invSeller(v).replace(/^統編 \d+$/, '')); if (!nv) return; const old = invSeller(v); v.seller = nv; if (v.sellerId) { DB.scfg.sellers = DB.scfg.sellers || {}; DB.scfg.sellers[v.sellerId] = nv; saveScfg(); invList().forEach(x => { if (x.sellerId === v.sellerId) x.seller = nv; }); } save(); if (!/^統編 \d+$|^未知店家$/.test(old)) await renameStoreAsk(old, nv); }
     else if (a === 'sid') { const nv = ((await askText('店家統編（8 位數字，可留空）', v.sellerId || '')) || '').replace(/\D/g, ''); if (nv && nv.length !== 8) { toast('統編是 8 位數字'); return; } v.sellerId = nv; if (nv && !v.seller) lookupSeller(nv); save(); }
     else if (a === 'total') { const nv = await askText('消費金額', v.total == null ? '' : String(v.total)); if (nv == null || nv === '') return; const n = parseFloat(String(nv).replace(/[^\d.\-]/g, '')); if (isNaN(n)) return; v.total = n; save(); }
     else if (a === 'open') { const b = invBill(v); if (b) { while (sheets.length) sheets[sheets.length - 1].close(); gotoBill(billKey(b), b.id); } } });
@@ -431,7 +431,12 @@ function openInvSettings() {
   sh.body.addEventListener('click', async e => { const t = e.target.closest('[data-a]'); if (!t) return; const a = t.dataset.a;
     if (a === 'accApp') { await pickInvApp(true); draw(); return; } if (a === 'accHelp') { openInvAcc(true); return; }
     if (a === 'car') { await editCarrier(); draw(); } else if (a === 'carDel') { delete DB.scfg.carrier; saveScfg(); draw(); }
-    else if (a === 'sRen') { const id = t.closest('.msR').dataset.id, nv = ((await askText('店家名稱', DB.scfg.sellers[id])) || '').trim(); if (nv) { DB.scfg.sellers[id] = nv; saveScfg(); draw(); } }
+    else if (a === 'sRen') { const id = t.closest('.msR').dataset.id, old = DB.scfg.sellers[id], nv = ((await askText('店家名稱', old)) || '').trim(); if (!nv || nv === old) return;
+      /* 同一個統編的發票全部換成新名稱，再問要不要同步地圖、日常、分帳、記帳 */
+      const olds = new Set([old]); invList().forEach(v => { if (v.sellerId === id) { if (v.seller) olds.add(v.seller); v.seller = nv; } }); DB.scfg.sellers[id] = nv; saveScfg(); saveInvs();
+      const others = [...olds].filter(o => o && o !== nv && !isPcatPayee(o)), refs = others.map(o => [o, storeRefs(o)]).filter(([, c]) => storeRefText(c));
+      if (refs.length && await ask(`發票已改成「${nv}」。\n其他地方也有用到舊名稱：\n${refs.map(([o, c]) => `・${o}（${storeRefText(c)}）`).join('\n')}\n要一起改成新名稱嗎？`, '一起改')) { let n = 0; for (const [o] of refs) n += await renameStoreAll(o, nv); toast(`✅ 已同步更新 ${n} 筆`); refreshAll(); }
+      else others.forEach(o => { DB.scfg.alias = DB.scfg.alias || {}; DB.scfg.alias[o] = nv; }); saveScfg(); draw(); }
     else if (a === 'wipe') { if (!await ask('確定要清除所有發票紀錄嗎？（分帳紀錄不會刪）', '全部清除', true)) return; DB.invs = {}; saveInvs(); draw(); } });
 }
 
