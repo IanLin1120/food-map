@@ -4,7 +4,7 @@
 <script>/* 線上更新開機程式：手機上若已下載比 APK 內建更新的介面版本，就改用新版（存在 IndexedDB）。
    新版連續兩次沒有正常開啟 → 自動退回 APK 內建版本。網址加上 #builtin 也會強制使用內建版本。 */
 (function () {
-  var B = '3.21.0'; if (!window.__OTA) window.APP_BUILTIN = B;
+  var B = '3.22.0'; if (!window.__OTA) window.APP_BUILTIN = B;
   if (window.__OTA || location.hash.indexOf('builtin') >= 0) return;
   var v = null; try { v = JSON.parse(localStorage.getItem('fm.ota') || 'null'); } catch (e) {}
   function gt(a, b) { a = String(a).split('.').map(Number); b = String(b).split('.').map(Number); for (var i = 0; i < Math.max(a.length, b.length); i++) { var p = a[i] || 0, q = b[i] || 0; if (p !== q) return p > q; } return false; }
@@ -154,7 +154,7 @@ h1,h2,h3{margin:0;line-height:1.25;text-wrap:balance}
 .fab{width:2.9rem;height:2.9rem;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:.9rem;color:var(--text)}
 .fab svg{width:1.35rem;height:1.35rem;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .fab.on{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
-.fab.big{width:3.4rem;height:3.4rem;background:var(--accent);color:var(--accent-fg);border-color:var(--accent);font-size:1.6rem}
+.fab.big{width:2.9rem;height:2.9rem;background:var(--accent);color:var(--accent-fg);border-color:var(--accent);font-size:1.45rem}
 #mCard{position:absolute;left:.7rem;right:.7rem;bottom:.8rem;z-index:6;border-radius:var(--r);padding:.85rem .95rem;max-width:40rem;margin:0 auto;background:var(--surface);box-shadow:var(--shadow);border:1px solid var(--border-soft);transform:translateY(130%);transition:transform .25s cubic-bezier(.2,.8,.2,1)}
 #mCard{pointer-events:none;transform:translateY(calc(100% + 2rem))!important;visibility:hidden;transition:transform .25s,visibility 0s .25s}#mCard.on{transform:none!important;pointer-events:auto;visibility:visible;transition:transform .25s}
 #mCard h3{font-size:1.08rem}
@@ -1342,14 +1342,10 @@ body.mAcc #tabbar button:not(.accT){display:none}
 .amTip{margin:0 0 .5rem;font-size:.74rem}
 .amSecH .grip{width:1.5rem;height:1.6rem;margin-left:-.3rem}
 .amSec.dragSrc{opacity:.35}
-.amCtl{position:absolute;left:.55rem;bottom:.55rem;display:flex;flex-direction:column;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.18);z-index:3}
-.amCtl.r{left:auto;right:.55rem;gap:.4rem;background:none;box-shadow:none;overflow:visible}
-.amCtl button{width:2.35rem;height:2.35rem;border:0;background:rgba(251,246,236,.96);color:#3a2c22;font-size:1.2rem;font-weight:800;display:grid;place-items:center}
-.amCtl:not(.r) button+button{border-top:1px solid #e3d6c0}
-.amCtl.r button{border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,.18)}
-#amNorth i{font-style:normal;display:block;transform-origin:center;color:#b5533c;font-size:1rem;line-height:1}#amNorth i{rotate:-90deg}
-#amNorth.on{background:var(--accent)}#amNorth.on i{color:#fff}
-#amMe{font-size:1.25rem;color:var(--accent)}#amMe.locating{animation:amPulse 1s infinite}@keyframes amPulse{50%{opacity:.4}}
+.amFabs{position:absolute;right:.6rem;bottom:.6rem;display:flex;flex-direction:column;gap:.5rem;z-index:3}
+
+#amNorth i{display:grid;place-items:center;transform-origin:center;line-height:0}
+#amMe.locating svg{animation:spin 1.2s linear infinite}
 </style>
 </head>
 <body>
@@ -3821,7 +3817,7 @@ var qrcode = function() {
 /* ============================================================
    日日帳本 — 核心：工具、資料儲存、主題、面板、拖曳排序、圖片
    ============================================================ */
-const APP_VERSION = '3.21.0';
+const APP_VERSION = '3.22.0';
 const APP_VER = APP_VERSION;
 /* 線上更新來源（GitHub Pages）：IanLin1120/food-map */
 const GH = {repo: 'https://github.com/IanLin1120/food-map', pages: 'https://ianlin1120.github.io/food-map/'};
@@ -8397,7 +8393,7 @@ async function accMapInit() {
     AM.map.on('error', () => {}); AM.fit = true;
     if (S.amNorth !== false) AM.map.touchZoomRotate.disableRotation();
     AM.map.on('rotate', () => { const n = $('#amNorth i'); if (n) n.style.transform = `rotate(${-AM.map.getBearing()}deg)`; });
-    $('.amMapBox').insertAdjacentHTML('beforeend', `<div class="amCtl"><button data-m="in" aria-label="放大">＋</button><button data-m="out" aria-label="縮小">－</button></div><div class="amCtl r"><button data-m="north" id="amNorth" class="${S.amNorth !== false ? 'on' : ''}" aria-label="固定朝北"><i>➤</i></button><button data-m="me" id="amMe" aria-label="目前位置">◎</button></div>`);
+    $('.amMapBox').insertAdjacentHTML('beforeend', `<div class="amFabs"><button class="fab glass" data-m="in" aria-label="放大"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button><button class="fab glass" data-m="out" aria-label="縮小"><svg viewBox="0 0 24 24"><path d="M5 12h14"/></svg></button><button class="fab glass ${S.amNorth !== false ? 'on' : ''}" data-m="north" id="amNorth" aria-label="固定朝北"><i><svg viewBox="0 0 24 24"><path d="M12 3l4 9H8z" fill="currentColor"/><path d="M12 21l-4-9h8z"/></svg></i></button><button class="fab glass" data-m="me" id="amMe" aria-label="目前位置"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg></button></div>`);
     $('.amMapBox').addEventListener('click', e => { const b = e.target.closest('[data-m]'); if (!b) return; buzz(10); const m = b.dataset.m, M2 = AM.map;
       if (m === 'in') M2.zoomIn({duration: 250}); else if (m === 'out') M2.zoomOut({duration: 250});
       else if (m === 'north') { S.amNorth = S.amNorth === false; saveS(); b.classList.toggle('on', S.amNorth); M2.easeTo({bearing: 0, pitch: 0, duration: 400}); if (S.amNorth) M2.touchZoomRotate.disableRotation(); else M2.touchZoomRotate.enableRotation(); toast(S.amNorth ? '🧭 固定朝北' : '可以用兩指旋轉地圖'); }
@@ -8413,6 +8409,9 @@ function accMapMarks(L) { if (!AM.map) return; AM.marks.forEach(m => m.remove())
 function accMapLocate() { if (!AM.map) return; Loc.start(); const b = $('#amMe'); b && b.classList.add('locating'); let n = 0;
   const go = () => { const L = Loc.last; if (L && Date.now() - L.t < 120000) { b && b.classList.remove('locating');
       if (!AM.me) { const e = el('<div class="meWrap"><div class="meDot"></div></div>'); AM.me = new maplibregl.Marker({element: e}).setLngLat([L.lon, L.lat]).addTo(AM.map); } else AM.me.setLngLat([L.lon, L.lat]);
+      /* 依目前位置自動選縣市、鄉鎮市區，直接顯示那一區的收藏 */
+      const tw = TW.init() && TW.townAt(L.lon, L.lat);
+      if (tw && !(AM.area && AM.area.c === tw.county && AM.area.t === tw.name)) { AM.area = {c: tw.county, t: tw.name}; AM.f = 'all'; AM.q = ''; S.amFold = S.amFold || {}; Object.keys(S.amFold).forEach(k => { S.amFold[k] = false; }); DB.cats.map(c => c.id).concat(['', '_acc']).forEach(k => { S.amFold[k] = false; }); saveS(); AM.fit = false; renderAccMap(); toast(`📍 ${tw.county} ${tw.name}`); }
       AM.map.flyTo({center: [L.lon, L.lat], zoom: Math.max(AM.map.getZoom(), 15.5), duration: 700}); return; }
     if (++n > 30 || Loc.err === 'denied' || Loc.err === 'off') { b && b.classList.remove('locating'); toast(Loc.err === 'denied' ? '請允許定位權限才能顯示你的位置' : Loc.err === 'off' ? '手機的定位功能是關閉的' : '暫時抓不到位置，請到室外或確認已開啟定位', 3500); return; }
     setTimeout(go, 500); };
