@@ -1388,3 +1388,7 @@ table.ckT td.s{text-align:center}table.ckT th.s{text-align:center}
 .camBar .btn{flex:none;min-width:2.6rem;justify-content:center}
 .scItems{display:flex;flex-direction:column;gap:.15rem;margin-top:.4rem;font-size:.82rem}
 .scItems span{display:flex;gap:.5rem;justify-content:space-between}.scItems em{font-style:normal;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.scItems i{font-style:normal;color:var(--muted);flex:none}
+.camVeil{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.55);color:#fff;font-weight:700;z-index:3}
+/* 順暢度：地圖上的按鈕、分類標籤不再即時模糊背後的地圖（每一格都要重算，高更新率螢幕最吃效能），改成較不透明的底色 */
+.glass{backdrop-filter:none!important;-webkit-backdrop-filter:none!important;background:color-mix(in srgb,var(--surface-3,#f6efe2) 94%,transparent)}
+.chip{backdrop-filter:none;-webkit-backdrop-filter:none}#chips .chip:not(.on){background:color-mix(in srgb,var(--surface-3,#f6efe2) 94%,transparent)}

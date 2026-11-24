@@ -54,11 +54,24 @@ public class MainActivity extends Activity {
     String saveName;
 
     @Override
+    /* 高更新率螢幕（90／120Hz）：請系統用最高的更新率，畫面滑動才會順 */
+    private void maxRefresh() {
+        try {
+            if (Build.VERSION.SDK_INT < 23) return;
+            android.view.Display d = getWindowManager().getDefaultDisplay(); android.view.Display.Mode cur0 = d.getMode(), best = cur0;
+            for (android.view.Display.Mode m : d.getSupportedModes())
+                if (m.getPhysicalWidth() == cur0.getPhysicalWidth() && m.getPhysicalHeight() == cur0.getPhysicalHeight() && m.getRefreshRate() > best.getRefreshRate()) best = m;
+            android.view.WindowManager.LayoutParams lp = getWindow().getAttributes(); lp.preferredDisplayModeId = best.getModeId();
+            if (Build.VERSION.SDK_INT >= 30) lp.preferredRefreshRate = best.getRefreshRate();
+            getWindow().setAttributes(lp);
+        } catch (Throwable t) { }
+    }
     protected void onCreate(Bundle b) {
         super.onCreate(b);
         /* 記帳的鎖：App 每次重新開啟（包含從最近使用劃掉後再開）都要重新解鎖 */
         Lock.session = false;
         cur = this;
+        maxRefresh();
         /* 螢幕一關就上鎖 */
         try { registerReceiver(screenOff, new android.content.IntentFilter(Intent.ACTION_SCREEN_OFF)); } catch (Throwable t) { }
         getWindow().setStatusBarColor(Color.parseColor("#efe5d3"));

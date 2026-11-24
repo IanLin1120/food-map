@@ -122,6 +122,24 @@ function parseInvQR(left, right) {
   }
   return {no, way: '實體店購物', date: `${y}-${m}-${d}`, sellerId: /^\d{8}$/.test(sellerId) ? sellerId : '', total: isNaN(total) ? 0 : total, items, src: 'qr', need: +(f[3] || 0)};
 }
+/* 辨識放到背景執行緒（Web Worker）：畫面、相機預覽不會被卡住，120Hz 也順。
+   worker 收到 RGBA 影像，找出最多 n 個 QR（找到一個就塗白再找下一個），回傳解好的文字 */
+const QRW = {w: null, busy: false, cb: null,
+  get() { if (this.w || this.w === false) return this.w; try { const src = (document.getElementById('jsqrJs') || {}).textContent; if (!src) throw 0;
+      const code = src + `
+const Z=[[0,1],[0,.5],[.5,1],[0,.62],[.38,1]];
+function txt(c){const b=c.binaryData&&c.binaryData.length?new Uint8Array(c.binaryData):null;if(!b)return c.data||'';const t=e=>{try{return new TextDecoder(e,{fatal:true}).decode(b)}catch(x){return null}};return t('utf-8')||t('big5')||c.data||new TextDecoder('utf-8').decode(b);}
+function crop(d,W,H,x0,w){if(x0===0&&w===W)return d;const o=new Uint8ClampedArray(w*H*4);for(let y=0;y<H;y++)o.set(d.subarray((y*W+x0)*4,(y*W+x0+w)*4),y*w*4);return o;}
+onmessage=e=>{const {d,W,H,n,id}=e.data;const out=[];try{for(let k=0;k<n;k++){let hit=null;for(const [a,b] of (n>1?Z:[[0,1]])){const x0=Math.round(W*a),w=Math.round(W*(b-a));const c=jsQR(crop(d,W,H,x0,w),w,H,{inversionAttempts:n>1?'dontInvert':'attemptBoth'});if(c){hit={c,x0};break;}}
+ if(!hit)break;out.push(txt(hit.c));const L=hit.c.location,xs=[L.topLeftCorner.x,L.topRightCorner.x,L.bottomLeftCorner.x,L.bottomRightCorner.x],ys=[L.topLeftCorner.y,L.topRightCorner.y,L.bottomLeftCorner.y,L.bottomRightCorner.y];
+ const p=(Math.max(...xs)-Math.min(...xs))*.15,X0=Math.max(0,Math.floor(hit.x0+Math.min(...xs)-p)),X1=Math.min(W,Math.ceil(hit.x0+Math.max(...xs)+p)),Y0=Math.max(0,Math.floor(Math.min(...ys)-p)),Y1=Math.min(H,Math.ceil(Math.max(...ys)+p));
+ for(let y=Y0;y<Y1;y++)d.fill(255,(y*W+X0)*4,(y*W+X1)*4);}}catch(x){}postMessage({id,out});};`;
+      this.w = new Worker(URL.createObjectURL(new Blob([code], {type: 'text/javascript'}))); this.w.onmessage = e => { this.busy = false; const f = this.cb; this.cb = null; f && f(e.data.out || []); };
+      this.w.onerror = () => { this.w = false; this.busy = false; }; } catch (e) { this.w = false; } return this.w; },
+  /* 送一張影像去辨識；還在忙就跳過這一格。沒有 worker 時退回在主執行緒做 */
+  scan(g, W, H, n, cb) { if (this.busy) return; const w = this.get(), img = g.getImageData(0, 0, W, H);
+    if (!w) { let r = []; try { r = n > 1 ? qrMulti(g, [0, 0, W, H]) : ((c => c ? [qrText(c)] : [])(jsQR(img.data, W, H))); } catch (e) {} cb(r); return; }
+    this.busy = true; this.cb = cb; w.postMessage({d: img.data, W, H, n, id: Date.now()}, [img.data.buffer]); } };
 /* 一張畫面讀兩個 QR：jsQR 一次只能讀一個，兩個並排時整張可能讀不到 → 依序試整張、左半、右半…，
    讀到一個就把它塗白，再從整張重新找下一個 */
 const QZ = [[0, 1], [0, .5], [.5, 1], [0, .62], [.38, 1]];
@@ -137,28 +155,35 @@ function qrMulti(g, z) {
 /* 相機：可以換鏡頭（避開長焦、超廣角）、放大縮小，讓你自己決定離多遠掃；會記住上次的鏡頭和倍率。
    手機支援的話用鏡頭本身的變焦，不支援就用數位放大（只取畫面中間來辨識） */
 function camKit(box, v, onErr) {
-  const K = {stream: null, track: null, z: Math.max(1, +S.camZ || 1), hw: null, devs: [], di: -1, stopped: false};
-  box.insertAdjacentHTML('afterend', `<div class="camBar"><button class="btn sm" data-cz="-" aria-label="縮小">－</button><input type="range" class="czR" min="1" max="5" step="0.1" value="${K.z}"><button class="btn sm" data-cz="+" aria-label="放大">＋</button><b class="czL">${K.z.toFixed(1)}×</b><button class="btn sm hide" data-cam="1">🔄 換鏡頭</button></div>`);
+  const K = {stream: null, track: null, z: 1, hw: null, devs: [], di: -1, stopped: false, busy: false};
+  box.insertAdjacentHTML('afterend', `<div class="camBar"><button class="btn sm" data-cz="-" aria-label="縮小">－</button><input type="range" class="czR" min="1" max="5" step="0.1" value="1"><button class="btn sm" data-cz="+" aria-label="放大">＋</button><b class="czL">${K.z.toFixed(1)}×</b><button class="btn sm hide" data-cam="1">🔄 換鏡頭</button></div>`);
   const bar = box.nextElementSibling, R = $('.czR', bar), Lb = $('.czL', bar), cb = $('[data-cam]', bar);
-  let svT = 0; const save = () => { clearTimeout(svT); svT = setTimeout(() => { S.camZ = K.z; saveS(); }, 400); };
-  K.apply = () => { const max = +R.max; K.z = Math.min(max, Math.max(1, Math.round(K.z * 10) / 10)); R.value = K.z; Lb.textContent = K.z.toFixed(1) + '×';
-    if (K.hw) { const z = K.hw.min + (K.z - 1); try { K.track.applyConstraints({advanced: [{zoom: Math.min(K.hw.max, z)}]}).catch(() => {}); } catch (e) {} v.style.transform = ''; }
-    else v.style.transform = K.z > 1 ? `scale(${K.z})` : ''; save(); };
+  /* 倍率就是實際的倍率：1× 是主鏡頭；鏡頭支援 0.5× 的話拉桿最左邊是 0.5×。每次打開都從 1× 開始 */
+  let zq = 0, zT = 0; K.apply = () => { const mn = +R.min, max = +R.max; K.z = Math.min(max, Math.max(mn, Math.round(K.z * 10) / 10)); R.value = K.z; Lb.textContent = K.z.toFixed(1) + '×';
+    if (K.hw) { v.style.transform = ''; zq = K.z; if (!zT) zT = requestAnimationFrame(() => { zT = 0; try { K.track.applyConstraints({advanced: [{zoom: Math.min(K.hw.max, Math.max(K.hw.min, zq))}]}).catch(() => {}); } catch (e) {} }); }
+    else v.style.transform = K.z > 1 ? `scale(${K.z})` : ''; };
   K.crop = () => { const vw = v.videoWidth, vh = v.videoHeight; if (K.hw || K.z <= 1) return [0, 0, vw, vh]; const w = vw / K.z, h = vh / K.z; return [(vw - w) / 2, (vh - h) / 2, w, h]; };
   K.stop = () => { K.stopped = true; if (K.stream) K.stream.getTracks().forEach(t => t.stop()); };
-  K.open = async dev => { if (K.stream) K.stream.getTracks().forEach(t => t.stop());
+  const mainBack = L => { const b = L.filter(d => /back|rear|environment|後/i.test(d.label)); if (!b.length) return null; const n = d => { const m = d.label.match(/camera2?\s*(\d+)/i); return m ? +m[1] : 99; }; return b.slice().sort((x, y) => n(x) - n(y))[0]; };
+  const veil = on => { let o = $('.camVeil', box); if (on && !o) box.insertAdjacentHTML('beforeend', '<div class="camVeil">切換鏡頭中…</div>'); else if (!on && o) o.remove(); };
+  K.open = async dev => { if (K.busy) return; K.busy = true; veil(!!K.stream); if (K.stream) { K.stream.getTracks().forEach(t => t.stop()); K.stream = null; }
+    /* 沒有自己選過鏡頭：先找編號最小的後鏡頭（通常就是 1× 主鏡頭），避開長焦或超廣角 */
+    if (!dev) { try { const all = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === 'videoinput'), m = mainBack(all); if (m && m.deviceId) dev = m.deviceId; } catch (e) {} }
     const base = {width: {ideal: 1920}, height: {ideal: 1080}}, c = dev ? Object.assign({deviceId: {exact: dev}}, base) : Object.assign({facingMode: {ideal: 'environment'}}, base);
-    let s; try { s = await navigator.mediaDevices.getUserMedia({video: c, audio: false}); } catch (er) { if (dev) { S.camDev = ''; return K.open(''); } onErr && onErr(er); return; }
-    if (K.stopped) { s.getTracks().forEach(t => t.stop()); return; } K.stream = s; K.track = s.getVideoTracks()[0]; v.srcObject = s; v.play().catch(() => {});
-    const cap = (K.track.getCapabilities && K.track.getCapabilities()) || {}; K.hw = cap.zoom && cap.zoom.max > cap.zoom.min ? cap.zoom : null; R.max = K.hw ? Math.min(8, Math.round((K.hw.max - K.hw.min + 1) * 10) / 10) : 5;
+    let s; try { s = await navigator.mediaDevices.getUserMedia({video: c, audio: false}); } catch (er) { K.busy = false; if (dev) { S.camDev = ''; return K.open(''); } veil(false); onErr && onErr(er); return; }
+    if (K.stopped) { s.getTracks().forEach(t => t.stop()); K.busy = false; return; } K.stream = s; K.track = s.getVideoTracks()[0]; v.srcObject = s; v.play().catch(() => {});
+    v.addEventListener('playing', () => veil(false), {once: true}); setTimeout(() => veil(false), 2500); K.busy = false;
+    const cap = (K.track.getCapabilities && K.track.getCapabilities()) || {}; K.hw = cap.zoom && cap.zoom.max > cap.zoom.min ? cap.zoom : null;
+    R.min = K.hw ? Math.min(1, Math.max(.5, K.hw.min)) : 1; R.max = K.hw ? Math.min(10, K.hw.max) : 5; K.z = 1;
     if (cap.focusMode && cap.focusMode.includes('continuous')) K.track.applyConstraints({advanced: [{focusMode: 'continuous'}]}).catch(() => {});
     K.apply();
     try { if (!K.devs.length) { const all = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === 'videoinput'), back = all.filter(d => /back|rear|environment|後/i.test(d.label)); K.devs = back.length >= 2 ? back : all; }
+      if (!K.devs[0].label) { const all = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === 'videoinput'), back = all.filter(d => /back|rear|environment|後/i.test(d.label)); if (all.length) K.devs = back.length >= 2 ? back : all; }
       const id = (K.track.getSettings && K.track.getSettings().deviceId) || dev; K.di = Math.max(0, K.devs.findIndex(d => d.deviceId === id)); cb.classList.toggle('hide', K.devs.length < 2);
       cb.textContent = `🔄 換鏡頭 ${K.di + 1}/${K.devs.length}`; } catch (e) {} };
   bar.addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; buzz(8);
-    if (b.dataset.cz) { K.z += b.dataset.cz === '+' ? .5 : -.5; K.apply(); }
-    else if (b.dataset.cam && K.devs.length > 1) { K.di = (K.di + 1) % K.devs.length; S.camDev = K.devs[K.di].deviceId; saveS(); K.open(S.camDev); toast(`鏡頭 ${K.di + 1}／${K.devs.length}${K.devs[K.di].label ? '：' + K.devs[K.di].label : ''}`); } });
+    if (b.dataset.cz) { K.z += b.dataset.cz === '+' ? (K.z < 1 ? .25 : .5) : (K.z <= 1 ? -.25 : -.5); K.apply(); }
+    else if (b.dataset.cam && K.devs.length > 1 && !K.busy) { K.di = (K.di + 1) % K.devs.length; S.camDev = K.devs[K.di].deviceId; saveS(); K.open(S.camDev); toast(`鏡頭 ${K.di + 1}／${K.devs.length}${K.devs[K.di].label ? '：' + K.devs[K.di].label : ''}`); } });
   R.addEventListener('input', () => { K.z = +R.value; K.apply(); });
   /* 雙指縮放畫面也可以調整倍率 */
   let d0 = 0, z0 = 1; box.addEventListener('touchstart', e => { if (e.touches.length === 2) { d0 = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY); z0 = K.z; } }, {passive: true});
@@ -182,8 +207,8 @@ function openInvScan() {
   sh.body.addEventListener('click', e => { const t = e.target.closest('[data-no]'); if (t) openInvDetail(t.dataset.no); });
   const take = txt => { if (/^[A-Z]{2}\d{8}\d{7}/.test(txt)) { if (!left || left !== txt) { left = txt; leftAt = Date.now(); } } else if (/^\*\*/.test(txt)) right = txt; mark(); };
   const tick = () => { if (stop) return;
-    if (v.readyState >= 2 && v.videoWidth) { const [sx, sy, vw, vh] = cam.crop(), sc = Math.min(1, 960 / vw); cv.width = Math.round(vw * sc); cv.height = Math.round(vh * sc); g.drawImage(v, sx, sy, vw, vh, 0, 0, cv.width, cv.height);
-      try { qrMulti(g, [0, 0, cv.width, cv.height]).forEach(take); } catch (e) {}
+    if (!QRW.busy && v.readyState >= 2 && v.videoWidth) { const [sx, sy, vw, vh] = cam.crop(), sc = Math.min(1, 960 / vw); cv.width = Math.round(vw * sc); cv.height = Math.round(vh * sc); g.drawImage(v, sx, sy, vw, vh, 0, 0, cv.width, cv.height);
+      QRW.scan(g, cv.width, cv.height, 2, r => { if (stop) return; r.forEach(take); });
       if (left) { const p = parseInvQR(left, right); const need = p && p.need, have = p ? p.items.length : 0; if (right || (need && have >= need) || need === 0 || Date.now() - leftAt > 2500) finish(); } }
     requestAnimationFrame(tick); };
   cam = camKit($('.scanBox', sh.body), v, er => { $('#scTip', sh.body).textContent = '❌ 打不開相機：' + (er.name === 'NotAllowedError' ? '請允許日日帳本使用相機' : er.message); }); tick();

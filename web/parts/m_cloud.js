@@ -289,8 +289,8 @@ function qrScanOnce(title, test) {
     let cam = null, stop = false, done = false; const sh = sheet({title, full: true, onClose() { stop = true; if (cam) cam.stop(); if (!done) res(null); }});
     sh.body.innerHTML = `<div class="scanBox"><video id="qsV" playsinline muted></video><div class="scFrame one"><i></i></div><div class="scTip" id="qsT">把 QR Code 放進框裡，太小可以按 ＋ 放大</div></div>`;
     const v = $('#qsV', sh.body), cv = document.createElement('canvas'), g = cv.getContext('2d', {willReadFrequently: true});
-    const tick = () => { if (stop) return; if (v.readyState >= 2 && v.videoWidth) { const [sx, sy, vw, vh] = cam.crop(), sc = Math.min(1, 900 / vw); cv.width = Math.round(vw * sc); cv.height = Math.round(vh * sc); g.drawImage(v, sx, sy, vw, vh, 0, 0, cv.width, cv.height);
-        try { const c = jsQR(g.getImageData(0, 0, cv.width, cv.height).data, cv.width, cv.height); if (c && c.data && (!test || test(c.data))) { done = true; buzz(60); sh.close(); res(c.data); return; } } catch (e) {} } requestAnimationFrame(tick); };
+    const tick = () => { if (stop) return; if (!QRW.busy && v.readyState >= 2 && v.videoWidth) { const [sx, sy, vw, vh] = cam.crop(), sc = Math.min(1, 900 / vw); cv.width = Math.round(vw * sc); cv.height = Math.round(vh * sc); g.drawImage(v, sx, sy, vw, vh, 0, 0, cv.width, cv.height);
+        QRW.scan(g, cv.width, cv.height, 1, r => { const t = r[0]; if (!done && !stop && t && (!test || test(t))) { done = true; buzz(60); sh.close(); res(t); } }); } requestAnimationFrame(tick); };
     cam = camKit($('.scanBox', sh.body), v, er => { $('#qsT', sh.body).textContent = '❌ 打不開相機：' + (er.name === 'NotAllowedError' ? '請允許日日帳本使用相機' : er.message); }); tick(); });
 }
 async function xferRecv() {
