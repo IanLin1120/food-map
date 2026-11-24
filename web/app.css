@@ -1321,3 +1321,13 @@ body.accLocked .page[id^="pgAcc"] .pgBody,body.accLocked .page[id^="pgAcc"] .pgH
 .pinKey:active{background:color-mix(in srgb,var(--accent) 15%,var(--surface))}
 .pinKey.ghost{visibility:hidden}
 .pinBox.shake{animation:pinShake .35s}@keyframes pinShake{20%,60%{transform:translateX(-8px)}40%,80%{transform:translateX(8px)}}
+
+.accLkRow{display:grid!important;grid-template-columns:1fr;gap:.45rem;padding:.6rem .9rem .8rem}
+.accLkRow.in{grid-template-columns:1fr auto}
+.accLkRow .lkBtn{width:100%;text-align:center;padding:.6rem .8rem}
+.accLkRow small{text-align:center}
+.stUndo{display:flex;align-items:center;gap:.6rem;padding:.55rem .7rem;margin-bottom:.7rem;border-radius:6px;background:color-mix(in srgb,var(--accent) 10%,var(--surface));border:1px solid color-mix(in srgb,var(--accent) 30%,transparent);font-size:.86rem;font-weight:700}
+.stUndo span{flex:1}
+table.ckT th small{display:block;font-size:.66rem;opacity:.8}
+table.ckT td.s{text-align:center}table.ckT th.s{text-align:center}
+.mcB table+table{margin-top:.2rem;border-top:2px solid var(--border-soft)}

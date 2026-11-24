@@ -541,13 +541,14 @@ function unsettleRec(r, p) {
 function accSettle(p) {
   const u = aWho(p), pend = () => DB.acc.recs.filter(r => !(r.settled || {})[p] && accOwe(r, p)).sort((a, b) => (a.d + (a.t || '')).localeCompare(b.d + (b.t || '')));
   if (!pend().length) { toast(`和 ${u.name} 沒有還沒結清的帳`); return; }
-  let from = pend()[0].d, to = ymd(new Date()), open = new Set(), into = '', off = new Set(), via = '';
+  let from = pend()[0].d, to = ymd(new Date()), open = new Set(), into = '', off = new Set(), via = '', lastSt = null;
   const sh = sheet({title: `🤝 和 ${u.icon} ${u.name} 對帳`, full: true, foot: '<div class="stFoot"><button class="btn" data-a="copy">📋 複製</button><button class="btn" data-a="csv">📤 CSV</button><button class="btn pri" data-a="ok">✅ 結清</button></div>'});
   const list = () => pend().filter(r => r.d >= from && r.d <= to), picked = () => list().filter(r => !off.has(r.id));
   const sum = L => r2(L.reduce((s, r) => s + accOwe(r, p), 0));
   const draw = () => { const L = list(), P = picked(), T = sum(L), TP = sum(P), top = sh.body.scrollTop;
-    if (!pend().length) { sh.body.innerHTML = `<div class="empty mealEmpty"><span class="big">🎉</span>和 ${esc(u.name)} 的帳都結清了</div>`; sh.foot.classList.add('hide'); return; }
-    sh.body.innerHTML = `<div class="acStH ${T >= 0 ? 'pos' : 'neg'}"><small>${from.replace(/-/g, '/')} ～ ${to.replace(/-/g, '/')}・${L.length} 筆</small><b>${T >= 0 ? `${esc(u.name)} 欠我` : `我欠 ${esc(u.name)}`}</b><strong>${money(Math.abs(T))}</strong>${P.length !== L.length ? `<small>這次勾選 ${P.length} 筆：${TP >= 0 ? '他還我' : '我還他'} <b>${money(Math.abs(TP))}</b></small>` : ''}</div>
+    const undoBar = lastSt && DB.acc.settles.includes(lastSt) ? `<div class="stUndo"><span>✅ 剛剛結清 ${lastSt.recs.length} 筆・${money(Math.abs(lastSt.amt))}</span><button class="btn sm" data-a="undoLast">↩ 整批還原</button></div>` : '';
+    if (!pend().length) { sh.body.innerHTML = undoBar + `<div class="empty mealEmpty"><span class="big">🎉</span>和 ${esc(u.name)} 的帳都結清了</div>`; sh.foot.classList.add('hide'); return; }
+    sh.foot.classList.remove('hide'); sh.body.innerHTML = undoBar + `<div class="acStH ${T >= 0 ? 'pos' : 'neg'}"><small>${from.replace(/-/g, '/')} ～ ${to.replace(/-/g, '/')}・${L.length} 筆</small><b>${T >= 0 ? `${esc(u.name)} 欠我` : `我欠 ${esc(u.name)}`}</b><strong>${money(Math.abs(T))}</strong>${P.length !== L.length ? `<small>這次勾選 ${P.length} 筆：${TP >= 0 ? '他還我' : '我還他'} <b>${money(Math.abs(TP))}</b></small>` : ''}</div>
       <div class="acRow2"><button class="btn" data-a="from">從 ${from.replace(/-/g, '/')}</button><button class="btn" data-a="to">到 ${to.replace(/-/g, '/')}</button></div>
       <div class="row" style="gap:.4rem;margin:-.3rem 0 .5rem"><button class="btn sm" data-a="all">全選</button><button class="btn sm" data-a="none">全不選</button><span class="small muted grow" style="text-align:right">勾選這次要結清的</span></div>
       <div class="acStL card">${L.map(r => { const c = accCat(r), o = accOwe(r, p), on = !off.has(r.id), its = (r.items || []).filter(x => (x.ppl || []).includes(p) || (r.payer === p && (x.ppl || []).includes(accMe()))); return `<div class="acStR ${on ? '' : 'dim'}"><button class="acCk2 ${on ? 'on' : ''}" data-ck="${r.id}" aria-label="勾選"></button><span class="acStD">${r.d.slice(5).replace('-', '/')}</span><span class="grow" data-o="${r.id}"><b>${esc(c.i)} ${esc(r.payee || c.n)}</b><small>總額 ${money(r.amt)}・${r.payer === p ? esc(u.name) + ' 付' : '我付'}${its.length ? '・' + its.length + ' 個品項 ' + (open.has(r.id) ? '▴' : '▾') : ''}</small>
@@ -560,6 +561,7 @@ function accSettle(p) {
   const text = () => { const L = picked(), T = sum(L); return [`🤝 ${u.name} 對帳（${from.replace(/-/g, '/')}～${to.replace(/-/g, '/')}）`, ''].concat(L.map(r => { const c = accCat(r), o = accOwe(r, p), its = (r.items || []).filter(x => (x.ppl || []).includes(p)); return `${r.d.slice(5).replace('-', '/')} ${r.payee || c.n}　${o >= 0 ? '' : '-'}${money(Math.abs(o))}` + (its.length ? '\n' + its.map(x => `　・${x.n} ${money(x.amt / ((x.ppl || []).length || 1))}`).join('\n') : ''); })).concat(['', T >= 0 ? `合計：${u.name} 欠我 ${money(T)}` : `合計：我欠 ${u.name} ${money(-T)}`]).join('\n'); };
   draw();
   sh.body.addEventListener('click', async e => { const t = e.target.closest('[data-a],[data-o],[data-ck],[data-acct],[data-kind],[data-fund],[data-via]'); if (!t) return; buzz(8); const d = t.dataset;
+    if (d.a === 'undoLast') { sh.foot.onclick({target: t}); return; }
     if (d.via) { via = via === d.via ? '' : d.via; draw(); return; }
     if (d.ck) { if (off.has(d.ck)) off.delete(d.ck); else off.add(d.ck); draw(); return; }
     if (d.o) { if (open.has(d.o)) open.delete(d.o); else open.add(d.o); draw(); return; }
@@ -576,18 +578,22 @@ function accSettle(p) {
       if (!await ask(`${T >= 0 ? `${u.name} 還我` : `我還 ${u.name}`} ${money(Math.abs(T))}（${L.length} 筆），${T >= 0 ? '收進' : '從'}「${ac.n}」${via ? '（' + via + '）' : ''}，標記為已結清？`, '結清')) return;
       const st = {id: 's' + uid(), p, d: ymd(new Date()), from: L[0].d, to: L[L.length - 1].d, amt: T, recs: L.map(r => r.id)}; DB.acc.settles.push(st); L.forEach(r => { r.settled = r.settled || {}; r.settled[p] = st.id; });
       if (Math.abs(T) > 0) { const now = new Date(), rr = {id: 'r' + uid(), d: st.d, t: String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0'), type: 'tr', amt: Math.abs(T), acct: T >= 0 ? '' : into, to: T >= 0 ? into : '', fee: 0, note: settleNote(st, L, u), via, settle: st.id}; DB.acc.recs.push(rr); st.rec = rr.id; }
-      Acc.day = null; Acc.ym = null; saveAcc(); renderAcc(); buzz(40); off.clear(); into = ''; via = ''; toast(`✅ 已結清 ${L.length} 筆${pend().length ? `，還有 ${pend().length} 筆沒結清` : ''}`); draw(); } };
+      Acc.day = null; Acc.ym = null; saveAcc(); renderAcc(); buzz(40); off.clear(); into = ''; via = ''; lastSt = st; draw(); toastUndo(`✅ 已結清 ${L.length} 筆`, () => { undoSettle(st); lastSt = null; draw(); toast('↩ 已整批還原'); }); }
+    else if (a === 'undoLast') { if (!lastSt) return; if (!await ask(`把剛剛結清的 ${lastSt.recs.length} 筆整批還原成未結清？那筆還款也會刪除。`, '整批還原', true)) return; undoSettle(lastSt); lastSt = null; sh.foot.classList.remove('hide'); draw(); toast('↩ 已整批還原'); } };
 }
+/* 整批還原一次結清：那次勾選的紀錄全部回到未結清，還款那筆也刪掉 */
+function undoSettle(st) { if (!st) return 0; const n = st.recs.length; DB.acc.recs.forEach(r => { if (r.settled && r.settled[st.p] === st.id) delete r.settled[st.p]; });
+  DB.acc.recs = DB.acc.recs.filter(r => r.settle !== st.id); DB.acc.settles = DB.acc.settles.filter(x => x !== st); saveAcc(); renderAcc(); return n; }
 function accSettleLog() {
   const sh = sheet({title: '📜 對帳紀錄', full: true}), open = new Set(); const draw = () => { const L = DB.acc.settles.slice().reverse();
     sh.body.innerHTML = L.map(st => { const R = st.recs.map(id => DB.acc.recs.find(x => x.id === id)).filter(Boolean), tr = DB.acc.recs.find(x => x.settle === st.id);
-      return `<div class="acLog card col"><div class="row" style="gap:.6rem;width:100%"><span class="acDI">${esc(aWho(st.p).icon)}</span><button class="grow acLogT" data-o="${st.id}"><b>${esc(aWho(st.p).name)}・${st.amt >= 0 ? '他還我' : '我還他'} ${money(Math.abs(st.amt))}</b><small>${st.d} 結清・${R.length} 筆${tr ? '・' + esc(acctName(tr.to || tr.acct)) : ''}${tr && tr.via ? '・' + esc(tr.via) : ''} ${open.has(st.id) ? '▴' : '▾'}</small></button><button class="btn sm" data-u="${st.id}">全部取消</button></div>
+      return `<div class="acLog card col"><div class="row" style="gap:.6rem;width:100%"><span class="acDI">${esc(aWho(st.p).icon)}</span><button class="grow acLogT" data-o="${st.id}"><b>${esc(aWho(st.p).name)}・${st.amt >= 0 ? '他還我' : '我還他'} ${money(Math.abs(st.amt))}</b><small>${st.d} 結清・${R.length} 筆${tr ? '・' + esc(acctName(tr.to || tr.acct)) : ''}${tr && tr.via ? '・' + esc(tr.via) : ''} ${open.has(st.id) ? '▴' : '▾'}</small></button><button class="btn sm" data-u="${st.id}">↩ 整批還原</button></div>
         ${open.has(st.id) ? `<div class="acLogL">${R.map(r => `<div class="acIt"><span class="grow">${r.d.slice(5).replace('-', '/')} ${esc(r.payee || accCat(r).n)}</span><b>${money(Math.abs(accOwe(r, st.p)))}</b><button class="btn sm" data-x="${st.id}:${r.id}">改回未結清</button></div>`).join('')}</div>` : ''}</div>`; }).join('') || '<div class="empty">還沒有對帳紀錄</div>'; };
   draw(); sh.body.onclick = async e => { const t = e.target.closest('[data-u],[data-o],[data-x]'); if (!t) return; buzz(8);
     if (t.dataset.o) { if (open.has(t.dataset.o)) open.delete(t.dataset.o); else open.add(t.dataset.o); draw(); return; }
     if (t.dataset.x) { const [sid, rid] = t.dataset.x.split(':'), st = DB.acc.settles.find(x => x.id === sid), r = DB.acc.recs.find(x => x.id === rid); if (!st || !r) return; if (!await ask(`把「${r.payee || accCat(r).n}」改回未結清？這次結清的還款金額會跟著減少。`, '改回未結清')) return; unsettleRec(r, st.p); draw(); renderAcc(); toast('已改回未結清'); return; }
-    if (!await ask('取消這次結清？這些紀錄會全部回到「未結清」，那筆還款也會刪除。', '取消結清', true)) return;
-    const st = DB.acc.settles.find(x => x.id === t.dataset.u); DB.acc.recs.forEach(r => { if (r.settled && r.settled[st.p] === st.id) delete r.settled[st.p]; }); DB.acc.recs = DB.acc.recs.filter(r => r.settle !== st.id); DB.acc.settles = DB.acc.settles.filter(x => x !== st); saveAcc(); draw(); renderAcc(); };
+    if (!await ask('整批還原這次結清？這次勾選的紀錄會全部回到「未結清」，那筆還款也會刪除。', '整批還原', true)) return;
+    const st = DB.acc.settles.find(x => x.id === t.dataset.u); undoSettle(st); draw(); toast('↩ 已整批還原'); renderAcc(); };
 }
 
 /* ---------- 從分帳匯入 ---------- */

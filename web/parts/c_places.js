@@ -708,7 +708,7 @@ function openPlace(id, toMenu) {
     const gSig = g => g.label + '|' + g.L.map(r => r.n + r.p).join(',');
     /* 卡片上方：整個系列共用的選擇；每個品項都有一模一樣的專屬選項（例如每杯咖啡都能選冰／熱）也合併到上方，其餘的放在各品項下面 */
     /* 所有選項都統一放在卡片上方：共用的寫選項名稱；專屬某個品項的寫出是哪個品項（例如「厚厚好食口味」「厚片抹醬」）；每個品項都一模一樣的（例如每杯都能選冰／熱）合併成一行 */
-    const optPlan = (c, rs) => { const names = rs.map(r => r.n), per = rs.map(r => groupsFor(c, r.n, names, ogs)); per.flat().forEach(g => used.add(g.c));
+    const optPlan = (c, rs, skip) => { const names = rs.map(r => r.n), per = rs.map(r => groupsFor(c, r.n, names, ogs).filter(g => !(skip && skip.has(g.c)))); rs.forEach(r => groupsFor(c, r.n, names, ogs).forEach(g => used.add(g.c)));
       const same = (per[0] || []).filter(g => per.length > 1 && per.every(L => L.some(x => gSig(x) === gSig(g)))), sig = new Set(same.map(gSig)), top = same.slice(), seen = new Set();
       per.forEach((L, i) => L.forEach(g => { if (sig.has(gSig(g)) || seen.has(g.c)) return; seen.add(g.c); const orig = ogs.find(x => x.c === g.c), gi = groupItem(orig, names);
         top.push(Object.assign({}, g, {label: gi ? (orig.label.includes(gi) || lcsStr(orig.label, gi).length >= 2 ? orig.label : gi + '・' + orig.label) : g.label})); }));
@@ -718,7 +718,12 @@ function openPlace(id, toMenu) {
     /* 每個分類一張卡片：分類名稱 → 「品名｜S｜M｜L｜瓶」標題列（只列這個分類有的尺寸，由小到大）→ 品項，沒有的尺寸寫「-」 */
     const cards = (L0, pre, cls) => { const L = merge(L0), cs = [], by = {}; L.forEach(r => { if (!by[r.c]) { by[r.c] = []; cs.push(r.c); } by[r.c].push(r); });
       const has = x => x.p !== '' && x.p != null, pr = v => pre + price(v);
-      return cs.map(c => { const rs = by[c], szs = [], plan = pre ? {strip: '', under: []} : optPlan(c, rs), nm = (r, i) => `<td class="n">${esc(r.n)}${(plan.under[i] || []).length ? `<div class="mcIO">${plan.under[i].map(g => `<span><b>${esc(g.label)}</b>${g.L.map(o => esc(o.n) + (o.p ? `<em>+$${esc(o.p)}</em>` : '')).join('／')}</span>`).join('')}</div>` : ''}</td>`;
+      /* 勾選框式的選項（原味｜辣味、一般量｜麵量加大 +10）：像菜單一樣變成欄位，價格直接算好；註明除外的品項那一欄空白 */
+      const isColG = g => !g.multi && g.L.length >= 2 && g.L.length <= 3 && g.L.every(o => String(o.n).length <= 6) && !/溫度|冰|熱|甜|糖/.test(g.label);
+      const colPlan = (c, rs) => { const names = rs.map(r => r.n);
+        return rs.map(r => { if (r.multi) return null; const g = groupsFor(c, r.n, names, ogs).find(isColG); if (g) return {g, ex: false};
+          const ex = ogs.find(o => isColG(o) && ownsGroup(c, o) && (o.excl || []).some(x => r.n === x || r.n.includes(x) || String(r.n).replace(SZ, '').trim() === x)); return ex ? {g: ex, ex: true} : null; }); };
+      return cs.map(c => { const rs = by[c], szs = [], cp = pre ? rs.map(() => null) : colPlan(c, rs), skip = new Set(cp.filter(Boolean).map(x => x.g.c)), plan = pre ? {strip: '', under: []} : optPlan(c, rs, skip), nm = (r, i) => `<td class="n">${esc(r.n)}${(plan.under[i] || []).length ? `<div class="mcIO">${plan.under[i].map(g => `<span><b>${esc(g.label)}</b>${g.L.map(o => esc(o.n) + (o.p ? `<em>+$${esc(o.p)}</em>` : '')).join('／')}</span>`).join('')}</div>` : ''}</td>`;
         /* 有欄位整欄都沒有價格（例如可頌那欄只是勾選框）：代表同價、只是可以選 → 收成一個價格，欄位名稱變成選項 */
         const allLab = [...new Set(rs.flatMap(r => r.multi ? r.v.map(x => x.s).filter(Boolean) : []))], emptyLab = allLab.filter(z => !rs.some(r => r.v.some(x => x.s === z && has(x))));
         if (!pre && emptyLab.length && emptyLab.length < allLab.length) { choice[c] = allLab; rs.forEach(r => { if (!r.multi) return; r.v = r.v.filter(x => has(x)).map(x => ({s: '', p: x.p})); r.multi = false; }); }
@@ -732,7 +737,14 @@ function openPlace(id, toMenu) {
           return `<tr>${nm(r, ri)}${szs.map(z => { const ps = [...new Set(vs.filter(x => x.s === z).map(x => x.p))]; return `<td class="s${ps.length ? '' : ' na'}${ps.length > 1 ? ' dup' : ''}">${ps.length ? ps.map(pr).join('<br>') : '-'}</td>`; }).join('')}</tr>`; }).join('');
         const nts = pre ? [] : notes.filter(r => r.c === c), ch = choice[c], extra = (ch ? `<div class="mcOR"><b>選擇</b><span class="tag">選一</span><span class="mcOL">${ch.map(z => `<span>${esc(z)}</span>`).join('')}</span></div>` : '') + nts.map(r => `<div class="mcN">ⓘ ${esc(r.n)}</div>`).join('');
         const strip = extra ? (plan.strip ? plan.strip.replace(/<\/div>$/, extra + '</div>') : `<div class="mcO">${extra}</div>`) : plan.strip;
-        return `<div class="mcard ${cls || ''}"><div class="mcH">${esc(c)}<span>${rs.length}</span></div>${strip}<div class="mcB"><table class="piv ${nc >= 4 ? 'many' : ''}">${head}${body}</table></div></div>`; }).join(''); };
+        let tables = `<table class="piv ${nc >= 4 ? 'many' : ''}">${head}${body}</table>`;
+        if (cp.some(Boolean)) { /* 依序分段：同一組欄位的品項放同一張表 */
+          const segs = []; rs.forEach((r, ri) => { const k = cp[ri] ? cp[ri].g.c : ''; const last = segs[segs.length - 1]; if (last && last.k === k) last.i.push(ri); else segs.push({k, g: cp[ri] && cp[ri].g, i: [ri]}); });
+          tables = segs.map(sg => { if (!sg.g) return `<table class="piv">${head}${sg.i.map(ri => body.split('</tr>')[ri] + '</tr>').join('')}</table>`;
+            const G = sg.g.L, hd = `<tr class="sh"><th class="n">品名</th>${G.map(o => `<th class="s">${esc(o.n)}${numP(o.p) ? `<small>+$${numP(o.p)}</small>` : ''}</th>`).join('')}</tr>`;
+            return `<table class="piv ckT">${hd}${sg.i.map(ri => { const r = rs[ri], bp = numP((r.v.find(has) || {}).p), ex = cp[ri].ex;
+              return `<tr>${nm(r, ri)}${G.map(o => { const blank = ex && numP(o.p); return `<td class="s${blank ? ' na' : ''}">${blank ? '' : r.v.some(has) ? pr(bp + numP(o.p)) : '-'}</td>`; }).join('')}</tr>`; }).join('')}</table>`; }).join(''); }
+        return `<div class="mcard ${cls || ''}"><div class="mcH">${esc(c)}<span>${rs.length}</span></div>${strip}<div class="mcB">${tables}</div></div>`; }).join(''); };
     if (showItem && items.length) html += cards(items, '');
     const gsLeft = ogs.filter(g => !used.has(g.c) && (mc === '' || mc === '🧩' || ownsGroup(mc, g) === false && mc === '🧩'));
     if ((mc === '' || mc === '🧩') && gsLeft.length) html += `<div class="mSec">🧩 組合選項<small>依步驟挑選，已含在主餐價格內</small></div>` + gsLeft.map(g => `<div class="optG"><div class="optH"><b>${esc(g.owner ? g.owner + '・' + g.label : g.label)}</b>${g.tag ? `<span class="tag">${esc(g.tag)}</span>` : ''}</div><div class="optL">${g.L.map(r => `<span>${esc(r.n)}${r.p ? ' <em>+' + esc(r.p) + '</em>' : ''}</span>`).join('')}</div></div>`).join('');
