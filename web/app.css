@@ -1355,3 +1355,4 @@ table.ckT td.s{text-align:center}table.ckT th.s{text-align:center}
 .amGRow .btn{flex:none;white-space:nowrap}.amGHas{flex:none;font-size:.76rem;color:var(--muted)}
 .amPin.res span{background:#c0392b!important;border-color:#fff!important}.amPin.res span i{filter:grayscale(1) brightness(3)}.amPin.res.has span{background:#8a9a5b!important}.amPin.res b{font-size:.66rem}
 .amGFoot{display:grid;grid-template-columns:repeat(auto-fit,minmax(0,1fr));gap:.45rem;width:100%}.amGFoot .btn{min-width:0;white-space:nowrap;padding-left:.4rem;padding-right:.4rem;justify-content:center}
+.arList .arH{display:flex;align-items:center;gap:.35rem;font-weight:700;font-size:.82rem;color:var(--c,var(--accent));padding:.55rem .2rem .25rem;border-bottom:2px solid color-mix(in srgb,var(--c,#9a5a34) 35%,transparent)}.arList .arH em{font-style:normal;margin-left:auto;font-size:.74rem;color:var(--muted);font-weight:600}

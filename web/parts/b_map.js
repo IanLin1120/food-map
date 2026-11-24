@@ -225,12 +225,20 @@ function gErrHint(m, st) { m = String(m || '') + ' ' + String(st || '');
 function gThrow(j) { if (j && j.error) { const m = j.error.message || j.error.status || '錯誤', h = gErrHint(m + JSON.stringify(j.error.details || ''), j.error.status); throw new Error(h || ('Google：' + m)); } }
 const cleanAddr = a => String(a || '').replace(/^\d{3,6}\s*/, '').replace(/^(台灣|臺灣)/, '');
 async function gPlaces(q, c, o) {
-  o = o || {}; c = c || [23.9, 121]; const k = q + '|' + (+c[0]).toFixed(2) + ',' + (+c[1]).toFixed(2) + '|' + (o.n || 10), h = GPC.get(k); if (h && Date.now() - h.t < 6e5) return h.r;
-  const body = {textQuery: q, languageCode: 'zh-TW', regionCode: 'TW', maxResultCount: o.n || 10, locationBias: {circle: {center: {latitude: +c[0], longitude: +c[1]}, radius: o.r || 50000}}};
-  const j = await jfetch('https://places.googleapis.com/v1/places:searchText', {method: 'POST', headers: gHead('places.id,places.displayName,places.formattedAddress,places.location,places.primaryTypeDisplayName'), body: JSON.stringify(body)}, 12000); gThrow(j);
-  const out = (j.places || []).filter(p => p.location).map(p => ({name: (p.displayName && p.displayName.text) || q, addr: cleanAddr(p.formattedAddress), lat: p.location.latitude, lon: p.location.longitude, tag: (p.primaryTypeDisplayName && p.primaryTypeDisplayName.text) || '', gid: p.id}));
+  o = o || {}; c = c || [23.9, 121]; const g = o.area, k = q + '|' + (g ? 'A' + g.bbox.join(',') : (+c[0]).toFixed(2) + ',' + (+c[1]).toFixed(2)) + '|' + (o.n || 10), h = GPC.get(k); if (h && Date.now() - h.t < 6e5) return h.r;
+  /* 有選區域：只在那一區的範圍裡找，最多翻 3 頁（60 筆），再用行政區外框把區外的剔掉 */
+  const body = {textQuery: q, languageCode: 'zh-TW', regionCode: 'TW', pageSize: o.n || 10};
+  if (g) body.locationRestriction = {rectangle: {low: {latitude: g.bbox[1], longitude: g.bbox[0]}, high: {latitude: g.bbox[3], longitude: g.bbox[2]}}};
+  else body.locationBias = {circle: {center: {latitude: +c[0], longitude: +c[1]}, radius: o.r || 50000}};
+  let out = [], seen = new Set();
+  for (let pg = 0; pg < (g ? 3 : 1); pg++) {
+    const j = await jfetch('https://places.googleapis.com/v1/places:searchText', {method: 'POST', headers: gHead('places.id,places.displayName,places.formattedAddress,places.location,places.primaryTypeDisplayName,nextPageToken'), body: JSON.stringify(body)}, 12000); gThrow(j);
+    (j.places || []).filter(p => p.location && !seen.has(p.id)).forEach(p => { seen.add(p.id); out.push({name: (p.displayName && p.displayName.text) || q, addr: cleanAddr(p.formattedAddress), lat: p.location.latitude, lon: p.location.longitude, tag: (p.primaryTypeDisplayName && p.primaryTypeDisplayName.text) || '', gid: p.id}); });
+    if (!j.nextPageToken) break; body.pageToken = j.nextPageToken; }
+  if (g) out = out.filter(x => TW.inGeom(g.geom, x.lon, x.lat));
   GPC.set(k, {t: Date.now(), r: out}); if (GPC.size > 60) GPC.delete(GPC.keys().next().value); return out;
 }
+
 const G_DETAIL = 'id,displayName,formattedAddress,location,regularOpeningHours.weekdayDescriptions,nationalPhoneNumber,rating,userRatingCount,googleMapsUri,websiteUri';
 /* 從 Google 帶入名稱、地址、營業時間、電話、評分 */
 async function gFill(p, force) {
@@ -246,10 +254,10 @@ async function gFill(p, force) {
   if (d.googleMapsUri) p.gurl = d.googleMapsUri; if (d.websiteUri) p.web = d.websiteUri; return p;
 }
 let nomLast = 0;
-async function nomSearch(q, c) { const w = 1100 - (Date.now() - nomLast); if (w > 0) await sleep(w); nomLast = Date.now();
+async function nomSearch(q, c, g) { const w = 1100 - (Date.now() - nomLast); if (w > 0) await sleep(w); nomLast = Date.now();
   let u = 'https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=8&accept-language=zh-TW,zh,en&countrycodes=tw&q=' + encodeURIComponent(q);
-  if (c) u += `&viewbox=${c[1] - .6},${c[0] + .6},${c[1] + .6},${c[0] - .6}`;
-  const j = await jfetch(u, null, 10000); return (Array.isArray(j) ? j : []).map(x => ({name: x.name || x.display_name.split(',')[0], addr: nomAddr(x.display_name), lat: +x.lat, lon: +x.lon, tag: ''})); }
+  if (g) u = u.replace('limit=8', 'limit=40') + `&bounded=1&viewbox=${g.bbox[0]},${g.bbox[3]},${g.bbox[2]},${g.bbox[1]}`; else if (c) u += `&viewbox=${c[1] - .6},${c[0] + .6},${c[1] + .6},${c[0] - .6}`;
+  const j = await jfetch(u, null, 10000); return (Array.isArray(j) ? j : []).filter(x => !g || TW.inGeom(g.geom, +x.lon, +x.lat)).map(x => ({name: x.name || x.display_name.split(',')[0], addr: nomAddr(x.display_name), lat: +x.lat, lon: +x.lon, tag: ''})); }
 const nomAddr = dn => String(dn || '').split(', ').filter(s => !/^\d{3,6}$/.test(s) && !/^(臺灣|台灣|Taiwan)$/.test(s)).reverse().join('');
 async function revGeo(lat, lon) { const j = await jfetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=18&accept-language=zh-TW,zh,en&lat=${lat}&lon=${lon}`, null, 10000);
   const poi = j && j.name && !/^\d/.test(j.name) && j.category && !/highway|boundary|place/.test(j.category) ? j.name : ''; return {addr: nomAddr(j && j.display_name), name: poi}; }
@@ -270,12 +278,12 @@ function resMarks(r, fit) { (M.rMarks || []).forEach(m => m.remove()); M.rMarks 
     M.rMarks.push(new maplibregl.Marker({element: e, anchor: 'bottom'}).setLngLat([x.lon, x.lat]).addTo(M.map)); });
   if (fit && r.length > 1) { const bb = new maplibregl.LngLatBounds(); r.forEach(x => bb.extend([x.lon, x.lat])); M.map.fitBounds(bb, {padding: {top: 170, bottom: 120, left: 50, right: 50}, maxZoom: 16, duration: 700}); }
   else if (fit && r.length === 1) flyTo(r[0].lat, r[0].lon, 16); }
-const searchOpt = m => ({n: 20, r: m && m.getZoom() >= 11 ? 6000 : 50000});
+const searchOpt = (m, a) => ({n: 20, r: m && m.getZoom() >= 11 ? 6000 : 50000, area: areaGeo(a)});
 async function doSearch(q, fit) {
   q = q.trim(); if (q.length < 2) { hideResults(); resMarks(null); return; } const seq = ++searchSeq; renderResults(q, null, '搜尋中…');
   const c = M.map ? [M.map.getCenter().lat, M.map.getCenter().lng] : null;
   try { let r, note = '';
-    if (S.gkey) r = await gPlaces(q, c, searchOpt(M.map)); else { r = await nomSearch(q, c); note = '目前使用 OpenStreetMap 搜尋，店家較不齊全。<br>填入 Google Maps 金鑰後，可用 Google 地圖的方式搜尋並自動帶入營業時間。 <button class="btn sm pri" data-a="key" style="margin-top:.4rem">看圖文教學</button>'; }
+    if (S.gkey) r = await gPlaces(q, c, searchOpt(M.map, S.area)); else { r = await nomSearch(q, c, areaGeo(S.area)); note = '目前使用 OpenStreetMap 搜尋，店家較不齊全。<br>填入 Google Maps 金鑰後，可用 Google 地圖的方式搜尋並自動帶入營業時間。 <button class="btn sm pri" data-a="key" style="margin-top:.4rem">看圖文教學</button>'; }
     if (seq !== searchSeq) return; r = r.filter(x => !DB.places.some(p => (x.gid && p.gid === x.gid)));
     resMarks(r, fit); renderResults(q, r, r.length || localMatches(q).length ? note : '找不到符合的地點' + (note ? '<br>' + note : ''));
   } catch (e) { if (seq === searchSeq) renderResults(q, null, '❌ ' + esc(e.message) + (S.gkey ? ' <button class="btn sm" data-a="key" style="margin-top:.4rem">檢查金鑰設定</button>' : '')); }

@@ -17,6 +17,8 @@ const TW = {towns: [], counties: {}, names: [], ready: false,
   inGeom(g, x, y) { for (const poly of (g.type === 'Polygon' ? [g.coordinates] : g.coordinates)) { if (!this.inRing(poly[0], x, y)) continue; let hole = false; for (let k = 1; k < poly.length; k++) if (this.inRing(poly[k], x, y)) { hole = true; break; } if (!hole) return true; } return false; },
   townAt(lon, lat) { for (const t of this.towns) { const b = t.bbox; if (lon < b[0] || lon > b[2] || lat < b[1] || lat > b[3]) continue; if (this.inGeom(t.geom, lon, lat)) return t; } return null; }
 };
+/* 區域（{c 縣市, t 鄉鎮}）對應的外框資料：搜尋時只找這一區用 */
+function areaGeo(a) { if (!a || !a.c || !TW.init()) return null; const co = TW.counties[a.c]; if (!co) return null; return a.t ? co.towns.find(x => x.name === a.t) || co : co; }
 var Area = {cache: new Map(), hideList: false,
   /* 這間店在不在目前選取的區域裡（沒選區域＝全部都算） */
   has(p) { const a = S.area; if (!a || !TW.ready) return true; let t = this.cache.get(p.id); if (t === undefined || t.lat !== p.lat || t.lon !== p.lon) { const tw = TW.townAt(p.lon, p.lat); t = {lat: p.lat, lon: p.lon, c: tw ? tw.county : '', t: tw ? tw.name : ''}; this.cache.set(p.id, t); }
@@ -27,7 +29,7 @@ var Area = {cache: new Map(), hideList: false,
     const c = $('#arC'), t = $('#arT'); c.innerHTML = '<option value="">縣市</option>' + TW.names.map(n => `<option>${n}</option>`).join('');
     c.onchange = () => this.set(c.value ? {c: c.value, t: ''} : null, true); t.onchange = () => this.set(c.value ? {c: c.value, t: t.value} : null, true);
     $('#arX').onclick = () => this.set(null);
-    $('#arMe').onclick = () => { const go = (lon, lat) => { const tw = TW.townAt(lon, lat); if (!tw) { toast('這個位置不在台灣的行政區範圍內'); return; } this.set({c: tw.county, t: tw.name}, true); };
+    $('#arMe').onclick = () => { const go = (lon, lat) => { const tw = TW.townAt(lon, lat); if (!tw) { toast('這個位置不在台灣的行政區範圍內'); return; } this.set({c: tw.county, t: tw.name}, false); flyTo(lat, lon, 15.5); toast(`📍 ${tw.county} ${tw.name}`); };
       if (M.meLL) { go(M.meLL[1], M.meLL[0]); return; } if (!navigator.geolocation) { if (M.map) { const k = M.map.getCenter(); go(k.lng, k.lat); } return; }
       Loc.start(); toast('定位中…'); let n = 0; const iv = setInterval(() => { if (M.meLL) { clearInterval(iv); go(M.meLL[1], M.meLL[0]); } else if (++n > 16) { clearInterval(iv); if (M.map) { const k = M.map.getCenter(); go(k.lng, k.lat); toast('無法定位，改用地圖中心所在的區域'); } } }, 500); };
     this.ui();
@@ -45,9 +47,11 @@ var Area = {cache: new Map(), hideList: false,
   draw() { const m = M.map; if (!m || !m.isStyleLoaded || !m.isStyleLoaded()) return;
     try { ['ar-s-fill', 'ar-t-line', 'ar-c-line', 'ar-s-line'].forEach(id => { if (m.getLayer(id)) m.removeLayer(id); }); ['ar-t', 'ar-c', 'ar-s'].forEach(id => { if (m.getSource(id)) m.removeSource(id); }); } catch (e) {} },
   /* 下方清冊：這一區（再依上方分類篩選）的所有收藏 */
-  card() { const a = S.area; if (!a) return; const ps = placesShown(M.filter), f = M.filter === 'all' ? null : (M.filter === '' ? UNCAT : catOf(M.filter));
+  card() { const a = S.area; if (!a) return; const ci = id => { const i = DB.cats.findIndex(c => c.id === id); return i < 0 ? 1e4 : i; }, me = M.meLL, dist = p => me ? (p.lat - me[0]) ** 2 + ((p.lon - me[1]) * .92) ** 2 : 0;
+    /* 依分類排（跟上方分類標籤同順序），同一類裡離我近的在前面 */
+    const ps = placesShown(M.filter).slice().sort((x, y) => ci(x.cat) - ci(y.cat) || dist(x) - dist(y) || (x.ord || 0) - (y.ord || 0)), f = M.filter === 'all' ? null : (M.filter === '' ? UNCAT : catOf(M.filter));
     showCard(`<div class="row"><div class="grow"><h3>${esc(a.c)}${a.t ? ' ' + esc(a.t) : ''}</h3><div class="small muted">${f ? esc(f.icon + ' ' + f.name) + ' · ' : ''}${ps.length} 間收藏${a.t ? '' : ' · 點地圖上的鄉鎮市區可只看那一區'}</div></div><button class="ic" data-a="ax" aria-label="收起清冊">✕</button></div>
-      <div class="arList">${ps.map(p => { const c = catOf(p.cat), st = stateHtml(p); return `<button class="res" data-a="ap" data-id="${p.id}"><span class="rIc" style="background:${c.color}">${esc(c.icon)}</span><span class="grow"><b>${esc(p.name)}</b><small>${st ? `<span class="row" style="gap:.3rem;display:inline-flex">${st}</span> · ` : ''}${esc(p.addr || '')}</small></span></button>`; }).join('') || '<div class="resNote">這一區還沒有' + (f ? '「' + esc(f.name) + '」的' : '') + '收藏</div>'}</div>`); }
+      <div class="arList">${ps.map((p, i) => { const c = catOf(p.cat), st = stateHtml(p), hd = M.filter === 'all' && (!i || (ps[i - 1].cat || '') !== (p.cat || '')) ? `<div class="arH" style="--c:${c.color}">${esc(c.icon)} ${esc(c.name)}<em>${ps.filter(x => (x.cat || '') === (p.cat || '')).length}</em></div>` : ''; return hd + `<button class="res" data-a="ap" data-id="${p.id}"><span class="rIc" style="background:${c.color}">${esc(c.icon)}</span><span class="grow"><b>${esc(p.name)}</b><small>${st ? `<span class="row" style="gap:.3rem;display:inline-flex">${st}</span> · ` : ''}${esc(p.addr || '')}</small></span></button>`; }).join('') || '<div class="resNote">這一區還沒有' + (f ? '「' + esc(f.name) + '」的' : '') + '收藏</div>'}</div>`); }
 };
 
 /* ---------------- 離線地圖 ---------------- */

@@ -39,7 +39,7 @@ import java.util.ArrayList;
 /** 日日帳本：把 assets/index.html 以 https://app.local/ 載入 WebView，並提供少量原生功能（震動、導航、選圖／拍照、定位、存檔）。 */
 public class MainActivity extends Activity {
     static final String HOST = "app.local";
-    static final int REQ_NOTIF = 17, REQ_FILE = 11, REQ_GEO = 12, REQ_LOC = 13, REQ_CAM = 14, REQ_GACC = 15, REQ_GCONSENT = 16;
+    static final int REQ_NOTIF = 17, REQ_FILE = 11, REQ_GEO = 12, REQ_LOC = 13, REQ_CAM = 14, REQ_GACC = 15, REQ_GCONSENT = 16, REQ_GUARD = 18;
     static final String GSCOPE = "oauth2:https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.email";
     String gPendId = null;
     android.webkit.PermissionRequest camReq;
@@ -580,7 +580,7 @@ public class MainActivity extends Activity {
     static void emit(String type, final String json) {
         final MainActivity a = cur;
         if (a == null) return;
-        final String fn = "apk".equals(type) ? "window.Upd&&Upd.onApk(" : "off".equals(type) ? "window.Off&&Off.onNative(" : "loc".equals(type) ? "window.Loc&&Loc.onNative(" : "share".equals(type) ? "window.Share&&Share.onNative(" : "lock".equals(type) ? "typeof AccLock!=='undefined'&&AccLock.onNative(" : null;
+        final String fn = "apk".equals(type) ? "window.Upd&&Upd.onApk(" : "off".equals(type) ? "window.Off&&Off.onNative(" : "loc".equals(type) ? "window.Loc&&Loc.onNative(" : "share".equals(type) ? "window.Share&&Share.onNative(" : "lock".equals(type) ? "typeof AccLock!=='undefined'&&AccLock.onNative(" : "guard".equals(type) ? "window.Guard&&Guard.onNative(" : null;
         if (fn == null) return;
         a.runOnUiThread(new Runnable() {
             public void run() {
@@ -821,6 +821,7 @@ public class MainActivity extends Activity {
             return;
         }
         if (req == REQ_GCONSENT) { gFetch(gPendId == null ? "signin" : gPendId, false); return; }
+        if (req == REQ_GUARD) { emit("guard", "{\"on\":" + Guard.on(this) + "}"); return; }
         if (req != REQ_FILE) { super.onActivityResult(req, res, data); return; }
         ValueCallback<Uri[]> cb = fileCb;
         fileCb = null;
@@ -841,6 +842,9 @@ public class MainActivity extends Activity {
 
     class Bridge {
         /* ---------- 記帳的鎖 ---------- */
+        @JavascriptInterface public boolean guardOn() { return Guard.on(MainActivity.this); }
+        @JavascriptInterface public void guardEnable() { runOnUiThread(() -> { try { startActivityForResult(Guard.ask(MainActivity.this), REQ_GUARD); } catch (Exception e) { emit("guard", "{\"on\":false,\"err\":true}"); } }); }
+        @JavascriptInterface public void guardDisable() { Guard.off(MainActivity.this); }
         @JavascriptInterface public boolean lockHas() { return Lock.has(MainActivity.this); }
         @JavascriptInterface public boolean lockSession() { return Lock.session; }
         @JavascriptInterface public int lockLen() { return Lock.len(MainActivity.this); }

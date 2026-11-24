@@ -873,11 +873,11 @@ function accGSInit() { const box = $('.amMapBox'); if (!box || $('#amGQ')) retur
     if (e.target.closest('[data-add]')) { accGSAdd(r); return; } R.classList.add('hide'); AM.map.flyTo({center: [r.lon, r.lat], zoom: Math.max(AM.map.getZoom(), 16), duration: 600}); accGSCard(r); }); }
 function accGSClear() { AM.gseq++; AM.res = []; AM.rMarks.forEach(m => m.remove()); AM.rMarks = []; const R = $('#amGR'); if (R) { R.innerHTML = ''; R.classList.add('hide'); } }
 async function accGSearch(q) { q = (q || '').trim(); if (q.length < 2 || !AM.map) return; const seq = ++AM.gseq, R = $('#amGR'); R.innerHTML = '<div class="resNote">搜尋中…</div>'; R.classList.remove('hide');
-  try { const c = [AM.map.getCenter().lat, AM.map.getCenter().lng]; let r = S.gkey ? await gPlaces(q, c, searchOpt(AM.map)) : await nomSearch(q, c); if (seq !== AM.gseq) return;
+  try { const c = [AM.map.getCenter().lat, AM.map.getCenter().lng]; let r = S.gkey ? await gPlaces(q, c, searchOpt(AM.map, AM.area)) : await nomSearch(q, c, areaGeo(AM.area)); if (seq !== AM.gseq) return;
     AM.res = r; accGSMarks(true); accGSList(); R.classList.remove('hide');
   } catch (e) { if (seq === AM.gseq) R.innerHTML = `<div class="resNote">❌ ${esc(e.message)}</div>`; } }
 function accGSList() { const R = $('#amGR'), r = AM.res; if (!R) return;
-    R.innerHTML = r.map((x, i) => { const has = accGSHas(x); return `<div class="amGRow" data-i="${i}"><span class="rIc">📍</span><span class="grow"><b>${esc(x.name)}</b><small>${x.tag ? esc(x.tag) + ' · ' : ''}${esc(x.addr || '')}</small></span>${has ? '<span class="amGHas">已收藏</span>' : '<button class="btn sm pri" data-add="1">＋ 收藏</button>'}</div>`; }).join('') || '<div class="resNote">找不到符合的地點，換個關鍵字試試</div>';
+    R.innerHTML = r.map((x, i) => { const has = accGSHas(x); return `<div class="amGRow" data-i="${i}"><span class="rIc">📍</span><span class="grow"><b>${esc(x.name)}</b><small>${x.tag ? esc(x.tag) + ' · ' : ''}${esc(x.addr || '')}</small></span>${has ? '<span class="amGHas">已收藏</span>' : '<button class="btn sm pri" data-add="1">＋ 收藏</button>'}</div>`; }).join('') || `<div class="resNote">${AM.area ? esc(AM.area.c + (AM.area.t ? ' ' + AM.area.t : '')) + ' 裡' : ''}找不到符合的地點，換個關鍵字試試</div>`;
     if (!S.gkey) R.insertAdjacentHTML('beforeend', '<div class="resNote">目前使用 OpenStreetMap 搜尋，店家較不齊全；填入 Google Maps 金鑰後可用 Google 地圖搜尋（設定 → 地圖）。</div>'); }
 const accGSHas = x => (DB.places || []).some(p => (x.gid && p.gid === x.gid) || (p.name === x.name && Math.abs(p.lat - x.lat) < 3e-4 && Math.abs(p.lon - x.lon) < 3e-4));
 function accGSMarks(fit) { AM.rMarks.forEach(m => m.remove()); AM.rMarks = []; const r = AM.res; if (!AM.map || !r.length) return;
@@ -989,7 +989,8 @@ function renderAccCfg() {
       <button class="setR" data-a="lkSet" style="width:100%;text-align:left"><span class="gRi">🔑</span><div class="t"><b>${AccLock.has() ? '更改密碼' : '設定密碼'}</b><small>${AccLock.has() ? '要先輸入目前的密碼' : '6～16 位數字；不設定也可以使用'}</small></div><span class="chev">›</span></button>
       ${AccLock.has() ? `${AccLock.app() && NB.lockBioOk && NB.lockBioOk() ? `<button class="setR" data-a="lkBio" style="width:100%;text-align:left"><span class="gRi">👆</span><div class="t"><b>可以用指紋／臉部解鎖</b><small>解鎖時自動跳出指紋，也可以改用密碼；關掉要先驗證密碼</small></div><span class="sw2 ${S.accBio !== false ? 'on' : ''}"></span></button>` : ''}
       <div class="setR" style="cursor:default"><span class="gRi">🛡️</span><div class="t"><b>自動上鎖</b><small>螢幕關閉、或從最近使用把 App 滑掉再打開，都會馬上上鎖。連續輸錯 5 次要等待，時間會越來越長。</small></div></div>
-      <div class="accLkRow in"><button class="lkBtn ${!AccLock.open() ? 'on' : ''}" data-lk data-a="lkTog">${AccLock.label()}</button><button class="btn sm" data-a="lkDel">移除密碼</button></div>` : ''}</div></div>
+      <div class="accLkRow in"><button class="lkBtn ${!AccLock.open() ? 'on' : ''}" data-lk data-a="lkTog">${AccLock.label()}</button><button class="btn sm" data-a="lkDel">移除密碼</button></div>` : ''}
+      ${IS_APP && NB.guardOn ? `<button class="setR" data-a="guard" style="width:100%;text-align:left"><span class="gRi">🧷</span><div class="t"><b>防止誤刪 App</b><small>開啟後不能直接解除安裝；要刪除得先到手機設定停用保護，並輸入手機的解鎖密碼確認${AccLock.has() ? '。在這裡關閉要先輸入記帳密碼' : ''}</small></div><span class="sw2 ${NB.guardOn() ? 'on' : ''}"></span></button>` : ''}</div></div>
     ${IS_APP && NB.widgetData ? `<div class="setG"><h3>快速記帳</h3><div class="setC">
       <button class="setR" data-a="qNotif" style="width:100%;text-align:left"><span class="gRi">🔔</span><div class="t"><b>通知欄快速記帳</b><small>通知欄常駐三顆按鈕（＋支出／＋收入／⭐常用），跟桌面小工具一樣</small></div><span class="sw2 ${S.qNotif ? 'on' : ''}"></span></button>
       <button class="setR" data-a="wHide" style="width:100%;text-align:left"><span class="gRi">👁</span><div class="t"><b>小工具和通知顯示金額</b><small>關掉後桌面小工具、通知只顯示 $ ••••</small></div><span class="sw2 ${S.wHide ? '' : 'on'}"></span></button>
@@ -1021,6 +1022,10 @@ async function accCfgClick(e) {
   const t = e.target.closest('[data-a],[data-me]'); if (!t) return; buzz(8); const a = t.dataset.a;
   if (t.dataset.me) { DB.acc.me = t.dataset.me; saveAcc(); renderAccCfg(); return; }
   if (a === 'people') { await accPeopleEdit(); renderAccCfg(); return; }
+  if (a === 'guard') { if (!NB.guardOn()) { Guard.asked = 1; NB.guardEnable(); return; }
+    if (!await ask('關閉後，日日帳本就可以直接被解除安裝（帳本資料會一起刪除）。確定要關閉嗎？', '關閉保護', true)) return;
+    if (AccLock.has() && !await new Promise(r => accPinPad({title: '關閉防誤刪要先驗證', onOk: () => r(true), onCancel: () => r(false)}))) return;
+    NB.guardDisable(); setTimeout(renderAccCfg, 300); toast('已關閉防止誤刪'); return; }
   if (a === 'leave') leaveAcc(); else if (a === 'guide') openGuide('acc'); else if (a === 'lkSet') { await accSetPin(); renderAccCfg(); } else if (a === 'lkTog') { await AccLock.toggle(); renderAccCfg(); } else if (a === 'lkDel') { await accClearPin(); } else if (a === 'lkBio') { if (S.accBio !== false) { const ok = await new Promise(r => accPinPad({title: '關閉指紋解鎖要先驗證', onOk: () => r(true), onCancel: () => r(false)})); if (!ok) return; S.accBio = false; } else S.accBio = true; saveS(); renderAccCfg(); } else if (a === 'qNotif') { S.qNotif = !S.qNotif; saveS(); NB.quickNotif(!!S.qNotif); accWidgetPush(); renderAccCfg(); toast(S.qNotif ? '🔔 已開啟通知欄快速記帳' : '已關閉通知欄快速記帳'); } else if (a === 'wHide') { S.wHide = !S.wHide; saveS(); accWidgetPush(); renderAccCfg(); } else if (a === 'cats') editCatTree(t.dataset.ty); else if (a === 'opt') optCfg(); else if (a === 'payees') managePayees(); else if (a === 'accts') enterAcc('AccA'); else if (a === 'tpls') manageTpls(); else if (a === 'csv') accCsv();
   else if (a === 'gFolder') gPickFolder(); else if (a === 'pFolder') pPickFolder(); else if (a === 'pIn') pLogin(); else if (a === 'lUp') localBackup(); else if (a === 'lDown') localRestore(); else if (a === 'xSend') xferSend(); else if (a === 'xRecv') xferRecv();
   else if (a === 'gwUp') gDriveWeb('up'); else if (a === 'gwDown') gDriveWeb('down'); else if (a === 'gwMan') gwManual();
@@ -1100,3 +1105,7 @@ function accCsv() {
       rows.push([], ['日期', '帳戶', '金額變動', '種類', '說明']); L.forEach(r => DB.acc.accts.forEach(a => { const v = acctFlow(r, a.id); if (v) rows.push([r.d, a.n, v, {out: '支出', in: '收入', tr: '轉帳', loss: '遺失'}[r.type], r.payee || String(r.note || '').split('\n')[0] || accCat(r).n]); }));
       await saveCsv(`資產明細_${from}_${to}.csv`, rows); } };
 }
+
+/* 防止誤刪：原生回報「裝置管理員」開關結果 */
+var Guard = {asked: 0, onNative(j) { let o = {}; try { o = JSON.parse(j); } catch (e) {} const a = this.asked; this.asked = 0;
+  if (o.on && a) { buzz(20); toast('🧷 已開啟防止誤刪，要刪除得先到手機設定停用保護', 3500); } else if (a && !o.on) toast(o.err ? '這支手機不支援防止誤刪' : '防止誤刪沒有開啟', 3000); if (typeof renderAccCfg === 'function') renderAccCfg(); }};
