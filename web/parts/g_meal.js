@@ -142,15 +142,22 @@ function pickMealType(cur) {
 }
 /* 回傳 place 物件、{name} 自填店名、null 不指定；undefined = 取消 */
 function pickStore(cur) {
-  return new Promise(res => { let done = false, q = ''; const sh = sheet({title: '選擇店家', full: true, onClose() { if (!done) res(undefined); }});
+  return new Promise(res => { let done = false, q = '', only = ''; const sh = sheet({title: '選擇店家', full: true, onClose() { if (!done) res(undefined); }});
     const fin = v => { done = true; sh.close(); res(v); };
-    const draw = () => { const hit = p => !q || (p.name + ' ' + (p.addr || '')).toLowerCase().includes(q);
-      const secs = DB.cats.concat([UNCAT]).map(c => ({c, ps: placesIn(c.id).filter(hit)})).filter(s => s.ps.length);
-      $('#psL', sh.body).innerHTML = secs.map(({c, ps}) => `<div class="psSec" style="--c:${c.color}"><div class="psSH"><span>${esc(c.icon)}</span>${esc(c.name)}</div>${ps.map(p => `<button class="psP ${p.id === cur ? 'on' : ''}" data-id="${p.id}"><b>${esc(p.name)}</b><small>${(p.menu || []).length ? '📋 ' + p.menu.length + ' 個品項' : '<span class="muted">沒有菜單表格</span>'}${p.addr ? ' · ' + esc(p.addr) : ''}</small></button>`).join('')}</div>`).join('')
-        || `<div class="empty">${FP().length ? '找不到符合的收藏店家' : '還沒有收藏店家<br><span class="small">可以先在地圖頁收藏，或用下面的「自己輸入店名」</span>'}</div>`; };
-    sh.body.innerHTML = `<div class="searchBox" style="margin-bottom:.7rem"><input id="psQ" type="search" placeholder="搜尋收藏的店家…"></div><div class="row" style="margin-bottom:.7rem;gap:.5rem"><button class="btn sm" data-a="free">✏️ 自己輸入店名</button><button class="btn sm" data-a="none">先不選店家</button></div><div id="psL"></div>`;
+    const curP = FP().find(p => p.id === cur), open = new Set(); if (curP) open.add(curP.cat || '');
+    const draw = () => { const hit = p => !q || (p.name + ' ' + (p.addr || '')).toLowerCase().includes(q), cats = DB.cats.concat([UNCAT]);
+      const all = cats.map(c => ({c, ps: placesIn(c.id).filter(hit)})).filter(x => x.ps.length), secs = all.filter(x => !only || (x.c.id || '_') === only);
+      const anyOpen = secs.some(x => open.has(x.c.id || ''));
+      $('#psBar', sh.body).innerHTML = `<div class="psChips">${[['', '🗺️ 全部', FP().filter(hit).length]].concat(all.map(x => [x.c.id || '_', `${x.c.icon} ${x.c.name}`, x.ps.length, x.c.color])).map(([k, t, n, col]) => `<button class="chip ${only === k ? 'on' : ''}" data-only="${k}" ${col ? `style="--c:${col}"` : ''}>${esc(t)} <span class="n">${n}</span></button>`).join('')}</div>
+        ${secs.length > 1 && !q ? `<div class="psTools"><span class="psHint">點分類展開店家</span><button class="btn sm" data-a="foldAll">${anyOpen ? '⊟ 全部收合' : '⊞ 全部展開'}</button></div>` : ''}`;
+      $('#psL', sh.body).innerHTML = secs.map(({c, ps}) => { const on = q || only || open.has(c.id || ''); return `<div class="psSec ${on ? 'open' : ''}" style="--c:${c.color}"><button class="psSH" data-cat="${c.id || ''}"><span>${esc(c.icon)}</span><b>${esc(c.name)}</b><em>${ps.length}</em><i class="psCv">▾</i></button>${on ? `<div class="psPL">${ps.map(p => `<button class="psP ${p.id === cur ? 'on' : ''}" data-id="${p.id}"><b>${esc(p.name)}</b><small>${(p.menu || []).length ? '📋 ' + p.menu.length + ' 個品項' : '<span class="muted">沒有菜單表格</span>'}${p.addr ? '・' + esc(p.addr) : ''}</small></button>`).join('')}</div>` : ''}</div>`; }).join('')
+        || `<div class="empty">${FP().length ? '找不到符合的收藏店家' : '還沒有收藏店家<br><span class="small">可以先在地圖頁收藏，或用上面的「自己輸入店名」</span>'}</div>`; };
+    sh.body.innerHTML = `<div class="searchBox" style="margin-bottom:.7rem"><input id="psQ" type="search" placeholder="搜尋收藏的店家…"></div><div class="row" style="margin-bottom:.7rem;gap:.5rem"><button class="btn sm" data-a="free">✏️ 自己輸入店名</button><button class="btn sm" data-a="none">先不選店家</button></div><div id="psBar"></div><div id="psL"></div>`;
     draw(); $('#psQ', sh.body).oninput = e => { q = e.target.value.trim().toLowerCase(); draw(); };
-    sh.body.addEventListener('click', async e => { const b = e.target.closest('button'); if (!b) return;
+    sh.body.addEventListener('click', async e => { const b = e.target.closest('button'); if (!b) return; buzz(8);
+      if (b.dataset.only != null) { only = b.dataset.only; draw(); return; }
+      if (b.dataset.a === 'foldAll') { const ks = [...$$('.psSH', sh.body)].map(x => x.dataset.cat), any = ks.some(k => open.has(k)); ks.forEach(k => any ? open.delete(k) : open.add(k)); draw(); return; }
+      if (b.dataset.cat != null) { if (only || q) return; const k = b.dataset.cat; if (open.has(k)) open.delete(k); else open.add(k); draw(); if (open.has(k)) { const el = $(`.psSH[data-cat="${k}"]`, sh.body); if (el) el.scrollIntoView({behavior: 'smooth', block: 'nearest'}); } return; }
       if (b.dataset.id) fin(FP().find(p => p.id === b.dataset.id));
       else if (b.dataset.a === 'none') fin(null);
       else if (b.dataset.a === 'free') { const v = ((await askText('店名', '', '例如：巷口早餐店')) || '').trim(); if (v) fin({id: '', name: v.slice(0, 30)}); } }); });

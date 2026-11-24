@@ -206,7 +206,11 @@ function groupItem(g, names) { let best = ''; names.forEach(n => { n = String(n 
   return sc[0] && sc[0].k >= 2 && (!sc[1] || sc[1].k < sc[0].k) && sc[0].k * 2 >= g.label.length ? sc[0].n : ''; }
 const shortLabel = (g, item) => (item ? g.label.replace(item, '').replace(/^[・\s的:：\-]+/, '').trim() : g.label) || g.label;
 /* 某個品項可以選的群組：系列共用的＋專屬這個品項的（別的品項專屬的不算） */
-function groupsFor(c, name, names, ogs) { return ogs.filter(g => { if ((g.excl || []).some(x => name === x || name.includes(x) || x.includes(name))) return false; if (g.owner && (g.owner === name || String(name).replace(SZ, '').trim() === g.owner)) return true; const gi = groupItem(g, names); return ownsGroup(c, g) ? !gi || gi === name : !g.owner && !!gi && gi === name; })
+const colLike = g => !g.multi && g.L.length <= 3 && !/溫度|冰|熱|甜|糖/.test(g.label);
+/* 品項自己有一組勾選選項（例如涼麵的 原味／辣味）時，整區共用的勾選選項（麵量加大）就不套用到它，和菜單表格一致 */
+function groupsFor(c, name, names, ogs) { const L = groupsFor0(c, name, names, ogs), own = L.filter(g => colLike(g) && g.owner && (g.owner === name || String(name).replace(SZ, '').trim() === g.owner));
+  return own.length ? L.filter(g => own.includes(g) || !(colLike(g) && ownsGroup(c, g) && g.owner !== name && String(name).replace(SZ, '').trim() !== g.owner)) : L; }
+function groupsFor0(c, name, names, ogs) { return ogs.filter(g => { if ((g.excl || []).some(x => name === x || name.includes(x) || x.includes(name))) return false; if (g.owner && (g.owner === name || String(name).replace(SZ, '').trim() === g.owner)) return true; const gi = groupItem(g, names); return ownsGroup(c, g) ? !gi || gi === name : !g.owner && !!gi && gi === name; })
   .map(g => Object.assign({}, g, {label: shortLabel(g, groupItem(g, names))})); }
 /* 冰／熱：「拿鐵咖啡 (熱)」、尺寸「12oz冰」→ 同一品項，溫度另外列成選項 */
 const TEMP_RE = /^(熱|冰|溫|常溫|去冰|少冰|熱飲|冰飲)$/;

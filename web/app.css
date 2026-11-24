@@ -1330,4 +1330,9 @@ body.accLocked .page[id^="pgAcc"] .pgBody,body.accLocked .page[id^="pgAcc"] .pgH
 .stUndo span{flex:1}
 table.ckT th small{display:block;font-size:.66rem;opacity:.8}
 table.ckT td.s{text-align:center}table.ckT th.s{text-align:center}
-.mcB table+table{margin-top:.2rem;border-top:2px solid var(--border-soft)}
+.mcB table+table{margin:0;border-top:0}
+
+.psChips{display:flex;gap:.4rem;overflow-x:auto;padding:.05rem .05rem .6rem;scrollbar-width:none}
+.psChips .chip{border:1.5px solid var(--border);background:var(--surface);flex:none}
+.psChips .chip.on{background:var(--c,var(--accent));border-color:var(--c,var(--accent));color:#fff}.psChips .chip.on .n{color:rgba(255,255,255,.85)}
+.psTools{display:flex;align-items:center;gap:.5rem;margin-bottom:.5rem}.psTools .psHint{flex:1;margin:0}.psTools .btn{border-radius:6px}
