@@ -4,7 +4,7 @@
 <script>/* 線上更新開機程式：手機上若已下載比 APK 內建更新的介面版本，就改用新版（存在 IndexedDB）。
    新版連續兩次沒有正常開啟 → 自動退回 APK 內建版本。網址加上 #builtin 也會強制使用內建版本。 */
 (function () {
-  var B = '3.26.0'; if (!window.__OTA) window.APP_BUILTIN = B;
+  var B = '3.27.0'; if (!window.__OTA) window.APP_BUILTIN = B;
   if (window.__OTA || location.hash.indexOf('builtin') >= 0) return;
   var v = null; try { v = JSON.parse(localStorage.getItem('fm.ota') || 'null'); } catch (e) {}
   function gt(a, b) { a = String(a).split('.').map(Number); b = String(b).split('.').map(Number); for (var i = 0; i < Math.max(a.length, b.length); i++) { var p = a[i] || 0, q = b[i] || 0; if (p !== q) return p > q; } return false; }
@@ -1397,6 +1397,7 @@ table.ckT td.s{text-align:center}table.ckT th.s{text-align:center}
 .amGRow .btn{flex:none;white-space:nowrap}.amGHas{flex:none;font-size:.76rem;color:var(--muted)}
 .amPin.res span{background:#c0392b!important;border-color:#fff!important}.amPin.res span i{filter:grayscale(1) brightness(3)}.amPin.res.has span{background:#8a9a5b!important}.amPin.res b{font-size:.66rem}
 .amGFoot{display:grid;grid-template-columns:repeat(auto-fit,minmax(0,1fr));gap:.45rem;width:100%}.amGFoot .btn{min-width:0;white-space:nowrap;padding-left:.4rem;padding-right:.4rem;justify-content:center}
+.arList .arH{display:flex;align-items:center;gap:.35rem;font-weight:700;font-size:.82rem;color:var(--c,var(--accent));padding:.55rem .2rem .25rem;border-bottom:2px solid color-mix(in srgb,var(--c,#9a5a34) 35%,transparent)}.arList .arH em{font-style:normal;margin-left:auto;font-size:.74rem;color:var(--muted);font-weight:600}
 </style>
 </head>
 <body>
@@ -3868,7 +3869,7 @@ var qrcode = function() {
 /* ============================================================
    日日帳本 — 核心：工具、資料儲存、主題、面板、拖曳排序、圖片
    ============================================================ */
-const APP_VERSION = '3.26.0';
+const APP_VERSION = '3.27.0';
 const APP_VER = APP_VERSION;
 /* 線上更新來源（GitHub Pages）：IanLin1120/food-map */
 const GH = {repo: 'https://github.com/IanLin1120/food-map', pages: 'https://ianlin1120.github.io/food-map/'};
@@ -4399,12 +4400,20 @@ function gErrHint(m, st) { m = String(m || '') + ' ' + String(st || '');
 function gThrow(j) { if (j && j.error) { const m = j.error.message || j.error.status || '錯誤', h = gErrHint(m + JSON.stringify(j.error.details || ''), j.error.status); throw new Error(h || ('Google：' + m)); } }
 const cleanAddr = a => String(a || '').replace(/^\d{3,6}\s*/, '').replace(/^(台灣|臺灣)/, '');
 async function gPlaces(q, c, o) {
-  o = o || {}; c = c || [23.9, 121]; const k = q + '|' + (+c[0]).toFixed(2) + ',' + (+c[1]).toFixed(2) + '|' + (o.n || 10), h = GPC.get(k); if (h && Date.now() - h.t < 6e5) return h.r;
-  const body = {textQuery: q, languageCode: 'zh-TW', regionCode: 'TW', maxResultCount: o.n || 10, locationBias: {circle: {center: {latitude: +c[0], longitude: +c[1]}, radius: o.r || 50000}}};
-  const j = await jfetch('https://places.googleapis.com/v1/places:searchText', {method: 'POST', headers: gHead('places.id,places.displayName,places.formattedAddress,places.location,places.primaryTypeDisplayName'), body: JSON.stringify(body)}, 12000); gThrow(j);
-  const out = (j.places || []).filter(p => p.location).map(p => ({name: (p.displayName && p.displayName.text) || q, addr: cleanAddr(p.formattedAddress), lat: p.location.latitude, lon: p.location.longitude, tag: (p.primaryTypeDisplayName && p.primaryTypeDisplayName.text) || '', gid: p.id}));
+  o = o || {}; c = c || [23.9, 121]; const g = o.area, k = q + '|' + (g ? 'A' + g.bbox.join(',') : (+c[0]).toFixed(2) + ',' + (+c[1]).toFixed(2)) + '|' + (o.n || 10), h = GPC.get(k); if (h && Date.now() - h.t < 6e5) return h.r;
+  /* 有選區域：只在那一區的範圍裡找，最多翻 3 頁（60 筆），再用行政區外框把區外的剔掉 */
+  const body = {textQuery: q, languageCode: 'zh-TW', regionCode: 'TW', pageSize: o.n || 10};
+  if (g) body.locationRestriction = {rectangle: {low: {latitude: g.bbox[1], longitude: g.bbox[0]}, high: {latitude: g.bbox[3], longitude: g.bbox[2]}}};
+  else body.locationBias = {circle: {center: {latitude: +c[0], longitude: +c[1]}, radius: o.r || 50000}};
+  let out = [], seen = new Set();
+  for (let pg = 0; pg < (g ? 3 : 1); pg++) {
+    const j = await jfetch('https://places.googleapis.com/v1/places:searchText', {method: 'POST', headers: gHead('places.id,places.displayName,places.formattedAddress,places.location,places.primaryTypeDisplayName,nextPageToken'), body: JSON.stringify(body)}, 12000); gThrow(j);
+    (j.places || []).filter(p => p.location && !seen.has(p.id)).forEach(p => { seen.add(p.id); out.push({name: (p.displayName && p.displayName.text) || q, addr: cleanAddr(p.formattedAddress), lat: p.location.latitude, lon: p.location.longitude, tag: (p.primaryTypeDisplayName && p.primaryTypeDisplayName.text) || '', gid: p.id}); });
+    if (!j.nextPageToken) break; body.pageToken = j.nextPageToken; }
+  if (g) out = out.filter(x => TW.inGeom(g.geom, x.lon, x.lat));
   GPC.set(k, {t: Date.now(), r: out}); if (GPC.size > 60) GPC.delete(GPC.keys().next().value); return out;
 }
+
 const G_DETAIL = 'id,displayName,formattedAddress,location,regularOpeningHours.weekdayDescriptions,nationalPhoneNumber,rating,userRatingCount,googleMapsUri,websiteUri';
 /* 從 Google 帶入名稱、地址、營業時間、電話、評分 */
 async function gFill(p, force) {
@@ -4420,10 +4429,10 @@ async function gFill(p, force) {
   if (d.googleMapsUri) p.gurl = d.googleMapsUri; if (d.websiteUri) p.web = d.websiteUri; return p;
 }
 let nomLast = 0;
-async function nomSearch(q, c) { const w = 1100 - (Date.now() - nomLast); if (w > 0) await sleep(w); nomLast = Date.now();
+async function nomSearch(q, c, g) { const w = 1100 - (Date.now() - nomLast); if (w > 0) await sleep(w); nomLast = Date.now();
   let u = 'https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=8&accept-language=zh-TW,zh,en&countrycodes=tw&q=' + encodeURIComponent(q);
-  if (c) u += `&viewbox=${c[1] - .6},${c[0] + .6},${c[1] + .6},${c[0] - .6}`;
-  const j = await jfetch(u, null, 10000); return (Array.isArray(j) ? j : []).map(x => ({name: x.name || x.display_name.split(',')[0], addr: nomAddr(x.display_name), lat: +x.lat, lon: +x.lon, tag: ''})); }
+  if (g) u = u.replace('limit=8', 'limit=40') + `&bounded=1&viewbox=${g.bbox[0]},${g.bbox[3]},${g.bbox[2]},${g.bbox[1]}`; else if (c) u += `&viewbox=${c[1] - .6},${c[0] + .6},${c[1] + .6},${c[0] - .6}`;
+  const j = await jfetch(u, null, 10000); return (Array.isArray(j) ? j : []).filter(x => !g || TW.inGeom(g.geom, +x.lon, +x.lat)).map(x => ({name: x.name || x.display_name.split(',')[0], addr: nomAddr(x.display_name), lat: +x.lat, lon: +x.lon, tag: ''})); }
 const nomAddr = dn => String(dn || '').split(', ').filter(s => !/^\d{3,6}$/.test(s) && !/^(臺灣|台灣|Taiwan)$/.test(s)).reverse().join('');
 async function revGeo(lat, lon) { const j = await jfetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=18&accept-language=zh-TW,zh,en&lat=${lat}&lon=${lon}`, null, 10000);
   const poi = j && j.name && !/^\d/.test(j.name) && j.category && !/highway|boundary|place/.test(j.category) ? j.name : ''; return {addr: nomAddr(j && j.display_name), name: poi}; }
@@ -4444,12 +4453,12 @@ function resMarks(r, fit) { (M.rMarks || []).forEach(m => m.remove()); M.rMarks 
     M.rMarks.push(new maplibregl.Marker({element: e, anchor: 'bottom'}).setLngLat([x.lon, x.lat]).addTo(M.map)); });
   if (fit && r.length > 1) { const bb = new maplibregl.LngLatBounds(); r.forEach(x => bb.extend([x.lon, x.lat])); M.map.fitBounds(bb, {padding: {top: 170, bottom: 120, left: 50, right: 50}, maxZoom: 16, duration: 700}); }
   else if (fit && r.length === 1) flyTo(r[0].lat, r[0].lon, 16); }
-const searchOpt = m => ({n: 20, r: m && m.getZoom() >= 11 ? 6000 : 50000});
+const searchOpt = (m, a) => ({n: 20, r: m && m.getZoom() >= 11 ? 6000 : 50000, area: areaGeo(a)});
 async function doSearch(q, fit) {
   q = q.trim(); if (q.length < 2) { hideResults(); resMarks(null); return; } const seq = ++searchSeq; renderResults(q, null, '搜尋中…');
   const c = M.map ? [M.map.getCenter().lat, M.map.getCenter().lng] : null;
   try { let r, note = '';
-    if (S.gkey) r = await gPlaces(q, c, searchOpt(M.map)); else { r = await nomSearch(q, c); note = '目前使用 OpenStreetMap 搜尋，店家較不齊全。<br>填入 Google Maps 金鑰後，可用 Google 地圖的方式搜尋並自動帶入營業時間。 <button class="btn sm pri" data-a="key" style="margin-top:.4rem">看圖文教學</button>'; }
+    if (S.gkey) r = await gPlaces(q, c, searchOpt(M.map, S.area)); else { r = await nomSearch(q, c, areaGeo(S.area)); note = '目前使用 OpenStreetMap 搜尋，店家較不齊全。<br>填入 Google Maps 金鑰後，可用 Google 地圖的方式搜尋並自動帶入營業時間。 <button class="btn sm pri" data-a="key" style="margin-top:.4rem">看圖文教學</button>'; }
     if (seq !== searchSeq) return; r = r.filter(x => !DB.places.some(p => (x.gid && p.gid === x.gid)));
     resMarks(r, fit); renderResults(q, r, r.length || localMatches(q).length ? note : '找不到符合的地點' + (note ? '<br>' + note : ''));
   } catch (e) { if (seq === searchSeq) renderResults(q, null, '❌ ' + esc(e.message) + (S.gkey ? ' <button class="btn sm" data-a="key" style="margin-top:.4rem">檢查金鑰設定</button>' : '')); }
@@ -5845,6 +5854,8 @@ const TW = {towns: [], counties: {}, names: [], ready: false,
   inGeom(g, x, y) { for (const poly of (g.type === 'Polygon' ? [g.coordinates] : g.coordinates)) { if (!this.inRing(poly[0], x, y)) continue; let hole = false; for (let k = 1; k < poly.length; k++) if (this.inRing(poly[k], x, y)) { hole = true; break; } if (!hole) return true; } return false; },
   townAt(lon, lat) { for (const t of this.towns) { const b = t.bbox; if (lon < b[0] || lon > b[2] || lat < b[1] || lat > b[3]) continue; if (this.inGeom(t.geom, lon, lat)) return t; } return null; }
 };
+/* 區域（{c 縣市, t 鄉鎮}）對應的外框資料：搜尋時只找這一區用 */
+function areaGeo(a) { if (!a || !a.c || !TW.init()) return null; const co = TW.counties[a.c]; if (!co) return null; return a.t ? co.towns.find(x => x.name === a.t) || co : co; }
 var Area = {cache: new Map(), hideList: false,
   /* 這間店在不在目前選取的區域裡（沒選區域＝全部都算） */
   has(p) { const a = S.area; if (!a || !TW.ready) return true; let t = this.cache.get(p.id); if (t === undefined || t.lat !== p.lat || t.lon !== p.lon) { const tw = TW.townAt(p.lon, p.lat); t = {lat: p.lat, lon: p.lon, c: tw ? tw.county : '', t: tw ? tw.name : ''}; this.cache.set(p.id, t); }
@@ -5855,7 +5866,7 @@ var Area = {cache: new Map(), hideList: false,
     const c = $('#arC'), t = $('#arT'); c.innerHTML = '<option value="">縣市</option>' + TW.names.map(n => `<option>${n}</option>`).join('');
     c.onchange = () => this.set(c.value ? {c: c.value, t: ''} : null, true); t.onchange = () => this.set(c.value ? {c: c.value, t: t.value} : null, true);
     $('#arX').onclick = () => this.set(null);
-    $('#arMe').onclick = () => { const go = (lon, lat) => { const tw = TW.townAt(lon, lat); if (!tw) { toast('這個位置不在台灣的行政區範圍內'); return; } this.set({c: tw.county, t: tw.name}, true); };
+    $('#arMe').onclick = () => { const go = (lon, lat) => { const tw = TW.townAt(lon, lat); if (!tw) { toast('這個位置不在台灣的行政區範圍內'); return; } this.set({c: tw.county, t: tw.name}, false); flyTo(lat, lon, 15.5); toast(`📍 ${tw.county} ${tw.name}`); };
       if (M.meLL) { go(M.meLL[1], M.meLL[0]); return; } if (!navigator.geolocation) { if (M.map) { const k = M.map.getCenter(); go(k.lng, k.lat); } return; }
       Loc.start(); toast('定位中…'); let n = 0; const iv = setInterval(() => { if (M.meLL) { clearInterval(iv); go(M.meLL[1], M.meLL[0]); } else if (++n > 16) { clearInterval(iv); if (M.map) { const k = M.map.getCenter(); go(k.lng, k.lat); toast('無法定位，改用地圖中心所在的區域'); } } }, 500); };
     this.ui();
@@ -5873,9 +5884,11 @@ var Area = {cache: new Map(), hideList: false,
   draw() { const m = M.map; if (!m || !m.isStyleLoaded || !m.isStyleLoaded()) return;
     try { ['ar-s-fill', 'ar-t-line', 'ar-c-line', 'ar-s-line'].forEach(id => { if (m.getLayer(id)) m.removeLayer(id); }); ['ar-t', 'ar-c', 'ar-s'].forEach(id => { if (m.getSource(id)) m.removeSource(id); }); } catch (e) {} },
   /* 下方清冊：這一區（再依上方分類篩選）的所有收藏 */
-  card() { const a = S.area; if (!a) return; const ps = placesShown(M.filter), f = M.filter === 'all' ? null : (M.filter === '' ? UNCAT : catOf(M.filter));
+  card() { const a = S.area; if (!a) return; const ci = id => { const i = DB.cats.findIndex(c => c.id === id); return i < 0 ? 1e4 : i; }, me = M.meLL, dist = p => me ? (p.lat - me[0]) ** 2 + ((p.lon - me[1]) * .92) ** 2 : 0;
+    /* 依分類排（跟上方分類標籤同順序），同一類裡離我近的在前面 */
+    const ps = placesShown(M.filter).slice().sort((x, y) => ci(x.cat) - ci(y.cat) || dist(x) - dist(y) || (x.ord || 0) - (y.ord || 0)), f = M.filter === 'all' ? null : (M.filter === '' ? UNCAT : catOf(M.filter));
     showCard(`<div class="row"><div class="grow"><h3>${esc(a.c)}${a.t ? ' ' + esc(a.t) : ''}</h3><div class="small muted">${f ? esc(f.icon + ' ' + f.name) + ' · ' : ''}${ps.length} 間收藏${a.t ? '' : ' · 點地圖上的鄉鎮市區可只看那一區'}</div></div><button class="ic" data-a="ax" aria-label="收起清冊">✕</button></div>
-      <div class="arList">${ps.map(p => { const c = catOf(p.cat), st = stateHtml(p); return `<button class="res" data-a="ap" data-id="${p.id}"><span class="rIc" style="background:${c.color}">${esc(c.icon)}</span><span class="grow"><b>${esc(p.name)}</b><small>${st ? `<span class="row" style="gap:.3rem;display:inline-flex">${st}</span> · ` : ''}${esc(p.addr || '')}</small></span></button>`; }).join('') || '<div class="resNote">這一區還沒有' + (f ? '「' + esc(f.name) + '」的' : '') + '收藏</div>'}</div>`); }
+      <div class="arList">${ps.map((p, i) => { const c = catOf(p.cat), st = stateHtml(p), hd = M.filter === 'all' && (!i || (ps[i - 1].cat || '') !== (p.cat || '')) ? `<div class="arH" style="--c:${c.color}">${esc(c.icon)} ${esc(c.name)}<em>${ps.filter(x => (x.cat || '') === (p.cat || '')).length}</em></div>` : ''; return hd + `<button class="res" data-a="ap" data-id="${p.id}"><span class="rIc" style="background:${c.color}">${esc(c.icon)}</span><span class="grow"><b>${esc(p.name)}</b><small>${st ? `<span class="row" style="gap:.3rem;display:inline-flex">${st}</span> · ` : ''}${esc(p.addr || '')}</small></span></button>`; }).join('') || '<div class="resNote">這一區還沒有' + (f ? '「' + esc(f.name) + '」的' : '') + '收藏</div>'}</div>`); }
 };
 
 /* ---------------- 離線地圖 ---------------- */
@@ -7052,7 +7065,7 @@ const GUIDE = {
     {t: '⑦ 匯出、備份、換機', h: phone('記帳設定', `${pc('<b>📤 匯出 CSV</b><small>消費明細・資產明細</small>')}${pc('<b>☁️ Google 雲端・pCloud</b><small>上傳／還原・選資料夾</small>')}${pc('<b>📲 快速換機</b><small>舊手機顯示 QR，新手機掃描</small>')}`, '設定', 'acc') +
       `<ul><li><b>匯出 CSV</b>：選日期區間，消費明細（含品項、分帳）或資產明細</li><li><b>雲端備份</b>：整個日日帳本＋所有圖片；pCloud 用網頁登入</li><li><b>網頁版雲端硬碟</b>：在 App 裡打開 drive.google.com 登入，上傳時備份檔自動選好，下載備份檔就自動還原，不用任何設定</li><li><b>手機內建儲存</b>、<b>快速換機 QR Code</b>：同一個 Wi-Fi 直接傳到新手機</li><li>圖片會回到原本那一筆紀錄</li></ul>`},
     {t: '⑨ 店家地圖、分帳的人', h: phone('地圖', `${pc('<b>📍 晨曦早午餐</b><small>星河路1號・消費 3 次・$420</small>' + tap)}${pc('<b>📌 好鄰居超市 中央店</b><small>還沒有位置</small><div class="pBtns">' + pb('📍 釘選', 'pri hl') + '</div>')}`, '地圖', 'acc') +
-      `<ul><li>記帳區最左邊的 <b>地圖</b>：列出記過帳的店家，點店家看地址、位置和每一筆消費紀錄</li><li>地圖下面是所有收藏的清冊，依早餐、午餐…分類；點上面的分類按鈕，地圖只顯示那一類，也可以選縣市、鄉鎮市區篩選</li><li>分類預設收合，「全部展開／全部收合」一鍵切換；按住分類標題可以上下移動，展開後按住店家可以排序</li><li>地圖左下 ＋／－ 放大縮小，右下 ➤ 固定朝北、◎ 移到目前位置</li><li>點店家會在地圖上標出來，下面顯示地址、分類和記帳明細，按「✎ 改店名」會同步到所有區</li><li>日日帳本地圖上的收藏都會顯示；只在記帳出現的店家按「📍 釘選」，用 Google 地圖搜尋找到位置</li><li>在記帳設定的「商家／對象名稱」點收藏店家，會直接跳到這張地圖</li><li>記一筆、商家名單裡有 📍 的就是已經連結地圖的店家</li><li>在發票、地圖、記帳任何一區<b>改店名</b>，會問要不要一起改其他區；台灣電力公司這類「只用在記帳」的名稱不會跟著改</li><li><b>分帳的人</b>：記帳 → 設定 →「管理名單」，名單只用在記帳，和日常點餐分開</li><li><b>上鎖</b>：記帳 → 設定 →「上鎖」設定 6 位數密碼，可以用指紋解鎖；螢幕關閉或把 App 滑掉就會自動上鎖。設定頁的鎖頭按鈕可以立刻上鎖／解鎖；從分帳匯入記帳也要先解鎖</li></ul>`},
+      `<ul><li>記帳區最左邊的 <b>地圖</b>：列出記過帳的店家，點店家看地址、位置和每一筆消費紀錄</li><li>地圖下面是所有收藏的清冊，依早餐、午餐…分類；點上面的分類按鈕，地圖只顯示那一類，也可以選縣市、鄉鎮市區篩選</li><li>分類預設收合，「全部展開／全部收合」一鍵切換；按住分類標題可以上下移動，展開後按住店家可以排序</li><li>地圖左下 ＋／－ 放大縮小，右下 ➤ 固定朝北、◎ 移到目前位置</li><li>地圖上方的搜尋列可以搜店名，或搜「停車場」這類關鍵字，結果全部標在地圖上，點標籤就能加入收藏；下面有選縣市、鄉鎮時只找那一區</li><li>點店家會在地圖上標出來，下面顯示地址、分類和記帳明細，按「✎ 改店名」會同步到所有區</li><li>日日帳本地圖上的收藏都會顯示；只在記帳出現的店家按「📍 釘選」，用 Google 地圖搜尋找到位置</li><li>在記帳設定的「商家／對象名稱」點收藏店家，會直接跳到這張地圖</li><li>記一筆、商家名單裡有 📍 的就是已經連結地圖的店家</li><li>在發票、地圖、記帳任何一區<b>改店名</b>，會問要不要一起改其他區；台灣電力公司這類「只用在記帳」的名稱不會跟著改</li><li><b>分帳的人</b>：記帳 → 設定 →「管理名單」，名單只用在記帳，和日常點餐分開</li><li><b>上鎖</b>：記帳 → 設定 →「上鎖」設定 6 位數密碼，可以用指紋解鎖；螢幕關閉或把 App 滑掉就會自動上鎖。設定頁的鎖頭按鈕可以立刻上鎖／解鎖；從分帳匯入記帳也要先解鎖</li></ul>`},
     {t: '⑧ 小工具、通知欄、控制中心', h: phone('桌面', `${pc('<b>📒 日日帳本　11月</b><small>本月支出 $8,420・收入 $36,000・今天 $185</small><div class="pBtns">' + pb('＋ 支出', 'pri hl') + pb('＋ 收入') + pb('⭐ 常用') + '</div>' + tap)}${pc('<b>🔔 日日帳本・快速記帳</b><small>11月 支出 $8,420・今天 $185</small>')}`, '設定', 'acc') +
       `<ul><li><b>桌面小工具</b>：長按桌面空白處 →「小工具」→ 日日帳本，按「＋ 支出」直接打開記一筆</li><li><b>通知欄</b>：記帳 → 設定 → 快速記帳，打開「通知欄快速記帳」，通知上就有跟小工具一樣的「＋ 支出／＋ 收入／⭐ 常用」三顆按鈕</li><li><b>控制中心</b>：下拉兩次 → 編輯（鉛筆）→ 把「記一筆」和「常用記帳」拖進去</li><li>不想讓別人看到金額：關掉「小工具和通知顯示金額」</li></ul>`}]}
 };
@@ -8622,11 +8635,11 @@ function accGSInit() { const box = $('.amMapBox'); if (!box || $('#amGQ')) retur
     if (e.target.closest('[data-add]')) { accGSAdd(r); return; } R.classList.add('hide'); AM.map.flyTo({center: [r.lon, r.lat], zoom: Math.max(AM.map.getZoom(), 16), duration: 600}); accGSCard(r); }); }
 function accGSClear() { AM.gseq++; AM.res = []; AM.rMarks.forEach(m => m.remove()); AM.rMarks = []; const R = $('#amGR'); if (R) { R.innerHTML = ''; R.classList.add('hide'); } }
 async function accGSearch(q) { q = (q || '').trim(); if (q.length < 2 || !AM.map) return; const seq = ++AM.gseq, R = $('#amGR'); R.innerHTML = '<div class="resNote">搜尋中…</div>'; R.classList.remove('hide');
-  try { const c = [AM.map.getCenter().lat, AM.map.getCenter().lng]; let r = S.gkey ? await gPlaces(q, c, searchOpt(AM.map)) : await nomSearch(q, c); if (seq !== AM.gseq) return;
+  try { const c = [AM.map.getCenter().lat, AM.map.getCenter().lng]; let r = S.gkey ? await gPlaces(q, c, searchOpt(AM.map, AM.area)) : await nomSearch(q, c, areaGeo(AM.area)); if (seq !== AM.gseq) return;
     AM.res = r; accGSMarks(true); accGSList(); R.classList.remove('hide');
   } catch (e) { if (seq === AM.gseq) R.innerHTML = `<div class="resNote">❌ ${esc(e.message)}</div>`; } }
 function accGSList() { const R = $('#amGR'), r = AM.res; if (!R) return;
-    R.innerHTML = r.map((x, i) => { const has = accGSHas(x); return `<div class="amGRow" data-i="${i}"><span class="rIc">📍</span><span class="grow"><b>${esc(x.name)}</b><small>${x.tag ? esc(x.tag) + ' · ' : ''}${esc(x.addr || '')}</small></span>${has ? '<span class="amGHas">已收藏</span>' : '<button class="btn sm pri" data-add="1">＋ 收藏</button>'}</div>`; }).join('') || '<div class="resNote">找不到符合的地點，換個關鍵字試試</div>';
+    R.innerHTML = r.map((x, i) => { const has = accGSHas(x); return `<div class="amGRow" data-i="${i}"><span class="rIc">📍</span><span class="grow"><b>${esc(x.name)}</b><small>${x.tag ? esc(x.tag) + ' · ' : ''}${esc(x.addr || '')}</small></span>${has ? '<span class="amGHas">已收藏</span>' : '<button class="btn sm pri" data-add="1">＋ 收藏</button>'}</div>`; }).join('') || `<div class="resNote">${AM.area ? esc(AM.area.c + (AM.area.t ? ' ' + AM.area.t : '')) + ' 裡' : ''}找不到符合的地點，換個關鍵字試試</div>`;
     if (!S.gkey) R.insertAdjacentHTML('beforeend', '<div class="resNote">目前使用 OpenStreetMap 搜尋，店家較不齊全；填入 Google Maps 金鑰後可用 Google 地圖搜尋（設定 → 地圖）。</div>'); }
 const accGSHas = x => (DB.places || []).some(p => (x.gid && p.gid === x.gid) || (p.name === x.name && Math.abs(p.lat - x.lat) < 3e-4 && Math.abs(p.lon - x.lon) < 3e-4));
 function accGSMarks(fit) { AM.rMarks.forEach(m => m.remove()); AM.rMarks = []; const r = AM.res; if (!AM.map || !r.length) return;
@@ -8738,7 +8751,8 @@ function renderAccCfg() {
       <button class="setR" data-a="lkSet" style="width:100%;text-align:left"><span class="gRi">🔑</span><div class="t"><b>${AccLock.has() ? '更改密碼' : '設定密碼'}</b><small>${AccLock.has() ? '要先輸入目前的密碼' : '6～16 位數字；不設定也可以使用'}</small></div><span class="chev">›</span></button>
       ${AccLock.has() ? `${AccLock.app() && NB.lockBioOk && NB.lockBioOk() ? `<button class="setR" data-a="lkBio" style="width:100%;text-align:left"><span class="gRi">👆</span><div class="t"><b>可以用指紋／臉部解鎖</b><small>解鎖時自動跳出指紋，也可以改用密碼；關掉要先驗證密碼</small></div><span class="sw2 ${S.accBio !== false ? 'on' : ''}"></span></button>` : ''}
       <div class="setR" style="cursor:default"><span class="gRi">🛡️</span><div class="t"><b>自動上鎖</b><small>螢幕關閉、或從最近使用把 App 滑掉再打開，都會馬上上鎖。連續輸錯 5 次要等待，時間會越來越長。</small></div></div>
-      <div class="accLkRow in"><button class="lkBtn ${!AccLock.open() ? 'on' : ''}" data-lk data-a="lkTog">${AccLock.label()}</button><button class="btn sm" data-a="lkDel">移除密碼</button></div>` : ''}</div></div>
+      <div class="accLkRow in"><button class="lkBtn ${!AccLock.open() ? 'on' : ''}" data-lk data-a="lkTog">${AccLock.label()}</button><button class="btn sm" data-a="lkDel">移除密碼</button></div>` : ''}
+      ${IS_APP && NB.guardOn ? `<button class="setR" data-a="guard" style="width:100%;text-align:left"><span class="gRi">🧷</span><div class="t"><b>防止誤刪 App</b><small>開啟後不能直接解除安裝；要刪除得先到手機設定停用保護，並輸入手機的解鎖密碼確認${AccLock.has() ? '。在這裡關閉要先輸入記帳密碼' : ''}</small></div><span class="sw2 ${NB.guardOn() ? 'on' : ''}"></span></button>` : ''}</div></div>
     ${IS_APP && NB.widgetData ? `<div class="setG"><h3>快速記帳</h3><div class="setC">
       <button class="setR" data-a="qNotif" style="width:100%;text-align:left"><span class="gRi">🔔</span><div class="t"><b>通知欄快速記帳</b><small>通知欄常駐三顆按鈕（＋支出／＋收入／⭐常用），跟桌面小工具一樣</small></div><span class="sw2 ${S.qNotif ? 'on' : ''}"></span></button>
       <button class="setR" data-a="wHide" style="width:100%;text-align:left"><span class="gRi">👁</span><div class="t"><b>小工具和通知顯示金額</b><small>關掉後桌面小工具、通知只顯示 $ ••••</small></div><span class="sw2 ${S.wHide ? '' : 'on'}"></span></button>
@@ -8770,6 +8784,10 @@ async function accCfgClick(e) {
   const t = e.target.closest('[data-a],[data-me]'); if (!t) return; buzz(8); const a = t.dataset.a;
   if (t.dataset.me) { DB.acc.me = t.dataset.me; saveAcc(); renderAccCfg(); return; }
   if (a === 'people') { await accPeopleEdit(); renderAccCfg(); return; }
+  if (a === 'guard') { if (!NB.guardOn()) { Guard.asked = 1; NB.guardEnable(); return; }
+    if (!await ask('關閉後，日日帳本就可以直接被解除安裝（帳本資料會一起刪除）。確定要關閉嗎？', '關閉保護', true)) return;
+    if (AccLock.has() && !await new Promise(r => accPinPad({title: '關閉防誤刪要先驗證', onOk: () => r(true), onCancel: () => r(false)}))) return;
+    NB.guardDisable(); setTimeout(renderAccCfg, 300); toast('已關閉防止誤刪'); return; }
   if (a === 'leave') leaveAcc(); else if (a === 'guide') openGuide('acc'); else if (a === 'lkSet') { await accSetPin(); renderAccCfg(); } else if (a === 'lkTog') { await AccLock.toggle(); renderAccCfg(); } else if (a === 'lkDel') { await accClearPin(); } else if (a === 'lkBio') { if (S.accBio !== false) { const ok = await new Promise(r => accPinPad({title: '關閉指紋解鎖要先驗證', onOk: () => r(true), onCancel: () => r(false)})); if (!ok) return; S.accBio = false; } else S.accBio = true; saveS(); renderAccCfg(); } else if (a === 'qNotif') { S.qNotif = !S.qNotif; saveS(); NB.quickNotif(!!S.qNotif); accWidgetPush(); renderAccCfg(); toast(S.qNotif ? '🔔 已開啟通知欄快速記帳' : '已關閉通知欄快速記帳'); } else if (a === 'wHide') { S.wHide = !S.wHide; saveS(); accWidgetPush(); renderAccCfg(); } else if (a === 'cats') editCatTree(t.dataset.ty); else if (a === 'opt') optCfg(); else if (a === 'payees') managePayees(); else if (a === 'accts') enterAcc('AccA'); else if (a === 'tpls') manageTpls(); else if (a === 'csv') accCsv();
   else if (a === 'gFolder') gPickFolder(); else if (a === 'pFolder') pPickFolder(); else if (a === 'pIn') pLogin(); else if (a === 'lUp') localBackup(); else if (a === 'lDown') localRestore(); else if (a === 'xSend') xferSend(); else if (a === 'xRecv') xferRecv();
   else if (a === 'gwUp') gDriveWeb('up'); else if (a === 'gwDown') gDriveWeb('down'); else if (a === 'gwMan') gwManual();
@@ -8849,6 +8867,10 @@ function accCsv() {
       rows.push([], ['日期', '帳戶', '金額變動', '種類', '說明']); L.forEach(r => DB.acc.accts.forEach(a => { const v = acctFlow(r, a.id); if (v) rows.push([r.d, a.n, v, {out: '支出', in: '收入', tr: '轉帳', loss: '遺失'}[r.type], r.payee || String(r.note || '').split('\n')[0] || accCat(r).n]); }));
       await saveCsv(`資產明細_${from}_${to}.csv`, rows); } };
 }
+
+/* 防止誤刪：原生回報「裝置管理員」開關結果 */
+var Guard = {asked: 0, onNative(j) { let o = {}; try { o = JSON.parse(j); } catch (e) {} const a = this.asked; this.asked = 0;
+  if (o.on && a) { buzz(20); toast('🧷 已開啟防止誤刪，要刪除得先到手機設定停用保護', 3500); } else if (a && !o.on) toast(o.err ? '這支手機不支援防止誤刪' : '防止誤刪沒有開啟', 3000); if (typeof renderAccCfg === 'function') renderAccCfg(); }};
 
 /* ============================================================
    雲端備份：Google 雲端硬碟（App 用手機上的 Google 帳戶登入）、pCloud（帳號密碼登入取得權杖）
