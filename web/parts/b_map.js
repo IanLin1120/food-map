@@ -66,7 +66,8 @@ async function initMap() {
     cv.addEventListener('touchmove', e => { const t = e.touches[0]; if (!t || e.touches.length > 1 || Math.hypot(t.clientX - sx, t.clientY - sy) > 10) clearTimeout(lt); }, {passive: true});
     ['touchend', 'touchcancel'].forEach(ev => cv.addEventListener(ev, () => clearTimeout(lt), {passive: true})); }
   syncMarkers();
-  locWarm(); if (!S.view) { Loc.start(); Loc.want = 1; }
+  /* 一進 App 就定位到現在的位置 */
+  locWarm(); Loc.start(); Loc.want = 1;
 }
 function mapResize() { if (M.map) setTimeout(() => M.map.resize(), 30); }
 function flyTo(lat, lon, z) { if (!M.map) return; M.map.flyTo({center: [lon, lat], zoom: Math.max(M.map.getZoom(), z || 16), pitch: S.map3d ? Math.max(M.map.getPitch(), 50) : M.map.getPitch(), duration: 900, essential: true}); }
@@ -158,10 +159,10 @@ async function pickPoint(lat, lon) {
   try { const r = await revGeo(lat, lon); if (M.draft !== d) return; d.addr = r.addr; if (r.name) d.name = r.name; const a = $('#dAddr'); if (a) a.textContent = r.addr || `${lat.toFixed(5)}, ${lon.toFixed(5)}`; if (r.name) { const h = $('#mCard h3'); if (h) h.textContent = r.name; } }
   catch (e) { const a = $('#dAddr'); if (a && M.draft === d) a.textContent = `${lat.toFixed(5)}, ${lon.toFixed(5)}`; }
 }
-async function addDraft(d) {
+async function addDraft(d, done) {
   const p = {id: '', name: d.name || '', addr: d.addr || '', lat: d.lat, lon: d.lon, cat: M.filter !== 'all' ? M.filter : (DB.cats[0] ? DB.cats[0].id : ''), hours: [], phone: '', note: '', albums: [], menu: [], gid: d.gid || '', gurl: ''};
   if (S.gkey) { busy('向 Google 取得營業時間…'); try { await gFill(p); } catch (e) { toast('Google 資料沒有帶入：' + e.message, 3500); } busy(false); }
-  editPlace(p, true);
+  editPlace(p, true, done);
 }
 
 /* ---------- 我的位置 ----------
@@ -223,9 +224,9 @@ function gErrHint(m, st) { m = String(m || '') + ' ' + String(st || '');
   return ''; }
 function gThrow(j) { if (j && j.error) { const m = j.error.message || j.error.status || '錯誤', h = gErrHint(m + JSON.stringify(j.error.details || ''), j.error.status); throw new Error(h || ('Google：' + m)); } }
 const cleanAddr = a => String(a || '').replace(/^\d{3,6}\s*/, '').replace(/^(台灣|臺灣)/, '');
-async function gPlaces(q, c) {
-  c = c || [23.9, 121]; const k = q + '|' + (+c[0]).toFixed(1) + ',' + (+c[1]).toFixed(1), h = GPC.get(k); if (h && Date.now() - h.t < 6e5) return h.r;
-  const body = {textQuery: q, languageCode: 'zh-TW', regionCode: 'TW', maxResultCount: 10, locationBias: {circle: {center: {latitude: +c[0], longitude: +c[1]}, radius: 50000}}};
+async function gPlaces(q, c, o) {
+  o = o || {}; c = c || [23.9, 121]; const k = q + '|' + (+c[0]).toFixed(2) + ',' + (+c[1]).toFixed(2) + '|' + (o.n || 10), h = GPC.get(k); if (h && Date.now() - h.t < 6e5) return h.r;
+  const body = {textQuery: q, languageCode: 'zh-TW', regionCode: 'TW', maxResultCount: o.n || 10, locationBias: {circle: {center: {latitude: +c[0], longitude: +c[1]}, radius: o.r || 50000}}};
   const j = await jfetch('https://places.googleapis.com/v1/places:searchText', {method: 'POST', headers: gHead('places.id,places.displayName,places.formattedAddress,places.location,places.primaryTypeDisplayName'), body: JSON.stringify(body)}, 12000); gThrow(j);
   const out = (j.places || []).filter(p => p.location).map(p => ({name: (p.displayName && p.displayName.text) || q, addr: cleanAddr(p.formattedAddress), lat: p.location.latitude, lon: p.location.longitude, tag: (p.primaryTypeDisplayName && p.primaryTypeDisplayName.text) || '', gid: p.id}));
   GPC.set(k, {t: Date.now(), r: out}); if (GPC.size > 60) GPC.delete(GPC.keys().next().value); return out;
@@ -262,22 +263,30 @@ function renderResults(q, remote, note) {
     (remote || []).map((r, i) => `<button class="res" data-i="${i}"><span class="rIc">📍</span><span class="grow"><b>${esc(r.name)}</b><small>${r.tag ? esc(r.tag) + ' · ' : ''}${esc(r.addr)}</small></span></button>`).join('') + (note ? `<div class="resNote">${note}</div>` : '');
   box.innerHTML = html; box.classList.toggle('hide', !html);
 }
-async function doSearch(q) {
-  q = q.trim(); if (q.length < 2) { hideResults(); return; } const seq = ++searchSeq; renderResults(q, null, '搜尋中…');
+/* 像 Google 地圖：搜尋「停車場」這類關鍵字時，把所有結果都標在地圖上，點標籤就能加入收藏 */
+function resMarks(r, fit) { (M.rMarks || []).forEach(m => m.remove()); M.rMarks = []; if (!M.map || !r || !r.length) return;
+  r.forEach(x => { const e = el(`<button class="amPin res"><span><i>📍</i></span><b>${esc(x.name)}</b></button>`);
+    e.onclick = ev => { ev.stopPropagation(); buzz(10); hideResults(); showDraft(Object.assign({}, x), false); M.map.easeTo({center: [x.lon, x.lat], duration: 400}); };
+    M.rMarks.push(new maplibregl.Marker({element: e, anchor: 'bottom'}).setLngLat([x.lon, x.lat]).addTo(M.map)); });
+  if (fit && r.length > 1) { const bb = new maplibregl.LngLatBounds(); r.forEach(x => bb.extend([x.lon, x.lat])); M.map.fitBounds(bb, {padding: {top: 170, bottom: 120, left: 50, right: 50}, maxZoom: 16, duration: 700}); }
+  else if (fit && r.length === 1) flyTo(r[0].lat, r[0].lon, 16); }
+const searchOpt = m => ({n: 20, r: m && m.getZoom() >= 11 ? 6000 : 50000});
+async function doSearch(q, fit) {
+  q = q.trim(); if (q.length < 2) { hideResults(); resMarks(null); return; } const seq = ++searchSeq; renderResults(q, null, '搜尋中…');
   const c = M.map ? [M.map.getCenter().lat, M.map.getCenter().lng] : null;
   try { let r, note = '';
-    if (S.gkey) r = await gPlaces(q, c); else { r = await nomSearch(q, c); note = '目前使用 OpenStreetMap 搜尋，店家較不齊全。<br>填入 Google Maps 金鑰後，可用 Google 地圖的方式搜尋並自動帶入營業時間。 <button class="btn sm pri" data-a="key" style="margin-top:.4rem">看圖文教學</button>'; }
+    if (S.gkey) r = await gPlaces(q, c, searchOpt(M.map)); else { r = await nomSearch(q, c); note = '目前使用 OpenStreetMap 搜尋，店家較不齊全。<br>填入 Google Maps 金鑰後，可用 Google 地圖的方式搜尋並自動帶入營業時間。 <button class="btn sm pri" data-a="key" style="margin-top:.4rem">看圖文教學</button>'; }
     if (seq !== searchSeq) return; r = r.filter(x => !DB.places.some(p => (x.gid && p.gid === x.gid)));
-    renderResults(q, r, r.length || localMatches(q).length ? note : '找不到符合的地點' + (note ? '<br>' + note : ''));
+    resMarks(r, fit); renderResults(q, r, r.length || localMatches(q).length ? note : '找不到符合的地點' + (note ? '<br>' + note : ''));
   } catch (e) { if (seq === searchSeq) renderResults(q, null, '❌ ' + esc(e.message) + (S.gkey ? ' <button class="btn sm" data-a="key" style="margin-top:.4rem">檢查金鑰設定</button>' : '')); }
 }
 function initSearch() {
   const inp = $('#mQ'), auto = debounce(() => doSearch(inp.value), 700);
-  inp.addEventListener('input', () => { $('#mQx').style.display = inp.value ? '' : 'none'; const q = inp.value.trim(); if (q.length < 2) { searchSeq++; hideResults(); return; } renderResults(q, null, '輸入後稍等，或按 🔍 搜尋'); auto(); });
-  inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); inp.blur(); doSearch(inp.value); } });
+  inp.addEventListener('input', () => { $('#mQx').style.display = inp.value ? '' : 'none'; const q = inp.value.trim(); if (q.length < 2) { searchSeq++; hideResults(); if (!q) resMarks(null); return; } renderResults(q, null, '輸入後稍等，或按 🔍 搜尋'); auto(); });
+  inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); inp.blur(); doSearch(inp.value, true); } });
   inp.addEventListener('focus', () => { if (inp.value.trim().length >= 2 && $('#mResults').innerHTML) $('#mResults').classList.remove('hide'); });
-  $('#mQgo').onclick = () => { inp.blur(); doSearch(inp.value); };
-  $('#mQx').onclick = () => { inp.value = ''; $('#mQx').style.display = 'none'; searchSeq++; hideResults(); inp.focus(); };
+  $('#mQgo').onclick = () => { inp.blur(); doSearch(inp.value, true); };
+  $('#mQx').onclick = () => { inp.value = ''; $('#mQx').style.display = 'none'; searchSeq++; hideResults(); resMarks(null); inp.focus(); };
   $('#mResults').addEventListener('click', e => { const k = e.target.closest('[data-a="key"]'); if (k) { hideResults(); openTutorial('maps'); return; }
     const b = e.target.closest('.res'); if (!b) return; hideResults();
     if (b.dataset.id) selectPlace(b.dataset.id, true); else { const r = M.results[+b.dataset.i]; if (r) showDraft(Object.assign({}, r), true); } });

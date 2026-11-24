@@ -155,7 +155,8 @@ function sheet(o) {
     title(t) { $('.shTitle', w).textContent = t; },
     close() { if (me.closed) return; me.closed = true; const i = sheets.indexOf(me); if (i >= 0) sheets.splice(i, 1); w.classList.remove('on'); setTimeout(() => w.remove(), 260); if (o.onClose) o.onClose(); }};
   $('.shBg', w).onclick = () => me.close(); $('.shX', w).onclick = () => me.close();
-  document.body.append(w); w.offsetHeight; w.classList.add('on'); sheets.push(me); return me;
+  /* 先讓呼叫的地方把內容放進去、畫好，下一個畫格才開始滑上來，避免滑動時畫面破碎閃爍 */
+  document.body.append(w); sheets.push(me); requestAnimationFrame(() => requestAnimationFrame(() => { if (!me.closed) w.classList.add('on'); })); return me;
 }
 function ask(msg, okLabel, danger) {
   return new Promise(res => { let done = false;

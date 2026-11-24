@@ -197,7 +197,7 @@ h1,h2,h3{margin:0;line-height:1.25;text-wrap:balance}
 /* ---------- 底部面板 ---------- */
 .shWrap{position:fixed;inset:0;z-index:50;display:flex;align-items:flex-end;justify-content:center}
 .shBg{position:absolute;inset:0;background:rgba(30,20,10,.45);opacity:0;transition:opacity .22s}
-.sheet{position:relative;width:100%;max-width:44rem;max-height:92%;display:flex;flex-direction:column;background:var(--bg);border-radius:1.4rem 1.4rem 0 0;box-shadow:0 -10px 40px rgba(0,0,0,.3);transform:translateY(100%);transition:transform .26s cubic-bezier(.2,.8,.2,1)}
+.sheet{position:relative;width:100%;max-width:44rem;max-height:92%;display:flex;flex-direction:column;background:var(--bg);will-change:transform;backface-visibility:hidden;contain:layout paint;border-radius:1.4rem 1.4rem 0 0;box-shadow:0 -10px 40px rgba(0,0,0,.3);transform:translateY(100%);transition:transform .26s cubic-bezier(.2,.8,.2,1)}
 .sheet.full{height:92%}
 .shWrap.on .shBg{opacity:1}.shWrap.on .sheet{transform:none}
 .shHead{display:flex;align-items:center;gap:.4rem;padding:.7rem .6rem .5rem 1.1rem;border-bottom:1px solid var(--border-soft);flex:none}
@@ -1344,3 +1344,14 @@ table.ckT td.s{text-align:center}table.ckT th.s{text-align:center}
 .acLogB .okTag{display:flex;align-items:center;justify-content:center;font-weight:800;color:var(--accent);font-size:.86rem}
 .acLog.ok{opacity:.75}
 .acLogMore{margin-top:.6rem;border-radius:6px}
+.tplFoot{display:grid;grid-template-columns:auto 1fr 1.2fr;gap:.45rem;width:100%}.tplFoot.new{grid-template-columns:1fr}.tplFoot .btn{min-width:0;white-space:nowrap;padding-left:.5rem;padding-right:.5rem;justify-content:center;font-size:.92rem}
+/* 記帳地圖的搜尋列（像 Google 地圖）與搜尋結果標籤 */
+.amGS{position:absolute;left:.6rem;right:.6rem;top:.6rem;z-index:4}
+.amGS .searchBox input{width:100%;height:2.6rem;background:rgba(255,252,246,.97);border:1px solid var(--line);box-shadow:0 2px 8px rgba(60,40,20,.18);padding-right:2.4rem;font-size:.95rem}
+.amGX{position:absolute;right:.35rem;top:50%;transform:translateY(-50%);width:2rem;height:2rem;border:0;background:none;color:var(--muted);font-size:1rem;border-radius:6px}
+.amGR{margin-top:.4rem;max-height:min(30vh,230px);overflow:auto;background:var(--card,#fffaf0);border:1px solid var(--line);border-radius:6px;box-shadow:0 4px 14px rgba(60,40,20,.2)}
+.amGRow{display:flex;align-items:center;gap:.55rem;padding:.55rem .65rem;border-bottom:1px solid var(--line);cursor:pointer}.amGRow:last-child{border-bottom:0}
+.amGRow .grow{min-width:0}.amGRow b{display:block;font-size:.92rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.amGRow small{display:block;color:var(--muted);font-size:.76rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.amGRow .btn{flex:none;white-space:nowrap}.amGHas{flex:none;font-size:.76rem;color:var(--muted)}
+.amPin.res span{background:#c0392b!important;border-color:#fff!important}.amPin.res span i{filter:grayscale(1) brightness(3)}.amPin.res.has span{background:#8a9a5b!important}.amPin.res b{font-size:.66rem}
+.amGFoot{display:grid;grid-template-columns:repeat(auto-fit,minmax(0,1fr));gap:.45rem;width:100%}.amGFoot .btn{min-width:0;white-space:nowrap;padding-left:.4rem;padding-right:.4rem;justify-content:center}

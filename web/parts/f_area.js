@@ -41,15 +41,9 @@ var Area = {cache: new Map(), hideList: false,
   /* 點地圖：區域模式下，點到哪個鄉鎮市區就切到那一區 */
   tap(lon, lat) { if (!S.area || !TW.ready) return; const tw = TW.townAt(lon, lat); if (!tw) return; if (tw.county === S.area.c && tw.name === S.area.t) { if (this.hideList) { this.hideList = false; this.card(); } return; } buzz(15); this.set({c: tw.county, t: tw.name}, false); },
   /* 在地圖上畫外框：縣市粗框、縣內各鄉鎮細線、選取的鄉鎮上色 */
-  draw() { const m = M.map; if (!m || !TW.ready || !m.isStyleLoaded()) { if (m && TW.ready) m.once('idle', () => this.draw()); return; }
-    const a = S.area, co = a && TW.counties[a.c], fc = f => ({type: 'FeatureCollection', features: f}), ft = g => ({type: 'Feature', properties: {}, geometry: g}), tw = a && a.t && co.towns.find(x => x.name === a.t);
-    const data = {'ar-t': fc(co ? co.towns.map(x => ft(x.geom)) : []), 'ar-c': fc(co ? [ft(co.geom)] : []), 'ar-s': fc(tw ? [ft(tw.geom)] : [])};
-    try { for (const k in data) { if (m.getSource(k)) m.getSource(k).setData(data[k]); else m.addSource(k, {type: 'geojson', data: data[k]}); }
-      if (!m.getLayer('ar-t-line')) { const col = '#9a5a34';
-        m.addLayer({id: 'ar-s-fill', type: 'fill', source: 'ar-s', paint: {'fill-color': col, 'fill-opacity': .14}});
-        m.addLayer({id: 'ar-t-line', type: 'line', source: 'ar-t', paint: {'line-color': col, 'line-width': 1.2, 'line-opacity': .55}});
-        m.addLayer({id: 'ar-c-line', type: 'line', source: 'ar-c', layout: {'line-join': 'round'}, paint: {'line-color': col, 'line-width': 3, 'line-opacity': .9}});
-        m.addLayer({id: 'ar-s-line', type: 'line', source: 'ar-s', layout: {'line-join': 'round'}, paint: {'line-color': col, 'line-width': 4}}); } } catch (e) {} },
+  /* 不再畫縣市、鄉鎮的邊界線（看起來雜亂）；舊版留下的圖層一併移除 */
+  draw() { const m = M.map; if (!m || !m.isStyleLoaded || !m.isStyleLoaded()) return;
+    try { ['ar-s-fill', 'ar-t-line', 'ar-c-line', 'ar-s-line'].forEach(id => { if (m.getLayer(id)) m.removeLayer(id); }); ['ar-t', 'ar-c', 'ar-s'].forEach(id => { if (m.getSource(id)) m.removeSource(id); }); } catch (e) {} },
   /* 下方清冊：這一區（再依上方分類篩選）的所有收藏 */
   card() { const a = S.area; if (!a) return; const ps = placesShown(M.filter), f = M.filter === 'all' ? null : (M.filter === '' ? UNCAT : catOf(M.filter));
     showCard(`<div class="row"><div class="grow"><h3>${esc(a.c)}${a.t ? ' ' + esc(a.t) : ''}</h3><div class="small muted">${f ? esc(f.icon + ' ' + f.name) + ' · ' : ''}${ps.length} 間收藏${a.t ? '' : ' · 點地圖上的鄉鎮市區可只看那一區'}</div></div><button class="ic" data-a="ax" aria-label="收起清冊">✕</button></div>
