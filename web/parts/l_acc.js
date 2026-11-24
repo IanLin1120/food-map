@@ -842,7 +842,7 @@ async function accMapInit() {
       else if (m === 'me') accMapLocate(); });
     accGSInit(); AM.map.on('click', () => { const b = $('#amGR'); if (b) b.classList.add('hide'); const i = $('#amGQ'); if (i) i.blur(); });
     /* 一進到記帳的地圖就定位到現在的位置 */
-    AM.map.once('load', () => accMapLocate(true));
+    AM.map.once('load', () => accMapLocate('entry'));
   } catch (e) { $('#accMap').innerHTML = '<div class="empty">這台裝置不支援地圖</div>'; }
 }
 function accMapMarks(L) { if (!AM.map) return; AM.marks.forEach(m => m.remove()); AM.marks = [];
@@ -856,7 +856,7 @@ function accMapLocate(auto) { if (!AM.map) return; Loc.start(); const b = $('#am
       if (!AM.me) { const e = el('<div class="meWrap"><div class="meDot"></div></div>'); AM.me = new maplibregl.Marker({element: e}).setLngLat([L.lon, L.lat]).addTo(AM.map); } else AM.me.setLngLat([L.lon, L.lat]);
       /* 依目前位置自動選縣市、鄉鎮市區，直接顯示那一區的收藏 */
       const tw = TW.init() && TW.townAt(L.lon, L.lat);
-      if (!auto && tw && !(AM.area && AM.area.c === tw.county && AM.area.t === tw.name)) { AM.area = {c: tw.county, t: tw.name}; AM.f = 'all'; AM.q = ''; S.amFold = S.amFold || {}; Object.keys(S.amFold).forEach(k => { S.amFold[k] = false; }); DB.cats.map(c => c.id).concat(['', '_acc']).forEach(k => { S.amFold[k] = false; }); saveS(); AM.fit = false; renderAccMap(); toast(`📍 ${tw.county} ${tw.name}`); }
+      if (auto !== true && tw && !(AM.area && AM.area.c === tw.county && AM.area.t === tw.name)) { AM.area = {c: tw.county, t: tw.name}; AM.f = 'all'; AM.q = ''; S.amFold = S.amFold || {}; Object.keys(S.amFold).forEach(k => { S.amFold[k] = false; }); DB.cats.map(c => c.id).concat(['', '_acc']).forEach(k => { S.amFold[k] = false; }); saveS(); AM.fit = false; renderAccMap(); if (!auto) toast(`📍 ${tw.county} ${tw.name}`); }
       AM.map.flyTo({center: [L.lon, L.lat], zoom: Math.max(AM.map.getZoom(), 15.5), duration: 700}); return; }
     if (++n > 30 || Loc.err === 'denied' || Loc.err === 'off') { b && b.classList.remove('locating'); if (!auto) toast(Loc.err === 'denied' ? '請允許定位權限才能顯示你的位置' : Loc.err === 'off' ? '手機的定位功能是關閉的' : '暫時抓不到位置，請到室外或確認已開啟定位', 3500); return; }
     setTimeout(go, 500); };

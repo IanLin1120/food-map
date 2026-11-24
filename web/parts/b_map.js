@@ -66,8 +66,8 @@ async function initMap() {
     cv.addEventListener('touchmove', e => { const t = e.touches[0]; if (!t || e.touches.length > 1 || Math.hypot(t.clientX - sx, t.clientY - sy) > 10) clearTimeout(lt); }, {passive: true});
     ['touchend', 'touchcancel'].forEach(ev => cv.addEventListener(ev, () => clearTimeout(lt), {passive: true})); }
   syncMarkers();
-  /* 一進 App 就定位到現在的位置 */
-  locWarm(); Loc.start(); Loc.want = 1;
+  /* 一進 App 就定位到現在的位置、朝北，並選好目前的鄉鎮 */
+  locWarm(); Loc.start(); Loc.want = 3;
 }
 function mapResize() { if (M.map) setTimeout(() => M.map.resize(), 30); }
 function flyTo(lat, lon, z) { if (!M.map) return; M.map.flyTo({center: [lon, lat], zoom: Math.max(M.map.getZoom(), z || 16), pitch: S.map3d ? Math.max(M.map.getPitch(), 50) : M.map.getPitch(), duration: 900, essential: true}); }
@@ -123,8 +123,10 @@ function openState(p) {
 function stateHtml(p) { const s = openState(p); if (!s) return ''; return `<span class="dot ${s.open === true ? 'ok' : s.open === false ? 'no' : ''}"></span>${s.open === true ? '營業中 · ' : s.open === false && s.txt !== '今日休息' ? '休息中 · ' : ''}${esc(s.txt)}`; }
 
 /* ---------- 地圖下方資訊卡 ---------- */
-function showCard(html) { const c = $('#mCard'); c.innerHTML = html; c.classList.add('on'); requestAnimationFrame(() => { $('#mapFabs').style.bottom = c.offsetHeight + 22 + 'px'; }); }
-function hideCard() { $('#mCard').classList.remove('on'); $('#mapFabs').style.bottom = ''; }
+function showCard(html) { const c = $('#mCard'); c.innerHTML = html; c.classList.add('on'); requestAnimationFrame(() => { const f = $('#mapFabs'); f.style.bottom = c.offsetHeight + 22 + 'px'; fabFit(); }); }
+/* 下方清冊打開、空間不夠時，先把 ＋／－ 收起來，避免按鈕疊到上面的區域選單 */
+function fabFit() { const f = $('#mapFabs'), bar = $('#areaBar'); if (!f) return; f.classList.remove('tight'); if (!bar) return; const top = bar.getBoundingClientRect().bottom; if (f.getBoundingClientRect().top < top + 8) f.classList.add('tight'); }
+function hideCard() { $('#mCard').classList.remove('on'); $('#mapFabs').style.bottom = ''; $('#mapFabs').classList.remove('tight'); }
 function clearSel() { M.sel = null; M.draft = null; if (M.temp) { M.temp.remove(); M.temp = null; } hideCard(); syncMarkers(); if (S.area && !Area.hideList) Area.card(); }
 function mapBack() { if (curTab !== 'Map') return false; if (!$('#mResults').classList.contains('hide')) { hideResults(); return true; } if (M.sel || M.draft) { clearSel(); return true; } if (S.area) { Area.set(null); return true; } return false; }
 function selectPlace(id, fly) {
@@ -184,7 +186,8 @@ var Loc = {last: null, on: false, wid: null, want: 0, err: '', native() { return
     if (L && Date.now() - L.t < 10000 && acc > L.acc * 2.5 && L.acc < 80) return; /* 剛有精準 GPS 時，不要被粗略的網路定位拉走 */
     this.last = {lat, lon, acc: acc || 0, t: t || Date.now(), src}; this.err = ''; M.meLL = [lat, lon]; this.draw();
     if (this.want) { const fresh = Date.now() - this.last.t < 30000;
-      if (this.want === 1 || (fresh && acc < 120)) { this.fly(this.want === 1); this.want = fresh && acc < 60 ? 0 : 2; if (!this.want) this.busy(false); } }
+      if (this.want === 3) { this.entry(); this.want = fresh && acc < 60 ? 0 : 2; if (!this.want) this.busy(false); }
+      else if (this.want === 1 || (fresh && acc < 120)) { this.fly(this.want === 1); this.want = fresh && acc < 60 ? 0 : 2; if (!this.want) this.busy(false); } }
   },
   fail(code) { this.err = code; if (this.want && !this.last) { this.want = 0; this.busy(false);
     toast(code === 'denied' ? '請允許定位權限才能顯示你的位置' : code === 'off' ? '手機的定位功能是關閉的，請到系統設定開啟「位置」' : '暫時抓不到位置，請到室外或確認已開啟定位', 3500); } },
@@ -193,6 +196,13 @@ var Loc = {last: null, on: false, wid: null, want: 0, err: '', native() { return
     else M.me.setLngLat([L.lon, L.lat]); this.acc(); },
   acc() { if (!M.me || !this.last) return; const z = M.map.getZoom(), mpp = 156543.03 * Math.cos(this.last.lat * Math.PI / 180) / Math.pow(2, z), px = Math.min(400, Math.max(0, this.last.acc / mpp * 2));
     const a = M.me.getElement().querySelector('.meAcc'); a.style.width = a.style.height = px + 'px'; a.style.display = px > 22 ? '' : 'none'; },
+  /* 進 App：飛到目前位置、轉回朝北，並自動選好目前所在的鄉鎮市區 */
+  entry() { if (!M.map || !this.last) return; const L = this.last; M.map.flyTo({center: [L.lon, L.lat], zoom: Math.max(M.map.getZoom(), 15.5), bearing: 0, duration: 700, essential: true});
+    const tw = TW.init() && TW.townAt(L.lon, L.lat); if (tw && !(S.area && S.area.c === tw.county && S.area.t === tw.name) && !M.sel && !M.draft) Area.set({c: tw.county, t: tw.name}, false);
+    if (typeof AM !== 'undefined' && AM.map && curTab === 'AccM') accMapLocate('entry'); },
+  /* 回到 App（離開超過 3 分鐘）也當作重新進來 */
+  resume() { if (!this.hidAt || Date.now() - this.hidAt < 180000) return; this.hidAt = 0; if (curTab === 'AccM') { if (typeof accMapLocate === 'function') accMapLocate('entry'); return; }
+    if (this.last && Date.now() - this.last.t < 20000) this.entry(); else this.want = 3; },
   fly(first) { if (!M.map || !this.last) return; const c = [this.last.lon, this.last.lat];
     if (first) M.map.flyTo({center: c, zoom: Math.max(M.map.getZoom(), 16), duration: 700, essential: true}); else M.map.easeTo({center: c, duration: 500}); },
   busy(b) { const f = $('#fbMe'); if (f) f.classList.toggle('locating', !!b); clearTimeout(this.bt); if (b) this.bt = setTimeout(() => { if (this.want) { this.want = 0; this.busy(false); if (!this.last) toast('暫時抓不到位置，請到室外或確認已開啟定位', 3500); } }, 25000); }
@@ -208,7 +218,7 @@ function locateMe(quiet) {
 async function locWarm() {
   let ok = false; try { if (Loc.native()) ok = !!(NB.locHasPerm && NB.locHasPerm()); else if (navigator.permissions) ok = (await navigator.permissions.query({name: 'geolocation'})).state === 'granted'; } catch (e) {}
   if (ok || S.locOn) Loc.start();
-  document.addEventListener('visibilitychange', () => { if (document.hidden) { Loc.wasOn = Loc.on; Loc.stop(); } else if (Loc.wasOn) Loc.start(); });
+  document.addEventListener('visibilitychange', () => { if (document.hidden) { Loc.wasOn = Loc.on; Loc.hidAt = Date.now(); Loc.stop(); } else { if (Loc.wasOn) Loc.start(); Loc.resume(); } });
 }
 
 /* ---------- 搜尋：Google Places API (New)，與行跡導航相同；沒有金鑰時改用 OpenStreetMap ---------- */

@@ -39,7 +39,12 @@ const dayTotal = k => (DB.days[k] || []).reduce((s, m) => s + mealTotal(m), 0);
 const Meal = {sel: ymd(new Date()), ym: null};
 
 /* ---------- 主畫面 ---------- */
-function renderMeal() {
+/* 舊版點餐的選項可能跟品項本身的份量矛盾（例如「特製涼麵 (特大量)」卻記著「一般量」）：份量以品項為準，把矛盾的份量選項拿掉 */
+function itemSize(x) { if (x.s) return x.s; const m = String(x.n || '').match(/[（(]([^()（）]+)[)）]\s*$/); return m && isSizeWord(m[1].trim()) ? m[1].trim() : ''; }
+function fixOptSize(x) { const z = itemSize(x); if (!z || !x.o) return false; const sz = w => isSizeWord(w) || /^(麵|飯|份)?量?加大$|^加大/.test(w);
+  const a = String(x.o).split(/[，,]/).map(w => w.trim()).filter(Boolean), b = a.filter(w => !sz(w) || w === z); if (b.length === a.length) return false; if (b.length) x.o = b.join('，'); else delete x.o; return true; }
+function fixAllOptSize() { if (fixAllOptSize.done) return; fixAllOptSize.done = 1; let n = 0; Object.values(DB.days || {}).forEach(L => (L || []).forEach(m => (m.items || []).forEach(x => { if (fixOptSize(x)) n++; }))); if (n) saveDays(); }
+function renderMeal() { fixAllOptSize();
   const box = $('#mealBody'); if (!box) return; const sel = ymdDate(Meal.sel); if (!Meal.ym) Meal.ym = [sel.getFullYear(), sel.getMonth()];
   const [Y, Mo] = Meal.ym, first = new Date(Y, Mo, 1), nd = new Date(Y, Mo + 1, 0).getDate(), today = ymd(new Date()), yNow = new Date().getFullYear();
   const yrs = []; for (let y = Math.min(yNow - 5, Y); y <= Math.max(yNow + 2, Y); y++) yrs.push(y);
@@ -228,7 +233,7 @@ function openOrder(m, opt = {}) {
   const cnt = (n, s) => m.items.filter(x => wkey(x) === who && x.n === n && (x.s || '') === (s || '')).reduce((a, x) => a + x.q, 0);
   const add = (n, s, p, o) => { if (!who) { toast('請先新增要點餐的人'); return; } const pv = numP(p), x = m.items.find(i => wkey(i) === who && i.n === n && (i.s || '') === (s || '') && (i.o || '') === (o || '') && numP(i.p) === pv);
     const sh0 = who.startsWith('S:') ? {who: SHARE, share: keyIds(who)} : {who};
-    if (x) x.q++; else m.items.push(Object.assign({id: 'i' + uid(), n, s: s || '', p: pv, q: 1}, sh0, o ? {o} : {})); m.lastWho = who; buzz(12); saveDays(); draw(); };
+    if (x) x.q++; else { const it = Object.assign({id: 'i' + uid(), n, s: s || '', p: pv, q: 1}, sh0, o ? {o} : {}); fixOptSize(it); m.items.push(it); } m.lastWho = who; buzz(12); saveDays(); draw(); };
   const draw = () => { const C = P ? menuChoices(P, rg) : {list: [], regs: [], cur: ''}; rg = C.cur;
     const cus = DB.mcfg.custom.filter(c => (m.place ? c.place === m.place : c.pname === m.pname)).map(c => ({t: 'cus', c: '⭐ 自訂品項', n: c.n, full: c.n, og: [], v: [{s: '', p: c.p}], cid: c.id}));
     const all = cus.concat(C.list), cats = [...new Set(all.map(o => o.c))], hit = o => (!q || o.n.toLowerCase().includes(q)) && (!cat || o.c === cat);
