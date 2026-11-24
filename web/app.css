@@ -1336,3 +1336,11 @@ table.ckT td.s{text-align:center}table.ckT th.s{text-align:center}
 .psChips .chip{border:1.5px solid var(--border);background:var(--surface);flex:none}
 .psChips .chip.on{background:var(--c,var(--accent));border-color:var(--c,var(--accent));color:#fff}.psChips .chip.on .n{color:rgba(255,255,255,.85)}
 .psTools{display:flex;align-items:center;gap:.5rem;margin-bottom:.5rem}.psTools .psHint{flex:1;margin:0}.psTools .btn{border-radius:6px}
+.acLog.col{padding:.7rem .8rem;gap:.5rem}
+.acLog .acLogT{display:flex;flex-direction:row;gap:.65rem;align-items:center;width:100%;border:0;background:none;text-align:left;padding:0}
+.acLog .acLogT .grow{display:flex;flex-direction:column;min-width:0}
+.acLog .acLogT b{font-size:.95rem}.acLog .acLogT b.amt{font-size:1.15rem;margin-top:.05rem}.acLog .acLogT small{color:var(--muted);font-size:.76rem;margin-top:.1rem}
+.acLogB{display:grid;grid-template-columns:1fr 1fr;gap:.45rem;margin-top:.15rem}.acLogB .btn{border-radius:6px;justify-content:center}
+.acLogB .okTag{display:flex;align-items:center;justify-content:center;font-weight:800;color:var(--accent);font-size:.86rem}
+.acLog.ok{opacity:.75}
+.acLogMore{margin-top:.6rem;border-radius:6px}

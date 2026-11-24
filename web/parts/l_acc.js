@@ -584,12 +584,24 @@ function accSettle(p) {
 /* 整批還原一次結清：那次勾選的紀錄全部回到未結清，還款那筆也刪掉 */
 function undoSettle(st) { if (!st) return 0; const n = st.recs.length; DB.acc.recs.forEach(r => { if (r.settled && r.settled[st.p] === st.id) delete r.settled[st.p]; });
   DB.acc.recs = DB.acc.recs.filter(r => r.settle !== st.id); DB.acc.settles = DB.acc.settles.filter(x => x !== st); saveAcc(); renderAcc(); return n; }
+/* 對帳紀錄清理：記帳裡已經刪掉的紀錄從結清裡拿掉；一筆都不剩的結清就移除（還款那筆照樣留在記帳，只是不再算是結清） */
+function accPruneSettles() { const A = DB.acc, ids = new Set(A.recs.map(r => r.id)); let ch = false;
+  A.settles = A.settles.filter(st => { const k = st.recs.filter(id => ids.has(id)); if (k.length !== st.recs.length) { st.recs = k; ch = true; }
+    if (k.length) return true; A.recs.forEach(r => { if (r.settle === st.id) delete r.settle; }); ch = true; return false; });
+  return ch; }
 function accSettleLog() {
-  const sh = sheet({title: '📜 對帳紀錄', full: true}), open = new Set(); const draw = () => { const L = DB.acc.settles.slice().reverse();
-    sh.body.innerHTML = L.map(st => { const R = st.recs.map(id => DB.acc.recs.find(x => x.id === id)).filter(Boolean), tr = DB.acc.recs.find(x => x.settle === st.id);
-      return `<div class="acLog card col"><div class="row" style="gap:.6rem;width:100%"><span class="acDI">${esc(aWho(st.p).icon)}</span><button class="grow acLogT" data-o="${st.id}"><b>${esc(aWho(st.p).name)}・${st.amt >= 0 ? '他還我' : '我還他'} ${money(Math.abs(st.amt))}</b><small>${st.d} 結清・${R.length} 筆${tr ? '・' + esc(acctName(tr.to || tr.acct)) : ''}${tr && tr.via ? '・' + esc(tr.via) : ''} ${open.has(st.id) ? '▴' : '▾'}</small></button><button class="btn sm" data-u="${st.id}">↩ 整批還原</button></div>
-        ${open.has(st.id) ? `<div class="acLogL">${R.map(r => `<div class="acIt"><span class="grow">${r.d.slice(5).replace('-', '/')} ${esc(r.payee || accCat(r).n)}</span><b>${money(Math.abs(accOwe(r, st.p)))}</b><button class="btn sm" data-x="${st.id}:${r.id}">改回未結清</button></div>`).join('')}</div>` : ''}</div>`; }).join('') || '<div class="empty">還沒有對帳紀錄</div>'; };
-  draw(); sh.body.onclick = async e => { const t = e.target.closest('[data-u],[data-o],[data-x]'); if (!t) return; buzz(8);
+  if (accPruneSettles()) saveAcc();
+  let showOk = false; const sh = sheet({title: '📜 對帳紀錄', full: true}), open = new Set(); const draw = () => { const all = DB.acc.settles.slice().reverse(), L = all.filter(st => showOk || !st.ok), nOk = all.filter(st => st.ok).length;
+    sh.body.innerHTML = (L.map(st => { const R = st.recs.map(id => DB.acc.recs.find(x => x.id === id)).filter(Boolean), tr = DB.acc.recs.find(x => x.settle === st.id);
+      return `<div class="acLog card col ${st.ok ? 'ok' : ''}"><button class="acLogT" data-o="${st.id}"><span class="acDI">${esc(aWho(st.p).icon)}</span><span class="grow"><b>${esc(aWho(st.p).name)}・${st.amt >= 0 ? '他還我' : '我還他'}</b><b class="amt">${money(Math.abs(st.amt))}</b><small>${st.d} 結清・${R.length} 筆${tr && acctName(tr.to || tr.acct) ? '・' + esc(acctName(tr.to || tr.acct)) : ''}${tr && tr.via ? '・' + esc(tr.via) : ''} ${open.has(st.id) ? '▴' : '▾'}</small></span></button>
+        ${open.has(st.id) ? `<div class="acLogL">${R.map(r => `<div class="acIt"><span class="grow">${r.d.slice(5).replace('-', '/')} ${esc(r.payee || accCat(r).n)}</span><b>${money(Math.abs(accOwe(r, st.p)))}</b>${st.ok ? '' : `<button class="btn sm" data-x="${st.id}:${r.id}">改回未結清</button>`}</div>`).join('')}</div>` : ''}
+        <div class="acLogB">${st.ok ? `<span class="okTag">✓ 已確認無誤</span><button class="btn sm" data-k="${st.id}">取消確認</button>` : `<button class="btn sm" data-u="${st.id}">↩ 整批還原</button><button class="btn sm pri" data-k="${st.id}">✓ 確認無誤</button>`}</div></div>`; }).join('') || `<div class="empty">${nOk ? '每一批都確認過了 👍' : '還沒有對帳紀錄'}</div>`)
+      + (nOk ? `<button class="btn block acLogMore" data-a="showOk">${showOk ? '隱藏已確認的' : `顯示已確認的 ${nOk} 批`}</button>` : ''); };
+  draw(); sh.body.onclick = async e => { const t = e.target.closest('[data-u],[data-o],[data-x],[data-k],[data-a]'); if (!t) return; buzz(8);
+    if (t.dataset.a === 'showOk') { showOk = !showOk; draw(); return; }
+    if (t.dataset.k) { const st = DB.acc.settles.find(x => x.id === t.dataset.k); if (!st) return;
+      if (!st.ok && !await ask('確認這一批結清沒有問題？確認後就不會顯示在對帳紀錄裡（可以從下面「顯示已確認的」找回來）。', '確認無誤')) return;
+      st.ok = !st.ok; saveAcc(); buzz(20); toast(st.ok ? '✓ 已確認，這批不再顯示' : '已取消確認'); draw(); return; }
     if (t.dataset.o) { if (open.has(t.dataset.o)) open.delete(t.dataset.o); else open.add(t.dataset.o); draw(); return; }
     if (t.dataset.x) { const [sid, rid] = t.dataset.x.split(':'), st = DB.acc.settles.find(x => x.id === sid), r = DB.acc.recs.find(x => x.id === rid); if (!st || !r) return; if (!await ask(`把「${r.payee || accCat(r).n}」改回未結清？這次結清的還款金額會跟著減少。`, '改回未結清')) return; unsettleRec(r, st.p); draw(); renderAcc(); toast('已改回未結清'); return; }
     if (!await ask('整批還原這次結清？這次勾選的紀錄會全部回到「未結清」，那筆還款也會刪除。', '整批還原', true)) return;
