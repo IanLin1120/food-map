@@ -4,7 +4,7 @@
 <script>/* 線上更新開機程式：手機上若已下載比 APK 內建更新的介面版本，就改用新版（存在 IndexedDB）。
    新版連續兩次沒有正常開啟 → 自動退回 APK 內建版本。網址加上 #builtin 也會強制使用內建版本。 */
 (function () {
-  var B = '3.28.0'; if (!window.__OTA) window.APP_BUILTIN = B;
+  var B = '3.29.0'; if (!window.__OTA) window.APP_BUILTIN = B;
   if (window.__OTA || location.hash.indexOf('builtin') >= 0) return;
   var v = null; try { v = JSON.parse(localStorage.getItem('fm.ota') || 'null'); } catch (e) {}
   function gt(a, b) { a = String(a).split('.').map(Number); b = String(b).split('.').map(Number); for (var i = 0; i < Math.max(a.length, b.length); i++) { var p = a[i] || 0, q = b[i] || 0; if (p !== q) return p > q; } return false; }
@@ -1399,6 +1399,13 @@ table.ckT td.s{text-align:center}table.ckT th.s{text-align:center}
 .amGFoot{display:grid;grid-template-columns:repeat(auto-fit,minmax(0,1fr));gap:.45rem;width:100%}.amGFoot .btn{min-width:0;white-space:nowrap;padding-left:.4rem;padding-right:.4rem;justify-content:center}
 .arList .arH{display:flex;align-items:center;gap:.35rem;font-weight:700;font-size:.82rem;color:var(--c,var(--accent));padding:.55rem .2rem .25rem;border-bottom:2px solid color-mix(in srgb,var(--c,#9a5a34) 35%,transparent)}.arList .arH em{font-style:normal;margin-left:auto;font-size:.74rem;color:var(--muted);font-weight:600}
 .mapFabs.tight .zm{display:none}
+/* 店家頁按鈕：4 個排 2×2，5 個時第二排兩個撐滿，不留空格 */
+.dActs{display:flex!important;flex-wrap:wrap}.dActs>.btn{flex:1 1 calc(100% / var(--n,3) - .5rem);min-width:0}
+@media (min-width:760px){.dActs>.btn{flex-basis:calc(100% / 6 - .5rem)}}
+.bkWhat{font-size:.78rem;color:var(--muted);line-height:1.55;margin:-.2rem .3rem .5rem}
+.sameL{display:flex;flex-direction:column;gap:.35rem;width:100%;margin:.2rem 0 .5rem}
+.sameR{display:grid;grid-template-columns:1fr auto 1fr auto;align-items:center;gap:.4rem;padding:.45rem .6rem;border:1px solid var(--line);border-radius:6px;background:var(--bg2,rgba(255,255,255,.4));font-weight:700;font-size:.9rem}
+.sameR span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.sameR small{font-weight:600;font-size:.68rem;color:var(--muted);margin-left:.3rem}.sameR b{color:var(--accent)}.sameR .ic{width:2rem;height:2rem}
 </style>
 </head>
 <body>
@@ -3872,7 +3879,7 @@ var qrcode = function() {
 /* ============================================================
    日日帳本 — 核心：工具、資料儲存、主題、面板、拖曳排序、圖片
    ============================================================ */
-const APP_VERSION = '3.28.0';
+const APP_VERSION = '3.29.0';
 const APP_VER = APP_VERSION;
 /* 線上更新來源（GitHub Pages）：IanLin1120/food-map */
 const GH = {repo: 'https://github.com/IanLin1120/food-map', pages: 'https://ianlin1120.github.io/food-map/'};
@@ -3922,6 +3929,11 @@ const CAT_EMOJI = '🍳 🥪 🥞 🥐 🍱 🍛 🍜 🍝 🍚 🍙 🍣 🥟 �
 const SHOP_CATS = [['量販店', '🛒', '#C23B4E'], ['超市', '🧺', '#5A7A44'], ['超商', '🏪', '#3F6E8C'], ['外送', '🛵', '#D2603A'], ['藥妝', '💊', '#8A5A9E'], ['其他', '🛍️', '#6B5344']];
 const UNCAT = {id: '', name: '未分類', icon: '📍', color: '#7d6c57'};
 const catOf = id => DB.cats.find(c => c.id === id) || UNCAT;
+/* 菜單只有吃的、喝的店才需要：分類可以自己設定「有菜單」，沒設定就看分類名稱；停車場、加油站這類一律不顯示菜單 */
+const FOOD_RE = /早餐|午餐|晚餐|宵夜|消夜|點心|甜點|飲|咖啡|小吃|餐|食|麵|飯|吃|茶|酒|甜|烘焙|麵包|鍋|燒烤|燒肉|便當|冰|手搖|早午|料理|拉麵|壽司|披薩|漢堡|牛排|滷味|鹹酥|雞排|豆花|蛋糕/,
+  NOMENU_RE = /停車|加油|充電|洗車|機車|汽車|修車|保養|輪胎|銀行|郵局|ATM|醫院|診所|藥局|藥妝|牙醫|眼科|學校|公園|車站|捷運|公車|客運|五金|家具|家居|服飾|鞋|超市|量販|便利|美髮|理髮|美甲|健身|電信|通訊|旅館|民宿|住宿|公所|戶政|寺|廟|宮|教會|文具|書局|寵物|動物醫院|洗衣|影印|3C|電器|百貨|市場|停車場|加油站/i;
+const catMenu = c => c && c.menu != null ? !!c.menu : !c || c.id === UNCAT.id ? true : FOOD_RE.test(c.name || '');
+function hasMenu(p) { if (!p) return false; if ((p.menu || []).length || (p.albums || []).some(a => (a.imgs || []).length)) return true; if (NOMENU_RE.test((p.tag || '') + ' ' + (p.gtype || ''))) return false; const c = catOf(p.cat); if (c.menu != null) return !!c.menu; if (NOMENU_RE.test(p.name || '') && !FOOD_RE.test(p.name || '')) return false; return catMenu(c); }
 
 const saveS = debounce(() => { IDB.put('kv', 'S', S).catch(() => {}); try { localStorage.setItem('fm.theme', JSON.stringify({theme: S.theme, palette: S.palette, scale: S.scale})); } catch (e) {} }, 150);
 const saveCats = () => IDB.put('kv', 'cats', DB.cats).catch(saveErr);
@@ -4028,10 +4040,10 @@ function sheet(o) {
   /* 先讓呼叫的地方把內容放進去、畫好，下一個畫格才開始滑上來，避免滑動時畫面破碎閃爍 */
   document.body.append(w); sheets.push(me); requestAnimationFrame(() => requestAnimationFrame(() => { if (!me.closed) w.classList.add('on'); })); return me;
 }
-function ask(msg, okLabel, danger) {
+function ask(msg, okLabel, danger, noLabel) {
   return new Promise(res => { let done = false;
     const w = el(`<div class="shWrap center"><div class="shBg"></div><div class="dlg"><p></p><div class="row"><button class="btn ghost" data-a="0">取消</button><button class="btn ${danger ? 'danger' : 'pri'}" data-a="1"></button></div></div></div>`);
-    $('p', w).textContent = msg; $('[data-a="1"]', w).textContent = okLabel || '確定';
+    $('p', w).textContent = msg; $('[data-a="1"]', w).textContent = okLabel || '確定'; if (noLabel) $('[data-a="0"]', w).textContent = noLabel;
     const me = {el: w, closed: false, close(v) { if (done) return; done = true; me.closed = true; const i = sheets.indexOf(me); if (i >= 0) sheets.splice(i, 1); w.classList.remove('on'); setTimeout(() => w.remove(), 220); res(!!v); }};
     $('.shBg', w).onclick = () => me.close(false); $$('button', w).forEach(b => b.onclick = () => me.close(b.dataset.a === '1'));
     document.body.append(w); w.offsetHeight; w.classList.add('on'); sheets.push(me); });
@@ -4315,7 +4327,7 @@ function selectPlace(id, fly) {
   showCard(`<div class="row" style="align-items:flex-start"><div class="grow" data-a="open"><h3>${esc(p.name)}</h3>
     <div class="small" style="margin:.25rem 0"><span class="tag" style="--c:${c.color}">${esc(c.icon)} ${esc(c.name)}</span></div>
     ${stateHtml(p) ? `<div class="small muted row" style="gap:.35rem">${stateHtml(p)}</div>` : ''}<div class="small muted">${esc(p.addr || '')}</div></div><button class="ic" data-a="x">✕</button></div>
-    <div class="acts"><button class="btn pri" data-a="open">詳細資料</button><button class="btn olive" data-a="nav">🧭 導航</button><button class="btn" data-a="menu">📋 菜單${n ? ' ' + n : ni ? ' 🖼️' : ''}</button>${(() => { const k = Object.values(DB.bills || {}).reduce((t, L) => t + L.filter(b => b.place === p.id).length, 0); return k ? `<button class="btn" data-a="recs">🧾 紀錄 ${k}</button>` : ''; })()}</div>`);
+    <div class="acts"><button class="btn pri" data-a="open">詳細資料</button><button class="btn olive" data-a="nav">🧭 導航</button>${hasMenu(p) ? `<button class="btn" data-a="menu">📋 菜單${n ? ' ' + n : ni ? ' 🖼️' : ''}</button>` : ''}${(() => { const k = Object.values(DB.bills || {}).reduce((t, L) => t + L.filter(b => b.place === p.id).length, 0); return k || !hasMenu(p) ? `<button class="btn" data-a="recs">🧾 ${hasMenu(p) ? '紀錄' : '消費紀錄'}${k ? ' ' + k : ''}</button>` : ''; })()}</div>`);
 }
 function initCard() {
   $('#mCard').addEventListener('click', e => { const a = e.target.closest('[data-a]'); if (!a) return; const act = a.dataset.a;
@@ -5081,7 +5093,7 @@ function gmMenuGuide(p) {
 }
 /* ---------- 接收其他 App「分享」過來的圖片（截圖、相簿） ---------- */
 /* 分享進來的圖片要做什麼 */
-function shareKind(n) { return new Promise(res => { let done = false; const sh = sheet({title: `收到 ${n} 張圖片，要拿來做什麼？`, onClose() { if (!done) res(null); }, html: `<div class="actList"><button data-k="menu">📋 店家的菜單（存到收藏的店家，可以 AI 辨識成表格）</button><button data-k="shop">🧾 購物明細（AI 辨識品項，拿來分帳）</button><button data-k="inv">🎫 發票截圖（AI 讀發票號碼和品項）</button></div>`});
+function shareKind(n) { return new Promise(res => { let done = false; const sh = sheet({title: `收到 ${n} 張圖片，要拿來做什麼？`, onClose() { if (!done) res(null); }, html: `<div class="actList"><button data-k="menu">📋 店家的菜單（存到收藏的店家，可以 AI 辨識成表格）</button><button data-k="shop">🧾 消費明細（AI 辨識品項，拿來分帳）</button><button data-k="inv">🎫 發票截圖（AI 讀發票號碼和品項）</button></div>`});
   sh.body.onclick = e => { const t = e.target.closest('[data-k]'); if (!t) return; buzz(10); done = true; sh.close(); res(t.dataset.k); }; }); }
 var Share = {
   expect(id) { lsSet('fm.shareFor', {id, t: Date.now()}); },
@@ -5194,9 +5206,10 @@ function openMenuImgs(p) { const items = []; albumsOf(p).forEach((a, i) => a.img
 /* ---------- 收藏地點：明細 ---------- */
 function openPlace(id, toMenu) {
   const p = DB.places.find(x => x.id === id); if (!p) return; let editT = false, mq = '', mc = '';
-  /* 店家頁下面分兩個分頁：📋 菜單（美食）／🧾 購物紀錄（分帳），互不干擾 */
+  /* 店家頁下面分兩個分頁：📋 菜單（美食）／🧾 消費紀錄（分帳），互不干擾 */
   const nBills = () => Object.values(DB.bills || {}).reduce((t, L) => t + L.filter(b => b.place === p.id).length, 0);
-  let ptab = toMenu === 'recs' ? 'recs' : toMenu ? 'menu' : ((p.menu || []).length || (p.albums || []).some(a => (a.imgs || []).length) || !nBills() ? 'menu' : 'recs');
+  const HM = () => hasMenu(p);
+  let ptab = !HM() ? 'recs' : toMenu === 'recs' ? 'recs' : toMenu ? 'menu' : ((p.menu || []).length || (p.albums || []).some(a => (a.imgs || []).length) || !nBills() ? 'menu' : 'recs');
   /* 區域：目前選的區域＋不分區的列 */
   if ((p.menu || []).some(r => r.g)) { const f = fixRegions(p.menu); if (f !== p.menu) { p.menu = f; savePlace(p); } }
   const regsOf = () => { const r = []; (p.menu || []).forEach(x => { if (x.g && !r.includes(x.g)) r.push(x.g); }); return rgSorted(r); };
@@ -5294,13 +5307,13 @@ function openPlace(id, toMenu) {
     sh.body.innerHTML = `<div class="dHero" style="--c:${c.color}"><div class="ico">${esc(c.icon)}</div><div class="grow"><h2>${esc(p.name)}</h2>
         <div style="margin:.3rem 0"><span class="tag" style="--c:${c.color}">${esc(c.name)}</span>${p.rating ? ` <span class="small muted">⭐ ${p.rating}${p.ratingN ? '（' + p.ratingN + ' 則）' : ''}</span>` : ''}</div>
         ${stateHtml(p) ? `<div class="small muted row" style="gap:.35rem">${stateHtml(p)}</div>` : ''}</div></div>
-      <div class="dActs"><button class="btn olive" data-a="nav"><span>🧭</span>導航</button><button class="btn" data-a="gm"><span>🗺️</span>Google 地圖</button><button class="btn" data-a="show"><span>📍</span>在地圖上看</button>
+      <div class="dActs" style="--n:${(n => n === 4 ? 2 : 3)(3 + !!p.phone + !!p.web + !!S.gkey)}"><button class="btn olive" data-a="nav"><span>🧭</span>導航</button><button class="btn" data-a="gm"><span>🗺️</span>Google 地圖</button><button class="btn" data-a="show"><span>📍</span>在地圖上看</button>
         ${p.phone ? '<button class="btn" data-a="tel"><span>📞</span>撥打電話</button>' : ''}${p.web ? '<button class="btn" data-a="web"><span>🌐</span>網站</button>' : ''}${S.gkey ? '<button class="btn" data-a="gfill"><span>🔄</span>更新資訊</button>' : ''}</div>
       <div class="info"><div class="ln" data-a="copyAddr"><span class="k">📍</span><span class="v">${esc(p.addr || '（尚未填寫地址）')}</span></div>
         <div class="ln"><span class="k">🕒</span><span class="v hours">${(p.hours || []).length ? p.hours.map((h, i) => `<div class="${i === hi ? 'td' : ''}">${esc(h)}</div>`).join('') : '<span class="muted">（尚未填寫營業時間' + (S.gkey ? '，可按上方「更新資訊」從 Google 帶入' : '') + '）</span>'}</span></div>
         ${p.phone ? `<div class="ln"><span class="k">📞</span><span class="v">${esc(p.phone)}</span></div>` : ''}
         ${p.note ? `<div class="ln"><span class="k">📝</span><span class="v" style="white-space:pre-wrap">${esc(p.note)}</span></div>` : ''}</div>
-      <div class="pTabs" id="menuTop"><button data-pt="menu" class="${ptab === 'menu' ? 'on' : ''}">📋 菜單<em>${(p.menu || []).length || ''}</em></button><button data-pt="recs" class="${ptab === 'recs' ? 'on' : ''}">🧾 購物紀錄<em>${nBills() || ''}</em></button></div>
+      ${HM() ? '' : '<div id="menuTop"></div>'}<div class="pTabs ${HM() ? '' : 'hide'}" id="${HM() ? 'menuTop' : 'menuTop2'}"><button data-pt="menu" class="${ptab === 'menu' ? 'on' : ''}">📋 菜單<em>${(p.menu || []).length || ''}</em></button><button data-pt="recs" class="${ptab === 'recs' ? 'on' : ''}">🧾 消費紀錄<em>${nBills() || ''}</em></button></div>
       ${ptab === 'recs' ? shopPlaceHtml(p) : `      <div class="h3 pTabH"><span class="grow">📋 菜單 <span class="muted small" style="font-weight:600">${(p.menu || []).length ? p.menu.length + ' 個品項' : ''}</span></span></div>
       ${job ? `<div class="jobBar"><span class="spin"></span><span class="grow">${esc(job.msg || 'AI 處理中…')}<small>在背景執行中，完成後會自動帶入，可以先離開這個畫面</small></span></div>` : ''}
       <div class="mBtns"><button class="btn pri" data-a="imgs" ${ni ? '' : 'disabled'}>🖼️ 打開菜單圖檔${ni ? `（${nv > 1 ? nv + ' 個版本・' : ''}${ni} 張）` : ''}</button><button class="btn" data-a="albums">🗂️ ${ni ? '管理圖檔' : '加入菜單圖片'}</button>
@@ -5384,10 +5397,12 @@ function editCat(cat, done, kind) {
   sh.body.innerHTML = `<div class="row" style="justify-content:center;margin:.3rem 0 1.4rem;height:3.2rem">${K.flag ? '<div style="position:relative;width:3rem;height:3rem"><div class="pin" id="cPrev" style="position:absolute;left:.6rem;bottom:.2rem"><div class="base"></div><div class="pole"></div><div class="knob"></div><div class="flag"></div></div></div>' : ''}<span class="chip on" id="cChip"></span></div>
     <div class="field"><label>分類名稱</label><input id="cN" value="${esc(d.name)}" placeholder="${K.ph}" maxlength="12"></div>
     <div class="field"><label>圖示</label><div class="emoGrid" id="cE">${CAT_EMOJI.map(x => `<button data-e="${x}">${x}</button>`).join('')}</div><div class="row" style="margin-top:.5rem"><span class="small muted" style="white-space:nowrap">或自己輸入：</span><input id="cI" value="${esc(d.icon)}" maxlength="4" style="width:5rem;text-align:center;font-size:1.2rem"></div></div>
+    ${K.flag ? `<label class="field row" style="gap:.6rem;align-items:center;cursor:pointer"><input type="checkbox" id="cM" ${catMenu(d) ? 'checked' : ''} style="width:1.2rem;height:1.2rem"><span class="grow"><b>這類店家有菜單</b><br><small class="muted">吃的、喝的店才需要；停車場、加油站、超市這類不用勾，店家頁就只顯示消費紀錄</small></span></label>` : ''}
     <div class="field"><label>${K.color}</label><div class="swGrid" id="cS">${CAT_COLORS.map(c => `<button class="sw" data-c="${c}" style="--c:${c}" aria-label="${c}"></button>`).join('')}<label class="sw" style="--c:conic-gradient(red,orange,yellow,lime,cyan,blue,magenta,red);background:var(--c)" title="自訂顏色"><input type="color" id="cC" value="${/^#[0-9a-f]{6}$/i.test(d.color) ? d.color : '#a2613a'}"></label></div></div>`;
   const upd = () => { if (K.flag) { $('#cPrev', sh.body).style.setProperty('--c', d.color); $('#cPrev .flag', sh.body).textContent = d.icon; } const ch = $('#cChip', sh.body); ch.style.setProperty('--c', d.color); ch.textContent = d.icon + ' ' + (d.name || '分類名稱');
     $$('#cE button', sh.body).forEach(b => b.classList.toggle('on', b.dataset.e === d.icon)); $$('#cS .sw[data-c]', sh.body).forEach(b => b.classList.toggle('on', b.dataset.c.toLowerCase() === d.color.toLowerCase())); };
   upd();
+  const cm = $('#cM', sh.body); if (cm) cm.onchange = () => { d.menu = cm.checked; buzz(8); };
   $('#cN', sh.body).oninput = e => { d.name = e.target.value.trim(); upd(); }; $('#cI', sh.body).oninput = e => { d.icon = e.target.value.trim() || '🍴'; upd(); }; $('#cC', sh.body).oninput = e => { d.color = e.target.value; upd(); };
   $('#cE', sh.body).onclick = e => { const b = e.target.closest('button'); if (!b) return; d.icon = b.dataset.e; $('#cI', sh.body).value = d.icon; upd(); };
   $('#cS', sh.body).onclick = e => { const b = e.target.closest('.sw[data-c]'); if (!b) return; d.color = b.dataset.c; upd(); };
@@ -5711,9 +5726,13 @@ async function saveFile(name, blob) {
   const u = URL.createObjectURL(blob), a = document.createElement('a'); a.href = u; a.download = name; document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 5000); return name;
 }
 /* 整個日日帳本打包成一個 JSON（含所有圖片）：本機匯出、雲端備份共用 */
-async function makeBackupBlob() {
+/* 備份內容：收藏店家、菜單、點餐、分帳、發票、記帳（常用紀錄、帳戶、對帳、商家）、資產、購物清單、食譜、所有分類與設定、所有圖片；
+   自己輸入的 Google Maps／AI 金鑰也一起備份（傳給別人時可以不帶）。只有雲端登入狀態和記帳密碼不備份（綁在這支手機）。 */
+const BACKUP_WHAT = '收藏店家與菜單、點餐、分帳、發票、記帳（常用紀錄、帳戶、對帳、商家）、資產、購物清單、食譜、分類、所有設定、API 金鑰和所有圖片';
+async function makeBackupBlob(opt = {}) {
   const Sx = Object.assign({}, S); delete Sx.gkey; delete Sx.aikey; delete Sx.pc; delete Sx.gd;
-  const parts = [`{"app":"shiguang-foodmap","v":1,"t":${Date.now()},"S":${JSON.stringify(Sx)},"cats":${JSON.stringify(DB.side.food.cats)},"shared1":1,"bills":${JSON.stringify(DB.bills || {})},"scfg":${JSON.stringify(DB.scfg || null)},"invs":${JSON.stringify(DB.invs || {})},"lists":${JSON.stringify(DB.lists || {})},"acc":${JSON.stringify(DB.acc || null)},"rcats":${JSON.stringify(DB.rcats)},"places":${JSON.stringify(DB.side.food.places)},"recipes":${JSON.stringify(DB.recipes)},"mcfg":${JSON.stringify(DB.mcfg || null)},"days":${JSON.stringify(DB.days || {})},"imgs":{`];
+  const apik = opt.noKeys ? null : {gkey: S.gkey || '', aikey: S.aikey || ''}, cs = await IDB.get('kv', 'cats_shop').catch(() => null);
+  const parts = [`{"app":"shiguang-foodmap","v":1,"t":${Date.now()},"S":${JSON.stringify(Sx)},"cats":${JSON.stringify(DB.side.food.cats)},"shared1":1,"bills":${JSON.stringify(DB.bills || {})},"scfg":${JSON.stringify(DB.scfg || null)},"invs":${JSON.stringify(DB.invs || {})},"lists":${JSON.stringify(DB.lists || {})},"acc":${JSON.stringify(DB.acc || null)},"rcats":${JSON.stringify(DB.rcats)},"places":${JSON.stringify(DB.side.food.places)},"recipes":${JSON.stringify(DB.recipes)},"mcfg":${JSON.stringify(DB.mcfg || null)},"days":${JSON.stringify(DB.days || {})},"keys":${JSON.stringify(apik)},"cats_shop":${JSON.stringify(cs || null)},"imgs":{`];
   const keys = await IDB.keys('imgs'); let n = 0; for (const k of keys) { const r = await IDB.get('imgs', k); if (!r) continue; parts.push((n++ ? ',' : '') + JSON.stringify(k) + ':' + JSON.stringify({type: r.type, w: r.w, h: r.h, d: await blobB64(new Blob([r.buf]))})); }
   parts.push('}}'); return new Blob(parts, {type: 'application/json'});
 }
@@ -5731,7 +5750,7 @@ async function applyBackup(j, keepCloud) {
   for (const k in j.imgs || {}) { const r = j.imgs[k]; await IDB.put('imgs', k, {buf: b64buf(r.d), type: r.type || 'image/jpeg', w: r.w, h: r.h}); }
   for (const p of j.places) await IDB.put('places', p.id, p); for (const r of j.recipes || []) await IDB.put('recipes', r.id, r);
   await IDB.put('kv', 'cats', j.cats || []); if (j.rcats) await IDB.put('kv', 'rcats', j.rcats); if (j.mcfg) await IDB.put('kv', 'mcfg', j.mcfg); await IDB.put('kv', 'days', j.days || {}); if (j.cats_shop) await IDB.put('kv', 'cats_shop', j.cats_shop); await IDB.put('kv', 'bills', j.bills || {}); if (j.scfg) await IDB.put('kv', 'scfg', j.scfg); if (j.shared1) await IDB.put('kv', 'shared1', 1); else await IDB.del('kv', 'shared1').catch(() => {}); if (j.invs) await IDB.put('kv', 'invs', j.invs); if (j.lists) await IDB.put('kv', 'lists', j.lists); if (j.acc) await IDB.put('kv', 'acc', j.acc);
-  await IDB.put('kv', 'S', Object.assign({}, S_DEF, j.S || {}, {gkey: S.gkey, aikey: S.aikey, pc: S.pc, gd: S.gd, onboard: true}));
+  const K = j.keys || {}; await IDB.put('kv', 'S', Object.assign({}, S_DEF, j.S || {}, {gkey: S.gkey || K.gkey || '', aikey: S.aikey || K.aikey || '', pc: S.pc, gd: S.gd, onboard: true}));
 }
 function importBackup() { const f = $('#jsonPick'); f.value = ''; f.onchange = async () => { const file = f.files[0]; if (!file) return;
   try { busy('讀取備份檔…'); const j = JSON.parse(await file.text()); busy(false); if (!/^shiguang/.test(j.app || '') || !Array.isArray(j.places)) throw new Error('這不是日日帳本的備份檔');
@@ -6271,11 +6290,16 @@ function openMealSettings(after) {
     const days = Object.keys(DB.days).length;
     sh.body.innerHTML = ['types', 'people'].map(k => `<div class="msSec"><div class="msH"><b class="grow">${MK[k].title}</b><button class="btn sm" data-a="add" data-k="${k}">＋ 新增</button></div><div class="small muted" style="margin:-.2rem 0 .5rem">按住 ☰ 拖曳調整順序</div>
         <div class="msL" data-k="${k}">${DB.mcfg[k].map(t => `<div class="msR" data-id="${t.id}"><span class="grip"></span><span class="msI">${esc(t.icon)}</span><b class="grow">${esc(t.name)}</b><button class="btn sm" data-a="edit">✎ 編輯</button></div>`).join('') || '<div class="empty" style="padding:.8rem">還沒有' + MK[k].title + '</div>'}</div></div>`).join('')
+      + (DB.acc ? `<div class="msSec"><div class="msH"><b class="grow">🔗 同一個人，不同綽號</b></div><div class="small muted" style="margin:-.2rem 0 .5rem">例如這裡叫「便當哥」、記帳叫「因因」：從分帳匯入記帳時會自動對到同一個人</div>
+        ${(() => { const L = Object.keys(accSame()).filter(k => mealWho(k)); return L.length ? `<div class="sameL">${L.map(k => { const a = mealWho(k), m = aWho(k); return `<div class="sameR"><span>${esc(a.icon)} ${esc(a.name)}<small>日常</small></span><b>＝</b><span>${esc(m.icon)} ${esc(m.name)}<small>記帳</small></span><button class="ic" data-a="mUnlink" data-k="${esc(k)}" aria-label="取消">✕</button></div>`; }).join('')}</div>` : ''; })()}
+        <button class="btn block" data-a="mLink">🔗 設定同一個人</button></div>` : '')
       + `<div class="msSec"><div class="msH"><b class="grow">自訂品項</b></div><div class="small muted" style="margin:-.2rem 0 .5rem">點餐時自己輸入的品項，會依店家記住</div>${Object.keys(cus).map(k => `<div class="msG">🏪 ${esc(k)}</div>${cus[k].map(c => `<div class="msR" data-cid="${c.id}"><b class="grow">${esc(c.n)}</b><span class="muted">${money(c.p)}</span><button class="btn sm" data-a="cEdit">✎</button><button class="ic" data-a="cDel" style="color:var(--danger)" aria-label="刪除">🗑</button></div>`).join('')}`).join('') || '<div class="empty" style="padding:.8rem">還沒有自訂品項</div>'}</div>
       <div class="msSec"><div class="msH"><b class="grow">點餐紀錄</b></div><div class="small muted">共有 ${days} 天的紀錄。紀錄會一起放進「設定 → 匯出備份」。</div>${days ? '<button class="btn sm danger" data-a="wipeDays" style="margin-top:.6rem">清除所有點餐紀錄</button>' : ''}</div>`;
     $$('.msL', sh.body).forEach(l => sortable(l, {item: '.msR', handle: '.grip', scroller: sh.body, onSort(from, to) { moveItem(DB.mcfg[l.dataset.k], from, to); saveMcfg(); draw(); }})); };
   draw();
   sh.body.addEventListener('click', async e => { const b = e.target.closest('[data-a]'); if (!b) return; const a = b.dataset.a;
+    if (a === 'mLink') { buzz(10); if (!await AccLock.need()) return; if (await accLinkAskMeal()) draw(); return; }
+    if (a === 'mUnlink') { const k = b.dataset.k, u = mealWho(k); if (!await ask(`取消「${u ? u.name : ''}」＝「${aWho(k).name}」？\n之後從分帳匯入記帳時就會分開算。`, '取消連結', true)) return; buzz(15); accUnlink(k); draw(); return; }
     if (a === 'add') editMealCfg(b.dataset.k, null, draw);
     else if (a === 'edit') { const k = b.closest('.msL').dataset.k; editMealCfg(k, DB.mcfg[k].find(t => t.id === b.closest('.msR').dataset.id), draw); }
     else if (a === 'cEdit' || a === 'cDel') { const c = DB.mcfg.custom.find(x => x.id === b.closest('.msR').dataset.cid); if (!c) return;
@@ -6476,7 +6500,7 @@ function renderShop() {
       ${calHead(Y, Mo)}
       <div class="calWd">${MWD.map((w, i) => `<span class="${i === 0 || i === 6 ? 'we' : ''}">${w}</span>`).join('')}</div><div class="calG">${cells}</div></div>
     <div class="dayHead"><b class="dhD">${sel.getMonth() + 1}月${sel.getDate()}日 星期${MWD[sel.getDay()]}</b><span class="grow"></span>${bs.length ? `<span class="dayTot">${money(dayTot)}</span><button class="btn sm" data-a="exportDay">📤 匯出</button>` : ''}</div>
-    ${bs.map(billCard).join('') || '<div class="empty mealEmpty"><span class="big">🧾</span>這天還沒有購物明細<br><span class="small">按上面的「上傳明細」拍照或選截圖，或「手動輸入」<br>也可以在 Foodpanda、相簿裡按「分享」傳給日日帳本</span></div>'}
+    ${bs.map(billCard).join('') || '<div class="empty mealEmpty"><span class="big">🧾</span>這天還沒有消費明細<br><span class="small">按上面的「上傳明細」拍照或選截圖，或「手動輸入」<br>也可以在 Foodpanda、相簿裡按「分享」傳給日日帳本</span></div>'}
     
     ${order.length ? `<div class="perSum card"><div class="psH">👥 每個人這天要付</div>${order.map(id => { const u = mWho(id); return `<div class="psR"><span class="psI">${esc(u.icon)}</span><b class="grow">${esc(u.name)}</b><span>${money(per[id])}</span></div>`; }).join('')}<div class="psR tot"><b class="grow">合計</b><span>${money(dayTot)}</span></div></div>` : ''}`;
 }
@@ -6537,9 +6561,9 @@ function gotoBill(k, id) { const d = ymdDate(k); Shop.sel = k; Shop.ym = [d.getF
 function shopPlaceHtml(p) {
   const L = []; Object.keys(DB.bills).sort().reverse().forEach(k => DB.bills[k].forEach(b => { if (b.place === p.id) L.push({k, b}); }));
   const tot = L.reduce((s, r) => s + billCalc(r.b).computed, 0);
-  return `<div class="h3 pTabH"><span class="grow">🧾 購物紀錄 <span class="muted small" style="font-weight:600">${L.length ? L.length + ' 筆・' + money(tot) : ''}</span></span></div>
+  return `<div class="h3 pTabH"><span class="grow">🧾 消費紀錄 <span class="muted small" style="font-weight:600">${L.length ? L.length + ' 筆・' + money(tot) : ''}</span></span></div>
     <div class="mBtns"><button class="btn pri" data-a="sbNew">＋ 新增這家店的明細</button></div>
-    ${L.length ? L.slice(0, 30).map(r => `<button class="srD" data-a="sbGo" data-k="${r.k}" data-id="${r.b.id}"><div class="row"><b class="grow">${dayLabel(r.k)}${r.b.time ? ' ' + esc(r.b.time) : ''}</b><span class="srA">${money(billCalc(r.b).computed)}</span></div><div class="srL">${esc(r.b.items.slice(0, 4).map(x => x.n).join('、'))}${r.b.items.length > 4 ? '…' : ''}</div></button>`).join('') : '<div class="empty" style="padding:1rem">這家店還沒有購物紀錄</div>'}`;
+    ${L.length ? L.slice(0, 30).map(r => `<button class="srD" data-a="sbGo" data-k="${r.k}" data-id="${r.b.id}"><div class="row"><b class="grow">${dayLabel(r.k)}${r.b.time ? ' ' + esc(r.b.time) : ''}</b><span class="srA">${money(billCalc(r.b).computed)}</span></div><div class="srL">${esc(r.b.items.slice(0, 4).map(x => x.n).join('、'))}${r.b.items.length > 4 ? '…' : ''}</div></button>`).join('') : '<div class="empty" style="padding:1rem">這家店還沒有消費紀錄</div>'}`;
 }
 
 function initShop() {
@@ -6561,7 +6585,7 @@ function initShop() {
   box.addEventListener('click', e => { const card = e.target.closest('.bill'); if (card && !e.target.closest('button')) { const b = curBill(card.dataset.b); if (b) editBill(b); } });
 }
 function billMore(b) {
-  const sh = sheet({title: '🧾 ' + (billStore(b) || '購物明細'), html: `<div class="actList"><button data-a="exp">📤 匯出這筆（文字／Excel）</button>${(b.imgs || []).length ? '<button data-a="imgs">🖼️ 看明細圖片</button>' : ''}${shopPlaces().some(p => p.id === b.place) ? '<button data-a="open">🏪 打開店家</button>' : ''}<button data-a="toAcc">📒 匯入記帳（帶入每個人分到的金額）</button><button data-a="toInv">🧾 套用到發票（取代品項和折扣）</button><button data-a="move">📅 改到其他日期</button><button data-a="del" class="dng">🗑 刪除這筆</button></div>`});
+  const sh = sheet({title: '🧾 ' + (billStore(b) || '消費明細'), html: `<div class="actList"><button data-a="exp">📤 匯出這筆（文字／Excel）</button>${(b.imgs || []).length ? '<button data-a="imgs">🖼️ 看明細圖片</button>' : ''}${shopPlaces().some(p => p.id === b.place) ? '<button data-a="open">🏪 打開店家</button>' : ''}<button data-a="toAcc">📒 匯入記帳（帶入每個人分到的金額）</button><button data-a="toInv">🧾 套用到發票（取代品項和折扣）</button><button data-a="move">📅 改到其他日期</button><button data-a="del" class="dng">🗑 刪除這筆</button></div>`});
   sh.body.onclick = async e => { const t = e.target.closest('[data-a]'); if (!t) return; const a = t.dataset.a; sh.close();
     if (a === 'exp') openShopExport(Shop.sel, b.id);
     else if (a === 'toInv') billToInv(b); else if (a === 'toAcc') { if (await enterAcc()) billToAcc(b); }
@@ -6569,7 +6593,7 @@ function billMore(b) {
     else if (a === 'open') openPlace(b.place);
     else if (a === 'move') { const v = await askText('改到哪一天？（年-月-日）', Shop.sel); if (!v) return; const k = v.trim().replace(/[/.]/g, '-'), d = new Date(k + 'T00:00'); if (isNaN(d)) { toast('日期格式不正確'); return; }
       const L = dayBills(Shop.sel); L.splice(L.indexOf(b), 1); (DB.bills[ymd(d)] = DB.bills[ymd(d)] || []).push(b); shopChanged(); toast('已移到 ' + ymd(d)); }
-    else if (a === 'del') { if (!await ask('確定要刪除這筆購物明細嗎？', '刪除', true)) return; const L = dayBills(Shop.sel); L.splice(L.indexOf(b), 1); for (const id of b.imgs || []) await imgDel(id); shopChanged(); } };
+    else if (a === 'del') { if (!await ask('確定要刪除這筆消費明細嗎？', '刪除', true)) return; const L = dayBills(Shop.sel); L.splice(L.indexOf(b), 1); for (const id of b.imgs || []) await imgDel(id); shopChanged(); } };
 }
 
 /* ---------- 新增：手動或上傳圖片 ---------- */
@@ -6791,7 +6815,7 @@ function pickPeople(cur, title, allowNone) {
 /* ---------- 編輯一筆明細 ---------- */
 function editBill(b, opt = {}) {
   /* opt.detached：記帳裡用分帳的方式輸入明細（這筆明細不放進分帳），完成時交給 opt.onDone */
-  let qs = null; const DET = !!opt.detached, sh = sheet({title: '🧾 ' + (billStore(b) || (DET ? '輸入購物明細' : '購物明細')), full: true, foot: '<div class="grow ordTot" id="ebT"></div><button class="btn pri" data-a="done" style="flex:0 0 auto">完成</button>', onClose() { if (DET) { opt.onDone && opt.onDone(b); return; }
+  let qs = null; const DET = !!opt.detached, sh = sheet({title: '🧾 ' + (billStore(b) || (DET ? '輸入消費明細' : '消費明細')), full: true, foot: '<div class="grow ordTot" id="ebT"></div><button class="btn pri" data-a="done" style="flex:0 0 auto">完成</button>', onClose() { if (DET) { opt.onDone && opt.onDone(b); return; }
     /* 手動新增後什麼都沒輸入就返回：不要留下空白明細 */
     if (opt.dropEmpty && !(b.items || []).length && !(b.fees || []).length && !(b.odisc || []).length && !(b.disc || []).length && !numP(b.total) && !(b.imgs || []).length) { Object.keys(DB.bills).forEach(k => { const i = DB.bills[k].indexOf(b); if (i >= 0) DB.bills[k].splice(i, 1); if (!DB.bills[k].length) delete DB.bills[k]; }); }
     shopChanged(); }});
@@ -6821,7 +6845,7 @@ function editBill(b, opt = {}) {
   sh.body.addEventListener('change', e => { if (e.target.id === 'ebTotal') { b.total = e.target.value.trim() === '' ? '' : numP(e.target.value); saveBills(); draw(); } });
   sh.body.addEventListener('click', async e => { const t = e.target.closest('[data-a]'); if (!t) return; const a = t.dataset.a, row = t.closest('.ebR');
     const X = row && row.dataset.x && b.items.find(x => x.id === row.dataset.x), D = row && row.dataset.d && b.disc.find(d => d.id === row.dataset.d), O = row && row.dataset.o && b.odisc.find(d => d.id === row.dataset.o), F = row && row.dataset.f && b.fees.find(d => d.id === row.dataset.f);
-    if (a === 'store') { const st = await pickShopStore(b.place); if (st === undefined) return; b.place = st ? st.id || '' : ''; b.pname = st ? st.name : ''; $('.shTitle', sh.el).textContent = '🧾 ' + (billStore(b) || '購物明細'); draw(); }
+    if (a === 'store') { const st = await pickShopStore(b.place); if (st === undefined) return; b.place = st ? st.id || '' : ''; b.pname = st ? st.name : ''; $('.shTitle', sh.el).textContent = '🧾 ' + (billStore(b) || '消費明細'); draw(); }
     else if (a === 'way') { buzz(8); b.way = b.way === t.dataset.w ? '' : t.dataset.w; saveBills(); draw(); return; }
     else if (a === 'wayAdd') { const v = await addWay(); if (v) { b.way = v; saveBills(); draw(); } return; }
     else if (a === 'pickTime') { const v = await timePick(b.time); if (v == null) return; b.time = v; saveBills(); shopChanged(); draw(); }
@@ -6913,7 +6937,7 @@ function billBlock(b) {
   out.push(`合計：${ntd(c.computed)}`); return out;
 }
 function openShopExport(k, bid) {
-  const bs = dayBills(k); if (!bs.length) { toast('這天沒有購物明細'); return; } let sel = bid || 'all';
+  const bs = dayBills(k); if (!bs.length) { toast('這天沒有消費明細'); return; } let sel = bid || 'all';
   const sh = sheet({title: '📤 匯出購物分帳', full: true, foot: '<button class="btn" data-a="xlsx">📊 匯出 Excel</button><button class="btn pri" data-a="copy">📋 複製文字</button>'});
   const pick = () => sel === 'all' ? bs : bs.filter(b => b.id === sel);
   const text = () => { const L = pick(), out = [dayLabel(k)]; L.forEach((b, i) => { out.push(...billBlock(b)); if (i < L.length - 1) out.push(''); });
@@ -6954,7 +6978,7 @@ function xlsxBook(rows, widths, name) {
 
 /* ---------- 搜尋 ---------- */
 function openShopSearch() {
-  let q = ''; const sh = sheet({title: '🔍 搜尋購物紀錄', full: true});
+  let q = ''; const sh = sheet({title: '🔍 搜尋消費紀錄', full: true});
   sh.body.innerHTML = `<div class="searchBox" style="margin-bottom:.8rem"><input id="ssQ" type="search" placeholder="輸入店名或商品，例如：全聯、衛生紙"></div><div id="ssR"></div>`;
   const draw = () => { const by = {};
     Object.keys(DB.bills).sort().reverse().forEach(k => DB.bills[k].forEach(b => { const nm = billStore(b) || '未選店家', hitItems = q ? b.items.filter(x => x.n.toLowerCase().includes(q)) : []; if (q && !nm.toLowerCase().includes(q) && !hitItems.length) return;
@@ -6962,7 +6986,7 @@ function openShopSearch() {
     const G = Object.values(by);
     $('#ssR', sh.body).innerHTML = G.length ? G.map(g => `<div class="srS"><div class="srH"><b class="grow">🏪 ${esc(g.nm)}</b><span class="muted">${g.rows.length} 筆 · ${money(g.rows.reduce((s, r) => s + billCalc(r.b).computed, 0))}</span></div>${g.rows.map(r => { const c = billCalc(r.b), ids = pOrder(Object.keys(c.per));
         return `<button class="srD" data-k="${r.k}" data-id="${r.b.id}"><div class="row"><b class="grow">${dayLabel(r.k)}${r.b.time ? ' ' + esc(r.b.time) : ''}</b><span class="srA">${money(c.computed)}</span></div>${(r.hitItems.length ? r.hitItems : r.b.items.slice(0, 3)).map(x => `<div class="srL">${esc(x.n)}${x.q > 1 ? '×' + x.q : ''} ${money(x.amt)}${(x.ppl || []).length ? '・' + esc(pplNames(x.ppl)) : ''}</div>`).join('')}${ids.length ? `<div class="srL muted">${ids.map(id => esc(mWho(id).name) + ' ' + money(c.per[id])).join('・')}</div>` : ''}</button>`; }).join('')}</div>`).join('')
-      : `<div class="empty">${Object.keys(DB.bills).length ? '找不到符合的店家或商品' : '還沒有任何購物紀錄'}</div>`; };
+      : `<div class="empty">${Object.keys(DB.bills).length ? '找不到符合的店家或商品' : '還沒有任何消費紀錄'}</div>`; };
   draw(); $('#ssQ', sh.body).oninput = debounce(e => { q = e.target.value.trim().toLowerCase(); draw(); }, 200);
   sh.body.addEventListener('click', e => { const t = e.target.closest('[data-k]'); if (!t) return; sh.close(); gotoBill(t.dataset.k, t.dataset.id); });
 }
@@ -6975,7 +6999,7 @@ function openShopSettings() {
     sh.body.innerHTML = `<div class="msSec"><div class="msH"><b class="grow">人名</b><button class="btn sm" data-a="addP">＋ 新增</button></div><div class="small muted" style="margin:-.2rem 0 .5rem">和點餐共用同一份人名，按住 ☰ 拖曳排序</div>
         <div class="msL" data-k="people">${DB.mcfg.people.map(u => `<div class="msR" data-id="${u.id}"><span class="grip"></span><span class="msI">${esc(u.icon)}</span><b class="grow">${esc(u.name)}</b><button class="btn sm" data-a="editP">✎ 編輯</button></div>`).join('')}</div></div>
       ${list('ways', '購物方式', '明細裡選擇在哪裡買的：實體店購物、Foodpanda、Uber Eats…')}${list('fees', '費用名稱', '新增費用時可以一鍵選，例如平台費、外送服務費、包材費')}${list('odisc', '整單折扣名稱', '例如優惠券、整單折扣')}
-      <div class="msSec"><div class="msH"><b class="grow">購物紀錄</b></div><div class="small muted">共有 ${n} 筆明細。紀錄會一起放進「設定 → 匯出備份」。</div>${n ? '<button class="btn sm danger" data-a="wipe" style="margin-top:.6rem">清除所有購物紀錄</button>' : ''}</div>`;
+      <div class="msSec"><div class="msH"><b class="grow">消費紀錄</b></div><div class="small muted">共有 ${n} 筆明細。紀錄會一起放進「設定 → 匯出備份」。</div>${n ? '<button class="btn sm danger" data-a="wipe" style="margin-top:.6rem">清除所有消費紀錄</button>' : ''}</div>`;
     $$('.msL', sh.body).forEach(l => sortable(l, {item: '.msR', handle: '.grip', scroller: sh.body, onSort(from, to) { const k = l.dataset.k; moveItem(k === 'people' ? DB.mcfg.people : DB.scfg[k], from, to); k === 'people' ? saveMcfg() : saveScfg(); draw(); }})); };
   draw();
   sh.body.addEventListener('click', async e => { const t = e.target.closest('[data-a]'); if (!t) return; const a = t.dataset.a, row = t.closest('.msR'), k = (t.closest('.msL') || t).dataset.k;
@@ -6983,14 +7007,14 @@ function openShopSettings() {
     else if (a === 'add') { const v = ((await askText('名稱', '')) || '').trim(); if (v) { DB.scfg[k].push(v); saveScfg(); draw(); } }
     else if (a === 'ren') { const i = +row.dataset.i, v = ((await askText('名稱', DB.scfg[k][i])) || '').trim(); if (v) { DB.scfg[k][i] = v; saveScfg(); draw(); } }
     else if (a === 'del') { DB.scfg[k].splice(+row.dataset.i, 1); saveScfg(); draw(); }
-    else if (a === 'wipe') { if (!await ask('確定要清除「所有」購物紀錄嗎？這個動作無法復原。', '全部清除', true)) return; DB.bills = {}; saveBills(); draw(); } });
+    else if (a === 'wipe') { if (!await ask('確定要清除「所有」消費紀錄嗎？這個動作無法復原。', '全部清除', true)) return; DB.bills = {}; saveBills(); draw(); } });
 }
 
 /* ============================================================
    使用說明：給第一次用的人看的圖解（手機畫面示意圖＋白話說明）
    ============================================================ */
 const APP_ICON = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="54 54 324 324"><defs> <linearGradient id="gicv" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#E0844B"/><stop offset=".55" stop-color="#C2633A"/><stop offset="1" stop-color="#9A4226"/></linearGradient> <linearGradient id="gisp" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#7E321C"/><stop offset="1" stop-color="#9C4527"/></linearGradient> <linearGradient id="gipl" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFF9EC"/><stop offset="1" stop-color="#F2E2C2"/></linearGradient> <linearGradient id="gicn" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F7D27A"/><stop offset="1" stop-color="#DB9A33"/></linearGradient> <radialGradient id="gigl" cx=".35" cy=".25" r=".8"><stop offset="0" stop-color="#fff" stop-opacity=".22"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient> <filter id="gish" x="-30%" y="-30%" width="160%" height="170%"><feDropShadow dx="0" dy="8" stdDeviation="9" flood-color="#5A2410" flood-opacity=".35"/></filter></defs><rect width="432" height="432" fill="url(#gicv)"/> <g opacity=".10" stroke="#FFF3DC" stroke-width="10" fill="none"><path d="M-10 120 L442 70"/><path d="M-10 350 L442 380"/><path d="M330 -10 L360 442"/></g> <rect x="0" y="0" width="112" height="432" fill="url(#gisp)"/><rect x="112" y="0" width="7" height="432" fill="#6E2A16" opacity=".45"/> <g stroke="#F4D9B6" stroke-width="5" stroke-linecap="round" stroke-dasharray="14 14" opacity=".75"><path d="M96 -6 V440"/></g> <path d="M286 0 h44 v150 l-22 -20 l-22 20z" fill="#7C8B4E"/><path d="M286 0 h44 v8 h-44z" fill="#5F6C39"/> <rect width="432" height="432" fill="url(#gigl)"/><g filter="url(#gish)"><circle cx="222" cy="210" r="102" fill="url(#gipl)"/><circle cx="222" cy="210" r="84" fill="none" stroke="#E4CDA4" stroke-width="4"/> <g fill="#A3482A"><path d="M178 150 h9 v46 h7 v-46 h9 v46 h7 v-46 h9 v55 a21 21 0 0 1 -16 20 v66 a8 8 0 0 1 -16 0 v-66 a21 21 0 0 1 -16 -20z"/> <ellipse cx="262" cy="182" rx="21" ry="31"/><rect x="254" y="206" width="16" height="85" rx="8"/></g></g> <g filter="url(#gish)"><circle cx="296" cy="290" r="40" fill="url(#gicn)" stroke="#FFF1CF" stroke-width="6"/><circle cx="296" cy="290" r="28" fill="none" stroke="#B5741C" stroke-width="3" opacity=".55"/> <text x="296" y="305" text-anchor="middle" font-family="DejaVu Sans, Arial" font-weight="700" font-size="40" fill="#8A5310">$</text></g></svg>';
-const PHT0 = [['🗺️', '地圖'], ['📒', '日常'], ['🧾', '分帳'], ['🎫', '發票'], ['⚙️', '設定']], PHT = {food: PHT0, shop: PHT0, inv: PHT0, acc: [['📒', '記帳'], ['🏛️', '資產'], ['📊', '分析'], ['⚙️', '設定']]};
+const PHT0 = [['🗺️', '地圖'], ['📒', '日常'], ['🧾', '分帳'], ['🎫', '發票'], ['⚙️', '設定']], PHT = {food: PHT0, shop: PHT0, inv: PHT0, acc: [['🗺️', '地圖'], ['📒', '記帳'], ['🏛️', '資產'], ['📊', '分析'], ['⚙️', '設定']]};
 /* 一支小手機：title 標題、body 內容、tab 亮起哪一個分頁、area 美食或購物 */
 const phone = (title, body, tab, area) => `<div class="ph"><div class="phIn"><div class="phNotch"></div><div class="phTop">${title}</div><div class="phBd">${body}</div>
   <div class="phTab">${PHT[area || 'food'].map(([i, t]) => `<span class="${t === tab ? 'on' : ''}"><i>${i}</i>${t}</span>`).join('')}</div></div></div>`;
@@ -7000,38 +7024,40 @@ const pRow = (a, b, cls) => `<div class="pRw ${cls || ''}"><span>${a}</span><b>$
 const tip = t => `<div class="gTip">💡 ${t}</div>`;
 const GUIDE = {
   food: {title: '🍽️ 地圖・日常・食譜 使用說明', steps: [
-    {t: '歡迎使用日日帳本', h: `<div class="gHero"><div class="gIcon">${APP_ICON}</div><b>收藏愛店・菜單・記帳分帳</b></div>
-      <div class="gGrid"><div><i>🗺️</i><b>地圖</b>找店、插旗收藏</div><div><i>🔖</i><b>收藏</b>地圖右上角，店家和菜單</div><div><i>📒</i><b>日常</b>記一餐、購物清單</div><div><i>🧾</i><b>分帳</b>購物明細誰付多少</div><div><i>🎫</i><b>發票</b>手機條碼、掃描、匯入</div><div><i>📖</i><b>食譜</b>在設定頁裡</div><div><i>💰</i><b>記帳</b>設定頁進入，收支、資產、對帳</div></div>
-      <p>跟著這份說明走一遍，大約 2 分鐘。看完可以隨時到 <b>設定 → 使用說明</b> 再打開。購物分帳、發票、記帳另外有自己的說明。</p>`},
-    {t: '① 找到店家，按收藏', h: phone('🔍 搜尋店家', `<div class="pSrch">🔍 晨曦早午餐</div><div class="pMap"><span class="flag">🚩</span><span class="flag f2">🚩</span></div>${pc(`<b>晨曦早午餐 幸福店</b><small>早午餐・距離 350 公尺</small><div class="pBtns">${pb('導航')}${pb('⭐ 收藏', 'pri hl') + tap}</div>`)}`, '地圖') +
-      `<ul><li>在地圖頁上方的搜尋框輸入店名</li><li>點選搜尋結果，按 <b>⭐ 收藏</b>，選一個分類（早餐、飲料…）</li><li>也可以<b>長按地圖</b>任何地方直接插旗</li></ul>${tip('有填 Google 金鑰的話，地址、電話、營業時間會自動帶入。')}`},
-    {t: '② 拍菜單，AI 自動整理成表格', h: phone('晨曦早午餐 幸福店', `${pc('<b>📋 菜單</b><div class="pImgs"><i>🖼️</i><i>🖼️</i></div>' + pb('✨ AI 辨識成表格', 'pri hl') + tap)}<div class="pTable"><div><b>品名</b><b>小</b><b>大</b></div><div><span>玉米濃湯</span><span>35</span><span>50</span></div><div><span>雞腿蛋堡</span><span>65</span><span>-</span></div></div>`, '地圖') +
-      `<ul><li>點地圖上的店家（或右上角 <b>🔖 收藏</b> 清單），在「📋 菜單」分頁加入菜單照片；旁邊的「🧾 購物紀錄」分頁是這家店的分帳明細</li><li>按 <b>✨ AI 辨識成表格</b>，等一下就會變成價格表</li><li>大小杯、冰熱、加購選項都會自動分欄</li></ul>${tip('菜單照片也可以在 Google 地圖截圖後，用「分享」傳給日日帳本。')}`},
-    {t: '③ 日常：選日期、記一餐', h: phone('今天的安排', `<div class="pCal">${Array.from({length: 14}, (_, i) => `<i class="${i === 9 ? 'on' : ''}">${i + 10}${i === 4 || i === 9 ? '<em></em>' : ''}</i>`).join('')}</div><div class="pBtns">${pb('🍱 記一餐', 'pri hl') + tap}${pb('🛒 購物清單')}</div>${pc('<b>🍱 午餐・晨曦早午餐</b><small>我、媽媽　共 $230</small>')}`, '日常') +
-      `<ul><li>下面分頁按 <b>📒 日常</b>，點月曆上的日期（<b>紅點</b>＝有餐點、<b>綠點</b>＝有購物清單）</li><li>按最上面的 <b>🍱 記一餐</b>，選餐別（早餐、午餐…）和店家</li></ul>`},
-    {t: '④ 誰吃了什麼？', h: phone('午餐・晨曦早午餐', `<div class="pWho"><i class="on">🙂 我</i><i>👩 媽媽</i><i>👦 弟弟</i></div>${pc(pRow('雞腿蛋堡(辣)', '$65') + pRow('玉米濃湯(大)', '$50') + `<div class="pBtns">${pb('＋ 從菜單選', 'pri hl') + tap}${pb('👥 一起吃')}</div>`)}`, '日常') +
-      `<ul><li>先點上面的人名，再按 <b>＋ 從菜單選</b>，價格會自動帶入</li><li>菜單上沒有的，可以自己輸入品名和價格</li><li>好幾個人<b>一起吃</b>的，選 👥 一起吃，價格會平均分</li></ul>`},
-    {t: '⑤ 匯出，貼到 LINE', h: phone('📤 匯出', `<div class="pSeg"><i>模板一</i><i class="on">模板二</i><i>模板三</i></div><div class="pText">2026/11/19(四)<br>午餐：晨曦早午餐<br>我：<br>雞腿蛋堡[NT$ 65]×1<br>小計：NT$ 65</div><div class="pBtns">${pb('📊 Excel')}${pb('📋 複製文字', 'pri hl') + tap}</div>`, '日常') +
-      `<ul><li>按 <b>📤 匯出</b>，選一種格式</li><li>按 <b>📋 複製文字</b>，到 LINE 長按貼上就好</li><li>要記帳的話也可以匯出 Excel</li><li>一餐的 <b>⋯ → 🧾 轉到購物分帳</b>：每個人的品項和金額直接變成一筆分帳明細，再按一次會更新同一筆，不會重複</li></ul>`},
-    {t: '⑥ 搜尋和設定', h: phone('今天的安排', `<div class="pBtns" style="justify-content:flex-end">${pb('🔍', 'hl') + tap}${pb('⚙️ 設定')}</div>${pc('<b>🏪 晨曦早午餐</b><small>11/19 午餐 $230・11/12 早餐 $95</small>')}${pc('<b>⚙️ 點餐設定</b><small>餐別、人名、自訂餐點都可以改、拖曳排序</small>')}`, '日常') +
-      `<ul><li><b>🔍</b>：輸入店名，看哪幾天吃過、吃什麼、花多少</li><li><b>⚙️ 設定</b>：新增人名（媽媽、同事…）、餐別和圖示</li></ul>`},
-    {t: '⑦ 購物清單', h: phone('今天的安排', `<div class="pBtns">${pb('🍱 記一餐')}${pb('🛒 購物清單', 'pri hl') + tap}</div><div class="pc"><b>🛒 量販店</b><small>還要買 3 項・已買 2</small><div class="pList"><span><i></i>雞蛋 <em>×2</em></span><span><i></i>雞胸肉</span><span class="ck"><i></i>蒲瓜</span></div><small>＋ 新增品項</small></div>`, '日常') +
-      `<ul><li>按 <b>🛒 購物清單</b>，選店家（可以不選），清單會記在月曆那一天</li><li>在下面輸入要買的東西，按 Enter 加入；可以一次貼好幾行，「雞蛋 ×2」會記數量；按「⭐ 常買」打開以前買過的清單，一次勾好幾個加入</li><li>打錯的品項<b>往左滑</b>就會出現「刪除」，刪掉後幾秒內可以按「復原」</li><li><b>勾選＝買到了</b>，會移到「已買」，按「放回清單」可以復原；按住 ☰ 拖曳排序</li><li>⋯ 可以換店家、改日期、複製清單文字貼 LINE、複製成今天的新清單</li></ul>${tip('🔍 搜尋可以切換「餐點」「購物清單」，找哪天買過什麼。')}`},
-    {t: '⑧ 食譜（在設定頁）', h: phone('設定', `<div class="pWho"><i class="on">全部</i><i>🍳 煎</i><i>🥘 炒</i><i>🍚 電鍋</i></div>${pc('<b>電鍋蒸飯</b><small>米 1 杯：水 1 杯・外鍋 1 杯水</small>')}${pc('<b>番茄炒蛋</b><small>2 人份・5 個步驟</small>')}${pb('＋ 新增食譜', 'pri wide hl') + tap}`, '設定') +
-      `<ul><li>到 <b>設定</b> 頁的「食譜」按 <b>進入食譜 ›</b>，左上角 ‹ 回設定</li><li>記錄拿手菜：食材表格＋自己的步驟</li><li>可以用「比例表」模板（例如電鍋蒸飯幾杯米配幾杯水）</li><li>自訂資料夾（煎、炒、電鍋、湯…），按住拖曳排序或移到其他資料夾</li></ul>`},
-    {t: '⑨ 備份和外觀', h: phone('設定', `${pc('<b>外觀</b><small>主題：跟隨系統／淺色／深色・重點顏色・介面大小・震動強度</small>')}${pc('<b>資料</b><div class="pBtns">' + pb('📤 匯出備份', 'pri hl') + pb('📥 匯入備份') + '</div>' + tap)}`, '設定') +
-      `<ul><li><b>匯出備份</b>：收藏、菜單、點餐、購物分帳、發票、記帳、資產、食譜和所有圖片存成一個檔案，換手機時再<b>匯入備份</b></li><li>雲端備份（Google 雲端、pCloud）和 <b>📲 快速換機 QR Code</b> 在 <b>記帳 → 設定 → 備份與換機</b></li><li>外觀可以換主題、重點顏色、介面大小和震動強度</li><li>有新版本時 App 會提醒，按一下就能更新</li></ul>`},
-    {t: '⑩ 先設定金鑰（只要一次）', h: `<div class="gKeys"><div><i>🔑</i><b>AI 辨識金鑰（建議）</b><small>菜單照片、購物明細變成表格都靠它。免費申請，不用信用卡。</small><button class="btn sm pri" data-tut="ai">📘 看教學</button></div>
-        <div><i>🗺️</i><b>Google 搜尋金鑰（選用）</b><small>讓搜尋店家更準，自動帶入地址電話。</small><button class="btn sm" data-tut="maps">📘 看教學</button></div></div>
-      <p>不設定也能先用，之後到 <b>設定</b> 頁再補上就可以。</p>`}]},
-  shop: {title: '🛒 購物分帳 使用說明', steps: [
-    {t: '購物分帳是什麼？', h: `<div class="gHero"><div class="gIcon">${APP_ICON}</div><b>一張明細，自動算出每個人要付多少</b></div>
+    {t: '歡迎使用日日帳本', h: `<div class="gHero"><div class="gIcon">${APP_ICON}</div><b>收藏愛店・菜單・點餐・分帳・記帳</b></div>
+      <div class="gGrid"><div><i>🗺️</i><b>地圖</b>自動定位、找店、收藏</div><div><i>🔖</i><b>收藏</b>店家、菜單、消費紀錄</div><div><i>📒</i><b>日常</b>記一餐、點餐、購物清單</div><div><i>🧾</i><b>分帳</b>消費明細誰付多少</div><div><i>🎫</i><b>發票</b>手機條碼、掃描、匯入</div><div><i>📖</i><b>食譜</b>在設定頁裡</div><div><i>💰</i><b>記帳</b>設定頁進入，收支、資產、對帳</div><div><i>🛡️</i><b>備份</b>手機、雲端、QR 換機</div></div>
+      <p>跟著這份說明走一遍，大約 3 分鐘。看完可以隨時到 <b>設定 → 使用說明</b> 再打開。分帳、發票、記帳另外有自己的說明。</p>`},
+    {t: '① 打開就定位，自動選好鄉鎮', h: phone('地圖', `<div class="pSrch">🔍 搜尋店家、地址、量販店…</div><div class="pWho"><i class="on">全部 12</i><i>🍳 早餐 3</i><i>🍱 午餐 4</i><i>🍲 晚餐 5</i></div><div class="pBtns">${pb('星河市 ▾')}${pb('幸福區 ▾')}${pb('📍', 'hl') + tap}</div><div class="pMap"><span class="flag">🍳</span><span class="flag f2">🍱</span></div>${pc('<b>星河市 幸福區・12 間收藏</b><small>🍳 早餐　晨曦早午餐、陽光蛋餅…</small>')}`, '地圖') +
+      `<ul><li>一打開 App（或離開超過 3 分鐘再回來），地圖會<b>自動飛到你的位置、轉回朝北</b>，並<b>選好你現在所在的縣市、鄉鎮</b></li><li>下面列出這一區的收藏，<b>依分類排</b>（跟上方分類按鈕同順序），同一類裡離你近的在前面</li><li>按 <b>📍</b> 重新抓目前的鄉鎮，地圖停在你附近，不會縮到整個鄉鎮那麼小；按 <b>✕</b> 取消區域，看全部</li><li>右邊的按鈕由上到下：<b>＋／－</b> 放大縮小、<b>2D／3D</b>、<b>指北針</b>（轉回北方）、<b>◎</b> 我的位置、<b>＋</b> 新增收藏</li></ul>${tip('地圖不畫縣市、鄉鎮的邊界線，畫面比較乾淨；選區域時只顯示那一區的收藏。')}`},
+    {t: '② 搜尋地點，一鍵收藏', h: phone('🔍 停車場', `<div class="pSrch">🔍 停車場</div><div class="pMap"><span class="flag">📍</span><span class="flag f2">📍</span></div>${pc(`<b>星河立體停車場</b><small>停車場・星河市幸福區光明路 8 號</small><div class="pBtns">${pb('🧭 導航')}${pb('⭐ 收藏', 'pri hl') + tap}</div>`)}`, '地圖') +
+      `<ul><li>上方搜尋框可以打<b>店名</b>，也可以打<b>停車場、加油站、咖啡廳</b>這類關鍵字</li><li>所有結果都會用紅色標籤<b>標在地圖上</b>，地圖自動縮放到剛好看得到全部；點標籤就能收藏，選一個分類</li><li>下面有選縣市、鄉鎮時，<b>只找那一區</b>（Google 最多 60 筆）</li><li>也可以<b>長按地圖</b>任何地方直接插旗</li></ul>${tip('有填 Google 金鑰的話搜尋最齊全，地址、電話、營業時間會自動帶入；沒有金鑰會改用 OpenStreetMap。')}`},
+    {t: '③ 菜單：吃喝的店才有', h: phone('晨曦早午餐 幸福店', `<div class="pBtns">${pb('🧭 導航')}${pb('🗺️ Google 地圖')}${pb('📍 在地圖上看')}${pb('🔄 更新資訊')}</div><div class="pSeg"><i class="on">📋 菜單</i><i>🧾 消費紀錄</i></div>${pc('<b>📋 菜單</b><div class="pImgs"><i>🖼️</i><i>🖼️</i></div>' + pb('✨ AI 辨識成表格', 'pri hl') + tap)}<div class="pTable"><div><b>品名</b><b>原味</b><b>辣味</b></div><div><span>特製涼麵</span><span>55</span><span>55</span></div><div><span>麵量加大</span><span>+10</span><span>+10</span></div></div>`, '地圖') +
+      `<ul><li>點店家 → <b>詳細資料</b>，有「📋 菜單」和「🧾 消費紀錄」兩個分頁</li><li>加入菜單照片後按 <b>✨ AI 辨識成表格</b>，大小杯、口味、份量、加購都會照紙本菜單分欄</li><li><b>停車場、加油站、超市</b>這類店家不會顯示菜單，只有消費紀錄</li><li>哪些分類有菜單可以自己改：設定 → 分類 → 編輯 →「這類店家有菜單」</li></ul>${tip('菜單照片也可以在 Google 地圖截圖後，用「分享」傳給日日帳本。')}`},
+    {t: '④ 日常：記一餐、選店家', h: phone('選擇店家', `<div class="pWho"><i class="on">全部</i><i>🍳 早餐</i><i>🍱 午餐</i><i>🍲 晚餐</i></div><div class="pBtns">${pb('⊟ 全部收合')}</div>${pc('<b>🍱 午餐 ▾</b><small>森林小廚房・月光拉麵・幸福便當</small>' + tap)}${pc('<b>🍳 早餐 ▸</b><small>3 間</small>')}`, '日常') +
+      `<ul><li>下面分頁按 <b>📒 日常</b>，點月曆上的日期（<b>紅點</b>＝有餐點、<b>綠點</b>＝有購物清單）</li><li>按 <b>🍱 記一餐</b>，選餐別和店家：上方分類按鈕切換，每一類可以單獨收合，或「全部收合／展開」</li><li>沒收藏的店也可以自己輸入店名</li></ul>`},
+    {t: '⑤ 點餐：誰吃了什麼？', h: phone('午餐・月光拉麵', `<div class="pWho"><i class="on">🙂 小美</i><i>👦 阿明</i><i>👥 一起吃</i></div>${pc(pRow('烏龍奶茶(去冰，微糖)', '$35') + pRow('特製涼麵(辣味)', '$55') + `<div class="pBtns">${pb('$55 一般量', 'hl') + tap}${pb('$65 特大量')}</div>`)}`, '日常') +
+      `<ul><li>先點上面的人名，再點品項右邊的價格，價格會自動帶入</li><li>有選項的品項會先讓你選：<b>口味、份量、飲料的溫度（去冰／溫／熱）和甜度（正常糖／微糖／無糖）</b>，不選就是店家預設</li><li>選好的會顯示成「烏龍奶茶(去冰，微糖)」；份量一律以品項本身為準</li><li>菜單上沒有的，可以自己輸入品名和價格，下次會記住</li><li>好幾個人<b>一起吃</b>的，選 👥 一起吃，金額平均分</li></ul>`},
+    {t: '⑥ 匯出，貼到 LINE', h: phone('📤 匯出', `<div class="pSeg"><i>模板一</i><i class="on">模板二</i><i>模板三</i></div><div class="pText">2026/11/19(四)<br>午餐：月光拉麵<br>小美：<br>特製涼麵(辣味)[NT$ 55]×1<br>小計：NT$ 55</div><div class="pBtns">${pb('📊 Excel')}${pb('📋 複製文字', 'pri hl') + tap}</div>`, '日常') +
+      `<ul><li>按 <b>📤 匯出</b>，選一種格式</li><li>按 <b>📋 複製文字</b>，到 LINE 長按貼上就好；也可以存成 Excel</li><li>一餐的 <b>⋯ → 🧾 轉到分帳</b>：每個人的品項和金額直接變成一筆分帳明細，再按一次會更新同一筆，不會重複</li></ul>`},
+    {t: '⑦ 搜尋、設定、同一個人', h: phone('⚙️ 日常設定', `${pc('<b>人名</b><small>🙂 小美　👦 阿明　👵 阿嬤（按住 ☰ 拖曳排序）</small>')}${pc('<b>🔗 同一個人，不同綽號</b><div class="sameR" style="margin-top:.3rem"><span>👦 阿明<small>日常</small></span><b>＝</b><span>🧑 明哥<small>記帳</small></span></div>' + pb('🔗 設定同一個人', 'hl') + tap)}`, '日常') +
+      `<ul><li><b>🔍 搜尋</b>：輸入店名，看哪幾天吃過、吃什麼、花多少</li><li><b>⚙️ 設定</b>：新增人名、餐別和圖示，拖曳排序；點餐時自己輸入的品項也在這裡管理</li><li><b>🔗 同一個人，不同綽號</b>：例如這裡叫「阿明」、記帳叫「明哥」，設定後從分帳匯入記帳會自動對到同一個人</li></ul>`},
+    {t: '⑧ 購物清單', h: phone('今天的安排', `<div class="pBtns">${pb('🍱 記一餐')}${pb('🛒 購物清單', 'pri hl') + tap}</div><div class="pc"><b>🛒 量販店</b><small>還要買 3 項・已買 2</small><div class="pList"><span><i></i>雞蛋 <em>×2</em></span><span><i></i>雞胸肉</span><span class="ck"><i></i>蒲瓜</span></div><small>＋ 新增品項</small></div>`, '日常') +
+      `<ul><li>按 <b>🛒 購物清單</b>，選店家（可以不選），清單會記在月曆那一天</li><li>輸入要買的東西按 Enter；可以一次貼好幾行，「雞蛋 ×2」會記數量；按「⭐ 常買」從以前買過的一次勾好幾個</li><li>打錯的<b>往左滑</b>刪除，幾秒內可以按「復原」；<b>勾選＝買到了</b>，按住 ☰ 拖曳排序</li><li>⋯ 可以換店家、改日期、複製清單文字、複製成今天的新清單</li></ul>${tip('🔍 搜尋可以切換「餐點」「購物清單」，找哪天買過什麼。')}`},
+    {t: '⑨ 食譜（在設定頁）', h: phone('設定', `<div class="pWho"><i class="on">全部</i><i>🍳 煎</i><i>🥘 炒</i><i>🍚 電鍋</i></div>${pc('<b>電鍋蒸飯</b><small>米 1 杯：水 1 杯・外鍋 1 杯水</small>')}${pc('<b>番茄炒蛋</b><small>2 人份・5 個步驟</small>')}${pb('＋ 新增食譜', 'pri wide hl') + tap}`, '設定') +
+      `<ul><li>到 <b>設定</b> 頁的「食譜」按 <b>進入食譜 ›</b>，左上角 ‹ 回設定</li><li>記錄拿手菜：食材表格＋自己的步驟；也有「比例表」模板（幾杯米配幾杯水）</li><li>自訂資料夾（煎、炒、電鍋、湯…），按住拖曳排序或移到其他資料夾</li></ul>`},
+    {t: '⑩ 備份、外觀、防誤刪', h: phone('設定', `${pc('<b>外觀</b><small>主題・重點顏色・介面大小・震動強度</small>')}${pc('<b>資料</b><div class="pBtns">' + pb('📤 匯出備份', 'pri hl') + pb('📥 匯入備份') + '</div>' + tap)}${pc('<b>🧷 防止誤刪 App</b><small>要刪除得先停用保護、輸入手機密碼</small>')}`, '設定') +
+      `<ul><li><b>備份會包含全部</b>：收藏店家和菜單、點餐、分帳、發票、記帳（常用紀錄、帳戶、對帳、商家）、資產、購物清單、食譜、分類、所有設定、API 金鑰和所有圖片</li><li>手機（匯出備份檔）、雲端（Google 雲端、pCloud）、<b>📲 QR Code 快速換機</b>內容都一樣；雲端和 QR 在 <b>記帳 → 設定 → 備份與換機</b></li><li>用 QR 傳給別人時可以選<b>不帶金鑰</b></li><li><b>🧷 防止誤刪 App</b>（記帳 → 設定 → 上鎖）：開啟後不能直接解除安裝</li><li>有新版本時 App 會提醒，按一下就能更新</li></ul>`},
+    {t: '⑪ 先設定金鑰（只要一次）', h: `<div class="gKeys"><div><i>🔑</i><b>AI 辨識金鑰（建議）</b><small>菜單照片、消費明細變成表格都靠它。免費申請，不用信用卡。</small><button class="btn sm pri" data-tut="ai">📘 看教學</button></div>
+        <div><i>🗺️</i><b>Google 搜尋金鑰（選用）</b><small>搜尋店家、停車場最齊全，自動帶入地址電話。</small><button class="btn sm" data-tut="maps">📘 看教學</button></div></div>
+      <p>不設定也能先用，之後到 <b>設定</b> 頁再補上就可以。金鑰會一起備份，換手機不用重新申請。</p>`}]},
+  shop: {title: '🧾 分帳 使用說明', steps: [
+    {t: '分帳是什麼？', h: `<div class="gHero"><div class="gIcon">${APP_ICON}</div><b>一張明細，自動算出每個人要付多少</b></div>
       <div class="gFlow"><span>🧾<small>拍明細</small></span><em>➜</em><span>🤖<small>AI 讀出品項</small></span><em>➜</em><span>👥<small>選誰付</small></span><em>➜</em><span>💰<small>每人金額</small></span></div>
       <p>適合全聯、量販店、超商一起買東西，或 Foodpanda 一起訂外送的時候。</p>`},
     {t: '① 打開分帳', h: phone('分帳', `${pc('<b>購物分帳</b><small>11月22日（日）・1 筆</small>' + pb('📷 上傳明細', 'pri wide hl') + tap)}${pc('<b>好鄰居超市 中央店</b><small>11 項・$652</small>')}`, '分帳') +
-      `<ul><li>下面的分頁按 <b>🧾 分帳</b>（順序是地圖、日常、分帳、發票、設定）</li><li>收藏在地圖右上角的 <b>🔖</b>；點地圖上的店家，可以在 <b>📋 菜單</b> 和 <b>🧾 購物紀錄</b> 兩個分頁之間切換</li></ul>${tip('美食和購物<b>共用同一份收藏</b>，分類也是同一份（早餐、午餐、晚餐、量販店、超市、超商…）。')}`},
-    {t: '② 收藏常去的店', h: phone('🔍 搜尋', `<div class="pSrch">🔍 好鄰居超市</div><div class="pMap"><span class="flag">🛒</span><span class="flag f2">🍱</span></div>${pc(`<b>好鄰居超市 中央店</b><small>量販店</small><div class="pBtns">${pb('🧾 購物紀錄')}${pb('⭐ 收藏', 'pri hl') + tap}</div>`)}`, '地圖', 'shop') +
-      `<ul><li>在地圖搜尋全聯、全家、常叫外送的餐廳…按收藏，選一個分類</li><li>外送的餐廳就照早餐、午餐、晚餐分類；是不是外送，改在每一筆明細選「購物方式」</li><li>店家卡片上的 <b>🧾 紀錄</b> 可以看這家店所有的明細</li><li>沒收藏的店也可以「✏️ 自己輸入店名」；記帳裡建立在收藏分類的名稱也會出現在這裡</li></ul>`},
+      `<ul><li>下面的分頁按 <b>🧾 分帳</b>（順序是地圖、日常、分帳、發票、設定）</li><li>收藏在地圖右上角的 <b>🔖</b>；點地圖上的店家，吃喝的店可以在 <b>📋 菜單</b> 和 <b>🧾 消費紀錄</b> 兩個分頁之間切換，超市、加油站這類只有消費紀錄</li></ul>${tip('美食和購物<b>共用同一份收藏</b>，分類也是同一份（早餐、午餐、晚餐、量販店、超市、超商…）。')}`},
+    {t: '② 收藏常去的店', h: phone('🔍 搜尋', `<div class="pSrch">🔍 好鄰居超市</div><div class="pMap"><span class="flag">🛒</span><span class="flag f2">🍱</span></div>${pc(`<b>好鄰居超市 中央店</b><small>量販店</small><div class="pBtns">${pb('🧾 消費紀錄')}${pb('⭐ 收藏', 'pri hl') + tap}</div>`)}`, '地圖', 'shop') +
+      `<ul><li>在地圖搜尋全聯、全家、常叫外送的餐廳…按收藏，選一個分類</li><li>外送的餐廳就照早餐、午餐、晚餐分類；是不是外送，改在每一筆明細選「購物方式」</li><li>店家卡片上的 <b>🧾 消費紀錄</b> 可以看這家店所有的明細</li><li>沒收藏的店也可以「✏️ 自己輸入店名」；記帳裡建立在收藏分類的名稱也會出現在這裡</li></ul>`},
     {t: '③ 上傳明細，AI 幫你讀', h: phone('購物分帳', `<div class="pBtns">${pb('📷 上傳明細', 'pri hl') + tap}${pb('✏️ 手動輸入')}</div><div class="pc" style="border-color:var(--accent)"><b>🤖 AI 辨識中・11/08</b><small>Flash-Lite 已讀到 5 項…（12 秒）</small></div><div class="pCal">${Array.from({length: 7}, (_, i) => `<i class="${i === 3 ? 'on' : ''}">${i + 5}${i === 3 ? '<em></em>' : ''}</i>`).join('')}</div>`, '分帳', 'shop') +
       `<ul><li>按最上面的 <b>📷 上傳明細</b>，選全聯 App 明細截圖、發票照片或 Foodpanda 訂單截圖（可以一次選好幾張）</li><li>辨識進度會<b>固定顯示在頁首</b>，不管看哪一天都看得到，點一下直接打開那筆</li><li>AI 會讀出店名、日期、時間、品項、折扣、平台費，自動放到明細上的日期</li></ul>${tip('也可以在 Foodpanda 或相簿按「分享」→ 日日帳本。')}`},
     {t: '④ 日期、時間、購物方式', h: phone('🧾 森林小廚房', `${pc('<b>店家</b><small>森林小廚房</small>')}${pc(`<b>購物方式</b><div class="pWho" style="margin-top:.2rem"><i>🏬 實體店購物</i><i class="on hl">🐼 Foodpanda</i><i>🛵 Uber Eats</i><i>🛵 店家外送</i><i>＋ 自訂</i></div>` + tap)}${pc('<b>日期</b><small>2026/10/04(日)　到月曆 ›　更改 ▾</small>')}${pc('<b>時間</b><small>🕒 11:15</small>')}`, '分帳', 'shop') +
@@ -7043,7 +7069,7 @@ const GUIDE = {
     {t: '⑦ 看結果，對一下金額', h: phone('🧾 好鄰居超市 中央店', `${pc(pRow('品項合計', '$736') + pRow('品項折扣', '-$158') + pRow('應付合計', '$578', 'tot') + '<div class="pOk">✅ 和明細上的實付金額一致</div>')}${pc(pRow('🙂 我', '$345.33') + pRow('👩 媽媽', '$166.33') + pRow('👦 弟弟', '$66.33'))}`, '分帳', 'shop') +
       `<ul><li>最下面會算出<b>每個人要付多少</b></li><li>看到 <b>✅</b> 代表和明細上的金額一樣；<b>⚠️</b> 代表有差，檢查一下有沒有漏掉的品項或折扣</li></ul>`},
     {t: '⑧ 匯出、搜尋、設定', h: phone('📤 匯出購物分帳', `<div class="pText">2026/11/08(日)<br>好鄰居超市 中央店 15:42<br>我：<br>礦泉水1500[NT$ 25]×2<br>洗衣精[NT$ 107]×2<br>衛生紙[NT$ 199]×0.33<br>小計：NT$ 494.33</div><div class="pBtns">${pb('📊 Excel')}${pb('📋 複製文字', 'pri hl') + tap}</div>`, '分帳', 'shop') +
-      `<ul><li><b>📤 匯出</b>：整天或單一筆，複製文字貼 LINE，或存成 Excel；單價是<b>扣完折扣後</b>的價格（例如 2 件 $298 折 $84 → [NT$ 107]×2）</li><li><b>🔍 搜尋</b>：店名或商品，例如「衛生紙」</li><li><b>⚙️ 設定</b>：人名（和點餐共用）、購物方式、費用名稱、整單折扣名稱</li><li>每筆明細的 <b>⋯</b>：<b>📒 匯入記帳</b>（每個人的金額、品項、圖片帶進記帳，不會重複匯入）、<b>🧾 套用到發票</b>（用這筆明細取代發票的品項和折扣，保留號碼、統編、日期）</li></ul>${tip('發票（紙本 QR、發票大師）也可以直接拿去分帳，請看「🎫 發票」的說明。')}`}]},
+      `<ul><li><b>📤 匯出</b>：整天或單一筆，複製文字貼 LINE，或存成 Excel；單價是<b>扣完折扣後</b>的價格（例如 2 件 $298 折 $84 → [NT$ 107]×2）</li><li><b>🔍 搜尋</b>：店名或商品，例如「衛生紙」</li><li><b>⚙️ 設定</b>：人名（和點餐共用）、購物方式、費用名稱、整單折扣名稱</li><li>匯入記帳時，在「同一個人，不同綽號」連起來的人會自動換成記帳裡的名字</li><li>每筆明細的 <b>⋯</b>：<b>📒 匯入記帳</b>（每個人的金額、品項、圖片帶進記帳，不會重複匯入）、<b>🧾 套用到發票</b>（用這筆明細取代發票的品項和折扣，保留號碼、統編、日期）</li></ul>${tip('發票（紙本 QR、發票大師）也可以直接拿去分帳，請看「🎫 發票」的說明。')}`}]},
   inv: {title: '🎫 發票 使用說明', steps: [
     {t: '發票區可以做什麼？', h: `<div class="gHero"><div class="gIcon">${APP_ICON}</div><b>把發票收進來，一鍵拿去分帳</b></div>
       <div class="gFlow"><span>📷<small>掃 QR</small></span><em>＋</em><span>🖼️<small>截圖</small></span><em>＋</em><span>🤖<small>協助工具</small></span><em>➜</em><span>🧾<small>拿去分帳</small></span></div>
@@ -7063,29 +7089,35 @@ const GUIDE = {
     {t: '⑦ 折扣：金額、組合價、打折', h: phone('新增折扣', `<div class="pSeg"><i>折扣金額</i><i class="on hl">組合價</i><i>打折</i></div>${pc('<b>組合優惠</b><small>組合價 $49</small>')}${pc('<b>☑ 罐裝拿鐵 $35</b><b>☑ 罐裝拿鐵 $35</b><small class="g">原價 $70 → 組合價 折扣 -$21</small>')}`, '發票', 'shop') +
       `<ul><li><b>折扣金額</b>：例如鮮食促 -21，直接填折掉多少</li><li><b>組合價</b>：例如任選 2 件 $49，勾 2 件填 49，自動算出折了多少</li><li><b>打折</b>：例如 8 折、6.5 折，勾選的品項乘上折數</li><li>勾好幾項會平均分；發票會自動驗算扣完折扣是否等於消費金額</li></ul>`},
     {t: '⑧ 拿去分帳', h: phone('🧾 發票明細', `${pc(pRow('消費金額', '$435', 'tot') + '<div class="pOk">✅ 品項扣掉折扣後合計和消費金額一致</div>')}<div class="pBtns">${pb('刪除')}${pb('🧾 拿去分帳', 'pri wide hl') + tap}</div>${pc('<b>✓ 已拿去分帳</b><small>2026/11/20(五) 月光拉麵　打開 ›</small>')}`, '發票', 'shop') +
-      `<ul><li>按 <b>🧾 拿去分帳</b>，會在發票日期建立一筆分帳，品項、折扣（含勾選的品項）、購物方式都會帶過去</li><li>接著選每一項是誰付的就完成了</li><li>已分帳的發票會標示「✓ 已分帳」，點一下直接打開那筆分帳</li><li>反過來：發票明細最下面「📥 用購物明細的內容取代」，可以把分帳裡比較完整的品項、折扣、整單折扣、費用套用到這張發票</li></ul>`}]},
+      `<ul><li>按 <b>🧾 拿去分帳</b>，會在發票日期建立一筆分帳，品項、折扣（含勾選的品項）、購物方式都會帶過去</li><li>接著選每一項是誰付的就完成了</li><li>已分帳的發票會標示「✓ 已分帳」，點一下直接打開那筆分帳</li><li>反過來：發票明細最下面「📥 用消費明細的內容取代」，可以把分帳裡比較完整的品項、折扣、整單折扣、費用套用到這張發票</li></ul>`}]},
   acc: {title: '💰 記帳 使用說明', steps: [
     {t: '記帳區可以做什麼？', h: `<div class="gHero"><div class="gIcon">${APP_ICON}</div><b>收支・資產・分帳欠款・對帳</b></div>
-      <div class="gGrid"><div><i>📒</i><b>記帳</b>月曆、記一筆、常用</div><div><i>🏛️</i><b>資產</b>每個帳戶剩多少</div><div><i>📊</i><b>分析</b>圓餅圖、非必要消費</div><div><i>⚙️</i><b>設定</b>分類、匯出、備份換機</div></div>
-      <p>從 <b>設定 → 記帳・對帳</b> 進入，底部會換成記帳專用的四個分頁；在記帳的 <b>設定 → 回到日日帳本</b> 切回來。重開 App 會回到上次的區域。</p>`},
+      <div class="gGrid"><div><i>🗺️</i><b>地圖</b>店家地圖、搜尋收藏</div><div><i>📒</i><b>記帳</b>月曆、記一筆、常用</div><div><i>🏛️</i><b>資產</b>每個帳戶剩多少</div><div><i>📊</i><b>分析</b>圓餅圖、非必要消費</div><div><i>⚙️</i><b>設定</b>分類、上鎖、備份換機</div></div>
+      <p>從 <b>設定 → 記帳・對帳</b> 進入（有設密碼要先解鎖），底部會換成記帳專用的五個分頁；在記帳的 <b>設定 → 回到日日帳本</b> 切回來。重開 App 會回到上次的區域。</p>`},
     {t: '① 記一筆', h: phone('📒 記一筆', `<div class="pSeg"><i class="on">支出</i><i>收入</i><i>轉帳</i><i>遺失</i></div>${pc('<b>NT$ 12×3+4 = 40</b>')}<div class="pWho"><i class="on">🍽️ 吃喝</i><i>🛍️ 購物</i><i>🏠 生活</i></div><div class="pWho"><i class="on">🍳 早餐</i><i>🍱 午餐</i><i>🍲 晚餐</i></div>`, '記帳', 'acc') +
-      `<ul><li>計算機可以 + − × ÷，按 = 算出結果</li><li>類別是 <b>母分類 → 子分類</b>（吃喝 → 早餐），都可以自訂名稱和圖示</li><li><b>商家／對象</b>：和收藏的店家同一份清單（早餐、量販店…），也可以建立台電、台水這種只在記帳用的名稱</li><li><b>付款帳戶</b>：先選現金、銀行、信用卡、儲值、行動支付，再選是哪一個；行動支付會從它綁定的銀行或信用卡扣款</li></ul>`},
-    {t: '② 備註、圖片、分帳', h: phone('📒 記一筆', `<div class="pBtns">${pb('🧾 用分帳方式輸入', 'pri hl') + tap}${pb('📥 從分帳帶入')}</div>${pc('<b>備註／購物明細</b><small>小美：泡菜鍋[NT$ 200]×1　小計 $343</small>')}<div class="pImgs"><i>🖼️</i><i>＋</i></div>`, '記帳', 'acc') +
-      `<ul><li><b>🧾 用分帳方式輸入</b>：跟分帳一樣輸入品項、誰付、折扣、平台費，完成後用模板二寫進備註</li><li><b>📥 從分帳帶入</b>：選一筆分帳明細，品項、每人金額和圖片一起帶入</li><li>可以加截圖；下面的 🤝 分帳選誰付的錢、誰要分（平均或自己填）</li></ul>`},
-    {t: '③ 常用紀錄', h: phone('⭐ 常用紀錄', `<div class="pSeg"><i class="on">支出</i><i>收入</i><i>轉帳</i></div>${pc('<b>春日公寓-3F-房租</b><small>$10,000</small>')}${pc('<b>電費</b><small>💬 每次輸入金額</small>')}`, '記帳', 'acc') +
-      `<ul><li>記一筆填好後按 <b>⭐ 存成常用</b></li><li>記帳頁「⭐ 常用紀錄」點一下會打開「記一筆」，帶好內容讓你確認再儲存；沒有金額時會提醒你先輸入。編輯常用紀錄時按 <b>＋ 另存常用</b> 可以複製一份新的</li><li>按住拖曳排序，✎ 編輯</li></ul>`},
+      `<ul><li>計算機可以 + − × ÷，按 = 算出結果；記帳頁的 <b>📅 今天</b> 跳回今天</li><li>類別是 <b>母分類 → 子分類</b>（吃喝 → 早餐），都可以自訂名稱和圖示</li><li><b>商家／對象</b>：和收藏的店家同一份清單，也可以建立台電、台水這種只在記帳用的名稱；有 📍 的是已經連結地圖的店家</li><li><b>付款帳戶</b>：先選現金、銀行、信用卡、儲值、行動支付，再選是哪一個</li></ul>`},
+    {t: '② 備註、圖片、分帳', h: phone('📒 記一筆', `<div class="pBtns">${pb('🧾 用分帳方式輸入', 'pri hl') + tap}${pb('📥 從分帳帶入')}</div>${pc('<b>備註／消費明細</b><small>小美：泡菜鍋[NT$ 200]×1　小計 $343</small>')}<div class="pImgs"><i>🖼️</i><i>＋</i></div>`, '記帳', 'acc') +
+      `<ul><li><b>🧾 用分帳方式輸入</b>：跟分帳一樣輸入品項、誰付、折扣、平台費，完成後寫進備註</li><li><b>📥 從分帳帶入</b>（或記帳頁的「從分帳匯入」）：品項、每人金額和圖片一起帶入，不會重複匯入</li><li>可以加截圖；下面的 🤝 分帳選誰付的錢、誰要分（平均或自己填）</li></ul>`},
+    {t: '③ 常用紀錄', h: phone('⭐ 常用紀錄', `<div class="pSeg"><i class="on">支出</i><i>收入</i><i>轉帳</i></div>${pc('<b>春日公寓-3F-房租</b><small>$10,000</small>')}${pc('<b>電費</b><small>💬 每次輸入金額</small>')}<div class="pBtns">${pb('🗑 刪除')}${pb('＋ 另存常用', 'hl') + tap}${pb('✓ 儲存', 'pri')}</div>`, '記帳', 'acc') +
+      `<ul><li>記一筆填好後按 <b>⭐ 存成常用</b>；記帳頁的「⭐ 常用紀錄」顯示有幾個常用，按「打開」</li><li>點一個常用紀錄會打開 <b>記一筆</b>，內容都帶好，<b>確認後再儲存</b>；沒有輸入金額就按儲存會跳出提醒</li><li>編輯時按 <b>＋ 另存常用</b> 可以複製成一個新的（例如另一間房租）</li><li>按住拖曳排序；分類也可以拖曳調整順序</li></ul>`},
     {t: '④ 欠款和對帳', h: phone('🤝 和小美對帳', `${pc('<b>小美 欠我</b><small>$587</small>')}${pc('<b>☑ 11/21 晨曦早午餐　$285</b><small>☑ 11/22 好鄰居超市　$302</small>')}<div class="pBtns">${pb('✅ 結清', 'pri wide hl') + tap}</div>`, '記帳', 'acc') +
-      `<ul><li>有分帳的紀錄會自動算出誰欠誰，記帳頁顯示「還沒結清的欠款」</li><li>按 <b>對帳 ›</b>，選日期範圍，勾選這次要結清的幾筆</li><li>選錢收進哪個帳戶（銀行或現金）和對方怎麼付的（LINE Pay、台灣 Pay、轉帳…），結清後會記一筆從「外部」轉進來的還款並更新資產，備註條列每筆的日期、店家、欠款和合計</li><li>「對帳紀錄」可以整次取消，也可以單獨把某一筆改回未結清</li></ul>`},
+      `<ul><li>有分帳的紀錄會自動算出誰欠誰</li><li>按 <b>🤝 對帳</b>，選日期範圍，勾選這次要結清的幾筆</li><li>選錢收進哪個帳戶（銀行或現金）和對方怎麼付的（LINE Pay、台灣 Pay、轉帳…），結清後會記一筆還款並更新資產</li><li><b>對帳紀錄</b>：可以整批復原，或單獨把某一筆改回未結清；已經從記帳刪掉的紀錄不會再出現；確認沒問題的按「確認此批沒有問題」就會收起來</li></ul>`},
     {t: '⑤ 資產', h: phone('資產', `<div class="pBtns" style="justify-content:flex-end">${pb('👁 顯示金額', 'hl') + tap}</div>${pc('<b>淨資產</b><small>$ ••••</small>')}${pc('<b>🏦 銀行</b><small>我的銀行　$ ••••</small>')}`, '資產', 'acc') +
       `<ul><li>金額預設隱藏，按右上角 👁 顯示</li><li>每個帳戶的餘額會隨支出、收入、轉帳、遺失自動計算；點帳戶可以設定目前餘額、換圖示</li><li>信用卡設定每月還款日和扣款銀行，到了會自動記一筆還款</li><li>按住拖曳排序</li></ul>`},
     {t: '⑥ 消費分析', h: phone('消費分析', `${pc('<b>11 月支出 $12,480</b><small>比上個月 ▼ 8%</small>')}<div class="pTable"><div><span>🍽️ 吃喝</span><span>42%</span></div><div><span>🏠 生活</span><span>30%</span></div></div>`, '分析', 'acc') +
       `<ul><li>圓餅圖看各分類花多少，點分類看子分類</li><li>必要／非必要消費比例和省錢建議（在設定裡選哪些算非必要）</li><li>每天支出、近 6 個月收支、最常花錢的地方、金額遺失統計</li></ul>`},
-    {t: '⑦ 匯出、備份、換機', h: phone('記帳設定', `${pc('<b>📤 匯出 CSV</b><small>消費明細・資產明細</small>')}${pc('<b>☁️ Google 雲端・pCloud</b><small>上傳／還原・選資料夾</small>')}${pc('<b>📲 快速換機</b><small>舊手機顯示 QR，新手機掃描</small>')}`, '設定', 'acc') +
-      `<ul><li><b>匯出 CSV</b>：選日期區間，消費明細（含品項、分帳）或資產明細</li><li><b>雲端備份</b>：整個日日帳本＋所有圖片；pCloud 用網頁登入</li><li><b>網頁版雲端硬碟</b>：在 App 裡打開 drive.google.com 登入，上傳時備份檔自動選好，下載備份檔就自動還原，不用任何設定</li><li><b>手機內建儲存</b>、<b>快速換機 QR Code</b>：同一個 Wi-Fi 直接傳到新手機</li><li>圖片會回到原本那一筆紀錄</li></ul>`},
-    {t: '⑨ 店家地圖、分帳的人', h: phone('地圖', `${pc('<b>📍 晨曦早午餐</b><small>星河路1號・消費 3 次・$420</small>' + tap)}${pc('<b>📌 好鄰居超市 中央店</b><small>還沒有位置</small><div class="pBtns">' + pb('📍 釘選', 'pri hl') + '</div>')}`, '地圖', 'acc') +
-      `<ul><li>記帳區最左邊的 <b>地圖</b>：列出記過帳的店家，點店家看地址、位置和每一筆消費紀錄</li><li>地圖下面是所有收藏的清冊，依早餐、午餐…分類；點上面的分類按鈕，地圖只顯示那一類，也可以選縣市、鄉鎮市區篩選</li><li>分類預設收合，「全部展開／全部收合」一鍵切換；按住分類標題可以上下移動，展開後按住店家可以排序</li><li>地圖左下 ＋／－ 放大縮小，右下 ➤ 固定朝北、◎ 移到目前位置</li><li>地圖上方的搜尋列可以搜店名，或搜「停車場」這類關鍵字，結果全部標在地圖上，點標籤就能加入收藏；下面有選縣市、鄉鎮時只找那一區</li><li>點店家會在地圖上標出來，下面顯示地址、分類和記帳明細，按「✎ 改店名」會同步到所有區</li><li>日日帳本地圖上的收藏都會顯示；只在記帳出現的店家按「📍 釘選」，用 Google 地圖搜尋找到位置</li><li>在記帳設定的「商家／對象名稱」點收藏店家，會直接跳到這張地圖</li><li>記一筆、商家名單裡有 📍 的就是已經連結地圖的店家</li><li>在發票、地圖、記帳任何一區<b>改店名</b>，會問要不要一起改其他區；台灣電力公司這類「只用在記帳」的名稱不會跟著改</li><li><b>分帳的人</b>：記帳 → 設定 →「管理名單」，名單只用在記帳，和日常點餐分開</li><li><b>上鎖</b>：記帳 → 設定 →「上鎖」設定 6 位數密碼，可以用指紋解鎖；螢幕關閉或把 App 滑掉就會自動上鎖。設定頁的鎖頭按鈕可以立刻上鎖／解鎖；從分帳匯入記帳也要先解鎖</li></ul>`},
-    {t: '⑧ 小工具、通知欄、控制中心', h: phone('桌面', `${pc('<b>📒 日日帳本　11月</b><small>本月支出 $8,420・收入 $36,000・今天 $185</small><div class="pBtns">' + pb('＋ 支出', 'pri hl') + pb('＋ 收入') + pb('⭐ 常用') + '</div>' + tap)}${pc('<b>🔔 日日帳本・快速記帳</b><small>11月 支出 $8,420・今天 $185</small>')}`, '設定', 'acc') +
-      `<ul><li><b>桌面小工具</b>：長按桌面空白處 →「小工具」→ 日日帳本，按「＋ 支出」直接打開記一筆</li><li><b>通知欄</b>：記帳 → 設定 → 快速記帳，打開「通知欄快速記帳」，通知上就有跟小工具一樣的「＋ 支出／＋ 收入／⭐ 常用」三顆按鈕</li><li><b>控制中心</b>：下拉兩次 → 編輯（鉛筆）→ 把「記一筆」和「常用記帳」拖進去</li><li>不想讓別人看到金額：關掉「小工具和通知顯示金額」</li></ul>`}]}
+    {t: '⑦ 店家地圖：定位、搜尋、收藏', h: phone('店家地圖', `<div class="pSrch">🔍 加油站</div><div class="pMap"><span class="flag">📍</span><span class="flag f2">🍳</span></div><div class="pBtns">${pb('星河市 ▾')}${pb('幸福區 ▾')}${pb('✕')}</div>${pc('<b>🍳 早餐 ▾</b><small>晨曦早午餐・消費 3 次・$420</small>' + tap)}`, '地圖', 'acc') +
+      `<ul><li>一進來就<b>定位到你的位置</b>，並<b>自動選好目前的鄉鎮</b>，下面列出那一區的店家</li><li>地圖上方的搜尋列可以搜店名，或搜<b>停車場、加油站</b>這類關鍵字：結果全部標在地圖上，點標籤或「＋ 收藏」就能加入收藏；有選鄉鎮時只找那一區</li><li>左下 ＋／－ 放大縮小，右下 ➤ 固定朝北、◎ 移到目前位置（會重新選好鄉鎮）</li><li>清冊依分類排，「全部展開／全部收合」一鍵切換；按住分類標題上下移動，展開後按住店家排序</li></ul>`},
+    {t: '⑧ 店家資料、改名、釘選', h: phone('店家地圖', `${pc('<b>📍 晨曦早午餐</b><small>星河路1號・消費 3 次・$420</small><div class="pBtns">' + pb('✎ 改店名') + pb('🧭 導航') + '</div>')}${pc('<b>📌 好鄰居超市 中央店</b><small>還沒有位置</small><div class="pBtns">' + pb('📍 釘選', 'pri hl') + '</div>' + tap)}`, '地圖', 'acc') +
+      `<ul><li>點店家會在地圖上標出來，下面顯示地址、分類和每一筆記帳明細</li><li>只在記帳出現、還沒有位置的店家按 <b>📍 釘選</b>，用 Google 地圖搜尋找到位置</li><li>在發票、地圖、記帳任何一區<b>改店名</b>，會問要不要一起改其他區；台灣電力公司這類「只用在記帳」的名稱不會跟著改</li><li>在記帳設定的「商家／對象名稱」點收藏店家，會直接跳到這張地圖</li></ul>`},
+    {t: '⑨ 分帳的人、同一個人', h: phone('記帳設定', `${pc('<b>我是誰</b><div class="pWho"><i class="on">🙂 小美</i><i>🧑 明哥</i><i>👵 阿嬤</i></div>')}${pc('<b>🔗 同一個人，不同綽號</b><div class="sameR" style="margin-top:.3rem"><span>👦 阿明<small>日常</small></span><b>＝</b><span>🧑 明哥<small>記帳</small></span></div>' + pb('🔗 設定同一個人', 'hl') + tap)}`, '設定', 'acc') +
+      `<ul><li><b>我是誰</b>：分帳、對帳時「我」是哪一個人</li><li><b>管理名單</b>：新增、改名、換圖示、刪除、拖曳排序；名單只用在記帳，和日常點餐分開</li><li><b>🔗 同一個人，不同綽號</b>：例如日常點餐叫「阿明」、記帳叫「明哥」。設定後，從分帳匯入記帳會自動變成「明哥」，欠款、對帳算在一起</li><li>如果記帳名單裡兩個名字其實是同一人，連起來後紀錄會併在一起，只留一個名字</li></ul>`},
+    {t: '⑩ 上鎖、防止誤刪', h: phone('記帳設定', `${pc('<b>🔒 記帳密碼</b><small>6 位數・可用指紋解鎖</small><div class="pBtns">' + pb('🔓 立刻上鎖', 'hl') + pb('變更密碼') + '</div>' + tap)}${pc('<b>🧷 防止誤刪 App</b><small>不能直接解除安裝</small>')}`, '設定', 'acc') +
+      `<ul><li><b>上鎖</b>：設定 6 位數密碼，可以用指紋解鎖；螢幕關閉或把 App 滑掉就會自動上鎖，在 App 裡切換分頁不用重新解鎖</li><li>設定頁的鎖頭按鈕可以立刻上鎖／解鎖；變更或移除密碼要先解鎖；從分帳匯入記帳也要先解鎖</li><li>有密碼時，桌面小工具和通知會把金額藏起來</li><li><b>🧷 防止誤刪 App</b>：開啟後手機不能直接解除安裝日日帳本，要先到手機設定停用保護，停用時要輸入手機的解鎖密碼；在 App 裡關閉要先輸入記帳密碼</li></ul>${tip('防誤刪是多一道確認，不是絕對擋得住；最可靠的還是定期備份。')}`},
+    {t: '⑪ 匯出、備份、換機', h: phone('記帳設定', `${pc('<b>📤 匯出 CSV</b><small>消費明細・資產明細</small>')}${pc('<b>☁️ Google 雲端・pCloud</b><small>上傳／還原・選資料夾</small>')}${pc('<b>📲 快速換機</b><small>舊手機顯示 QR，新手機掃描</small>' + tap)}`, '設定', 'acc') +
+      `<ul><li><b>匯出 CSV</b>：選日期區間，消費明細（含品項、分帳）或資產明細</li><li><b>備份內容是整個日日帳本</b>：收藏店家和菜單、點餐、分帳、發票、記帳（常用紀錄、帳戶、對帳、商家）、資產、購物清單、食譜、分類、所有設定、API 金鑰和所有圖片；只有雲端登入和記帳密碼不備份</li><li><b>Google 雲端、pCloud</b>：上傳或還原，可以選資料夾；也可以在 App 裡用網頁版雲端硬碟登入</li><li><b>手機內建儲存</b>：存成一個備份檔放在「下載」資料夾</li><li><b>📲 快速換機 QR Code</b>：同一個 Wi-Fi 直接傳到新手機；傳給別人時選「不要」就不會帶你的金鑰</li></ul>`},
+    {t: '⑫ 小工具、通知欄、控制中心', h: phone('桌面', `${pc('<b>📒 日日帳本　11月</b><small>本月支出 $8,420・收入 $36,000・今天 $185</small><div class="pBtns">' + pb('＋ 支出', 'pri hl') + pb('＋ 收入') + pb('⭐ 常用') + '</div>' + tap)}${pc('<b>🔔 日日帳本・快速記帳</b><small>11月 支出 $8,420・今天 $185</small>')}`, '設定', 'acc') +
+      `<ul><li><b>桌面小工具</b>：長按桌面空白處 →「小工具」→ 日日帳本，按「＋ 支出」直接打開記一筆</li><li><b>通知欄</b>：記帳 → 設定 → 快速記帳，打開「通知欄快速記帳」，通知上有「＋ 支出／＋ 收入／⭐ 常用」三顆按鈕</li><li><b>控制中心</b>：下拉兩次 → 編輯（鉛筆）→ 把「記一筆」和「常用記帳」拖進去</li><li>不想讓別人看到金額：關掉「小工具和通知顯示金額」</li></ul>`}]}
 };
 function openGuide(kind) {
   const G = GUIDE[kind]; let i = 0; buzz(10);
@@ -7357,7 +7389,7 @@ function openInvDetail(no) {
         ${fe.length ? `<div class="ihT card">${fe.map((d, k) => `<button class="ihD" data-fk="${k}"><span class="grow"><b>${esc(d.n)}</b></span><b>+${money(d.amt)}</b></button>`).join('')}</div>` : ''}
         ${Math.abs(sum - numP(v.total)) > 0.5 && v.total ? `<div class="blWarn" style="margin:.5rem 0 0">⚠️ 品項${ds.length || od.length || fe.length ? '加減折扣和費用後' : ''}合計 ${money(sum)} 和消費金額不同${v.src === 'qr' ? '（右邊 QR 可能沒掃到，可以再掃一次）' : ''}</div>` : `${ds.length || od.length || fe.length || its.some(x => +x.amt < 0) ? `<div class="blOk" style="margin:.5rem 0 0">✅ 品項${ds.length || od.length || fe.length ? '加減折扣和費用後' : ''}合計和消費金額一致</div>` : ''}`}`
         : `<div class="empty" style="padding:1rem">這張發票還沒有品項明細<br><span class="small">按「＋ 品項」手動輸入，或用截圖、協助工具補上</span></div>`}
-      <button class="btn block" data-a="fromBill" style="margin-top:.8rem">📥 用購物明細的內容取代品項和折扣</button>
+      <button class="btn block" data-a="fromBill" style="margin-top:.8rem">📥 用消費明細的內容取代品項和折扣</button>
       ${b ? `<button class="invLink card" data-a="open"><span>✓ 已拿去分帳：${dayLabel(billKey(b))} ${esc(billStore(b) || '')}</span><b>打開 ›</b></button><div class="small muted" style="margin-top:.35rem">修改發票不會自動改到已經做好的分帳</div>` : ''}`;
     $('[data-a="split"]', sh.foot).textContent = b ? '🧾 打開分帳' : '🧾 拿去分帳'; };
   draw();
@@ -7480,7 +7512,7 @@ function invToBill(v) {
   while (sheets.length) sheets[sheets.length - 1].close(); buzz(30); toast('✅ 已建立分帳，接著選每一項是誰付的', 3000); gotoBill(k, b.id);
 }
 
-/* ---------- 購物明細 → 發票：保留發票號碼、統編、日期、時間、消費金額，只換品項、折扣、整單折扣、費用 ---------- */
+/* ---------- 消費明細 → 發票：保留發票號碼、統編、日期、時間、消費金額，只換品項、折扣、整單折扣、費用 ---------- */
 const sameSeller = (a, b) => { const n = s => String(s || '').replace(/股份有限公司|有限公司|福利中心|實業|分公司|\s/g, '').toLowerCase(); const x = n(a), y = n(b); return x && y && (x.includes(y.slice(0, 2)) || y.includes(x.slice(0, 2))); };
 function pickInvFor(b) {
   const k = billKey(b), tot = numP(billCalc(b).computed), bt = numP(b.total), st = billStore(b);
@@ -7495,19 +7527,19 @@ function pickInvFor(b) {
 function pickBillFor(v) {
   const all = []; Object.keys(DB.bills || {}).forEach(k => DB.bills[k].forEach(b => all.push(b)));
   const score = b => (billKey(b) === v.date ? 4 : 0) + (Math.abs(numP(b.total || billCalc(b).computed) - numP(v.total)) < 0.5 ? 3 : 0) + (sameSeller(invSeller(v), billStore(b)) ? 2 : 0) + (b.inv === v.no ? 10 : 0);
-  return new Promise(res => { let done = false; const sh = sheet({title: '📥 選擇購物明細', full: true, onClose() { if (!done) res(null); }});
+  return new Promise(res => { let done = false; const sh = sheet({title: '📥 選擇消費明細', full: true, onClose() { if (!done) res(null); }});
     const L = all.sort((x, y) => score(y) - score(x) || billKey(y).localeCompare(billKey(x))).slice(0, 80);
-    sh.body.innerHTML = `<div class="small muted" style="margin:-.2rem 0 .6rem">選一筆購物明細，用它的品項、折扣、整單折扣和費用取代這張發票的內容（發票號碼、統編、日期時間和金額不變）</div>` + (L.map(b => { const sc = score(b); return `<button class="invC card piC ${sc >= 7 ? 'best' : ''}" data-id="${b.id}"><div class="invL"><b>${esc(billStore(b) || '購物明細')}</b><small>${dayLabel(billKey(b))}・${(b.items || []).length} 項</small>${sc >= 7 ? '<span class="chip">很可能是這筆</span>' : ''}</div><div class="invR"><b>${money(b.total || billCalc(b).computed)}</b></div></button>`; }).join('') || '<div class="empty">還沒有購物明細</div>');
+    sh.body.innerHTML = `<div class="small muted" style="margin:-.2rem 0 .6rem">選一筆消費明細，用它的品項、折扣、整單折扣和費用取代這張發票的內容（發票號碼、統編、日期時間和金額不變）</div>` + (L.map(b => { const sc = score(b); return `<button class="invC card piC ${sc >= 7 ? 'best' : ''}" data-id="${b.id}"><div class="invL"><b>${esc(billStore(b) || '消費明細')}</b><small>${dayLabel(billKey(b))}・${(b.items || []).length} 項</small>${sc >= 7 ? '<span class="chip">很可能是這筆</span>' : ''}</div><div class="invR"><b>${money(b.total || billCalc(b).computed)}</b></div></button>`; }).join('') || '<div class="empty">還沒有消費明細</div>');
     sh.body.addEventListener('click', e => { const t = e.target.closest('[data-id]'); if (!t) return; buzz(10); done = true; sh.close(); res(all.find(b => b.id === t.dataset.id)); }); });
 }
 async function applyBillToInv(b, v) {
-  if (!await ask(`用「${billStore(b) || '購物明細'}」的 ${(b.items || []).length} 個品項取代發票 ${invNoFmt(v.no)} 的品項和折扣？\n發票號碼、店家統編、日期、時間和消費金額會保留。`, '取代')) return false;
+  if (!await ask(`用「${billStore(b) || '消費明細'}」的 ${(b.items || []).length} 個品項取代發票 ${invNoFmt(v.no)} 的品項和折扣？\n發票號碼、店家統編、日期、時間和消費金額會保留。`, '取代')) return false;
   const r2 = n => Math.round(n * 100) / 100;
   v.items = (b.items || []).map(x => { const q = +x.q || 1, a = numP(x.amt); return {id: x.id || 'i' + uid(), n: x.n, q, p: r2(a / q), amt: r2(a)}; });
   v.disc = (b.disc || []).map(d => ({id: d.id || 'v' + uid(), n: d.n, amt: numP(d.amt), items: (d.items || []).slice(), kind: d.kind, val: d.val}));
   v.odisc = (b.odisc || []).map(d => ({id: d.id || 'o' + uid(), n: d.n, amt: numP(d.amt), kind: d.kind, val: d.val}));
   v.fees = (b.fees || []).map(d => ({id: d.id || 'f' + uid(), n: d.n, amt: numP(d.amt)}));
-  if (b.way) v.way = b.way; v.bill = {k: billKey(b), id: b.id}; b.inv = v.no; saveInvs(); saveBills(); buzz(30); toast('✅ 已把購物明細的內容套用到發票', 2500); return true;
+  if (b.way) v.way = b.way; v.bill = {k: billKey(b), id: b.id}; b.inv = v.no; saveInvs(); saveBills(); buzz(30); toast('✅ 已把消費明細的內容套用到發票', 2500); return true;
 }
 async function billToInv(b) { const v = await pickInvFor(b); if (!v) return; if (await applyBillToInv(b, v)) { invChanged(); openInvDetail(v.no); } }
 
@@ -7894,7 +7926,39 @@ async function loadAcc() {
     A.recs.forEach(r => { if (r.tags && r.tags.length && !r.payee) r.payee = r.tags[0]; }); A.v = 2; saveAcc(); }
 }
 const accPeople = () => DB.acc.people || (DB.acc.people = []);
-const aWho = id => accPeople().find(u => u.id === id) || ((DB.mcfg && DB.mcfg.people) || []).find(u => u.id === id) || {id, name: '（已刪除）', icon: '👤'};
+/* 同一個人在不同地方用不同綽號：例如日常點餐叫「便當哥」、記帳叫「因因」。same 存「別名 id → 記帳裡的那個人 id」 */
+const accSame = () => DB.acc.same || (DB.acc.same = {});
+function accPid(id) { const M = accSame(); let n = 0; while (id && M[id] && M[id] !== id && n++ < 6) id = M[id]; return id; }
+const mealWho = id => ((DB.mcfg && DB.mcfg.people) || []).find(u => u.id === id);
+function accSameName(id) { const u = accPeople().find(x => x.id === id) || mealWho(id); return u ? u : ((DB.acc.sameN || {})[id] ? {id, name: DB.acc.sameN[id], icon: (DB.acc.sameI || {})[id] || '👤'} : null); }
+/* 把別名併進主要的人：記帳裡所有用到別名的地方都換成主要的人，別名從記帳名單拿掉 */
+function accLink(alias, main) { if (!alias || !main || alias === main) return; const A = DB.acc, f = id => id === alias ? main : id, u = accSameName(alias);
+  (A.sameN = A.sameN || {})[alias] = u ? u.name : alias; (A.sameI = A.sameI || {})[alias] = u ? u.icon : '👤'; accSame()[alias] = main; Object.keys(accSame()).forEach(k => { if (accSame()[k] === alias) accSame()[k] = main; });
+  const fixSplit = L => { const out = []; (L || []).forEach(x => { const p = f(x.p), o = out.find(y => y.p === p); if (o) o.amt = r2((+o.amt || 0) + (+x.amt || 0)); else out.push(Object.assign({}, x, {p})); }); return out; };
+  A.recs.forEach(r => { if (r.payer) r.payer = f(r.payer); if (r.split) r.split = fixSplit(r.split); if (r.settled && r.settled[alias] != null) { if (r.settled[main] == null) r.settled[main] = r.settled[alias]; delete r.settled[alias]; } (r.items || []).forEach(x => { if (x.ppl) x.ppl = [...new Set(x.ppl.map(f))]; }); });
+  A.settles.forEach(t => { if (t.p) t.p = f(t.p); }); A.tpls.forEach(t => { if (t.payer) t.payer = f(t.payer); if (t.split) t.split = fixSplit(t.split); });
+  if (A.me === alias) A.me = main; A.people = accPeople().filter(x => x.id !== alias); saveAcc(); }
+function accUnlink(alias) { delete accSame()[alias]; saveAcc(); }
+/* 選「同一個人」：先選記帳裡顯示的名字，再選另一個名字（記帳名單或日常點餐名單） */
+async function accLinkAsk(mainId) {
+  const pick = (title, L) => new Promise(res => { let done = false; const sh = sheet({title, onClose() { if (!done) res(null); }});
+    sh.body.innerHTML = L.length ? `<div class="whoRow">${L.map(u => `<button data-id="${esc(u.id)}">${esc(u.icon || '👤')} ${esc(u.name)}${u.tag ? `<small class="muted"> ${esc(u.tag)}</small>` : ''}</button>`).join('')}</div>` : '<div class="empty">沒有可以選的人</div>';
+    sh.body.onclick = e => { const b = e.target.closest('[data-id]'); if (!b) return; buzz(10); done = true; sh.close(); res(b.dataset.id); }; });
+  const main = mainId || await pick('① 記帳裡要顯示哪個名字？', accPeople()); if (!main) return false; const M = accPeople().find(u => u.id === main);
+  const cand = accPeople().filter(u => u.id !== main).map(u => Object.assign({tag: '記帳'}, u)).concat(((DB.mcfg && DB.mcfg.people) || []).filter(u => u.id !== main && !accPeople().some(x => x.id === u.id) && accPid(u.id) !== main).map(u => Object.assign({}, u, {tag: '日常點餐'})));
+  const al = await pick(`② 哪個名字其實也是「${M ? M.name : ''}」？`, cand); if (!al) return false; const A = accSameName(al), inAcc = accPeople().some(u => u.id === al);
+  if (!await ask(`「${A ? A.name : ''}」和「${M ? M.name : ''}」是同一個人？\n\n${inAcc ? `記帳裡「${A ? A.name : ''}」的紀錄、欠款都會併到「${M ? M.name : ''}」，記帳名單只留「${M ? M.name : ''}」。` : `日常點餐還是叫「${A ? A.name : ''}」，從分帳匯入記帳時會自動變成「${M ? M.name : ''}」。`}`, '是同一個人')) return false;
+  accLink(al, main); buzz(30); toast(`🔗 ${A ? A.name : ''} ＝ ${M ? M.name : ''}`); return true; }
+/* 從日常設定進來：先選日常的名字，再選記帳裡是誰 */
+async function accLinkAskMeal() {
+  const pick = (title, L) => new Promise(res => { let done = false; const sh = sheet({title, onClose() { if (!done) res(null); }});
+    sh.body.innerHTML = L.length ? `<div class="whoRow">${L.map(u => `<button data-id="${esc(u.id)}">${esc(u.icon || '👤')} ${esc(u.name)}</button>`).join('')}</div>` : '<div class="empty">沒有可以選的人</div>';
+    sh.body.onclick = e => { const b = e.target.closest('[data-id]'); if (!b) return; buzz(10); done = true; sh.close(); res(b.dataset.id); }; });
+  const al = await pick('① 日常點餐裡的哪個名字？', DB.mcfg.people); if (!al) return false; const A = mealWho(al);
+  const main = await pick(`② 「${A.name}」在記帳裡是誰？`, accPeople().filter(u => u.id !== al)); if (!main) return false; const M = accPeople().find(u => u.id === main);
+  if (!await ask(`「${A.name}」（日常）和「${M.name}」（記帳）是同一個人？\n日常還是顯示「${A.name}」，從分帳匯入記帳時會自動變成「${M.name}」${accPeople().some(u => u.id === al) ? `；記帳裡原本「${A.name}」的紀錄也會併到「${M.name}」` : ''}。`, '是同一個人')) return false;
+  accLink(al, main); buzz(30); toast(`🔗 ${A.name} ＝ ${M.name}`); return true; }
+const aWho = id => (id = accPid(id), accPeople().find(u => u.id === id)) || ((DB.mcfg && DB.mcfg.people) || []).find(u => u.id === id) || {id, name: '（已刪除）', icon: '👤'};
 const accMe = () => { const P = accPeople(); if (DB.acc.me && P.some(u => u.id === DB.acc.me)) return DB.acc.me; const u = P.find(x => x.name === '我') || P[0]; return u ? u.id : 'me'; };
 /* 找類別：回傳 {p: 母分類, s: 子分類} */
 function catFind(type, id) { const L = DB.acc.cats[type === 'in' ? 'in' : 'out'] || []; for (const p of L) { if (p.id === id) return {p, s: null}; const s = (p.subs || []).find(x => x.id === id); if (s) return {p, s}; } return {p: null, s: null}; }
@@ -8031,13 +8095,13 @@ function renderAcc() {
   const L = (Acc.day ? mon.filter(r => r.d === Acc.day) : mon).slice().sort(recSort);
   const days = []; L.forEach(r => { let g = days.find(x => x.d === r.d); if (!g) days.push(g = {d: r.d, L: []}); g.L.push(r); });
   $('#accSub').textContent = `${Mo + 1}月・${mon.length} 筆`;
-  box.innerHTML = `<button class="acTplBtn card" data-a="tpls"><span class="acTplI">⭐</span><span class="grow"><b>常用紀錄</b><small>${DB.acc.tpls.length ? esc(DB.acc.tpls.slice(0, 3).map(t => t.name).join('、')) + (DB.acc.tpls.length > 3 ? ` 等 ${DB.acc.tpls.length} 個` : '') : '每月房租、手機費…點一下就記好'}</small></span><span class="acDGo">打開 ›</span></button>
+  box.innerHTML = `<button class="acTplBtn card" data-a="tpls"><span class="acTplI">⭐</span><span class="grow"><b>常用紀錄</b><small>${DB.acc.tpls.length ? `${DB.acc.tpls.length} 個常用紀錄` : '每月房租、手機費…點一下就記好'}</small></span><span class="acDGo">打開 ›</span></button>
     <div class="acSum card"><div class="acT out"><small>支出（我的）</small><b>${money(out)}</b></div><div class="acT in"><small>收入</small><b>${money(inc)}</b></div><div class="acT bal"><small>結餘</small><b>${money(inc - out - lossM)}</b></div></div>${lossM ? `<div class="acLoss card">💸 這個月遺失 <b>${money(lossM)}</b><small>（另外統計，已算進結餘）</small></div>` : ''}
     ${dIds.length ? `<div class="acDebt card"><div class="acDH"><b>🤝 還沒結清的欠款</b><button class="btn sm" data-a="settleLog">對帳紀錄</button></div>${dIds.map(p => { const u = aWho(p), v = debts[p]; return `<button class="acDR" data-settle="${p}"><span class="acDI">${esc(u.icon)}</span><span class="grow"><b>${esc(u.name)}</b><small>${v > 0 ? '欠我' : '我欠他'}</small></span><span class="acDV ${v > 0 ? 'pos' : 'neg'}">${money(Math.abs(v))}</span><span class="acDGo">對帳 ›</span></button>`; }).join('')}</div>` : ''}
     <div class="cal card">${calHead(Y, Mo)}<div class="calWd">${MWD.map((w, i) => `<span class="${i === 0 || i === 6 ? 'we' : ''}">${w}</span>`).join('')}</div><div class="calG acCal">${cells}</div></div>
     ${Acc.day ? `<div class="invDayBar"><span class="grow">📅 只看 ${dayLabel(Acc.day)}</span><button class="btn sm" data-a="allDays">看整個月</button></div>` : ''}
     ${days.map(g => { const s = g.L.reduce((t, r) => t + accSign(r) * accMine(r), 0); return `<div class="acDay"><span>${dayLabel(g.d)}</span>${s ? `<b class="${s > 0 ? 'pos' : 'neg'}">${s > 0 ? '+' : ''}${money(s)}</b>` : ''}</div>${g.L.map(accCard).join('')}`; }).join('')
-      || `<div class="empty mealEmpty"><span class="big">📒</span>${Acc.day ? '這天' : '這個月'}還沒有記帳<br><span class="small">按上面的「＋ 記一筆」，或「從分帳匯入」把購物明細帶進來</span></div>`}`;
+      || `<div class="empty mealEmpty"><span class="big">📒</span>${Acc.day ? '這天' : '這個月'}還沒有記帳<br><span class="small">按上面的「＋ 記一筆」，或「從分帳匯入」把消費明細帶進來</span></div>`}`;
 }
 function accCard(r) {
   const c = accCat(r), me = accMe(), sp = (r.split || []).filter(s => s.p !== me), payer = r.payer || me;
@@ -8224,7 +8288,7 @@ function accEdit(r0, preset, opt = {}) {
         <div class="lbl">商家／對象</div><button class="acPayee" data-a="payee">${r.payee ? `<b>${esc(r.payee)}</b>` : '<span class="muted">選擇店名，或自訂名稱（例如：台灣電力公司）</span>'}<i>›</i></button>${r.payee && !isPcatPayee(r.payee) && r.type !== 'tr' ? (storeLoc(r.payee) ? `<div class="pyLocT on">📍 已連結地圖${storeLoc(r.payee).addr ? '・' + esc(storeLoc(r.payee).addr) : ''}</div>` : '<button class="pyLocT" data-a="pinP">📌 這間店還沒有地圖位置，點這裡釘選</button>') : ''}
         <div class="lbl">${r.type === 'in' ? '收進哪個帳戶' : '付款帳戶'}</div>${acctPickerHtml(r.acct, 'acct', r.fund)}`}
         ${r0 && Object.keys(r.settled || {}).length ? `<div class="acSetl">${Object.keys(r.settled).map(p => `<div class="row" style="gap:.5rem"><span class="grow">✓ 已和 ${esc(aWho(p).name)} 結清</span><button class="btn sm" data-unst="${p}">改回未結清</button></div>`).join('')}</div>` : ''}
-        <div class="field" style="margin-top:.7rem"><label class="row" style="gap:.4rem"><span class="grow">備註／購物明細</span></label>${tr ? '' : `<div class="acRow2" style="margin-bottom:.5rem"><button class="btn" data-a="billEd">🧾 ${r.bill ? '編輯明細（' + (r.bill.items || []).length + ' 項）' : '用分帳方式輸入'}</button><button class="btn" data-a="fromBill">📥 從分帳帶入</button></div>`}<textarea id="acNote" rows="${Math.min(10, Math.max(3, String(r.note || '').split('\n').length + 1))}" placeholder="例如：\n鮮奶 ×2  $95\n雞蛋  $60">${esc(r.note || '')}</textarea></div>
+        <div class="field" style="margin-top:.7rem"><label class="row" style="gap:.4rem"><span class="grow">備註／消費明細</span></label>${tr ? '' : `<div class="acRow2" style="margin-bottom:.5rem"><button class="btn" data-a="billEd">🧾 ${r.bill ? '編輯明細（' + (r.bill.items || []).length + ' 項）' : '用分帳方式輸入'}</button><button class="btn" data-a="fromBill">📥 從分帳帶入</button></div>`}<textarea id="acNote" rows="${Math.min(10, Math.max(3, String(r.note || '').split('\n').length + 1))}" placeholder="例如：\n鮮奶 ×2  $95\n雞蛋  $60">${esc(r.note || '')}</textarea></div>
         <div class="lbl">圖片</div><div class="acImgs">${r.imgs.map((id, i) => `<span class="acImg"><img data-img="${id}" data-i="${i}" alt=""><button data-rmimg="${i}" aria-label="移除">✕</button></span>`).join('')}<button class="acImgAdd" data-a="addImg">＋<small>加入圖片</small></button></div>
         ${r.type === 'out' ? `<div class="acSplit card"><div class="acSH"><b>🤝 分帳</b><small>${who.length ? '選了 ' + who.length + ' 人分' : '不分帳就不用選'}</small></div>
           <div class="lbl">誰付的錢</div><div class="whoRow">${accPeople().map(u => `<button data-payer="${u.id}" class="${payer === u.id ? 'on' : ''}">${esc(u.icon)} ${esc(u.name)}</button>`).join('')}</div>
@@ -8398,23 +8462,23 @@ function accGuessCat(b) {
 }
 /* 分帳明細 → 備註（日常「模板二」的寫法：每個人列自己的品項和小計；平台費、包材費、整單折扣照分帳方式分攤） */
 function accNoteFromBill(b) {
-  const c = billCalc(b), ids = pOrder(Object.keys(c.per)), out = [`🏪 ${billStore(b) || '購物明細'}${b.time ? ' ' + b.time : ''}`, `🛒 購物方式：${b.way || '實體店購物'}`, ''];
+  const c = billCalc(b), ids = pOrder(Object.keys(c.per)), out = [`🏪 ${billStore(b) || '消費明細'}${b.time ? ' ' + b.time : ''}`, `🛒 購物方式：${b.way || '實體店購物'}`, ''];
   if (ids.length) { const L = billBlock(b); out.push(...L.slice(1)); return out.join('\n').replace(/\n(小計：[^\n]+)\n(?!合計)/g, '\n$1\n\n'); }
   (b.items || []).forEach(x => { const unit = (numP(x.amt) - (c.itemDisc[x.id] || 0)) / (x.q || 1); out.push(`${tn(x.n)}${x.o ? '(' + x.o + ')' : ''}[${ntd(unit)}]×${x.q || 1}`); });
   (b.odisc || []).forEach(d => out.push(`${d.n}：-${ntd(d.amt)}`)); (b.fees || []).forEach(d => out.push(`${d.n}：${ntd(d.amt)}`)); out.push(`合計：${ntd(c.computed)}`); return out.join('\n');
 }
 function billToAccRec(b, k) {
   const c = billCalc(b), me = accMe(), tot = r2(c.total != null ? c.total : c.computed), per = c.per, ids = pOrder(Object.keys(per));
-  let split = ids.map(p => ({p, amt: r2(per[p])})); const diff = r2(tot - split.reduce((s, x) => s + x.amt, 0)); if (split.length && Math.abs(diff) < 1) split[split.length - 1].amt = r2(split[split.length - 1].amt + diff);
+  let split = []; ids.forEach(p0 => { const p = accPid(p0), o = split.find(x => x.p === p); if (o) o.amt = r2(o.amt + r2(per[p0])); else split.push({p, amt: r2(per[p0])}); }); const diff = r2(tot - split.reduce((s, x) => s + x.amt, 0)); if (split.length && Math.abs(diff) < 1) split[split.length - 1].amt = r2(split[split.length - 1].amt + diff);
   if (split.length === 1 && split[0].p === me) split = [];
-  const items = (b.items || []).map(x => ({n: x.n, amt: r2(numP(x.amt) - (c.itemDisc[x.id] || 0)), ppl: (x.ppl || []).slice(), q: x.q || 1}));
+  const items = (b.items || []).map(x => ({n: x.n, amt: r2(numP(x.amt) - (c.itemDisc[x.id] || 0)), ppl: [...new Set((x.ppl || []).map(accPid))], q: x.q || 1}));
   const note = accNoteFromBill(b);
   return {id: 'r' + uid(), d: k, t: b.time || '', type: 'out', amt: tot, cat: accGuessCat(b), acct: (DB.acc.accts[0] || {}).id || '', note, payee: billStore(b) || '', payer: me, split, items, imgs: [], src: {bill: b.id}};
 }
 function pickBillForAcc() {
   const all = []; Object.keys(DB.bills || {}).sort().reverse().forEach(k => DB.bills[k].forEach(b => all.push({k, b})));
   return new Promise(res => { let done = false; const sh = sheet({title: '📥 選一筆分帳明細', full: true, onClose() { if (!done) res(null); }});
-    sh.body.innerHTML = all.slice(0, 120).map(({k, b}, i) => `<button class="acImp card" data-i="${i}"><span class="grow"><b>${esc(billStore(b) || '購物明細')}</b><small>${dayLabel(k)}・${(b.items || []).length} 項${(b.imgs || []).length ? '・🖼️' + b.imgs.length : ''}${b.acc ? '・已匯入過' : ''}</small></span><b>${money(billCalc(b).total != null ? billCalc(b).total : billCalc(b).computed)}</b></button>`).join('') || '<div class="empty">分帳裡還沒有明細</div>';
+    sh.body.innerHTML = all.slice(0, 120).map(({k, b}, i) => `<button class="acImp card" data-i="${i}"><span class="grow"><b>${esc(billStore(b) || '消費明細')}</b><small>${dayLabel(k)}・${(b.items || []).length} 項${(b.imgs || []).length ? '・🖼️' + b.imgs.length : ''}${b.acc ? '・已匯入過' : ''}</small></span><b>${money(billCalc(b).total != null ? billCalc(b).total : billCalc(b).computed)}</b></button>`).join('') || '<div class="empty">分帳裡還沒有明細</div>';
     sh.body.onclick = e => { const t = e.target.closest('[data-i]'); if (!t) return; buzz(10); done = true; sh.close(); res(all[+t.dataset.i]); }; });
 }
 async function billToAcc(b) {
@@ -8428,7 +8492,7 @@ function accImportBills() {
   if (!all.length) { toast('分帳裡的明細都已經匯入過了，不會重複匯入'); return; }
   const sel = new Set();   /* 預設全不選 */
   const sh = sheet({title: '📥 從分帳匯入', full: true, foot: '<button class="btn" data-a="all">全選</button><button class="btn pri" data-a="ok">匯入</button>'});
-  const draw = () => { sh.body.innerHTML = `<div class="small muted" style="margin:-.2rem 0 .7rem">勾選要匯入的購物明細（已經匯入過的不會出現）。每個人分到的金額、品項明細和圖片都會一起帶進來，付錢的人預設是「${esc(aWho(accMe()).name)}」。</div>` + all.map(({k, b}) => { const c = billCalc(b), ids = pOrder(Object.keys(c.per)); return `<button class="acImp card ${sel.has(b.id) ? 'on' : ''}" data-b="${b.id}"><span class="acCk"></span><span class="grow"><b>${esc(billStore(b) || '購物明細')}</b><small>${dayLabel(k)}・${(b.items || []).length} 項${(b.imgs || []).length ? '・🖼️' + b.imgs.length : ''}${ids.length ? '・' + ids.map(p => esc(aWho(p).name) + ' ' + money(c.per[p])).join('、') : ''}</small></span><b>${money(c.total != null ? c.total : c.computed)}</b></button>`; }).join('');
+  const draw = () => { sh.body.innerHTML = `<div class="small muted" style="margin:-.2rem 0 .7rem">勾選要匯入的消費明細（已經匯入過的不會出現）。每個人分到的金額、品項明細和圖片都會一起帶進來，付錢的人預設是「${esc(aWho(accMe()).name)}」。</div>` + all.map(({k, b}) => { const c = billCalc(b), ids = pOrder(Object.keys(c.per)); return `<button class="acImp card ${sel.has(b.id) ? 'on' : ''}" data-b="${b.id}"><span class="acCk"></span><span class="grow"><b>${esc(billStore(b) || '消費明細')}</b><small>${dayLabel(k)}・${(b.items || []).length} 項${(b.imgs || []).length ? '・🖼️' + b.imgs.length : ''}${ids.length ? '・' + ids.map(p => esc(aWho(p).name) + ' ' + money(c.per[p])).join('、') : ''}</small></span><b>${money(c.total != null ? c.total : c.computed)}</b></button>`; }).join('');
     sh.foot.querySelector('[data-a="ok"]').textContent = `匯入 ${sel.size} 筆`; };
   draw(); sh.body.onclick = e => { const t = e.target.closest('[data-b]'); if (!t) return; buzz(8); const id = t.dataset.b; if (sel.has(id)) sel.delete(id); else sel.add(id); draw(); };
   sh.foot.onclick = async e => { const b = e.target.closest('[data-a]'); if (!b) return; buzz(10);
@@ -8777,6 +8841,9 @@ function renderAccCfg() {
       <div class="setR" style="cursor:default"><span class="gRi">📱</span><div class="t"><b>桌面小工具、控制中心按鈕</b><small>桌面：長按空白處 →「小工具」→ 日日帳本。控制中心：下拉兩次 → 編輯（鉛筆）→ 把「記一筆」「常用記帳」拖進去。</small></div></div></div></div>` : ''}
     <div class="setG"><h3>說明</h3><div class="setC"><button class="setR" data-a="guide" style="width:100%;text-align:left"><span class="gRi">📖</span><div class="t"><b>記帳 圖解說明</b><small>記一筆、常用、欠款對帳、資產、分析、備份換機</small></div><span class="chev">›</span></button></div></div>
     <div class="setG"><h3>分帳的人</h3><div class="setC"><div class="setR col"><div class="t"><b>我是誰</b><small>分帳、對帳時「我」是哪一個人（記帳自己的名單，和日常點餐分開）</small></div><div class="whoRow">${accPeople().map(u => `<button data-me="${u.id}" class="${accMe() === u.id ? 'on' : ''}">${esc(u.icon)} ${esc(u.name)}</button>`).join('')}</div></div>
+      <div class="setR col"><div class="t"><b>🔗 同一個人，不同綽號</b><small>例如日常點餐叫「便當哥」、記帳叫「因因」：設定後分帳匯入記帳會自動對到同一個人，欠款、對帳也算在一起</small></div>
+        ${Object.keys(accSame()).length ? `<div class="sameL">${Object.keys(accSame()).map(k => { const a = accSameName(k), m = aWho(k); return `<div class="sameR"><span>${esc((a && a.icon) || '👤')} ${esc(a ? a.name : (DB.acc.sameN || {})[k] || k)}${mealWho(k) ? '<small>日常</small>' : ''}</span><b>＝</b><span>${esc(m.icon)} ${esc(m.name)}<small>記帳</small></span><button class="ic" data-unlink="${esc(k)}" aria-label="取消">✕</button></div>`; }).join('')}</div>` : ''}
+        <button class="btn block" data-a="link">🔗 設定同一個人</button></div>
       <button class="setR" data-a="people" style="width:100%;text-align:left"><span class="gRi">👥</span><div class="t"><b>管理名單</b><small>新增、改名、換圖示、刪除、拖曳排序</small></div><span class="chev">›</span></button></div></div>
     <div class="setG"><h3>分類</h3><div class="setC">
       <button class="setR" data-a="cats" data-ty="out" style="width:100%;text-align:left"><span class="gRi">📂</span><div class="t"><b>支出分類</b><small>${DB.acc.cats.out.map(p => p.n).join('、')}</small></div><span class="chev">›</span></button>
@@ -8787,7 +8854,7 @@ function renderAccCfg() {
       <button class="setR" data-a="accts" style="width:100%;text-align:left"><span class="gRi">🏦</span><div class="t"><b>帳戶</b><small>${DB.acc.accts.length} 個・現金、銀行、信用卡、行動支付</small></div><span class="chev">›</span></button>
       <button class="setR" data-a="tpls" style="width:100%;text-align:left"><span class="gRi">⭐</span><div class="t"><b>常用紀錄</b><small>${DB.acc.tpls.length ? `${DB.acc.tpls.length} 筆常用紀錄` : '在「記一筆」按「⭐ 存成常用」建立'}</small></div><span class="chev">›</span></button></div></div>
     <div class="setG"><h3>匯出</h3><div class="setC"><button class="setR" data-a="csv" style="width:100%;text-align:left"><span class="gRi">📤</span><div class="t"><b>匯出 CSV</b><small>選日期區間：所有消費明細（含品項、分帳），以及資產明細</small></div><span class="chev">›</span></button></div></div>
-    <div class="setG"><h3>備份與換機（整個日日帳本＋所有圖片）</h3><div class="setC">
+    <div class="setG"><h3>備份與換機（整個日日帳本＋所有圖片）</h3><div class="bkWhat">📦 會備份：${BACKUP_WHAT}。手機、雲端、QR Code 換機都一樣；只有雲端登入和記帳密碼不備份。</div><div class="setC">
       <div class="setR col"><div class="t"><b>☁️ Google 雲端硬碟</b><small>${(S.gd || {}).email || gi.email ? '帳戶：' + esc((S.gd || {}).email || gi.email) : '還沒登入（可以用瀏覽器登入，支援兩步驟驗證）'}・資料夾：${esc((S.gd || {}).folder || '日日帳本備份')}${S.gd && S.gd.last ? '・上次備份 ' + new Date(S.gd.last).toLocaleString('zh-TW') : ''}</small></div>
         <div class="acRow2"><button class="btn pri" data-a="gUp">⬆️ 上傳備份</button><button class="btn" data-a="gDown">⬇️ 從雲端還原</button></div><div class="acRow2"><button class="btn sm" data-a="gFolder">📁 選擇資料夾</button>${gi.email || (S.gd || {}).rt ? '<button class="btn sm" data-a="gOut">換帳戶／登出</button>' : '<button class="btn sm" data-a="gIn">🌐 登入 Google</button>'}</div><div class="gwBox"><b>🌐 網頁版雲端硬碟（免設定）</b><small>在 App 裡打開 drive.google.com，跟用瀏覽器一樣登入。登入後會自動建立「日日帳本備份」資料夾並上傳；還原時列出資料夾裡的備份讓你選。${S.gd && S.gd.wEmail ? '<br>已登入：' + esc(S.gd.wEmail) : ''}</small><div class="acRow2"><button class="btn" data-a="gwUp">⬆️ 上傳備份</button><button class="btn" data-a="gwDown">⬇️ 從雲端還原</button></div><button class="btn sm" data-a="gwMan" style="margin-top:.3rem">🖥️ 開電腦版網頁自己上傳／下載</button></div></div>
       <div class="setR col"><div class="t"><b>☁️ pCloud</b><small>${pc.auth ? '帳戶：' + esc(pc.email || '') + '・資料夾：' + esc((pc.folder || {}).path || '/日日帳本備份') + (pc.last ? '・上次備份 ' + new Date(pc.last).toLocaleString('zh-TW') : '') : '還沒登入（可以用 pCloud 網頁登入，支援 Google 登入、兩步驟驗證）'}</small></div>
@@ -8799,9 +8866,11 @@ function renderAccCfg() {
       <div class="setR col"><div class="t"><small>每張圖片都用自己的編號存在備份裡，記錄只記著圖片編號，所以還原後圖片會回到原本那一筆記帳、分帳明細、菜單和食譜，不會亂掉。</small></div></div></div></div>`;
 }
 async function accCfgClick(e) {
-  const t = e.target.closest('[data-a],[data-me]'); if (!t) return; buzz(8); const a = t.dataset.a;
+  const t = e.target.closest('[data-a],[data-me],[data-unlink]'); if (!t) return; buzz(8); const a = t.dataset.a;
   if (t.dataset.me) { DB.acc.me = t.dataset.me; saveAcc(); renderAccCfg(); return; }
+  if (t.dataset.unlink) { const k = t.dataset.unlink, a = accSameName(k); if (!await ask(`取消「${a ? a.name : (DB.acc.sameN || {})[k] || ''}」＝「${aWho(k).name}」？\n已經併在一起的紀錄不會拆開，之後從分帳匯入的才會分開算。`, '取消連結', true)) return; buzz(15); accUnlink(k); renderAccCfg(); return; }
   if (a === 'people') { await accPeopleEdit(); renderAccCfg(); return; }
+  if (a === 'link') { if (await accLinkAsk()) renderAccCfg(); return; }
   if (a === 'guard') { if (!NB.guardOn()) { Guard.asked = 1; NB.guardEnable(); return; }
     if (!await ask('關閉後，日日帳本就可以直接被解除安裝（帳本資料會一起刪除）。確定要關閉嗎？', '關閉保護', true)) return;
     if (AccLock.has() && !await new Promise(r => accPinPad({title: '關閉防誤刪要先驗證', onOk: () => r(true), onCancel: () => r(false)}))) return;
@@ -9165,13 +9234,14 @@ function localRestore() { importBackup(); }
 /* ---------- 快速換機：同一個 Wi-Fi，舊手機顯示 QR Code，新手機掃描後直接把整個日日帳本（含圖片）傳過去 ---------- */
 async function xferSend() {
   if (!(IS_APP && NB.xferStart)) { toast('快速換機要在 Android App 裡使用'); return; }
-  try { busy('打包資料和圖片…'); const blob = await makeBackupBlob(); const CH = 768 * 1024; let off = 0, first = true;
+  const withKeys = !(S.gkey || S.aikey) || await ask('要連同你的 Google Maps／AI 金鑰一起傳嗎？\n傳給自己的新手機：選「一起傳」\n傳給別人：選「不要」，對方要用自己的金鑰', '一起傳', false, '不要');
+  try { busy('打包資料和圖片…'); const blob = await makeBackupBlob({noKeys: !withKeys}); const CH = 768 * 1024; let off = 0, first = true;
     while (off < blob.size) { busy(`準備傳送…${Math.round(off / blob.size * 100)}%`); const b64 = await blobB64(blob.slice(off, off + CH)); if (!NB.tmpWrite('xfer_out.json', b64, !first)) throw new Error('寫入暫存檔失敗'); first = false; off += CH; }
     const info = JSON.parse(NB.xferStart()); busy(false); if (info.err || !info.ip) throw new Error(info.err || '找不到這支手機的 Wi-Fi 位址，請先連上 Wi-Fi');
     const url = `http://${info.ip}:${info.port}/${info.tok}`, qr = qrcode(0, 'M'); qr.addData('RIZHANG:' + url); qr.make();
     const sh = sheet({title: '📲 快速換機：在新手機掃描', full: true, onClose() { NB.xferStop(); window.__xferSent = null; }, html: `<div class="xfQR">${qr.createSvgTag({cellSize: 6, margin: 2, scalable: true})}</div>
       <ol class="invSteps"><li>兩支手機連同一個 Wi-Fi（或新手機連舊手機的熱點）</li><li>新手機打開日日帳本 → 記帳 → 設定 →「📷 掃描 QR Code 接收」</li><li>掃描上面的 QR Code，傳完會自動還原，<b>這個畫面請先不要關閉</b></li></ol>
-      <div class="small muted">要傳的資料：${(blob.size / 1048576).toFixed(1)} MB（收藏、點餐、分帳、發票、記帳、資產、食譜、設定和所有圖片）</div><div class="xfSt" id="xfSt">等待新手機連線…</div>`});
+      <div class="small muted">要傳的資料：${(blob.size / 1048576).toFixed(1)} MB（${BACKUP_WHAT}${withKeys ? '' : '；不含金鑰'}）</div><div class="xfSt" id="xfSt">等待新手機連線…</div>`});
     window.__xferSent = () => { buzz(60); const st = $('#xfSt', sh.body); if (st) st.innerHTML = '✅ 已經傳送完成！新手機會自動還原。'; };
   } catch (e) { busy(false); toast('❌ ' + e.message, 5000); }
 }
