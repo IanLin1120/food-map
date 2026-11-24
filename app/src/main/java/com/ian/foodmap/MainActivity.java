@@ -53,7 +53,6 @@ public class MainActivity extends Activity {
     Uri saveUri;
     String saveName;
 
-    @Override
     /* 高更新率螢幕（90／120Hz）：請系統用最高的更新率，畫面滑動才會順 */
     private void maxRefresh() {
         try {
@@ -66,6 +65,7 @@ public class MainActivity extends Activity {
             getWindow().setAttributes(lp);
         } catch (Throwable t) { }
     }
+    @Override
     protected void onCreate(Bundle b) {
         super.onCreate(b);
         /* 記帳的鎖：App 每次重新開啟（包含從最近使用劃掉後再開）都要重新解鎖 */
