@@ -286,13 +286,12 @@ async function xferSend() {
 }
 function qrScanOnce(title, test) {
   return new Promise(res => { if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { toast('這台手機不支援相機掃描'); res(null); return; }
-    let stream = null, stop = false, done = false; const sh = sheet({title, full: true, onClose() { stop = true; if (stream) stream.getTracks().forEach(t => t.stop()); if (!done) res(null); }});
-    sh.body.innerHTML = `<div class="scanBox"><video id="qsV" playsinline muted></video><div class="scFrame"><i></i><i></i></div><div class="scTip" id="qsT">把 QR Code 放進框裡</div></div>`;
+    let cam = null, stop = false, done = false; const sh = sheet({title, full: true, onClose() { stop = true; if (cam) cam.stop(); if (!done) res(null); }});
+    sh.body.innerHTML = `<div class="scanBox"><video id="qsV" playsinline muted></video><div class="scFrame one"><i></i></div><div class="scTip" id="qsT">把 QR Code 放進框裡，太小可以按 ＋ 放大</div></div>`;
     const v = $('#qsV', sh.body), cv = document.createElement('canvas'), g = cv.getContext('2d', {willReadFrequently: true});
-    const tick = () => { if (stop) return; if (v.readyState >= 2 && v.videoWidth) { const sc = Math.min(1, 800 / v.videoWidth); cv.width = Math.round(v.videoWidth * sc); cv.height = Math.round(v.videoHeight * sc); g.drawImage(v, 0, 0, cv.width, cv.height);
+    const tick = () => { if (stop) return; if (v.readyState >= 2 && v.videoWidth) { const [sx, sy, vw, vh] = cam.crop(), sc = Math.min(1, 900 / vw); cv.width = Math.round(vw * sc); cv.height = Math.round(vh * sc); g.drawImage(v, sx, sy, vw, vh, 0, 0, cv.width, cv.height);
         try { const c = jsQR(g.getImageData(0, 0, cv.width, cv.height).data, cv.width, cv.height); if (c && c.data && (!test || test(c.data))) { done = true; buzz(60); sh.close(); res(c.data); return; } } catch (e) {} } requestAnimationFrame(tick); };
-    navigator.mediaDevices.getUserMedia({video: {facingMode: {ideal: 'environment'}}, audio: false}).then(s2 => { stream = s2; if (stop) { s2.getTracks().forEach(t => t.stop()); return; } v.srcObject = s2; v.play().catch(() => {}); tick(); })
-      .catch(er => { $('#qsT', sh.body).textContent = '❌ 打不開相機：' + (er.name === 'NotAllowedError' ? '請允許日日帳本使用相機' : er.message); }); });
+    cam = camKit($('.scanBox', sh.body), v, er => { $('#qsT', sh.body).textContent = '❌ 打不開相機：' + (er.name === 'NotAllowedError' ? '請允許日日帳本使用相機' : er.message); }); tick(); });
 }
 async function xferRecv() {
   if (!(IS_APP && NB.xferGet)) { toast('快速換機要在 Android App 裡使用'); return; }

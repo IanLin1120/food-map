@@ -134,10 +134,42 @@ function qrMulti(g, z) {
     const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys), pad = (x1 - x0) * 0.15; g.fillStyle = '#fff'; g.fillRect(hit.x + x0 - pad, Y + y0 - pad, x1 - x0 + pad * 2, y1 - y0 + pad * 2); }
   return out;
 }
+/* 相機：可以換鏡頭（避開長焦、超廣角）、放大縮小，讓你自己決定離多遠掃；會記住上次的鏡頭和倍率。
+   手機支援的話用鏡頭本身的變焦，不支援就用數位放大（只取畫面中間來辨識） */
+function camKit(box, v, onErr) {
+  const K = {stream: null, track: null, z: Math.max(1, +S.camZ || 1), hw: null, devs: [], di: -1, stopped: false};
+  box.insertAdjacentHTML('afterend', `<div class="camBar"><button class="btn sm" data-cz="-" aria-label="縮小">－</button><input type="range" class="czR" min="1" max="5" step="0.1" value="${K.z}"><button class="btn sm" data-cz="+" aria-label="放大">＋</button><b class="czL">${K.z.toFixed(1)}×</b><button class="btn sm hide" data-cam="1">🔄 換鏡頭</button></div>`);
+  const bar = box.nextElementSibling, R = $('.czR', bar), Lb = $('.czL', bar), cb = $('[data-cam]', bar);
+  let svT = 0; const save = () => { clearTimeout(svT); svT = setTimeout(() => { S.camZ = K.z; saveS(); }, 400); };
+  K.apply = () => { const max = +R.max; K.z = Math.min(max, Math.max(1, Math.round(K.z * 10) / 10)); R.value = K.z; Lb.textContent = K.z.toFixed(1) + '×';
+    if (K.hw) { const z = K.hw.min + (K.z - 1); try { K.track.applyConstraints({advanced: [{zoom: Math.min(K.hw.max, z)}]}).catch(() => {}); } catch (e) {} v.style.transform = ''; }
+    else v.style.transform = K.z > 1 ? `scale(${K.z})` : ''; save(); };
+  K.crop = () => { const vw = v.videoWidth, vh = v.videoHeight; if (K.hw || K.z <= 1) return [0, 0, vw, vh]; const w = vw / K.z, h = vh / K.z; return [(vw - w) / 2, (vh - h) / 2, w, h]; };
+  K.stop = () => { K.stopped = true; if (K.stream) K.stream.getTracks().forEach(t => t.stop()); };
+  K.open = async dev => { if (K.stream) K.stream.getTracks().forEach(t => t.stop());
+    const base = {width: {ideal: 1920}, height: {ideal: 1080}}, c = dev ? Object.assign({deviceId: {exact: dev}}, base) : Object.assign({facingMode: {ideal: 'environment'}}, base);
+    let s; try { s = await navigator.mediaDevices.getUserMedia({video: c, audio: false}); } catch (er) { if (dev) { S.camDev = ''; return K.open(''); } onErr && onErr(er); return; }
+    if (K.stopped) { s.getTracks().forEach(t => t.stop()); return; } K.stream = s; K.track = s.getVideoTracks()[0]; v.srcObject = s; v.play().catch(() => {});
+    const cap = (K.track.getCapabilities && K.track.getCapabilities()) || {}; K.hw = cap.zoom && cap.zoom.max > cap.zoom.min ? cap.zoom : null; R.max = K.hw ? Math.min(8, Math.round((K.hw.max - K.hw.min + 1) * 10) / 10) : 5;
+    if (cap.focusMode && cap.focusMode.includes('continuous')) K.track.applyConstraints({advanced: [{focusMode: 'continuous'}]}).catch(() => {});
+    K.apply();
+    try { if (!K.devs.length) { const all = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === 'videoinput'), back = all.filter(d => /back|rear|environment|後/i.test(d.label)); K.devs = back.length >= 2 ? back : all; }
+      const id = (K.track.getSettings && K.track.getSettings().deviceId) || dev; K.di = Math.max(0, K.devs.findIndex(d => d.deviceId === id)); cb.classList.toggle('hide', K.devs.length < 2);
+      cb.textContent = `🔄 換鏡頭 ${K.di + 1}/${K.devs.length}`; } catch (e) {} };
+  bar.addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; buzz(8);
+    if (b.dataset.cz) { K.z += b.dataset.cz === '+' ? .5 : -.5; K.apply(); }
+    else if (b.dataset.cam && K.devs.length > 1) { K.di = (K.di + 1) % K.devs.length; S.camDev = K.devs[K.di].deviceId; saveS(); K.open(S.camDev); toast(`鏡頭 ${K.di + 1}／${K.devs.length}${K.devs[K.di].label ? '：' + K.devs[K.di].label : ''}`); } });
+  R.addEventListener('input', () => { K.z = +R.value; K.apply(); });
+  /* 雙指縮放畫面也可以調整倍率 */
+  let d0 = 0, z0 = 1; box.addEventListener('touchstart', e => { if (e.touches.length === 2) { d0 = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY); z0 = K.z; } }, {passive: true});
+  box.addEventListener('touchmove', e => { if (e.touches.length === 2 && d0) { const d = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY); K.z = z0 * d / d0; K.apply(); } }, {passive: true});
+  box.addEventListener('touchend', () => { d0 = 0; }, {passive: true});
+  K.open(S.camDev || ''); return K;
+}
 function openInvScan() {
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { toast('這台手機不支援相機掃描'); return; }
-  let stream = null, stop = false, left = null, right = null, leftAt = 0, got = [];
-  const sh = sheet({title: '📷 掃描發票 QR Code', full: true, onClose() { stop = true; if (stream) stream.getTracks().forEach(t => t.stop()); }});
+  let cam = null, stop = false, left = null, right = null, leftAt = 0, got = [];
+  const sh = sheet({title: '📷 掃描發票 QR Code', full: true, onClose() { stop = true; if (cam) cam.stop(); }});
   sh.body.innerHTML = `<div class="scanBox"><video id="scV" playsinline muted></video><div class="scFrame"><i></i><i></i></div><div class="scTip" id="scTip">把發票左右兩個 QR Code 一起放進框裡</div></div>
     <div class="scState"><span id="scL" class="chip">左邊 QR</span><span id="scR" class="chip">右邊 QR</span></div><div id="scGot" class="scGot"></div>`;
   const v = $('#scV', sh.body), cv = document.createElement('canvas'), g = cv.getContext('2d', {willReadFrequently: true});
@@ -145,18 +177,16 @@ function openInvScan() {
   const finish = () => { const inv = parseInvQR(left, right); left = right = null; leftAt = 0; mark(); if (!inv) return;
     if (got.includes(inv.no)) return; got.push(inv.no); buzz(60);
     const r = invPut(inv); invChanged(); lookupSeller(inv.sellerId);
-    $('#scGot', sh.body).insertAdjacentHTML('afterbegin', `<button class="invC card" data-no="${inv.no}"><div class="invL"><b>${r === 'new' ? '✅ 已存入' : '🔄 已更新'}　${invNoFmt(inv.no)}</b><small>${dayLabel(inv.date)}・${inv.items.length} 項${inv.need && inv.items.length < inv.need ? `（共 ${inv.need} 項，右邊 QR 沒掃到的會少）` : ''}</small></div><div class="invR"><b>${money(inv.total)}</b><span class="chip">查看 ›</span></div></button>`);
+    $('#scGot', sh.body).insertAdjacentHTML('afterbegin', `<button class="invC card" data-no="${inv.no}"><div class="invL"><b>${r === 'new' ? '✅ 已存入' : '🔄 已更新'}　${invNoFmt(inv.no)}</b><small>${dayLabel(inv.date)}・${inv.items.length} 項${inv.need && inv.items.length < inv.need ? `（共 ${inv.need} 項，右邊 QR 沒掃到的會少）` : ''}</small>${inv.items.length ? `<div class="scItems">${inv.items.map(x => `<span><em>${esc(x.n)}</em><i>${x.q !== 1 ? '×' + x.q + ' ' : ''}${money(x.amt)}</i></span>`).join('')}</div>` : '<small class="muted">這張發票的 QR Code 沒有列出品項</small>'}</div><div class="invR"><b>${money(inv.total)}</b><span class="chip">查看 ›</span></div></button>`);
     $('#scTip', sh.body).textContent = '已存入！可以繼續掃下一張'; };
   sh.body.addEventListener('click', e => { const t = e.target.closest('[data-no]'); if (t) openInvDetail(t.dataset.no); });
   const take = txt => { if (/^[A-Z]{2}\d{8}\d{7}/.test(txt)) { if (!left || left !== txt) { left = txt; leftAt = Date.now(); } } else if (/^\*\*/.test(txt)) right = txt; mark(); };
   const tick = () => { if (stop) return;
-    if (v.readyState >= 2 && v.videoWidth) { const vw = v.videoWidth, vh = v.videoHeight, sc = Math.min(1, 960 / vw); cv.width = Math.round(vw * sc); cv.height = Math.round(vh * sc); g.drawImage(v, 0, 0, cv.width, cv.height);
+    if (v.readyState >= 2 && v.videoWidth) { const [sx, sy, vw, vh] = cam.crop(), sc = Math.min(1, 960 / vw); cv.width = Math.round(vw * sc); cv.height = Math.round(vh * sc); g.drawImage(v, sx, sy, vw, vh, 0, 0, cv.width, cv.height);
       try { qrMulti(g, [0, 0, cv.width, cv.height]).forEach(take); } catch (e) {}
       if (left) { const p = parseInvQR(left, right); const need = p && p.need, have = p ? p.items.length : 0; if (right || (need && have >= need) || need === 0 || Date.now() - leftAt > 2500) finish(); } }
     requestAnimationFrame(tick); };
-  navigator.mediaDevices.getUserMedia({video: {facingMode: {ideal: 'environment'}, width: {ideal: 1920}, height: {ideal: 1080}}, audio: false})
-    .then(s => { stream = s; if (stop) { s.getTracks().forEach(t => t.stop()); return; } v.srcObject = s; v.play().catch(() => {}); tick(); })
-    .catch(er => { $('#scTip', sh.body).textContent = '❌ 打不開相機：' + (er.name === 'NotAllowedError' ? '請允許日日帳本使用相機' : er.message); });
+  cam = camKit($('.scanBox', sh.body), v, er => { $('#scTip', sh.body).textContent = '❌ 打不開相機：' + (er.name === 'NotAllowedError' ? '請允許日日帳本使用相機' : er.message); }); tick();
 }
 
 /* ---------- 統編查店名（經濟部商工登記公示資料，查不到就顯示統編，可以自己改） ---------- */

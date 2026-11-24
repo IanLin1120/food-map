@@ -130,7 +130,7 @@ function accUnlink(alias) { delete accSame()[alias]; saveAcc(); }
 /* 選「同一個人」：先選記帳裡顯示的名字，再選另一個名字（記帳名單或日常點餐名單） */
 async function accLinkAsk(mainId) {
   const pick = (title, L) => new Promise(res => { let done = false; const sh = sheet({title, onClose() { if (!done) res(null); }});
-    sh.body.innerHTML = L.length ? `<div class="whoRow">${L.map(u => `<button data-id="${esc(u.id)}">${esc(u.icon || '👤')} ${esc(u.name)}${u.tag ? `<small class="muted"> ${esc(u.tag)}</small>` : ''}</button>`).join('')}</div>` : '<div class="empty">沒有可以選的人</div>';
+    sh.body.innerHTML = L.length ? `<div class="whoRow pplGrid">${L.map(u => `<button data-id="${esc(u.id)}">${esc(u.icon || '👤')} ${esc(u.name)}${u.tag ? `<small class="muted"> ${esc(u.tag)}</small>` : ''}</button>`).join('')}</div>` : '<div class="empty">沒有可以選的人</div>';
     sh.body.onclick = e => { const b = e.target.closest('[data-id]'); if (!b) return; buzz(10); done = true; sh.close(); res(b.dataset.id); }; });
   const main = mainId || await pick('① 記帳裡要顯示哪個名字？', accPeople()); if (!main) return false; const M = accPeople().find(u => u.id === main);
   const cand = accPeople().filter(u => u.id !== main).map(u => Object.assign({tag: '記帳'}, u)).concat(((DB.mcfg && DB.mcfg.people) || []).filter(u => u.id !== main && !accPeople().some(x => x.id === u.id) && accPid(u.id) !== main).map(u => Object.assign({}, u, {tag: '日常點餐'})));
@@ -140,7 +140,7 @@ async function accLinkAsk(mainId) {
 /* 從日常設定進來：先選日常的名字，再選記帳裡是誰 */
 async function accLinkAskMeal() {
   const pick = (title, L) => new Promise(res => { let done = false; const sh = sheet({title, onClose() { if (!done) res(null); }});
-    sh.body.innerHTML = L.length ? `<div class="whoRow">${L.map(u => `<button data-id="${esc(u.id)}">${esc(u.icon || '👤')} ${esc(u.name)}</button>`).join('')}</div>` : '<div class="empty">沒有可以選的人</div>';
+    sh.body.innerHTML = L.length ? `<div class="whoRow pplGrid">${L.map(u => `<button data-id="${esc(u.id)}">${esc(u.icon || '👤')} ${esc(u.name)}</button>`).join('')}</div>` : '<div class="empty">沒有可以選的人</div>';
     sh.body.onclick = e => { const b = e.target.closest('[data-id]'); if (!b) return; buzz(10); done = true; sh.close(); res(b.dataset.id); }; });
   const al = await pick('① 日常點餐裡的哪個名字？', DB.mcfg.people); if (!al) return false; const A = mealWho(al);
   const main = await pick(`② 「${A.name}」在記帳裡是誰？`, accPeople().filter(u => u.id !== al)); if (!main) return false; const M = accPeople().find(u => u.id === main);
@@ -479,8 +479,8 @@ function accEdit(r0, preset, opt = {}) {
         <div class="field" style="margin-top:.7rem"><label class="row" style="gap:.4rem"><span class="grow">備註／消費明細</span></label>${tr ? '' : `<div class="acRow2" style="margin-bottom:.5rem"><button class="btn" data-a="billEd">🧾 ${r.bill ? '編輯明細（' + (r.bill.items || []).length + ' 項）' : '用分帳方式輸入'}</button><button class="btn" data-a="fromBill">📥 從分帳帶入</button></div>`}<textarea id="acNote" rows="${Math.min(10, Math.max(3, String(r.note || '').split('\n').length + 1))}" placeholder="例如：\n鮮奶 ×2  $95\n雞蛋  $60">${esc(r.note || '')}</textarea></div>
         <div class="lbl">圖片</div><div class="acImgs">${r.imgs.map((id, i) => `<span class="acImg"><img data-img="${id}" data-i="${i}" alt=""><button data-rmimg="${i}" aria-label="移除">✕</button></span>`).join('')}<button class="acImgAdd" data-a="addImg">＋<small>加入圖片</small></button></div>
         ${r.type === 'out' ? `<div class="acSplit card"><div class="acSH"><b>🤝 分帳</b><small>${who.length ? '選了 ' + who.length + ' 人分' : '不分帳就不用選'}</small></div>
-          <div class="lbl">誰付的錢</div><div class="whoRow">${accPeople().map(u => `<button data-payer="${u.id}" class="${payer === u.id ? 'on' : ''}">${esc(u.icon)} ${esc(u.name)}</button>`).join('')}</div>
-          <div class="lbl">誰要分（點選）</div><div class="whoRow">${accPeople().map(u => `<button data-who="${u.id}" class="${who.includes(u.id) ? 'on' : ''}">${esc(u.icon)} ${esc(u.name)}</button>`).join('')}<button data-a="addP">＋ 新增</button></div>
+          <div class="lbl">誰付的錢</div><div class="whoRow pplGrid">${accPeople().map(u => `<button data-payer="${u.id}" class="${payer === u.id ? 'on' : ''}">${esc(u.icon)} ${esc(u.name)}</button>`).join('')}</div>
+          <div class="lbl">誰要分（點選）</div><div class="whoRow pplGrid">${accPeople().map(u => `<button data-who="${u.id}" class="${who.includes(u.id) ? 'on' : ''}">${esc(u.icon)} ${esc(u.name)}</button>`).join('')}<button data-a="addP">＋ 新增</button></div>
           ${who.length ? `<div class="dkSeg acMode"><button data-mode="even" class="${mode === 'even' ? 'on' : ''}">平均分</button><button data-mode="custom" class="${mode === 'custom' ? 'on' : ''}">自己填金額</button></div>
             <div class="acShares">${sp.map(s => `<div class="acShR"><span>${esc(aWho(s.p).icon)} ${esc(aWho(s.p).name)}</span>${mode === 'custom' ? `<input data-cu="${s.p}" value="${custom[s.p] != null ? custom[s.p] : ''}" inputmode="decimal" placeholder="0">` : `<b>${money(s.amt)}</b>`}</div>`).join('')}</div>
             ${mode === 'custom' && Math.abs(sumSp - A) > 0.01 ? `<div class="blWarn">⚠️ 分攤合計 ${money(sumSp)}，和金額 ${money(A)} 差 ${money(A - sumSp)}</div>` : ''}
@@ -727,17 +727,26 @@ async function accAssetClick(e) {
 function editAcct(a) {
   if (!a) return; let kind = a.kind, pf = a.payFrom || '', fund = a.fund || '', ic = a.i, logo = a.logo || '';
   const sh = sheet({title: '編輯帳戶', full: true, foot: '<button class="btn danger" data-a="del" style="flex:0 0 auto">刪除</button><button class="btn pri" data-a="ok">儲存</button>'});
-  const flows = DB.acc.recs.filter(r => acctFlow(r, a.id)).sort(recSort).slice(0, 120), payUse = DB.acc.recs.filter(r => r.acct === a.id).sort(recSort).slice(0, 60);
+  const flows = DB.acc.recs.filter(r => acctFlow(r, a.id)).sort(recSort), payUse = DB.acc.recs.filter(r => r.acct === a.id).sort(recSort);
+  /* 收支明細依月份分組，可以收合；預設只打開最新的月份 */
+  const moOpen = new Set(); { const f = (flows[0] || payUse[0]); if (f) moOpen.add(f.d.slice(0, 7)); }
   const draw = () => { const cur = acctBal(a); sh.body.innerHTML = `<div class="niRow"><button class="niIc" data-a="ic">${aIco({i: ic, logo, kind})}<small>換圖示</small></button><div class="field grow" style="margin:0"><label>名稱</label><input id="eaN" value="${esc(a.n)}"></div></div>
     <div class="lbl">種類</div><div class="dkSeg acKind">${Object.entries(AK).map(([k, [n, i]]) => `<button data-k="${k}" class="${kind === k ? 'on' : ''}">${i} ${n}</button>`).join('')}</div>
     ${kind === 'pay' ? `<div class="lbl" style="margin-top:.8rem">綁定哪個帳戶扣款（記帳時預設從這裡扣）</div><div class="acAccts">${DB.acc.accts.filter(x => x.kind === 'bank' || x.kind === 'card' || x.kind === 'stored').map(x => `<button data-fd="${x.id}" class="${fund === x.id ? 'on' : ''}">${aIco(x)} ${esc(x.n)}</button>`).join('') || '<span class="muted small">先新增銀行、信用卡或儲值帳戶</span>'}</div>`
       : `<div class="field" style="margin-top:.8rem"><label>目前餘額${kind === 'card' ? '（信用卡欠款請填負數，例如 -3500）' : ''}</label><input id="eaB" value="${cur}" inputmode="decimal"></div>`}
     ${kind === 'card' ? `<div class="field"><label>每月幾號還款（1～28）</label><input id="eaD" value="${a.payDay || ''}" inputmode="numeric" placeholder="例如 5"></div><div class="lbl">從哪個帳戶自動扣款還款</div><div class="acAccts">${DB.acc.accts.filter(x => x.kind === 'bank').map(x => `<button data-pf="${x.id}" class="${pf === x.id ? 'on' : ''}">${aIco(x)} ${esc(x.n)}</button>`).join('') || '<span class="muted small">先在「銀行」新增帳戶</span>'}</div>` : ''}
-    <div class="lbl" style="margin-top:1rem">${kind === 'pay' ? '用這個付款方式的紀錄' : '收支明細'}</div><div class="card" style="padding:.2rem .7rem">${(kind === 'pay' ? payUse.map(r => `<div class="acIt"><span class="grow">${r.d.slice(5).replace('-', '/')} ${esc(r.payee || String(r.note || '').split('\n')[0] || accCat(r).n)}</span><b class="neg">${money(r.amt)}</b></div>`) : flows.map(r => { const v = acctFlow(r, a.id); return `<div class="acIt"><span class="grow">${r.d.slice(5).replace('-', '/')} ${esc(r.payee || String(r.note || '').split('\n')[0] || accCat(r).n)}</span><b class="${v > 0 ? 'pos' : 'neg'}">${v > 0 ? '+' : ''}${money(v)}</b></div>`; })).join('') || '<div class="empty" style="padding:.8rem">還沒有紀錄</div>'}</div>`; };
+    <div class="lbl" style="margin-top:1rem">${kind === 'pay' ? '用這個付款方式的紀錄' : '收支明細'}</div>${(() => { const L = kind === 'pay' ? payUse : flows, val = r => kind === 'pay' ? -(+r.amt || 0) : acctFlow(r, a.id); if (!L.length) return '<div class="card"><div class="empty" style="padding:.8rem">還沒有紀錄</div></div>';
+      const G = []; L.forEach(r => { const k = r.d.slice(0, 7); let g = G[G.length - 1]; if (!g || g.k !== k) G.push(g = {k, L: []}); g.L.push(r); }); const allOpen = G.every(g => moOpen.has(g.k));
+      return `<div class="moBar"><span class="muted small">共 ${L.length} 筆・${G.length} 個月</span><button class="btn sm" data-a="moAll">${allOpen ? '⊟ 全部收合' : '⊞ 全部展開'}</button></div>` + G.map(g => { const op = moOpen.has(g.k), inn = g.L.reduce((t, r) => t + Math.max(0, val(r)), 0), out = g.L.reduce((t, r) => t + Math.min(0, val(r)), 0);
+        return `<div class="moG card ${op ? 'on' : ''}"><button class="moH" data-mo="${g.k}"><b>${op ? '▾' : '▸'} ${+g.k.slice(0, 4)}年${+g.k.slice(5)}月</b><small>${g.L.length} 筆</small><span class="grow"></span>${inn ? `<em class="pos">+${money(inn)}</em>` : ''}${out ? `<em class="neg">${money(out)}</em>` : ''}</button>
+          ${op ? `<div class="moB">${g.L.map(r => { const v = val(r); return `<button class="acIt" data-rid="${r.id}"><span class="grow">${r.d.slice(5).replace('-', '/')} ${esc(r.payee || String(r.note || '').split('\n')[0] || accCat(r).n)}</span><b class="${v > 0 ? 'pos' : 'neg'}">${v > 0 ? '+' : ''}${money(v)}</b></button>`; }).join('')}</div>` : ''}</div>`; }).join(''); })()}`; };
   draw();
   const keepN = () => { const n = $('#eaN', sh.body); if (n) a._n = n.value; const bb = $('#eaB', sh.body); if (bb) a._b = bb.value; const dd = $('#eaD', sh.body); if (dd) a._d = dd.value; };
   sh.body.onclick = async e => { const t = e.target.closest('button'); if (!t) return; buzz(8); keepN();
-    if (t.dataset.a === 'ic') { const v = await iconPick(ic, 'fin'); if (v) { ic = v; logo = ''; } }
+    if (t.dataset.mo) { const k = t.dataset.mo; moOpen.has(k) ? moOpen.delete(k) : moOpen.add(k); }
+    else if (t.dataset.a === 'moAll') { const ks = [...new Set((kind === 'pay' ? payUse : flows).map(r => r.d.slice(0, 7)))], all = ks.every(k => moOpen.has(k)); ks.forEach(k => all ? moOpen.delete(k) : moOpen.add(k)); }
+    else if (t.dataset.rid) { const r = DB.acc.recs.find(x => x.id === t.dataset.rid); if (r) accEdit(r); return; }
+    else if (t.dataset.a === 'ic') { const v = await iconPick(ic, 'fin'); if (v) { ic = v; logo = ''; } }
     else if (t.dataset.k) kind = t.dataset.k; else if (t.dataset.pf) pf = t.dataset.pf; else if (t.dataset.fd) fund = t.dataset.fd; else return;
     draw(); if (a._n != null) $('#eaN', sh.body).value = a._n; if (a._b != null && $('#eaB', sh.body)) $('#eaB', sh.body).value = a._b; if (a._d != null && $('#eaD', sh.body)) $('#eaD', sh.body).value = a._d; };
   sh.foot.onclick = async e => { const b = e.target.closest('[data-a]'); if (!b) return; buzz(10); keepN(); delete a._n; delete a._b; delete a._d;
@@ -1028,7 +1037,7 @@ function renderAccCfg() {
       <button class="setR" data-a="wHide" style="width:100%;text-align:left"><span class="gRi">👁</span><div class="t"><b>小工具和通知顯示金額</b><small>關掉後桌面小工具、通知只顯示 $ ••••</small></div><span class="sw2 ${S.wHide ? '' : 'on'}"></span></button>
       <div class="setR" style="cursor:default"><span class="gRi">📱</span><div class="t"><b>桌面小工具、控制中心按鈕</b><small>桌面：長按空白處 →「小工具」→ 日日帳本。控制中心：下拉兩次 → 編輯（鉛筆）→ 把「記一筆」「常用記帳」拖進去。</small></div></div></div></div>` : ''}
     <div class="setG"><h3>說明</h3><div class="setC"><button class="setR" data-a="guide" style="width:100%;text-align:left"><span class="gRi">📖</span><div class="t"><b>記帳 圖解說明</b><small>記一筆、常用、欠款對帳、資產、分析、備份換機</small></div><span class="chev">›</span></button></div></div>
-    <div class="setG"><h3>分帳的人</h3><div class="setC"><div class="setR col"><div class="t"><b>我是誰</b><small>分帳、對帳時「我」是哪一個人（記帳自己的名單，和日常點餐分開）</small></div><div class="whoRow">${accPeople().map(u => `<button data-me="${u.id}" class="${accMe() === u.id ? 'on' : ''}">${esc(u.icon)} ${esc(u.name)}</button>`).join('')}</div></div>
+    <div class="setG"><h3>分帳的人</h3><div class="setC"><div class="setR col"><div class="t"><b>我是誰</b><small>分帳、對帳時「我」是哪一個人（記帳自己的名單，和日常點餐分開）</small></div><div class="whoRow pplGrid">${accPeople().map(u => `<button data-me="${u.id}" class="${accMe() === u.id ? 'on' : ''}">${esc(u.icon)} ${esc(u.name)}</button>`).join('')}</div></div>
       <div class="setR col"><div class="t"><b>🔗 同一個人，不同綽號</b><small>例如日常點餐叫「便當哥」、記帳叫「因因」：設定後分帳匯入記帳會自動對到同一個人，欠款、對帳也算在一起</small></div>
         ${Object.keys(accSame()).length ? `<div class="sameL">${Object.keys(accSame()).map(k => { const a = accSameName(k), m = aWho(k); return `<div class="sameR"><span>${esc((a && a.icon) || '👤')} ${esc(a ? a.name : (DB.acc.sameN || {})[k] || k)}${mealWho(k) ? '<small>日常</small>' : ''}</span><b>＝</b><span>${esc(m.icon)} ${esc(m.name)}<small>記帳</small></span><button class="ic" data-unlink="${esc(k)}" aria-label="取消">✕</button></div>`; }).join('')}</div>` : ''}
         <button class="btn block" data-a="link">🔗 設定同一個人</button></div>
