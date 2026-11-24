@@ -4,7 +4,7 @@
 <script>/* 線上更新開機程式：手機上若已下載比 APK 內建更新的介面版本，就改用新版（存在 IndexedDB）。
    新版連續兩次沒有正常開啟 → 自動退回 APK 內建版本。網址加上 #builtin 也會強制使用內建版本。 */
 (function () {
-  var B = '3.29.0'; if (!window.__OTA) window.APP_BUILTIN = B;
+  var B = '3.30.0'; if (!window.__OTA) window.APP_BUILTIN = B;
   if (window.__OTA || location.hash.indexOf('builtin') >= 0) return;
   var v = null; try { v = JSON.parse(localStorage.getItem('fm.ota') || 'null'); } catch (e) {}
   function gt(a, b) { a = String(a).split('.').map(Number); b = String(b).split('.').map(Number); for (var i = 0; i < Math.max(a.length, b.length); i++) { var p = a[i] || 0, q = b[i] || 0; if (p !== q) return p > q; } return false; }
@@ -1406,6 +1406,30 @@ table.ckT td.s{text-align:center}table.ckT th.s{text-align:center}
 .sameL{display:flex;flex-direction:column;gap:.35rem;width:100%;margin:.2rem 0 .5rem}
 .sameR{display:grid;grid-template-columns:1fr auto 1fr auto;align-items:center;gap:.4rem;padding:.45rem .6rem;border:1px solid var(--line);border-radius:6px;background:var(--bg2,rgba(255,255,255,.4));font-weight:700;font-size:.9rem}
 .sameR span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.sameR small{font-weight:600;font-size:.68rem;color:var(--muted);margin-left:.3rem}.sameR b{color:var(--accent)}.sameR .ic{width:2rem;height:2rem}
+/* 人名按鈕：不管兩個字還是三個字都一樣大、上下對齊 */
+.whoRow.pplGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.45rem}
+.whoRow.pplGrid button{justify-content:center;min-width:0;white-space:nowrap;padding-left:.35rem;padding-right:.35rem}
+.whoRow.pplGrid button>span:first-child{flex:none}
+/* 帳戶收支明細：依月份收合 */
+.moBar{display:flex;align-items:center;justify-content:space-between;gap:.5rem;margin:.1rem 0 .45rem}
+.moG{padding:0!important;margin-bottom:.45rem;overflow:hidden}
+.moH{display:flex;align-items:center;gap:.5rem;width:100%;padding:.65rem .8rem;background:none;border:0;text-align:left;font:inherit;color:inherit}
+.moH b{font-size:.95rem}.moH small{color:var(--muted)}.moH em{font-style:normal;font-weight:800;font-size:.88rem;margin-left:.45rem}
+.moB{padding:0 .8rem .3rem;border-top:1px solid var(--line)}
+.moB .acIt{width:100%;background:none;border:0;border-bottom:1px dashed var(--line);font:inherit;color:inherit;text-align:left;display:flex;align-items:center;gap:.5rem;padding:.55rem 0}.moB .acIt:last-child{border-bottom:0}
+.emoGs{display:flex;flex-direction:column;gap:.15rem}
+.emoGT{font-size:.78rem;font-weight:800;color:var(--muted);margin:.55rem 0 .2rem;position:sticky;top:0;background:var(--surface,#f3eadb);z-index:1;padding:.15rem 0}
+.emoGs .emoGT:first-child{margin-top:0}
+.menuTg{display:flex;align-items:center;gap:.7rem;padding:.75rem .85rem;border:1px solid var(--border);border-radius:6px;background:var(--surface-3)}
+/* 掃描：單一 QR 框、放大縮小與換鏡頭 */
+.scFrame.one{grid-template-columns:1fr;inset:10% 22%}
+.scanBox video{transform-origin:center center;transition:transform .12s}
+.camBar{display:flex;align-items:center;gap:.45rem;margin:.6rem 0 .2rem}
+.camBar .czR{flex:1;min-width:0;accent-color:var(--accent)}
+.camBar .czL{min-width:2.6rem;text-align:center;font-size:.9rem}
+.camBar .btn{flex:none;min-width:2.6rem;justify-content:center}
+.scItems{display:flex;flex-direction:column;gap:.15rem;margin-top:.4rem;font-size:.82rem}
+.scItems span{display:flex;gap:.5rem;justify-content:space-between}.scItems em{font-style:normal;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.scItems i{font-style:normal;color:var(--muted);flex:none}
 </style>
 </head>
 <body>
@@ -3879,7 +3903,7 @@ var qrcode = function() {
 /* ============================================================
    日日帳本 — 核心：工具、資料儲存、主題、面板、拖曳排序、圖片
    ============================================================ */
-const APP_VERSION = '3.29.0';
+const APP_VERSION = '3.30.0';
 const APP_VER = APP_VERSION;
 /* 線上更新來源（GitHub Pages）：IanLin1120/food-map */
 const GH = {repo: 'https://github.com/IanLin1120/food-map', pages: 'https://ianlin1120.github.io/food-map/'};
@@ -3924,7 +3948,26 @@ const DEF_CATS = [
   ['速食店', '🍔', '#C23B4E'], ['飲料店', '🧋', '#3F8F86'], ['咖啡廳', '☕', '#6B5344'], ['甜點', '🍰', '#C2678F']
 ];
 const CAT_COLORS = ['#E8A13A', '#D2603A', '#C23B4E', '#C2678F', '#8A5A9E', '#4A5B8C', '#3F6E8C', '#3F8F86', '#5A7A44', '#8C8A2E', '#8E4B2B', '#6B5344', '#57606A', '#2F2A25'];
-const CAT_EMOJI = '🍳 🥪 🥞 🥐 🍱 🍛 🍜 🍝 🍚 🍙 🍣 🥟 🍲 🥘 🍽️ 🥩 🍗 🍖 🍔 🍟 🍕 🌭 🌮 🥗 🍢 🍡 🌙 🍺 🍻 🍷 🍶 🧋 🥤 🍵 ☕ 🧃 🍰 🧁 🍩 🍦 🍧 🍮 🥧 🍪 🍫 🥖 🧇 🥓 🧆 🦐 🦀 🐟 🔥 ⭐ ❤️ 🏪 🛒 🥬'.split(' ');
+/* 分類圖示依種類分組，選的時候比較好找 */
+const CAT_EMOJI_G = {
+  '早餐': '🍳 🥪 🥞 🧇 🥐 🥯 🍞 🥖 🥓 🥚 🧀 🥛 🌯 🍙 🥟',
+  '午餐・正餐': '🍱 🍛 🍜 🍝 🍚 🍲 🥘 🍽️ 🍣 🍤 🍥 🥩 🍗 🍖 🥗 🍘',
+  '異國・速食': '🍔 🍟 🍕 🌭 🌮 🥙 🧆 🥫 🍝 🦞 🦀 🦐 🦑 🐟',
+  '宵夜・小吃': '🌙 🍢 🍡 🥠 🍠 🌽 🍿 🥜 🔥 🍻 🍺 🍶',
+  '飲料・咖啡': '🧋 🥤 ☕ 🍵 🧃 🥛 🍹 🍸 🍷 🥂 🧉 🍼',
+  '甜點・烘焙': '🍰 🎂 🧁 🍩 🍪 🍫 🍬 🍭 🍮 🍦 🍨 🍧 🥧 🍯 🥮',
+  '蔬果・生鮮': '🥬 🥕 🥦 🍅 🥔 🍆 🧅 🧄 🍄 🍎 🍌 🍇 🍉 🍓 🍊 🍋 🍍 🥝 🥑 🌶️',
+  '超市・購物': '🛒 🏪 🏬 🛍️ 🧺 📦 🏷️ 🎁 🧾 💳',
+  '服飾・配件': '👕 👚 👗 👖 👔 🧥 👘 👙 🧦 🧣 🧤 👟 👠 👡 👢 🥾 🧢 👒 👜 👛 🎒 👓 🕶️ 💍',
+  '美妝・保養': '💄 💅 💇 💈 🧴 🧼 🪒 🧽 🛁 🌸',
+  '3C・家居': '📱 💻 🖥️ ⌨️ 🎧 📷 🔌 🔋 📺 🛋️ 🛏️ 🪑 🧸 🪴 🔨 🔧 🧰 💡 🧹',
+  '交通・停車': '🅿️ ⛽ 🚗 🛵 🏍️ 🚲 🚌 🚇 🚆 🚉 🚕 🔧 ✈️ 🚢',
+  '醫療・生活': '🏥 💊 🩺 🦷 🏦 🏧 📮 🏫 🏨 🏠 🏢 🧺 🐶 🐱 🐾 ⛪ 🛕',
+  '休閒・娛樂': '🎬 🎮 🎤 🎳 🎢 🎡 🏊 🏋️ ⚽ 🏀 🏸 🧘 📚 🎨 🏕️ 🏖️ 🌳',
+  '其他': '⭐ ❤️ ✨ 🍀 🎯 📌 📍 🔖 🎈 🎀 🌈 ☀️ ❓'};
+const CAT_EMOJI = [...new Set(Object.values(CAT_EMOJI_G).join(' ').split(' ').filter(Boolean))];
+/* 依分組畫出圖示選單：每組一個小標題 */
+const emoGroupsHtml = (G, cur) => Object.entries(G).map(([t, v]) => `<div class="emoGT">${t}</div><div class="emoGrid">${[...new Set(v.split(' ').filter(Boolean))].map(x => `<button data-e="${x}" class="${x === cur ? 'on' : ''}">${x}</button>`).join('')}</div>`).join('');
 /* 購物分帳功能區的預設分類 */
 const SHOP_CATS = [['量販店', '🛒', '#C23B4E'], ['超市', '🧺', '#5A7A44'], ['超商', '🏪', '#3F6E8C'], ['外送', '🛵', '#D2603A'], ['藥妝', '💊', '#8A5A9E'], ['其他', '🛍️', '#6B5344']];
 const UNCAT = {id: '', name: '未分類', icon: '📍', color: '#7d6c57'};
@@ -3932,7 +3975,7 @@ const catOf = id => DB.cats.find(c => c.id === id) || UNCAT;
 /* 菜單只有吃的、喝的店才需要：分類可以自己設定「有菜單」，沒設定就看分類名稱；停車場、加油站這類一律不顯示菜單 */
 const FOOD_RE = /早餐|午餐|晚餐|宵夜|消夜|點心|甜點|飲|咖啡|小吃|餐|食|麵|飯|吃|茶|酒|甜|烘焙|麵包|鍋|燒烤|燒肉|便當|冰|手搖|早午|料理|拉麵|壽司|披薩|漢堡|牛排|滷味|鹹酥|雞排|豆花|蛋糕/,
   NOMENU_RE = /停車|加油|充電|洗車|機車|汽車|修車|保養|輪胎|銀行|郵局|ATM|醫院|診所|藥局|藥妝|牙醫|眼科|學校|公園|車站|捷運|公車|客運|五金|家具|家居|服飾|鞋|超市|量販|便利|美髮|理髮|美甲|健身|電信|通訊|旅館|民宿|住宿|公所|戶政|寺|廟|宮|教會|文具|書局|寵物|動物醫院|洗衣|影印|3C|電器|百貨|市場|停車場|加油站/i;
-const catMenu = c => c && c.menu != null ? !!c.menu : !c || c.id === UNCAT.id ? true : FOOD_RE.test(c.name || '');
+const catMenu = c => c && c.menu != null ? !!c.menu : !c || (c.id && c.id === UNCAT.id) ? true : FOOD_RE.test(c.name || '');
 function hasMenu(p) { if (!p) return false; if ((p.menu || []).length || (p.albums || []).some(a => (a.imgs || []).length)) return true; if (NOMENU_RE.test((p.tag || '') + ' ' + (p.gtype || ''))) return false; const c = catOf(p.cat); if (c.menu != null) return !!c.menu; if (NOMENU_RE.test(p.name || '') && !FOOD_RE.test(p.name || '')) return false; return catMenu(c); }
 
 const saveS = debounce(() => { IDB.put('kv', 'S', S).catch(() => {}); try { localStorage.setItem('fm.theme', JSON.stringify({theme: S.theme, palette: S.palette, scale: S.scale})); } catch (e) {} }, 150);
@@ -5396,14 +5439,14 @@ function editCat(cat, done, kind) {
   const sh = sheet({title: isNew ? '新增分類' : '編輯分類', full: true, foot: `${isNew ? '' : '<button class="btn danger" data-a="del" style="flex:0 0 auto">刪除</button>'}<button class="btn pri" data-a="ok">${isNew ? '新增' : '儲存'}</button>`});
   sh.body.innerHTML = `<div class="row" style="justify-content:center;margin:.3rem 0 1.4rem;height:3.2rem">${K.flag ? '<div style="position:relative;width:3rem;height:3rem"><div class="pin" id="cPrev" style="position:absolute;left:.6rem;bottom:.2rem"><div class="base"></div><div class="pole"></div><div class="knob"></div><div class="flag"></div></div></div>' : ''}<span class="chip on" id="cChip"></span></div>
     <div class="field"><label>分類名稱</label><input id="cN" value="${esc(d.name)}" placeholder="${K.ph}" maxlength="12"></div>
-    <div class="field"><label>圖示</label><div class="emoGrid" id="cE">${CAT_EMOJI.map(x => `<button data-e="${x}">${x}</button>`).join('')}</div><div class="row" style="margin-top:.5rem"><span class="small muted" style="white-space:nowrap">或自己輸入：</span><input id="cI" value="${esc(d.icon)}" maxlength="4" style="width:5rem;text-align:center;font-size:1.2rem"></div></div>
-    ${K.flag ? `<label class="field row" style="gap:.6rem;align-items:center;cursor:pointer"><input type="checkbox" id="cM" ${catMenu(d) ? 'checked' : ''} style="width:1.2rem;height:1.2rem"><span class="grow"><b>這類店家有菜單</b><br><small class="muted">吃的、喝的店才需要；停車場、加油站、超市這類不用勾，店家頁就只顯示消費紀錄</small></span></label>` : ''}
+    <div class="field"><label>圖示</label><div class="emoGs" id="cE">${emoGroupsHtml(CAT_EMOJI_G, d.icon)}</div><div class="row" style="margin-top:.5rem"><span class="small muted" style="white-space:nowrap">或自己輸入：</span><input id="cI" value="${esc(d.icon)}" maxlength="4" style="width:5rem;text-align:center;font-size:1.2rem"></div></div>
+    ${K.flag ? `<button class="setR menuTg" id="cM" type="button" style="width:100%;text-align:left;margin:.2rem 0 .8rem"><span class="gRi">📋</span><div class="t"><b>這類店家有菜單</b><small>吃的、喝的店才需要；停車場、加油站、超市、服飾店這類不用開，店家頁就只顯示消費紀錄</small></div><span class="sw2 ${catMenu(d) ? 'on' : ''}"></span></button>` : ''}
     <div class="field"><label>${K.color}</label><div class="swGrid" id="cS">${CAT_COLORS.map(c => `<button class="sw" data-c="${c}" style="--c:${c}" aria-label="${c}"></button>`).join('')}<label class="sw" style="--c:conic-gradient(red,orange,yellow,lime,cyan,blue,magenta,red);background:var(--c)" title="自訂顏色"><input type="color" id="cC" value="${/^#[0-9a-f]{6}$/i.test(d.color) ? d.color : '#a2613a'}"></label></div></div>`;
   const upd = () => { if (K.flag) { $('#cPrev', sh.body).style.setProperty('--c', d.color); $('#cPrev .flag', sh.body).textContent = d.icon; } const ch = $('#cChip', sh.body); ch.style.setProperty('--c', d.color); ch.textContent = d.icon + ' ' + (d.name || '分類名稱');
     $$('#cE button', sh.body).forEach(b => b.classList.toggle('on', b.dataset.e === d.icon)); $$('#cS .sw[data-c]', sh.body).forEach(b => b.classList.toggle('on', b.dataset.c.toLowerCase() === d.color.toLowerCase())); };
   upd();
-  const cm = $('#cM', sh.body); if (cm) cm.onchange = () => { d.menu = cm.checked; buzz(8); };
-  $('#cN', sh.body).oninput = e => { d.name = e.target.value.trim(); upd(); }; $('#cI', sh.body).oninput = e => { d.icon = e.target.value.trim() || '🍴'; upd(); }; $('#cC', sh.body).oninput = e => { d.color = e.target.value; upd(); };
+  const cm = $('#cM', sh.body); if (cm) cm.onclick = () => { d.menu = !catMenu(d); $('.sw2', cm).classList.toggle('on', d.menu); buzz(8); };
+  $('#cN', sh.body).oninput = e => { d.name = e.target.value.trim(); upd(); if (cm && d.menu == null) $('.sw2', cm).classList.toggle('on', catMenu(d)); }; $('#cI', sh.body).oninput = e => { d.icon = e.target.value.trim() || '🍴'; upd(); }; $('#cC', sh.body).oninput = e => { d.color = e.target.value; upd(); };
   $('#cE', sh.body).onclick = e => { const b = e.target.closest('button'); if (!b) return; d.icon = b.dataset.e; $('#cI', sh.body).value = d.icon; upd(); };
   $('#cS', sh.body).onclick = e => { const b = e.target.closest('.sw[data-c]'); if (!b) return; d.color = b.dataset.c; upd(); };
   sh.foot.addEventListener('click', async e => { const b = e.target.closest('[data-a]'); if (!b) return;
@@ -6231,7 +6274,7 @@ function openOrder(m, opt = {}) {
     const all = cus.concat(C.list), cats = [...new Set(all.map(o => o.c))], hit = o => (!q || o.n.toLowerCase().includes(q)) && (!cat || o.c === cat);
     const L = all.filter(hit); LIST = L; const mine = m.items.filter(x => wkey(x) === who), tot = mealTotal(m), isS = who.startsWith('S:'), sIds = keyIds(who), mt = mine.reduce((s, x) => s + xAmt(x), 0);
     const sets = shareSets(m).map(g => g.key); if (isS && !sets.includes(who)) sets.push(who);
-    sh.body.innerHTML = `<div class="ordWho"><span class="lbl">誰要吃</span><div class="whoRow">${DB.mcfg.people.map(u => { const n = m.items.filter(x => !isShare(x) && x.who === u.id).reduce((a, x) => a + x.q, 0); return `<button data-who="${u.id}" class="${u.id === who ? 'on' : ''}"><span>${esc(u.icon)}</span>${esc(u.name)}${n ? `<i>${n}</i>` : ''}</button>`; }).join('')}<button data-a="newWho" class="add">＋ 新增人名</button></div>
+    sh.body.innerHTML = `<div class="ordWho"><span class="lbl">誰要吃</span><div class="whoRow pplGrid">${DB.mcfg.people.map(u => { const n = m.items.filter(x => !isShare(x) && x.who === u.id).reduce((a, x) => a + x.q, 0); return `<button data-who="${u.id}" class="${u.id === who ? 'on' : ''}"><span>${esc(u.icon)}</span>${esc(u.name)}${n ? `<i>${n}</i>` : ''}</button>`; }).join('')}<button data-a="newWho" class="add">＋ 新增人名</button></div>
       <div class="whoRow shareRow">${sets.map(k => { const n = m.items.filter(x => wkey(x) === k).reduce((a, x) => a + x.q, 0); return `<button data-who="${esc(k)}" class="share ${k === who ? 'on' : ''}"><span>👥</span>${esc(shareNames(keyIds(k)))}${n ? `<i>${n}</i>` : ''}</button>`; }).join('')}<button data-a="share" class="add">👥 一起吃（分攤）</button></div></div>
       ${isS ? `<div class="shareHint">現在點的品項由 <b>${esc(shareNames(sIds))}</b> ${sIds.length} 人一起吃，金額平均分攤</div>` : ''}
       ${mine.length ? `<div class="ordMine"><div class="omH">${isS ? `👥 一起吃・${esc(shareNames(sIds))} 已點 <b>${money(mt)}</b>（每人 ${money(mt / sIds.length)}）` : `${esc(mWho(who).icon)} ${esc(mWho(who).name)} 已點 <b>${money(mt)}</b>`}</div>${mine.map(x => `<div class="omR" data-i="${x.id}"><span class="grow">${esc(x.n)}${xTags(x)}</span><span class="muted">${money(x.p)}</span><span class="q"><button data-a="om">−</button><b>${x.q}</b><button data-a="op">＋</button></span></div>`).join('')}</div>` : ''}
@@ -6273,7 +6316,7 @@ function editMealItem(m, x) {
   sh.body.innerHTML = `<div class="field"><label>品名</label><input id="eN" value="${esc(x.n)}" maxlength="40"></div>
     <div class="row" style="gap:.6rem"><div class="field grow"><label>尺寸／備註</label><input id="eS" value="${esc(x.s || '')}" maxlength="12" placeholder="例如 L、大碗、去冰"></div><div class="field" style="width:6rem"><label>單價</label><input id="eP" value="${esc(x.p)}" inputmode="decimal"></div><div class="field" style="width:5rem"><label>數量</label><input id="eQ" value="${x.q}" inputmode="numeric"></div></div>
     <div class="field"><label>選項</label><input id="eO" value="${esc(x.o || '')}" maxlength="40" placeholder="例如 漢堡、辣味、熱"></div>
-    <div class="field"><label>誰要吃（選 2 人以上＝一起吃，金額平均分攤）</label><div class="whoRow">${DB.mcfg.people.map(u => `<button data-who="${u.id}" class="${(isShare(x) ? x.share.includes(u.id) : u.id === x.who) ? 'on' : ''}"><span>${esc(u.icon)}</span>${esc(u.name)}</button>`).join('')}</div></div>`;
+    <div class="field"><label>誰要吃（選 2 人以上＝一起吃，金額平均分攤）</label><div class="whoRow pplGrid">${DB.mcfg.people.map(u => `<button data-who="${u.id}" class="${(isShare(x) ? x.share.includes(u.id) : u.id === x.who) ? 'on' : ''}"><span>${esc(u.icon)}</span>${esc(u.name)}</button>`).join('')}</div></div>`;
   const ws = new Set(isShare(x) ? x.share : [x.who]); sh.body.onclick = e => { const b = e.target.closest('[data-who]'); if (!b) return; buzz(8); const id = b.dataset.who; if (ws.has(id)) { if (ws.size > 1) ws.delete(id); } else ws.add(id); $$('[data-who]', sh.body).forEach(k => k.classList.toggle('on', ws.has(k.dataset.who))); };
   sh.foot.onclick = async e => { const b = e.target.closest('[data-a]'); if (!b) return;
     if (b.dataset.a === 'del') { if (!await ask(`要刪除「${x.n}」嗎？`, '刪除', true)) return; m.items.splice(m.items.indexOf(x), 1); }
@@ -6313,7 +6356,7 @@ function editMealCfg(k, it, done) {
   const sh = sheet({title: (isNew ? '新增' : '編輯') + K.title, full: true, foot: `${isNew ? '' : '<button class="btn danger" data-a="del" style="flex:0 0 auto">刪除</button>'}<button class="btn pri" data-a="ok">${isNew ? '新增' : '儲存'}</button>`});
   sh.body.innerHTML = `<div class="row" style="justify-content:center;margin:.3rem 0 1.2rem"><span class="chip on" id="eChip"></span></div>
     <div class="field"><label>名稱</label><input id="eN" value="${esc(d.name)}" placeholder="${K.ph}" maxlength="12"></div>
-    <div class="field"><label>圖示</label><div class="emoGrid" id="eE">${K.emoji.map(x => `<button data-e="${x}">${x}</button>`).join('')}</div><div class="row" style="margin-top:.5rem"><span class="small muted" style="white-space:nowrap">或自己輸入：</span><input id="eI" value="${esc(d.icon)}" maxlength="8" style="width:5rem;text-align:center;font-size:1.2rem"></div></div>`;
+    <div class="field"><label>圖示</label><div class="${K.emoji === CAT_EMOJI ? 'emoGs' : 'emoGrid'}" id="eE">${K.emoji === CAT_EMOJI ? emoGroupsHtml(CAT_EMOJI_G) : K.emoji.map(x => `<button data-e="${x}">${x}</button>`).join('')}</div><div class="row" style="margin-top:.5rem"><span class="small muted" style="white-space:nowrap">或自己輸入：</span><input id="eI" value="${esc(d.icon)}" maxlength="8" style="width:5rem;text-align:center;font-size:1.2rem"></div></div>`;
   const upd = () => { $('#eChip', sh.body).textContent = d.icon + ' ' + (d.name || '名稱'); $$('#eE button', sh.body).forEach(b => b.classList.toggle('on', b.dataset.e === d.icon)); }; upd();
   $('#eN', sh.body).oninput = e => { d.name = e.target.value.trim(); upd(); }; $('#eI', sh.body).oninput = e => { d.icon = e.target.value.trim() || K.def; upd(); };
   $('#eE', sh.body).onclick = e => { const b = e.target.closest('button'); if (!b) return; d.icon = b.dataset.e; $('#eI', sh.body).value = d.icon; upd(); };
@@ -6879,7 +6922,7 @@ function editBillItem(b, x) {
     sh.body.innerHTML = `<div class="field"><label>品名</label><input id="iN" value="${esc(d.n)}" maxlength="60"></div>
       <div class="iGrid"><div class="field"><label>單價</label><input id="iU" value="${d.amt !== '' && d.q ? esc(Math.round(numP(d.amt) / d.q * 100) / 100) : ''}" inputmode="decimal" placeholder="149"></div><div class="field"><label>數量</label><input id="iQ" value="${d.q}" inputmode="decimal"></div><div class="field"><label>總額</label><input id="iA" value="${esc(d.amt)}" inputmode="decimal" placeholder="298"></div></div>
       <div class="field"><label>規格／備註</label><input id="iO" value="${esc(d.o || '')}" maxlength="60" placeholder="例如 冰、燉飯"></div>
-      <div class="field"><label>誰付（選好幾個人＝平均分攤）</label><div class="whoRow">${DB.mcfg.people.map(u => `<button data-id="${u.id}" class="${(d.ppl || []).includes(u.id) ? 'on' : ''}"><span>${esc(u.icon)}</span>${esc(u.name)}</button>`).join('')}</div></div>`;
+      <div class="field"><label>誰付（選好幾個人＝平均分攤）</label><div class="whoRow pplGrid">${DB.mcfg.people.map(u => `<button data-id="${u.id}" class="${(d.ppl || []).includes(u.id) ? 'on' : ''}"><span>${esc(u.icon)}</span>${esc(u.name)}</button>`).join('')}</div></div>`;
     const r2 = v => Math.round(v * 100) / 100, iU = $('#iU', sh.body), iQ = $('#iQ', sh.body), iA = $('#iA', sh.body);
     sh.body.addEventListener('input', e => { const q = numP(iQ.value) || 1; if (e.target === iU || e.target === iQ) { if (iU.value.trim() !== '') iA.value = r2(numP(iU.value) * q); } else if (e.target === iA) { if (iA.value.trim() !== '') iU.value = r2(numP(iA.value) / q); } });
     const ws = new Set(d.ppl || []); sh.body.onclick = e => { const t = e.target.closest('[data-id]'); if (!t) return; buzz(8); if (ws.has(t.dataset.id)) ws.delete(t.dataset.id); else ws.add(t.dataset.id); t.classList.toggle('on', ws.has(t.dataset.id)); };
@@ -7077,7 +7120,7 @@ const GUIDE = {
     {t: '① 我的手機條碼', h: phone('發票', `<div class="pc" style="background:#fff"><b>📱 我的手機條碼</b><div class="pBar"></div><small style="text-align:center;letter-spacing:.3em">/ABC+123</small></div>${pc('<b>2026/11/20(五)</b><small>月光拉麵・XY-20481357</small>')}`, '發票', 'shop') +
       `<ul><li>第一次按「📱 設定我的手機條碼」輸入載具號碼（斜線開頭共 8 碼）</li><li>之後發票區最上面會顯示條碼，<b>點一下放大</b>給店員掃，發票就會存進你的載具</li></ul>`},
     {t: '② 掃描紙本發票 QR Code', h: phone('📷 掃描發票', `<div class="pScan"><i></i><i></i></div><div class="pWho"><i class="on">左邊 QR ✓</i><i class="on">右邊 QR ✓</i></div>${pc('<b>✅ 已存入 QT-36925814</b><small>2026/11/18・5 項　$108</small>')}`, '發票', 'shop') +
-      `<ul><li>按 <b>📷 掃描</b>，把發票左右兩個 QR Code 一起放進框裡</li><li>不用網路就能讀出發票號碼、日期、統編、金額和每個品項；可以連續掃好幾張</li><li>店名會用統編自動查；查不到可以自己改</li></ul>`},
+      `<ul><li>按 <b>📷 掃描</b>，把發票左右兩個 QR Code 一起放進框裡；太小或太遠可以按 <b>＋／－</b>、拉桿或雙指縮放調整倍率，有好幾顆鏡頭時可以按「🔄 換鏡頭」，會記住你的選擇</li><li>掃到後下面會直接列出每個品項和金額</li><li>不用網路就能讀出發票號碼、日期、統編、金額和每個品項；可以連續掃好幾張</li><li>店名會用統編自動查；查不到可以自己改</li></ul>`},
     {t: '③ 匯入發票大師截圖', h: phone('發票', `<div class="pBtns">${pb('📷 掃描')}${pb('🖼️ 截圖', 'pri hl') + tap}${pb('🤖 協助工具')}</div><div class="pc" style="border-color:var(--accent)"><b>🤖 AI 讀取發票截圖 2/5</b><small>第 3 張・Flash-Lite 已讀到 6 行…</small></div><div class="pImgs"><i>📱</i><i>📱</i><i>📱</i></div>`, '發票', 'shop') +
       `<ul><li>在發票大師、發票存摺、發票載具把「發票明細」或「發票列表」截圖</li><li>按 <b>🖼️ 截圖</b> 一次選好多張，AI 讀出號碼、日期、店家、金額、品項</li><li>同一張發票重複匯入會自動合併（同號碼，或同一天、同時間、同金額）；列表截圖之後再補明細截圖，品項會補上</li></ul>`},
     {t: '④ 協助工具：直接讀發票 App', h: phone('發票大師', `${pc('<b>發票明細</b><small>XY-20481357　$435</small>')}${pc('<b>品名　數量　小計</b><small>豚骨拉麵　1　$245</small>')}<div class="pFab hl">🧾</div>${tap}`, '', 'shop') +
@@ -7103,7 +7146,7 @@ const GUIDE = {
     {t: '④ 欠款和對帳', h: phone('🤝 和小美對帳', `${pc('<b>小美 欠我</b><small>$587</small>')}${pc('<b>☑ 11/21 晨曦早午餐　$285</b><small>☑ 11/22 好鄰居超市　$302</small>')}<div class="pBtns">${pb('✅ 結清', 'pri wide hl') + tap}</div>`, '記帳', 'acc') +
       `<ul><li>有分帳的紀錄會自動算出誰欠誰</li><li>按 <b>🤝 對帳</b>，選日期範圍，勾選這次要結清的幾筆</li><li>選錢收進哪個帳戶（銀行或現金）和對方怎麼付的（LINE Pay、台灣 Pay、轉帳…），結清後會記一筆還款並更新資產</li><li><b>對帳紀錄</b>：可以整批復原，或單獨把某一筆改回未結清；已經從記帳刪掉的紀錄不會再出現；確認沒問題的按「確認此批沒有問題」就會收起來</li></ul>`},
     {t: '⑤ 資產', h: phone('資產', `<div class="pBtns" style="justify-content:flex-end">${pb('👁 顯示金額', 'hl') + tap}</div>${pc('<b>淨資產</b><small>$ ••••</small>')}${pc('<b>🏦 銀行</b><small>我的銀行　$ ••••</small>')}`, '資產', 'acc') +
-      `<ul><li>金額預設隱藏，按右上角 👁 顯示</li><li>每個帳戶的餘額會隨支出、收入、轉帳、遺失自動計算；點帳戶可以設定目前餘額、換圖示</li><li>信用卡設定每月還款日和扣款銀行，到了會自動記一筆還款</li><li>按住拖曳排序</li></ul>`},
+      `<ul><li>金額預設隱藏，按右上角 👁 顯示</li><li>每個帳戶的餘額會隨支出、收入、轉帳、遺失自動計算；點帳戶可以設定目前餘額、換圖示</li><li>帳戶裡的<b>收支明細依月份分組</b>，點月份收合，或按「全部展開／全部收合」；點一筆可以直接修改</li><li>信用卡設定每月還款日和扣款銀行，到了會自動記一筆還款</li><li>按住拖曳排序</li></ul>`},
     {t: '⑥ 消費分析', h: phone('消費分析', `${pc('<b>11 月支出 $12,480</b><small>比上個月 ▼ 8%</small>')}<div class="pTable"><div><span>🍽️ 吃喝</span><span>42%</span></div><div><span>🏠 生活</span><span>30%</span></div></div>`, '分析', 'acc') +
       `<ul><li>圓餅圖看各分類花多少，點分類看子分類</li><li>必要／非必要消費比例和省錢建議（在設定裡選哪些算非必要）</li><li>每天支出、近 6 個月收支、最常花錢的地方、金額遺失統計</li></ul>`},
     {t: '⑦ 店家地圖：定位、搜尋、收藏', h: phone('店家地圖', `<div class="pSrch">🔍 加油站</div><div class="pMap"><span class="flag">📍</span><span class="flag f2">🍳</span></div><div class="pBtns">${pb('星河市 ▾')}${pb('幸福區 ▾')}${pb('✕')}</div>${pc('<b>🍳 早餐 ▾</b><small>晨曦早午餐・消費 3 次・$420</small>' + tap)}`, '地圖', 'acc') +
@@ -7115,7 +7158,7 @@ const GUIDE = {
     {t: '⑩ 上鎖、防止誤刪', h: phone('記帳設定', `${pc('<b>🔒 記帳密碼</b><small>6 位數・可用指紋解鎖</small><div class="pBtns">' + pb('🔓 立刻上鎖', 'hl') + pb('變更密碼') + '</div>' + tap)}${pc('<b>🧷 防止誤刪 App</b><small>不能直接解除安裝</small>')}`, '設定', 'acc') +
       `<ul><li><b>上鎖</b>：設定 6 位數密碼，可以用指紋解鎖；螢幕關閉或把 App 滑掉就會自動上鎖，在 App 裡切換分頁不用重新解鎖</li><li>設定頁的鎖頭按鈕可以立刻上鎖／解鎖；變更或移除密碼要先解鎖；從分帳匯入記帳也要先解鎖</li><li>有密碼時，桌面小工具和通知會把金額藏起來</li><li><b>🧷 防止誤刪 App</b>：開啟後手機不能直接解除安裝日日帳本，要先到手機設定停用保護，停用時要輸入手機的解鎖密碼；在 App 裡關閉要先輸入記帳密碼</li></ul>${tip('防誤刪是多一道確認，不是絕對擋得住；最可靠的還是定期備份。')}`},
     {t: '⑪ 匯出、備份、換機', h: phone('記帳設定', `${pc('<b>📤 匯出 CSV</b><small>消費明細・資產明細</small>')}${pc('<b>☁️ Google 雲端・pCloud</b><small>上傳／還原・選資料夾</small>')}${pc('<b>📲 快速換機</b><small>舊手機顯示 QR，新手機掃描</small>' + tap)}`, '設定', 'acc') +
-      `<ul><li><b>匯出 CSV</b>：選日期區間，消費明細（含品項、分帳）或資產明細</li><li><b>備份內容是整個日日帳本</b>：收藏店家和菜單、點餐、分帳、發票、記帳（常用紀錄、帳戶、對帳、商家）、資產、購物清單、食譜、分類、所有設定、API 金鑰和所有圖片；只有雲端登入和記帳密碼不備份</li><li><b>Google 雲端、pCloud</b>：上傳或還原，可以選資料夾；也可以在 App 裡用網頁版雲端硬碟登入</li><li><b>手機內建儲存</b>：存成一個備份檔放在「下載」資料夾</li><li><b>📲 快速換機 QR Code</b>：同一個 Wi-Fi 直接傳到新手機；傳給別人時選「不要」就不會帶你的金鑰</li></ul>`},
+      `<ul><li><b>匯出 CSV</b>：選日期區間，消費明細（含品項、分帳）或資產明細</li><li><b>備份內容是整個日日帳本</b>：收藏店家和菜單、點餐、分帳、發票、記帳（常用紀錄、帳戶、對帳、商家）、資產、購物清單、食譜、分類、所有設定、API 金鑰和所有圖片；只有雲端登入和記帳密碼不備份</li><li><b>Google 雲端、pCloud</b>：上傳或還原，可以選資料夾；也可以在 App 裡用網頁版雲端硬碟登入</li><li><b>手機內建儲存</b>：存成一個備份檔放在「下載」資料夾</li><li><b>📲 快速換機 QR Code</b>：同一個 Wi-Fi 直接傳到新手機（新手機只要掃一個 QR，可以放大縮小）；傳給別人時選「不要」就不會帶你的金鑰</li></ul>`},
     {t: '⑫ 小工具、通知欄、控制中心', h: phone('桌面', `${pc('<b>📒 日日帳本　11月</b><small>本月支出 $8,420・收入 $36,000・今天 $185</small><div class="pBtns">' + pb('＋ 支出', 'pri hl') + pb('＋ 收入') + pb('⭐ 常用') + '</div>' + tap)}${pc('<b>🔔 日日帳本・快速記帳</b><small>11月 支出 $8,420・今天 $185</small>')}`, '設定', 'acc') +
       `<ul><li><b>桌面小工具</b>：長按桌面空白處 →「小工具」→ 日日帳本，按「＋ 支出」直接打開記一筆</li><li><b>通知欄</b>：記帳 → 設定 → 快速記帳，打開「通知欄快速記帳」，通知上有「＋ 支出／＋ 收入／⭐ 常用」三顆按鈕</li><li><b>控制中心</b>：下拉兩次 → 編輯（鉛筆）→ 把「記一筆」和「常用記帳」拖進去</li><li>不想讓別人看到金額：關掉「小工具和通知顯示金額」</li></ul>`}]}
 };
@@ -7268,10 +7311,42 @@ function qrMulti(g, z) {
     const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys), pad = (x1 - x0) * 0.15; g.fillStyle = '#fff'; g.fillRect(hit.x + x0 - pad, Y + y0 - pad, x1 - x0 + pad * 2, y1 - y0 + pad * 2); }
   return out;
 }
+/* 相機：可以換鏡頭（避開長焦、超廣角）、放大縮小，讓你自己決定離多遠掃；會記住上次的鏡頭和倍率。
+   手機支援的話用鏡頭本身的變焦，不支援就用數位放大（只取畫面中間來辨識） */
+function camKit(box, v, onErr) {
+  const K = {stream: null, track: null, z: Math.max(1, +S.camZ || 1), hw: null, devs: [], di: -1, stopped: false};
+  box.insertAdjacentHTML('afterend', `<div class="camBar"><button class="btn sm" data-cz="-" aria-label="縮小">－</button><input type="range" class="czR" min="1" max="5" step="0.1" value="${K.z}"><button class="btn sm" data-cz="+" aria-label="放大">＋</button><b class="czL">${K.z.toFixed(1)}×</b><button class="btn sm hide" data-cam="1">🔄 換鏡頭</button></div>`);
+  const bar = box.nextElementSibling, R = $('.czR', bar), Lb = $('.czL', bar), cb = $('[data-cam]', bar);
+  let svT = 0; const save = () => { clearTimeout(svT); svT = setTimeout(() => { S.camZ = K.z; saveS(); }, 400); };
+  K.apply = () => { const max = +R.max; K.z = Math.min(max, Math.max(1, Math.round(K.z * 10) / 10)); R.value = K.z; Lb.textContent = K.z.toFixed(1) + '×';
+    if (K.hw) { const z = K.hw.min + (K.z - 1); try { K.track.applyConstraints({advanced: [{zoom: Math.min(K.hw.max, z)}]}).catch(() => {}); } catch (e) {} v.style.transform = ''; }
+    else v.style.transform = K.z > 1 ? `scale(${K.z})` : ''; save(); };
+  K.crop = () => { const vw = v.videoWidth, vh = v.videoHeight; if (K.hw || K.z <= 1) return [0, 0, vw, vh]; const w = vw / K.z, h = vh / K.z; return [(vw - w) / 2, (vh - h) / 2, w, h]; };
+  K.stop = () => { K.stopped = true; if (K.stream) K.stream.getTracks().forEach(t => t.stop()); };
+  K.open = async dev => { if (K.stream) K.stream.getTracks().forEach(t => t.stop());
+    const base = {width: {ideal: 1920}, height: {ideal: 1080}}, c = dev ? Object.assign({deviceId: {exact: dev}}, base) : Object.assign({facingMode: {ideal: 'environment'}}, base);
+    let s; try { s = await navigator.mediaDevices.getUserMedia({video: c, audio: false}); } catch (er) { if (dev) { S.camDev = ''; return K.open(''); } onErr && onErr(er); return; }
+    if (K.stopped) { s.getTracks().forEach(t => t.stop()); return; } K.stream = s; K.track = s.getVideoTracks()[0]; v.srcObject = s; v.play().catch(() => {});
+    const cap = (K.track.getCapabilities && K.track.getCapabilities()) || {}; K.hw = cap.zoom && cap.zoom.max > cap.zoom.min ? cap.zoom : null; R.max = K.hw ? Math.min(8, Math.round((K.hw.max - K.hw.min + 1) * 10) / 10) : 5;
+    if (cap.focusMode && cap.focusMode.includes('continuous')) K.track.applyConstraints({advanced: [{focusMode: 'continuous'}]}).catch(() => {});
+    K.apply();
+    try { if (!K.devs.length) { const all = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === 'videoinput'), back = all.filter(d => /back|rear|environment|後/i.test(d.label)); K.devs = back.length >= 2 ? back : all; }
+      const id = (K.track.getSettings && K.track.getSettings().deviceId) || dev; K.di = Math.max(0, K.devs.findIndex(d => d.deviceId === id)); cb.classList.toggle('hide', K.devs.length < 2);
+      cb.textContent = `🔄 換鏡頭 ${K.di + 1}/${K.devs.length}`; } catch (e) {} };
+  bar.addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; buzz(8);
+    if (b.dataset.cz) { K.z += b.dataset.cz === '+' ? .5 : -.5; K.apply(); }
+    else if (b.dataset.cam && K.devs.length > 1) { K.di = (K.di + 1) % K.devs.length; S.camDev = K.devs[K.di].deviceId; saveS(); K.open(S.camDev); toast(`鏡頭 ${K.di + 1}／${K.devs.length}${K.devs[K.di].label ? '：' + K.devs[K.di].label : ''}`); } });
+  R.addEventListener('input', () => { K.z = +R.value; K.apply(); });
+  /* 雙指縮放畫面也可以調整倍率 */
+  let d0 = 0, z0 = 1; box.addEventListener('touchstart', e => { if (e.touches.length === 2) { d0 = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY); z0 = K.z; } }, {passive: true});
+  box.addEventListener('touchmove', e => { if (e.touches.length === 2 && d0) { const d = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY); K.z = z0 * d / d0; K.apply(); } }, {passive: true});
+  box.addEventListener('touchend', () => { d0 = 0; }, {passive: true});
+  K.open(S.camDev || ''); return K;
+}
 function openInvScan() {
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { toast('這台手機不支援相機掃描'); return; }
-  let stream = null, stop = false, left = null, right = null, leftAt = 0, got = [];
-  const sh = sheet({title: '📷 掃描發票 QR Code', full: true, onClose() { stop = true; if (stream) stream.getTracks().forEach(t => t.stop()); }});
+  let cam = null, stop = false, left = null, right = null, leftAt = 0, got = [];
+  const sh = sheet({title: '📷 掃描發票 QR Code', full: true, onClose() { stop = true; if (cam) cam.stop(); }});
   sh.body.innerHTML = `<div class="scanBox"><video id="scV" playsinline muted></video><div class="scFrame"><i></i><i></i></div><div class="scTip" id="scTip">把發票左右兩個 QR Code 一起放進框裡</div></div>
     <div class="scState"><span id="scL" class="chip">左邊 QR</span><span id="scR" class="chip">右邊 QR</span></div><div id="scGot" class="scGot"></div>`;
   const v = $('#scV', sh.body), cv = document.createElement('canvas'), g = cv.getContext('2d', {willReadFrequently: true});
@@ -7279,18 +7354,16 @@ function openInvScan() {
   const finish = () => { const inv = parseInvQR(left, right); left = right = null; leftAt = 0; mark(); if (!inv) return;
     if (got.includes(inv.no)) return; got.push(inv.no); buzz(60);
     const r = invPut(inv); invChanged(); lookupSeller(inv.sellerId);
-    $('#scGot', sh.body).insertAdjacentHTML('afterbegin', `<button class="invC card" data-no="${inv.no}"><div class="invL"><b>${r === 'new' ? '✅ 已存入' : '🔄 已更新'}　${invNoFmt(inv.no)}</b><small>${dayLabel(inv.date)}・${inv.items.length} 項${inv.need && inv.items.length < inv.need ? `（共 ${inv.need} 項，右邊 QR 沒掃到的會少）` : ''}</small></div><div class="invR"><b>${money(inv.total)}</b><span class="chip">查看 ›</span></div></button>`);
+    $('#scGot', sh.body).insertAdjacentHTML('afterbegin', `<button class="invC card" data-no="${inv.no}"><div class="invL"><b>${r === 'new' ? '✅ 已存入' : '🔄 已更新'}　${invNoFmt(inv.no)}</b><small>${dayLabel(inv.date)}・${inv.items.length} 項${inv.need && inv.items.length < inv.need ? `（共 ${inv.need} 項，右邊 QR 沒掃到的會少）` : ''}</small>${inv.items.length ? `<div class="scItems">${inv.items.map(x => `<span><em>${esc(x.n)}</em><i>${x.q !== 1 ? '×' + x.q + ' ' : ''}${money(x.amt)}</i></span>`).join('')}</div>` : '<small class="muted">這張發票的 QR Code 沒有列出品項</small>'}</div><div class="invR"><b>${money(inv.total)}</b><span class="chip">查看 ›</span></div></button>`);
     $('#scTip', sh.body).textContent = '已存入！可以繼續掃下一張'; };
   sh.body.addEventListener('click', e => { const t = e.target.closest('[data-no]'); if (t) openInvDetail(t.dataset.no); });
   const take = txt => { if (/^[A-Z]{2}\d{8}\d{7}/.test(txt)) { if (!left || left !== txt) { left = txt; leftAt = Date.now(); } } else if (/^\*\*/.test(txt)) right = txt; mark(); };
   const tick = () => { if (stop) return;
-    if (v.readyState >= 2 && v.videoWidth) { const vw = v.videoWidth, vh = v.videoHeight, sc = Math.min(1, 960 / vw); cv.width = Math.round(vw * sc); cv.height = Math.round(vh * sc); g.drawImage(v, 0, 0, cv.width, cv.height);
+    if (v.readyState >= 2 && v.videoWidth) { const [sx, sy, vw, vh] = cam.crop(), sc = Math.min(1, 960 / vw); cv.width = Math.round(vw * sc); cv.height = Math.round(vh * sc); g.drawImage(v, sx, sy, vw, vh, 0, 0, cv.width, cv.height);
       try { qrMulti(g, [0, 0, cv.width, cv.height]).forEach(take); } catch (e) {}
       if (left) { const p = parseInvQR(left, right); const need = p && p.need, have = p ? p.items.length : 0; if (right || (need && have >= need) || need === 0 || Date.now() - leftAt > 2500) finish(); } }
     requestAnimationFrame(tick); };
-  navigator.mediaDevices.getUserMedia({video: {facingMode: {ideal: 'environment'}, width: {ideal: 1920}, height: {ideal: 1080}}, audio: false})
-    .then(s => { stream = s; if (stop) { s.getTracks().forEach(t => t.stop()); return; } v.srcObject = s; v.play().catch(() => {}); tick(); })
-    .catch(er => { $('#scTip', sh.body).textContent = '❌ 打不開相機：' + (er.name === 'NotAllowedError' ? '請允許日日帳本使用相機' : er.message); });
+  cam = camKit($('.scanBox', sh.body), v, er => { $('#scTip', sh.body).textContent = '❌ 打不開相機：' + (er.name === 'NotAllowedError' ? '請允許日日帳本使用相機' : er.message); }); tick();
 }
 
 /* ---------- 統編查店名（經濟部商工登記公示資料，查不到就顯示統編，可以自己改） ---------- */
@@ -7942,7 +8015,7 @@ function accUnlink(alias) { delete accSame()[alias]; saveAcc(); }
 /* 選「同一個人」：先選記帳裡顯示的名字，再選另一個名字（記帳名單或日常點餐名單） */
 async function accLinkAsk(mainId) {
   const pick = (title, L) => new Promise(res => { let done = false; const sh = sheet({title, onClose() { if (!done) res(null); }});
-    sh.body.innerHTML = L.length ? `<div class="whoRow">${L.map(u => `<button data-id="${esc(u.id)}">${esc(u.icon || '👤')} ${esc(u.name)}${u.tag ? `<small class="muted"> ${esc(u.tag)}</small>` : ''}</button>`).join('')}</div>` : '<div class="empty">沒有可以選的人</div>';
+    sh.body.innerHTML = L.length ? `<div class="whoRow pplGrid">${L.map(u => `<button data-id="${esc(u.id)}">${esc(u.icon || '👤')} ${esc(u.name)}${u.tag ? `<small class="muted"> ${esc(u.tag)}</small>` : ''}</button>`).join('')}</div>` : '<div class="empty">沒有可以選的人</div>';
     sh.body.onclick = e => { const b = e.target.closest('[data-id]'); if (!b) return; buzz(10); done = true; sh.close(); res(b.dataset.id); }; });
   const main = mainId || await pick('① 記帳裡要顯示哪個名字？', accPeople()); if (!main) return false; const M = accPeople().find(u => u.id === main);
   const cand = accPeople().filter(u => u.id !== main).map(u => Object.assign({tag: '記帳'}, u)).concat(((DB.mcfg && DB.mcfg.people) || []).filter(u => u.id !== main && !accPeople().some(x => x.id === u.id) && accPid(u.id) !== main).map(u => Object.assign({}, u, {tag: '日常點餐'})));
@@ -7952,7 +8025,7 @@ async function accLinkAsk(mainId) {
 /* 從日常設定進來：先選日常的名字，再選記帳裡是誰 */
 async function accLinkAskMeal() {
   const pick = (title, L) => new Promise(res => { let done = false; const sh = sheet({title, onClose() { if (!done) res(null); }});
-    sh.body.innerHTML = L.length ? `<div class="whoRow">${L.map(u => `<button data-id="${esc(u.id)}">${esc(u.icon || '👤')} ${esc(u.name)}</button>`).join('')}</div>` : '<div class="empty">沒有可以選的人</div>';
+    sh.body.innerHTML = L.length ? `<div class="whoRow pplGrid">${L.map(u => `<button data-id="${esc(u.id)}">${esc(u.icon || '👤')} ${esc(u.name)}</button>`).join('')}</div>` : '<div class="empty">沒有可以選的人</div>';
     sh.body.onclick = e => { const b = e.target.closest('[data-id]'); if (!b) return; buzz(10); done = true; sh.close(); res(b.dataset.id); }; });
   const al = await pick('① 日常點餐裡的哪個名字？', DB.mcfg.people); if (!al) return false; const A = mealWho(al);
   const main = await pick(`② 「${A.name}」在記帳裡是誰？`, accPeople().filter(u => u.id !== al)); if (!main) return false; const M = accPeople().find(u => u.id === main);
@@ -8291,8 +8364,8 @@ function accEdit(r0, preset, opt = {}) {
         <div class="field" style="margin-top:.7rem"><label class="row" style="gap:.4rem"><span class="grow">備註／消費明細</span></label>${tr ? '' : `<div class="acRow2" style="margin-bottom:.5rem"><button class="btn" data-a="billEd">🧾 ${r.bill ? '編輯明細（' + (r.bill.items || []).length + ' 項）' : '用分帳方式輸入'}</button><button class="btn" data-a="fromBill">📥 從分帳帶入</button></div>`}<textarea id="acNote" rows="${Math.min(10, Math.max(3, String(r.note || '').split('\n').length + 1))}" placeholder="例如：\n鮮奶 ×2  $95\n雞蛋  $60">${esc(r.note || '')}</textarea></div>
         <div class="lbl">圖片</div><div class="acImgs">${r.imgs.map((id, i) => `<span class="acImg"><img data-img="${id}" data-i="${i}" alt=""><button data-rmimg="${i}" aria-label="移除">✕</button></span>`).join('')}<button class="acImgAdd" data-a="addImg">＋<small>加入圖片</small></button></div>
         ${r.type === 'out' ? `<div class="acSplit card"><div class="acSH"><b>🤝 分帳</b><small>${who.length ? '選了 ' + who.length + ' 人分' : '不分帳就不用選'}</small></div>
-          <div class="lbl">誰付的錢</div><div class="whoRow">${accPeople().map(u => `<button data-payer="${u.id}" class="${payer === u.id ? 'on' : ''}">${esc(u.icon)} ${esc(u.name)}</button>`).join('')}</div>
-          <div class="lbl">誰要分（點選）</div><div class="whoRow">${accPeople().map(u => `<button data-who="${u.id}" class="${who.includes(u.id) ? 'on' : ''}">${esc(u.icon)} ${esc(u.name)}</button>`).join('')}<button data-a="addP">＋ 新增</button></div>
+          <div class="lbl">誰付的錢</div><div class="whoRow pplGrid">${accPeople().map(u => `<button data-payer="${u.id}" class="${payer === u.id ? 'on' : ''}">${esc(u.icon)} ${esc(u.name)}</button>`).join('')}</div>
+          <div class="lbl">誰要分（點選）</div><div class="whoRow pplGrid">${accPeople().map(u => `<button data-who="${u.id}" class="${who.includes(u.id) ? 'on' : ''}">${esc(u.icon)} ${esc(u.name)}</button>`).join('')}<button data-a="addP">＋ 新增</button></div>
           ${who.length ? `<div class="dkSeg acMode"><button data-mode="even" class="${mode === 'even' ? 'on' : ''}">平均分</button><button data-mode="custom" class="${mode === 'custom' ? 'on' : ''}">自己填金額</button></div>
             <div class="acShares">${sp.map(s => `<div class="acShR"><span>${esc(aWho(s.p).icon)} ${esc(aWho(s.p).name)}</span>${mode === 'custom' ? `<input data-cu="${s.p}" value="${custom[s.p] != null ? custom[s.p] : ''}" inputmode="decimal" placeholder="0">` : `<b>${money(s.amt)}</b>`}</div>`).join('')}</div>
             ${mode === 'custom' && Math.abs(sumSp - A) > 0.01 ? `<div class="blWarn">⚠️ 分攤合計 ${money(sumSp)}，和金額 ${money(A)} 差 ${money(A - sumSp)}</div>` : ''}
@@ -8539,17 +8612,26 @@ async function accAssetClick(e) {
 function editAcct(a) {
   if (!a) return; let kind = a.kind, pf = a.payFrom || '', fund = a.fund || '', ic = a.i, logo = a.logo || '';
   const sh = sheet({title: '編輯帳戶', full: true, foot: '<button class="btn danger" data-a="del" style="flex:0 0 auto">刪除</button><button class="btn pri" data-a="ok">儲存</button>'});
-  const flows = DB.acc.recs.filter(r => acctFlow(r, a.id)).sort(recSort).slice(0, 120), payUse = DB.acc.recs.filter(r => r.acct === a.id).sort(recSort).slice(0, 60);
+  const flows = DB.acc.recs.filter(r => acctFlow(r, a.id)).sort(recSort), payUse = DB.acc.recs.filter(r => r.acct === a.id).sort(recSort);
+  /* 收支明細依月份分組，可以收合；預設只打開最新的月份 */
+  const moOpen = new Set(); { const f = (flows[0] || payUse[0]); if (f) moOpen.add(f.d.slice(0, 7)); }
   const draw = () => { const cur = acctBal(a); sh.body.innerHTML = `<div class="niRow"><button class="niIc" data-a="ic">${aIco({i: ic, logo, kind})}<small>換圖示</small></button><div class="field grow" style="margin:0"><label>名稱</label><input id="eaN" value="${esc(a.n)}"></div></div>
     <div class="lbl">種類</div><div class="dkSeg acKind">${Object.entries(AK).map(([k, [n, i]]) => `<button data-k="${k}" class="${kind === k ? 'on' : ''}">${i} ${n}</button>`).join('')}</div>
     ${kind === 'pay' ? `<div class="lbl" style="margin-top:.8rem">綁定哪個帳戶扣款（記帳時預設從這裡扣）</div><div class="acAccts">${DB.acc.accts.filter(x => x.kind === 'bank' || x.kind === 'card' || x.kind === 'stored').map(x => `<button data-fd="${x.id}" class="${fund === x.id ? 'on' : ''}">${aIco(x)} ${esc(x.n)}</button>`).join('') || '<span class="muted small">先新增銀行、信用卡或儲值帳戶</span>'}</div>`
       : `<div class="field" style="margin-top:.8rem"><label>目前餘額${kind === 'card' ? '（信用卡欠款請填負數，例如 -3500）' : ''}</label><input id="eaB" value="${cur}" inputmode="decimal"></div>`}
     ${kind === 'card' ? `<div class="field"><label>每月幾號還款（1～28）</label><input id="eaD" value="${a.payDay || ''}" inputmode="numeric" placeholder="例如 5"></div><div class="lbl">從哪個帳戶自動扣款還款</div><div class="acAccts">${DB.acc.accts.filter(x => x.kind === 'bank').map(x => `<button data-pf="${x.id}" class="${pf === x.id ? 'on' : ''}">${aIco(x)} ${esc(x.n)}</button>`).join('') || '<span class="muted small">先在「銀行」新增帳戶</span>'}</div>` : ''}
-    <div class="lbl" style="margin-top:1rem">${kind === 'pay' ? '用這個付款方式的紀錄' : '收支明細'}</div><div class="card" style="padding:.2rem .7rem">${(kind === 'pay' ? payUse.map(r => `<div class="acIt"><span class="grow">${r.d.slice(5).replace('-', '/')} ${esc(r.payee || String(r.note || '').split('\n')[0] || accCat(r).n)}</span><b class="neg">${money(r.amt)}</b></div>`) : flows.map(r => { const v = acctFlow(r, a.id); return `<div class="acIt"><span class="grow">${r.d.slice(5).replace('-', '/')} ${esc(r.payee || String(r.note || '').split('\n')[0] || accCat(r).n)}</span><b class="${v > 0 ? 'pos' : 'neg'}">${v > 0 ? '+' : ''}${money(v)}</b></div>`; })).join('') || '<div class="empty" style="padding:.8rem">還沒有紀錄</div>'}</div>`; };
+    <div class="lbl" style="margin-top:1rem">${kind === 'pay' ? '用這個付款方式的紀錄' : '收支明細'}</div>${(() => { const L = kind === 'pay' ? payUse : flows, val = r => kind === 'pay' ? -(+r.amt || 0) : acctFlow(r, a.id); if (!L.length) return '<div class="card"><div class="empty" style="padding:.8rem">還沒有紀錄</div></div>';
+      const G = []; L.forEach(r => { const k = r.d.slice(0, 7); let g = G[G.length - 1]; if (!g || g.k !== k) G.push(g = {k, L: []}); g.L.push(r); }); const allOpen = G.every(g => moOpen.has(g.k));
+      return `<div class="moBar"><span class="muted small">共 ${L.length} 筆・${G.length} 個月</span><button class="btn sm" data-a="moAll">${allOpen ? '⊟ 全部收合' : '⊞ 全部展開'}</button></div>` + G.map(g => { const op = moOpen.has(g.k), inn = g.L.reduce((t, r) => t + Math.max(0, val(r)), 0), out = g.L.reduce((t, r) => t + Math.min(0, val(r)), 0);
+        return `<div class="moG card ${op ? 'on' : ''}"><button class="moH" data-mo="${g.k}"><b>${op ? '▾' : '▸'} ${+g.k.slice(0, 4)}年${+g.k.slice(5)}月</b><small>${g.L.length} 筆</small><span class="grow"></span>${inn ? `<em class="pos">+${money(inn)}</em>` : ''}${out ? `<em class="neg">${money(out)}</em>` : ''}</button>
+          ${op ? `<div class="moB">${g.L.map(r => { const v = val(r); return `<button class="acIt" data-rid="${r.id}"><span class="grow">${r.d.slice(5).replace('-', '/')} ${esc(r.payee || String(r.note || '').split('\n')[0] || accCat(r).n)}</span><b class="${v > 0 ? 'pos' : 'neg'}">${v > 0 ? '+' : ''}${money(v)}</b></button>`; }).join('')}</div>` : ''}</div>`; }).join(''); })()}`; };
   draw();
   const keepN = () => { const n = $('#eaN', sh.body); if (n) a._n = n.value; const bb = $('#eaB', sh.body); if (bb) a._b = bb.value; const dd = $('#eaD', sh.body); if (dd) a._d = dd.value; };
   sh.body.onclick = async e => { const t = e.target.closest('button'); if (!t) return; buzz(8); keepN();
-    if (t.dataset.a === 'ic') { const v = await iconPick(ic, 'fin'); if (v) { ic = v; logo = ''; } }
+    if (t.dataset.mo) { const k = t.dataset.mo; moOpen.has(k) ? moOpen.delete(k) : moOpen.add(k); }
+    else if (t.dataset.a === 'moAll') { const ks = [...new Set((kind === 'pay' ? payUse : flows).map(r => r.d.slice(0, 7)))], all = ks.every(k => moOpen.has(k)); ks.forEach(k => all ? moOpen.delete(k) : moOpen.add(k)); }
+    else if (t.dataset.rid) { const r = DB.acc.recs.find(x => x.id === t.dataset.rid); if (r) accEdit(r); return; }
+    else if (t.dataset.a === 'ic') { const v = await iconPick(ic, 'fin'); if (v) { ic = v; logo = ''; } }
     else if (t.dataset.k) kind = t.dataset.k; else if (t.dataset.pf) pf = t.dataset.pf; else if (t.dataset.fd) fund = t.dataset.fd; else return;
     draw(); if (a._n != null) $('#eaN', sh.body).value = a._n; if (a._b != null && $('#eaB', sh.body)) $('#eaB', sh.body).value = a._b; if (a._d != null && $('#eaD', sh.body)) $('#eaD', sh.body).value = a._d; };
   sh.foot.onclick = async e => { const b = e.target.closest('[data-a]'); if (!b) return; buzz(10); keepN(); delete a._n; delete a._b; delete a._d;
@@ -8840,7 +8922,7 @@ function renderAccCfg() {
       <button class="setR" data-a="wHide" style="width:100%;text-align:left"><span class="gRi">👁</span><div class="t"><b>小工具和通知顯示金額</b><small>關掉後桌面小工具、通知只顯示 $ ••••</small></div><span class="sw2 ${S.wHide ? '' : 'on'}"></span></button>
       <div class="setR" style="cursor:default"><span class="gRi">📱</span><div class="t"><b>桌面小工具、控制中心按鈕</b><small>桌面：長按空白處 →「小工具」→ 日日帳本。控制中心：下拉兩次 → 編輯（鉛筆）→ 把「記一筆」「常用記帳」拖進去。</small></div></div></div></div>` : ''}
     <div class="setG"><h3>說明</h3><div class="setC"><button class="setR" data-a="guide" style="width:100%;text-align:left"><span class="gRi">📖</span><div class="t"><b>記帳 圖解說明</b><small>記一筆、常用、欠款對帳、資產、分析、備份換機</small></div><span class="chev">›</span></button></div></div>
-    <div class="setG"><h3>分帳的人</h3><div class="setC"><div class="setR col"><div class="t"><b>我是誰</b><small>分帳、對帳時「我」是哪一個人（記帳自己的名單，和日常點餐分開）</small></div><div class="whoRow">${accPeople().map(u => `<button data-me="${u.id}" class="${accMe() === u.id ? 'on' : ''}">${esc(u.icon)} ${esc(u.name)}</button>`).join('')}</div></div>
+    <div class="setG"><h3>分帳的人</h3><div class="setC"><div class="setR col"><div class="t"><b>我是誰</b><small>分帳、對帳時「我」是哪一個人（記帳自己的名單，和日常點餐分開）</small></div><div class="whoRow pplGrid">${accPeople().map(u => `<button data-me="${u.id}" class="${accMe() === u.id ? 'on' : ''}">${esc(u.icon)} ${esc(u.name)}</button>`).join('')}</div></div>
       <div class="setR col"><div class="t"><b>🔗 同一個人，不同綽號</b><small>例如日常點餐叫「便當哥」、記帳叫「因因」：設定後分帳匯入記帳會自動對到同一個人，欠款、對帳也算在一起</small></div>
         ${Object.keys(accSame()).length ? `<div class="sameL">${Object.keys(accSame()).map(k => { const a = accSameName(k), m = aWho(k); return `<div class="sameR"><span>${esc((a && a.icon) || '👤')} ${esc(a ? a.name : (DB.acc.sameN || {})[k] || k)}${mealWho(k) ? '<small>日常</small>' : ''}</span><b>＝</b><span>${esc(m.icon)} ${esc(m.name)}<small>記帳</small></span><button class="ic" data-unlink="${esc(k)}" aria-label="取消">✕</button></div>`; }).join('')}</div>` : ''}
         <button class="btn block" data-a="link">🔗 設定同一個人</button></div>
@@ -9247,13 +9329,12 @@ async function xferSend() {
 }
 function qrScanOnce(title, test) {
   return new Promise(res => { if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { toast('這台手機不支援相機掃描'); res(null); return; }
-    let stream = null, stop = false, done = false; const sh = sheet({title, full: true, onClose() { stop = true; if (stream) stream.getTracks().forEach(t => t.stop()); if (!done) res(null); }});
-    sh.body.innerHTML = `<div class="scanBox"><video id="qsV" playsinline muted></video><div class="scFrame"><i></i><i></i></div><div class="scTip" id="qsT">把 QR Code 放進框裡</div></div>`;
+    let cam = null, stop = false, done = false; const sh = sheet({title, full: true, onClose() { stop = true; if (cam) cam.stop(); if (!done) res(null); }});
+    sh.body.innerHTML = `<div class="scanBox"><video id="qsV" playsinline muted></video><div class="scFrame one"><i></i></div><div class="scTip" id="qsT">把 QR Code 放進框裡，太小可以按 ＋ 放大</div></div>`;
     const v = $('#qsV', sh.body), cv = document.createElement('canvas'), g = cv.getContext('2d', {willReadFrequently: true});
-    const tick = () => { if (stop) return; if (v.readyState >= 2 && v.videoWidth) { const sc = Math.min(1, 800 / v.videoWidth); cv.width = Math.round(v.videoWidth * sc); cv.height = Math.round(v.videoHeight * sc); g.drawImage(v, 0, 0, cv.width, cv.height);
+    const tick = () => { if (stop) return; if (v.readyState >= 2 && v.videoWidth) { const [sx, sy, vw, vh] = cam.crop(), sc = Math.min(1, 900 / vw); cv.width = Math.round(vw * sc); cv.height = Math.round(vh * sc); g.drawImage(v, sx, sy, vw, vh, 0, 0, cv.width, cv.height);
         try { const c = jsQR(g.getImageData(0, 0, cv.width, cv.height).data, cv.width, cv.height); if (c && c.data && (!test || test(c.data))) { done = true; buzz(60); sh.close(); res(c.data); return; } } catch (e) {} } requestAnimationFrame(tick); };
-    navigator.mediaDevices.getUserMedia({video: {facingMode: {ideal: 'environment'}}, audio: false}).then(s2 => { stream = s2; if (stop) { s2.getTracks().forEach(t => t.stop()); return; } v.srcObject = s2; v.play().catch(() => {}); tick(); })
-      .catch(er => { $('#qsT', sh.body).textContent = '❌ 打不開相機：' + (er.name === 'NotAllowedError' ? '請允許日日帳本使用相機' : er.message); }); });
+    cam = camKit($('.scanBox', sh.body), v, er => { $('#qsT', sh.body).textContent = '❌ 打不開相機：' + (er.name === 'NotAllowedError' ? '請允許日日帳本使用相機' : er.message); }); tick(); });
 }
 async function xferRecv() {
   if (!(IS_APP && NB.xferGet)) { toast('快速換機要在 Android App 裡使用'); return; }
