@@ -52,6 +52,11 @@ const CAT_EMOJI = '🍳 🥪 🥞 🥐 🍱 🍛 🍜 🍝 🍚 🍙 🍣 🥟 �
 const SHOP_CATS = [['量販店', '🛒', '#C23B4E'], ['超市', '🧺', '#5A7A44'], ['超商', '🏪', '#3F6E8C'], ['外送', '🛵', '#D2603A'], ['藥妝', '💊', '#8A5A9E'], ['其他', '🛍️', '#6B5344']];
 const UNCAT = {id: '', name: '未分類', icon: '📍', color: '#7d6c57'};
 const catOf = id => DB.cats.find(c => c.id === id) || UNCAT;
+/* 菜單只有吃的、喝的店才需要：分類可以自己設定「有菜單」，沒設定就看分類名稱；停車場、加油站這類一律不顯示菜單 */
+const FOOD_RE = /早餐|午餐|晚餐|宵夜|消夜|點心|甜點|飲|咖啡|小吃|餐|食|麵|飯|吃|茶|酒|甜|烘焙|麵包|鍋|燒烤|燒肉|便當|冰|手搖|早午|料理|拉麵|壽司|披薩|漢堡|牛排|滷味|鹹酥|雞排|豆花|蛋糕/,
+  NOMENU_RE = /停車|加油|充電|洗車|機車|汽車|修車|保養|輪胎|銀行|郵局|ATM|醫院|診所|藥局|藥妝|牙醫|眼科|學校|公園|車站|捷運|公車|客運|五金|家具|家居|服飾|鞋|超市|量販|便利|美髮|理髮|美甲|健身|電信|通訊|旅館|民宿|住宿|公所|戶政|寺|廟|宮|教會|文具|書局|寵物|動物醫院|洗衣|影印|3C|電器|百貨|市場|停車場|加油站/i;
+const catMenu = c => c && c.menu != null ? !!c.menu : !c || c.id === UNCAT.id ? true : FOOD_RE.test(c.name || '');
+function hasMenu(p) { if (!p) return false; if ((p.menu || []).length || (p.albums || []).some(a => (a.imgs || []).length)) return true; if (NOMENU_RE.test((p.tag || '') + ' ' + (p.gtype || ''))) return false; const c = catOf(p.cat); if (c.menu != null) return !!c.menu; if (NOMENU_RE.test(p.name || '') && !FOOD_RE.test(p.name || '')) return false; return catMenu(c); }
 
 const saveS = debounce(() => { IDB.put('kv', 'S', S).catch(() => {}); try { localStorage.setItem('fm.theme', JSON.stringify({theme: S.theme, palette: S.palette, scale: S.scale})); } catch (e) {} }, 150);
 const saveCats = () => IDB.put('kv', 'cats', DB.cats).catch(saveErr);
@@ -158,10 +163,10 @@ function sheet(o) {
   /* 先讓呼叫的地方把內容放進去、畫好，下一個畫格才開始滑上來，避免滑動時畫面破碎閃爍 */
   document.body.append(w); sheets.push(me); requestAnimationFrame(() => requestAnimationFrame(() => { if (!me.closed) w.classList.add('on'); })); return me;
 }
-function ask(msg, okLabel, danger) {
+function ask(msg, okLabel, danger, noLabel) {
   return new Promise(res => { let done = false;
     const w = el(`<div class="shWrap center"><div class="shBg"></div><div class="dlg"><p></p><div class="row"><button class="btn ghost" data-a="0">取消</button><button class="btn ${danger ? 'danger' : 'pri'}" data-a="1"></button></div></div></div>`);
-    $('p', w).textContent = msg; $('[data-a="1"]', w).textContent = okLabel || '確定';
+    $('p', w).textContent = msg; $('[data-a="1"]', w).textContent = okLabel || '確定'; if (noLabel) $('[data-a="0"]', w).textContent = noLabel;
     const me = {el: w, closed: false, close(v) { if (done) return; done = true; me.closed = true; const i = sheets.indexOf(me); if (i >= 0) sheets.splice(i, 1); w.classList.remove('on'); setTimeout(() => w.remove(), 220); res(!!v); }};
     $('.shBg', w).onclick = () => me.close(false); $$('button', w).forEach(b => b.onclick = () => me.close(b.dataset.a === '1'));
     document.body.append(w); w.offsetHeight; w.classList.add('on'); sheets.push(me); });

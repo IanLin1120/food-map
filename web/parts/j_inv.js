@@ -255,7 +255,7 @@ function openInvDetail(no) {
         ${fe.length ? `<div class="ihT card">${fe.map((d, k) => `<button class="ihD" data-fk="${k}"><span class="grow"><b>${esc(d.n)}</b></span><b>+${money(d.amt)}</b></button>`).join('')}</div>` : ''}
         ${Math.abs(sum - numP(v.total)) > 0.5 && v.total ? `<div class="blWarn" style="margin:.5rem 0 0">⚠️ 品項${ds.length || od.length || fe.length ? '加減折扣和費用後' : ''}合計 ${money(sum)} 和消費金額不同${v.src === 'qr' ? '（右邊 QR 可能沒掃到，可以再掃一次）' : ''}</div>` : `${ds.length || od.length || fe.length || its.some(x => +x.amt < 0) ? `<div class="blOk" style="margin:.5rem 0 0">✅ 品項${ds.length || od.length || fe.length ? '加減折扣和費用後' : ''}合計和消費金額一致</div>` : ''}`}`
         : `<div class="empty" style="padding:1rem">這張發票還沒有品項明細<br><span class="small">按「＋ 品項」手動輸入，或用截圖、協助工具補上</span></div>`}
-      <button class="btn block" data-a="fromBill" style="margin-top:.8rem">📥 用購物明細的內容取代品項和折扣</button>
+      <button class="btn block" data-a="fromBill" style="margin-top:.8rem">📥 用消費明細的內容取代品項和折扣</button>
       ${b ? `<button class="invLink card" data-a="open"><span>✓ 已拿去分帳：${dayLabel(billKey(b))} ${esc(billStore(b) || '')}</span><b>打開 ›</b></button><div class="small muted" style="margin-top:.35rem">修改發票不會自動改到已經做好的分帳</div>` : ''}`;
     $('[data-a="split"]', sh.foot).textContent = b ? '🧾 打開分帳' : '🧾 拿去分帳'; };
   draw();
@@ -378,7 +378,7 @@ function invToBill(v) {
   while (sheets.length) sheets[sheets.length - 1].close(); buzz(30); toast('✅ 已建立分帳，接著選每一項是誰付的', 3000); gotoBill(k, b.id);
 }
 
-/* ---------- 購物明細 → 發票：保留發票號碼、統編、日期、時間、消費金額，只換品項、折扣、整單折扣、費用 ---------- */
+/* ---------- 消費明細 → 發票：保留發票號碼、統編、日期、時間、消費金額，只換品項、折扣、整單折扣、費用 ---------- */
 const sameSeller = (a, b) => { const n = s => String(s || '').replace(/股份有限公司|有限公司|福利中心|實業|分公司|\s/g, '').toLowerCase(); const x = n(a), y = n(b); return x && y && (x.includes(y.slice(0, 2)) || y.includes(x.slice(0, 2))); };
 function pickInvFor(b) {
   const k = billKey(b), tot = numP(billCalc(b).computed), bt = numP(b.total), st = billStore(b);
@@ -393,19 +393,19 @@ function pickInvFor(b) {
 function pickBillFor(v) {
   const all = []; Object.keys(DB.bills || {}).forEach(k => DB.bills[k].forEach(b => all.push(b)));
   const score = b => (billKey(b) === v.date ? 4 : 0) + (Math.abs(numP(b.total || billCalc(b).computed) - numP(v.total)) < 0.5 ? 3 : 0) + (sameSeller(invSeller(v), billStore(b)) ? 2 : 0) + (b.inv === v.no ? 10 : 0);
-  return new Promise(res => { let done = false; const sh = sheet({title: '📥 選擇購物明細', full: true, onClose() { if (!done) res(null); }});
+  return new Promise(res => { let done = false; const sh = sheet({title: '📥 選擇消費明細', full: true, onClose() { if (!done) res(null); }});
     const L = all.sort((x, y) => score(y) - score(x) || billKey(y).localeCompare(billKey(x))).slice(0, 80);
-    sh.body.innerHTML = `<div class="small muted" style="margin:-.2rem 0 .6rem">選一筆購物明細，用它的品項、折扣、整單折扣和費用取代這張發票的內容（發票號碼、統編、日期時間和金額不變）</div>` + (L.map(b => { const sc = score(b); return `<button class="invC card piC ${sc >= 7 ? 'best' : ''}" data-id="${b.id}"><div class="invL"><b>${esc(billStore(b) || '購物明細')}</b><small>${dayLabel(billKey(b))}・${(b.items || []).length} 項</small>${sc >= 7 ? '<span class="chip">很可能是這筆</span>' : ''}</div><div class="invR"><b>${money(b.total || billCalc(b).computed)}</b></div></button>`; }).join('') || '<div class="empty">還沒有購物明細</div>');
+    sh.body.innerHTML = `<div class="small muted" style="margin:-.2rem 0 .6rem">選一筆消費明細，用它的品項、折扣、整單折扣和費用取代這張發票的內容（發票號碼、統編、日期時間和金額不變）</div>` + (L.map(b => { const sc = score(b); return `<button class="invC card piC ${sc >= 7 ? 'best' : ''}" data-id="${b.id}"><div class="invL"><b>${esc(billStore(b) || '消費明細')}</b><small>${dayLabel(billKey(b))}・${(b.items || []).length} 項</small>${sc >= 7 ? '<span class="chip">很可能是這筆</span>' : ''}</div><div class="invR"><b>${money(b.total || billCalc(b).computed)}</b></div></button>`; }).join('') || '<div class="empty">還沒有消費明細</div>');
     sh.body.addEventListener('click', e => { const t = e.target.closest('[data-id]'); if (!t) return; buzz(10); done = true; sh.close(); res(all.find(b => b.id === t.dataset.id)); }); });
 }
 async function applyBillToInv(b, v) {
-  if (!await ask(`用「${billStore(b) || '購物明細'}」的 ${(b.items || []).length} 個品項取代發票 ${invNoFmt(v.no)} 的品項和折扣？\n發票號碼、店家統編、日期、時間和消費金額會保留。`, '取代')) return false;
+  if (!await ask(`用「${billStore(b) || '消費明細'}」的 ${(b.items || []).length} 個品項取代發票 ${invNoFmt(v.no)} 的品項和折扣？\n發票號碼、店家統編、日期、時間和消費金額會保留。`, '取代')) return false;
   const r2 = n => Math.round(n * 100) / 100;
   v.items = (b.items || []).map(x => { const q = +x.q || 1, a = numP(x.amt); return {id: x.id || 'i' + uid(), n: x.n, q, p: r2(a / q), amt: r2(a)}; });
   v.disc = (b.disc || []).map(d => ({id: d.id || 'v' + uid(), n: d.n, amt: numP(d.amt), items: (d.items || []).slice(), kind: d.kind, val: d.val}));
   v.odisc = (b.odisc || []).map(d => ({id: d.id || 'o' + uid(), n: d.n, amt: numP(d.amt), kind: d.kind, val: d.val}));
   v.fees = (b.fees || []).map(d => ({id: d.id || 'f' + uid(), n: d.n, amt: numP(d.amt)}));
-  if (b.way) v.way = b.way; v.bill = {k: billKey(b), id: b.id}; b.inv = v.no; saveInvs(); saveBills(); buzz(30); toast('✅ 已把購物明細的內容套用到發票', 2500); return true;
+  if (b.way) v.way = b.way; v.bill = {k: billKey(b), id: b.id}; b.inv = v.no; saveInvs(); saveBills(); buzz(30); toast('✅ 已把消費明細的內容套用到發票', 2500); return true;
 }
 async function billToInv(b) { const v = await pickInvFor(b); if (!v) return; if (await applyBillToInv(b, v)) { invChanged(); openInvDetail(v.no); } }
 

@@ -57,7 +57,7 @@ function renderShop() {
       ${calHead(Y, Mo)}
       <div class="calWd">${MWD.map((w, i) => `<span class="${i === 0 || i === 6 ? 'we' : ''}">${w}</span>`).join('')}</div><div class="calG">${cells}</div></div>
     <div class="dayHead"><b class="dhD">${sel.getMonth() + 1}月${sel.getDate()}日 星期${MWD[sel.getDay()]}</b><span class="grow"></span>${bs.length ? `<span class="dayTot">${money(dayTot)}</span><button class="btn sm" data-a="exportDay">📤 匯出</button>` : ''}</div>
-    ${bs.map(billCard).join('') || '<div class="empty mealEmpty"><span class="big">🧾</span>這天還沒有購物明細<br><span class="small">按上面的「上傳明細」拍照或選截圖，或「手動輸入」<br>也可以在 Foodpanda、相簿裡按「分享」傳給日日帳本</span></div>'}
+    ${bs.map(billCard).join('') || '<div class="empty mealEmpty"><span class="big">🧾</span>這天還沒有消費明細<br><span class="small">按上面的「上傳明細」拍照或選截圖，或「手動輸入」<br>也可以在 Foodpanda、相簿裡按「分享」傳給日日帳本</span></div>'}
     
     ${order.length ? `<div class="perSum card"><div class="psH">👥 每個人這天要付</div>${order.map(id => { const u = mWho(id); return `<div class="psR"><span class="psI">${esc(u.icon)}</span><b class="grow">${esc(u.name)}</b><span>${money(per[id])}</span></div>`; }).join('')}<div class="psR tot"><b class="grow">合計</b><span>${money(dayTot)}</span></div></div>` : ''}`;
 }
@@ -118,9 +118,9 @@ function gotoBill(k, id) { const d = ymdDate(k); Shop.sel = k; Shop.ym = [d.getF
 function shopPlaceHtml(p) {
   const L = []; Object.keys(DB.bills).sort().reverse().forEach(k => DB.bills[k].forEach(b => { if (b.place === p.id) L.push({k, b}); }));
   const tot = L.reduce((s, r) => s + billCalc(r.b).computed, 0);
-  return `<div class="h3 pTabH"><span class="grow">🧾 購物紀錄 <span class="muted small" style="font-weight:600">${L.length ? L.length + ' 筆・' + money(tot) : ''}</span></span></div>
+  return `<div class="h3 pTabH"><span class="grow">🧾 消費紀錄 <span class="muted small" style="font-weight:600">${L.length ? L.length + ' 筆・' + money(tot) : ''}</span></span></div>
     <div class="mBtns"><button class="btn pri" data-a="sbNew">＋ 新增這家店的明細</button></div>
-    ${L.length ? L.slice(0, 30).map(r => `<button class="srD" data-a="sbGo" data-k="${r.k}" data-id="${r.b.id}"><div class="row"><b class="grow">${dayLabel(r.k)}${r.b.time ? ' ' + esc(r.b.time) : ''}</b><span class="srA">${money(billCalc(r.b).computed)}</span></div><div class="srL">${esc(r.b.items.slice(0, 4).map(x => x.n).join('、'))}${r.b.items.length > 4 ? '…' : ''}</div></button>`).join('') : '<div class="empty" style="padding:1rem">這家店還沒有購物紀錄</div>'}`;
+    ${L.length ? L.slice(0, 30).map(r => `<button class="srD" data-a="sbGo" data-k="${r.k}" data-id="${r.b.id}"><div class="row"><b class="grow">${dayLabel(r.k)}${r.b.time ? ' ' + esc(r.b.time) : ''}</b><span class="srA">${money(billCalc(r.b).computed)}</span></div><div class="srL">${esc(r.b.items.slice(0, 4).map(x => x.n).join('、'))}${r.b.items.length > 4 ? '…' : ''}</div></button>`).join('') : '<div class="empty" style="padding:1rem">這家店還沒有消費紀錄</div>'}`;
 }
 
 function initShop() {
@@ -142,7 +142,7 @@ function initShop() {
   box.addEventListener('click', e => { const card = e.target.closest('.bill'); if (card && !e.target.closest('button')) { const b = curBill(card.dataset.b); if (b) editBill(b); } });
 }
 function billMore(b) {
-  const sh = sheet({title: '🧾 ' + (billStore(b) || '購物明細'), html: `<div class="actList"><button data-a="exp">📤 匯出這筆（文字／Excel）</button>${(b.imgs || []).length ? '<button data-a="imgs">🖼️ 看明細圖片</button>' : ''}${shopPlaces().some(p => p.id === b.place) ? '<button data-a="open">🏪 打開店家</button>' : ''}<button data-a="toAcc">📒 匯入記帳（帶入每個人分到的金額）</button><button data-a="toInv">🧾 套用到發票（取代品項和折扣）</button><button data-a="move">📅 改到其他日期</button><button data-a="del" class="dng">🗑 刪除這筆</button></div>`});
+  const sh = sheet({title: '🧾 ' + (billStore(b) || '消費明細'), html: `<div class="actList"><button data-a="exp">📤 匯出這筆（文字／Excel）</button>${(b.imgs || []).length ? '<button data-a="imgs">🖼️ 看明細圖片</button>' : ''}${shopPlaces().some(p => p.id === b.place) ? '<button data-a="open">🏪 打開店家</button>' : ''}<button data-a="toAcc">📒 匯入記帳（帶入每個人分到的金額）</button><button data-a="toInv">🧾 套用到發票（取代品項和折扣）</button><button data-a="move">📅 改到其他日期</button><button data-a="del" class="dng">🗑 刪除這筆</button></div>`});
   sh.body.onclick = async e => { const t = e.target.closest('[data-a]'); if (!t) return; const a = t.dataset.a; sh.close();
     if (a === 'exp') openShopExport(Shop.sel, b.id);
     else if (a === 'toInv') billToInv(b); else if (a === 'toAcc') { if (await enterAcc()) billToAcc(b); }
@@ -150,7 +150,7 @@ function billMore(b) {
     else if (a === 'open') openPlace(b.place);
     else if (a === 'move') { const v = await askText('改到哪一天？（年-月-日）', Shop.sel); if (!v) return; const k = v.trim().replace(/[/.]/g, '-'), d = new Date(k + 'T00:00'); if (isNaN(d)) { toast('日期格式不正確'); return; }
       const L = dayBills(Shop.sel); L.splice(L.indexOf(b), 1); (DB.bills[ymd(d)] = DB.bills[ymd(d)] || []).push(b); shopChanged(); toast('已移到 ' + ymd(d)); }
-    else if (a === 'del') { if (!await ask('確定要刪除這筆購物明細嗎？', '刪除', true)) return; const L = dayBills(Shop.sel); L.splice(L.indexOf(b), 1); for (const id of b.imgs || []) await imgDel(id); shopChanged(); } };
+    else if (a === 'del') { if (!await ask('確定要刪除這筆消費明細嗎？', '刪除', true)) return; const L = dayBills(Shop.sel); L.splice(L.indexOf(b), 1); for (const id of b.imgs || []) await imgDel(id); shopChanged(); } };
 }
 
 /* ---------- 新增：手動或上傳圖片 ---------- */
@@ -372,7 +372,7 @@ function pickPeople(cur, title, allowNone) {
 /* ---------- 編輯一筆明細 ---------- */
 function editBill(b, opt = {}) {
   /* opt.detached：記帳裡用分帳的方式輸入明細（這筆明細不放進分帳），完成時交給 opt.onDone */
-  let qs = null; const DET = !!opt.detached, sh = sheet({title: '🧾 ' + (billStore(b) || (DET ? '輸入購物明細' : '購物明細')), full: true, foot: '<div class="grow ordTot" id="ebT"></div><button class="btn pri" data-a="done" style="flex:0 0 auto">完成</button>', onClose() { if (DET) { opt.onDone && opt.onDone(b); return; }
+  let qs = null; const DET = !!opt.detached, sh = sheet({title: '🧾 ' + (billStore(b) || (DET ? '輸入消費明細' : '消費明細')), full: true, foot: '<div class="grow ordTot" id="ebT"></div><button class="btn pri" data-a="done" style="flex:0 0 auto">完成</button>', onClose() { if (DET) { opt.onDone && opt.onDone(b); return; }
     /* 手動新增後什麼都沒輸入就返回：不要留下空白明細 */
     if (opt.dropEmpty && !(b.items || []).length && !(b.fees || []).length && !(b.odisc || []).length && !(b.disc || []).length && !numP(b.total) && !(b.imgs || []).length) { Object.keys(DB.bills).forEach(k => { const i = DB.bills[k].indexOf(b); if (i >= 0) DB.bills[k].splice(i, 1); if (!DB.bills[k].length) delete DB.bills[k]; }); }
     shopChanged(); }});
@@ -402,7 +402,7 @@ function editBill(b, opt = {}) {
   sh.body.addEventListener('change', e => { if (e.target.id === 'ebTotal') { b.total = e.target.value.trim() === '' ? '' : numP(e.target.value); saveBills(); draw(); } });
   sh.body.addEventListener('click', async e => { const t = e.target.closest('[data-a]'); if (!t) return; const a = t.dataset.a, row = t.closest('.ebR');
     const X = row && row.dataset.x && b.items.find(x => x.id === row.dataset.x), D = row && row.dataset.d && b.disc.find(d => d.id === row.dataset.d), O = row && row.dataset.o && b.odisc.find(d => d.id === row.dataset.o), F = row && row.dataset.f && b.fees.find(d => d.id === row.dataset.f);
-    if (a === 'store') { const st = await pickShopStore(b.place); if (st === undefined) return; b.place = st ? st.id || '' : ''; b.pname = st ? st.name : ''; $('.shTitle', sh.el).textContent = '🧾 ' + (billStore(b) || '購物明細'); draw(); }
+    if (a === 'store') { const st = await pickShopStore(b.place); if (st === undefined) return; b.place = st ? st.id || '' : ''; b.pname = st ? st.name : ''; $('.shTitle', sh.el).textContent = '🧾 ' + (billStore(b) || '消費明細'); draw(); }
     else if (a === 'way') { buzz(8); b.way = b.way === t.dataset.w ? '' : t.dataset.w; saveBills(); draw(); return; }
     else if (a === 'wayAdd') { const v = await addWay(); if (v) { b.way = v; saveBills(); draw(); } return; }
     else if (a === 'pickTime') { const v = await timePick(b.time); if (v == null) return; b.time = v; saveBills(); shopChanged(); draw(); }
@@ -494,7 +494,7 @@ function billBlock(b) {
   out.push(`合計：${ntd(c.computed)}`); return out;
 }
 function openShopExport(k, bid) {
-  const bs = dayBills(k); if (!bs.length) { toast('這天沒有購物明細'); return; } let sel = bid || 'all';
+  const bs = dayBills(k); if (!bs.length) { toast('這天沒有消費明細'); return; } let sel = bid || 'all';
   const sh = sheet({title: '📤 匯出購物分帳', full: true, foot: '<button class="btn" data-a="xlsx">📊 匯出 Excel</button><button class="btn pri" data-a="copy">📋 複製文字</button>'});
   const pick = () => sel === 'all' ? bs : bs.filter(b => b.id === sel);
   const text = () => { const L = pick(), out = [dayLabel(k)]; L.forEach((b, i) => { out.push(...billBlock(b)); if (i < L.length - 1) out.push(''); });
@@ -535,7 +535,7 @@ function xlsxBook(rows, widths, name) {
 
 /* ---------- 搜尋 ---------- */
 function openShopSearch() {
-  let q = ''; const sh = sheet({title: '🔍 搜尋購物紀錄', full: true});
+  let q = ''; const sh = sheet({title: '🔍 搜尋消費紀錄', full: true});
   sh.body.innerHTML = `<div class="searchBox" style="margin-bottom:.8rem"><input id="ssQ" type="search" placeholder="輸入店名或商品，例如：全聯、衛生紙"></div><div id="ssR"></div>`;
   const draw = () => { const by = {};
     Object.keys(DB.bills).sort().reverse().forEach(k => DB.bills[k].forEach(b => { const nm = billStore(b) || '未選店家', hitItems = q ? b.items.filter(x => x.n.toLowerCase().includes(q)) : []; if (q && !nm.toLowerCase().includes(q) && !hitItems.length) return;
@@ -543,7 +543,7 @@ function openShopSearch() {
     const G = Object.values(by);
     $('#ssR', sh.body).innerHTML = G.length ? G.map(g => `<div class="srS"><div class="srH"><b class="grow">🏪 ${esc(g.nm)}</b><span class="muted">${g.rows.length} 筆 · ${money(g.rows.reduce((s, r) => s + billCalc(r.b).computed, 0))}</span></div>${g.rows.map(r => { const c = billCalc(r.b), ids = pOrder(Object.keys(c.per));
         return `<button class="srD" data-k="${r.k}" data-id="${r.b.id}"><div class="row"><b class="grow">${dayLabel(r.k)}${r.b.time ? ' ' + esc(r.b.time) : ''}</b><span class="srA">${money(c.computed)}</span></div>${(r.hitItems.length ? r.hitItems : r.b.items.slice(0, 3)).map(x => `<div class="srL">${esc(x.n)}${x.q > 1 ? '×' + x.q : ''} ${money(x.amt)}${(x.ppl || []).length ? '・' + esc(pplNames(x.ppl)) : ''}</div>`).join('')}${ids.length ? `<div class="srL muted">${ids.map(id => esc(mWho(id).name) + ' ' + money(c.per[id])).join('・')}</div>` : ''}</button>`; }).join('')}</div>`).join('')
-      : `<div class="empty">${Object.keys(DB.bills).length ? '找不到符合的店家或商品' : '還沒有任何購物紀錄'}</div>`; };
+      : `<div class="empty">${Object.keys(DB.bills).length ? '找不到符合的店家或商品' : '還沒有任何消費紀錄'}</div>`; };
   draw(); $('#ssQ', sh.body).oninput = debounce(e => { q = e.target.value.trim().toLowerCase(); draw(); }, 200);
   sh.body.addEventListener('click', e => { const t = e.target.closest('[data-k]'); if (!t) return; sh.close(); gotoBill(t.dataset.k, t.dataset.id); });
 }
@@ -556,7 +556,7 @@ function openShopSettings() {
     sh.body.innerHTML = `<div class="msSec"><div class="msH"><b class="grow">人名</b><button class="btn sm" data-a="addP">＋ 新增</button></div><div class="small muted" style="margin:-.2rem 0 .5rem">和點餐共用同一份人名，按住 ☰ 拖曳排序</div>
         <div class="msL" data-k="people">${DB.mcfg.people.map(u => `<div class="msR" data-id="${u.id}"><span class="grip"></span><span class="msI">${esc(u.icon)}</span><b class="grow">${esc(u.name)}</b><button class="btn sm" data-a="editP">✎ 編輯</button></div>`).join('')}</div></div>
       ${list('ways', '購物方式', '明細裡選擇在哪裡買的：實體店購物、Foodpanda、Uber Eats…')}${list('fees', '費用名稱', '新增費用時可以一鍵選，例如平台費、外送服務費、包材費')}${list('odisc', '整單折扣名稱', '例如優惠券、整單折扣')}
-      <div class="msSec"><div class="msH"><b class="grow">購物紀錄</b></div><div class="small muted">共有 ${n} 筆明細。紀錄會一起放進「設定 → 匯出備份」。</div>${n ? '<button class="btn sm danger" data-a="wipe" style="margin-top:.6rem">清除所有購物紀錄</button>' : ''}</div>`;
+      <div class="msSec"><div class="msH"><b class="grow">消費紀錄</b></div><div class="small muted">共有 ${n} 筆明細。紀錄會一起放進「設定 → 匯出備份」。</div>${n ? '<button class="btn sm danger" data-a="wipe" style="margin-top:.6rem">清除所有消費紀錄</button>' : ''}</div>`;
     $$('.msL', sh.body).forEach(l => sortable(l, {item: '.msR', handle: '.grip', scroller: sh.body, onSort(from, to) { const k = l.dataset.k; moveItem(k === 'people' ? DB.mcfg.people : DB.scfg[k], from, to); k === 'people' ? saveMcfg() : saveScfg(); draw(); }})); };
   draw();
   sh.body.addEventListener('click', async e => { const t = e.target.closest('[data-a]'); if (!t) return; const a = t.dataset.a, row = t.closest('.msR'), k = (t.closest('.msL') || t).dataset.k;
@@ -564,5 +564,5 @@ function openShopSettings() {
     else if (a === 'add') { const v = ((await askText('名稱', '')) || '').trim(); if (v) { DB.scfg[k].push(v); saveScfg(); draw(); } }
     else if (a === 'ren') { const i = +row.dataset.i, v = ((await askText('名稱', DB.scfg[k][i])) || '').trim(); if (v) { DB.scfg[k][i] = v; saveScfg(); draw(); } }
     else if (a === 'del') { DB.scfg[k].splice(+row.dataset.i, 1); saveScfg(); draw(); }
-    else if (a === 'wipe') { if (!await ask('確定要清除「所有」購物紀錄嗎？這個動作無法復原。', '全部清除', true)) return; DB.bills = {}; saveBills(); draw(); } });
+    else if (a === 'wipe') { if (!await ask('確定要清除「所有」消費紀錄嗎？這個動作無法復原。', '全部清除', true)) return; DB.bills = {}; saveBills(); draw(); } });
 }

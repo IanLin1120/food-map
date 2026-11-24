@@ -287,9 +287,13 @@ async function saveFile(name, blob) {
   const u = URL.createObjectURL(blob), a = document.createElement('a'); a.href = u; a.download = name; document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 5000); return name;
 }
 /* 整個日日帳本打包成一個 JSON（含所有圖片）：本機匯出、雲端備份共用 */
-async function makeBackupBlob() {
+/* 備份內容：收藏店家、菜單、點餐、分帳、發票、記帳（常用紀錄、帳戶、對帳、商家）、資產、購物清單、食譜、所有分類與設定、所有圖片；
+   自己輸入的 Google Maps／AI 金鑰也一起備份（傳給別人時可以不帶）。只有雲端登入狀態和記帳密碼不備份（綁在這支手機）。 */
+const BACKUP_WHAT = '收藏店家與菜單、點餐、分帳、發票、記帳（常用紀錄、帳戶、對帳、商家）、資產、購物清單、食譜、分類、所有設定、API 金鑰和所有圖片';
+async function makeBackupBlob(opt = {}) {
   const Sx = Object.assign({}, S); delete Sx.gkey; delete Sx.aikey; delete Sx.pc; delete Sx.gd;
-  const parts = [`{"app":"shiguang-foodmap","v":1,"t":${Date.now()},"S":${JSON.stringify(Sx)},"cats":${JSON.stringify(DB.side.food.cats)},"shared1":1,"bills":${JSON.stringify(DB.bills || {})},"scfg":${JSON.stringify(DB.scfg || null)},"invs":${JSON.stringify(DB.invs || {})},"lists":${JSON.stringify(DB.lists || {})},"acc":${JSON.stringify(DB.acc || null)},"rcats":${JSON.stringify(DB.rcats)},"places":${JSON.stringify(DB.side.food.places)},"recipes":${JSON.stringify(DB.recipes)},"mcfg":${JSON.stringify(DB.mcfg || null)},"days":${JSON.stringify(DB.days || {})},"imgs":{`];
+  const apik = opt.noKeys ? null : {gkey: S.gkey || '', aikey: S.aikey || ''}, cs = await IDB.get('kv', 'cats_shop').catch(() => null);
+  const parts = [`{"app":"shiguang-foodmap","v":1,"t":${Date.now()},"S":${JSON.stringify(Sx)},"cats":${JSON.stringify(DB.side.food.cats)},"shared1":1,"bills":${JSON.stringify(DB.bills || {})},"scfg":${JSON.stringify(DB.scfg || null)},"invs":${JSON.stringify(DB.invs || {})},"lists":${JSON.stringify(DB.lists || {})},"acc":${JSON.stringify(DB.acc || null)},"rcats":${JSON.stringify(DB.rcats)},"places":${JSON.stringify(DB.side.food.places)},"recipes":${JSON.stringify(DB.recipes)},"mcfg":${JSON.stringify(DB.mcfg || null)},"days":${JSON.stringify(DB.days || {})},"keys":${JSON.stringify(apik)},"cats_shop":${JSON.stringify(cs || null)},"imgs":{`];
   const keys = await IDB.keys('imgs'); let n = 0; for (const k of keys) { const r = await IDB.get('imgs', k); if (!r) continue; parts.push((n++ ? ',' : '') + JSON.stringify(k) + ':' + JSON.stringify({type: r.type, w: r.w, h: r.h, d: await blobB64(new Blob([r.buf]))})); }
   parts.push('}}'); return new Blob(parts, {type: 'application/json'});
 }
@@ -307,7 +311,7 @@ async function applyBackup(j, keepCloud) {
   for (const k in j.imgs || {}) { const r = j.imgs[k]; await IDB.put('imgs', k, {buf: b64buf(r.d), type: r.type || 'image/jpeg', w: r.w, h: r.h}); }
   for (const p of j.places) await IDB.put('places', p.id, p); for (const r of j.recipes || []) await IDB.put('recipes', r.id, r);
   await IDB.put('kv', 'cats', j.cats || []); if (j.rcats) await IDB.put('kv', 'rcats', j.rcats); if (j.mcfg) await IDB.put('kv', 'mcfg', j.mcfg); await IDB.put('kv', 'days', j.days || {}); if (j.cats_shop) await IDB.put('kv', 'cats_shop', j.cats_shop); await IDB.put('kv', 'bills', j.bills || {}); if (j.scfg) await IDB.put('kv', 'scfg', j.scfg); if (j.shared1) await IDB.put('kv', 'shared1', 1); else await IDB.del('kv', 'shared1').catch(() => {}); if (j.invs) await IDB.put('kv', 'invs', j.invs); if (j.lists) await IDB.put('kv', 'lists', j.lists); if (j.acc) await IDB.put('kv', 'acc', j.acc);
-  await IDB.put('kv', 'S', Object.assign({}, S_DEF, j.S || {}, {gkey: S.gkey, aikey: S.aikey, pc: S.pc, gd: S.gd, onboard: true}));
+  const K = j.keys || {}; await IDB.put('kv', 'S', Object.assign({}, S_DEF, j.S || {}, {gkey: S.gkey || K.gkey || '', aikey: S.aikey || K.aikey || '', pc: S.pc, gd: S.gd, onboard: true}));
 }
 function importBackup() { const f = $('#jsonPick'); f.value = ''; f.onchange = async () => { const file = f.files[0]; if (!file) return;
   try { busy('讀取備份檔…'); const j = JSON.parse(await file.text()); busy(false); if (!/^shiguang/.test(j.app || '') || !Array.isArray(j.places)) throw new Error('這不是日日帳本的備份檔');

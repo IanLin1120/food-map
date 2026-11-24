@@ -114,7 +114,39 @@ async function loadAcc() {
     A.recs.forEach(r => { if (r.tags && r.tags.length && !r.payee) r.payee = r.tags[0]; }); A.v = 2; saveAcc(); }
 }
 const accPeople = () => DB.acc.people || (DB.acc.people = []);
-const aWho = id => accPeople().find(u => u.id === id) || ((DB.mcfg && DB.mcfg.people) || []).find(u => u.id === id) || {id, name: '（已刪除）', icon: '👤'};
+/* 同一個人在不同地方用不同綽號：例如日常點餐叫「便當哥」、記帳叫「因因」。same 存「別名 id → 記帳裡的那個人 id」 */
+const accSame = () => DB.acc.same || (DB.acc.same = {});
+function accPid(id) { const M = accSame(); let n = 0; while (id && M[id] && M[id] !== id && n++ < 6) id = M[id]; return id; }
+const mealWho = id => ((DB.mcfg && DB.mcfg.people) || []).find(u => u.id === id);
+function accSameName(id) { const u = accPeople().find(x => x.id === id) || mealWho(id); return u ? u : ((DB.acc.sameN || {})[id] ? {id, name: DB.acc.sameN[id], icon: (DB.acc.sameI || {})[id] || '👤'} : null); }
+/* 把別名併進主要的人：記帳裡所有用到別名的地方都換成主要的人，別名從記帳名單拿掉 */
+function accLink(alias, main) { if (!alias || !main || alias === main) return; const A = DB.acc, f = id => id === alias ? main : id, u = accSameName(alias);
+  (A.sameN = A.sameN || {})[alias] = u ? u.name : alias; (A.sameI = A.sameI || {})[alias] = u ? u.icon : '👤'; accSame()[alias] = main; Object.keys(accSame()).forEach(k => { if (accSame()[k] === alias) accSame()[k] = main; });
+  const fixSplit = L => { const out = []; (L || []).forEach(x => { const p = f(x.p), o = out.find(y => y.p === p); if (o) o.amt = r2((+o.amt || 0) + (+x.amt || 0)); else out.push(Object.assign({}, x, {p})); }); return out; };
+  A.recs.forEach(r => { if (r.payer) r.payer = f(r.payer); if (r.split) r.split = fixSplit(r.split); if (r.settled && r.settled[alias] != null) { if (r.settled[main] == null) r.settled[main] = r.settled[alias]; delete r.settled[alias]; } (r.items || []).forEach(x => { if (x.ppl) x.ppl = [...new Set(x.ppl.map(f))]; }); });
+  A.settles.forEach(t => { if (t.p) t.p = f(t.p); }); A.tpls.forEach(t => { if (t.payer) t.payer = f(t.payer); if (t.split) t.split = fixSplit(t.split); });
+  if (A.me === alias) A.me = main; A.people = accPeople().filter(x => x.id !== alias); saveAcc(); }
+function accUnlink(alias) { delete accSame()[alias]; saveAcc(); }
+/* 選「同一個人」：先選記帳裡顯示的名字，再選另一個名字（記帳名單或日常點餐名單） */
+async function accLinkAsk(mainId) {
+  const pick = (title, L) => new Promise(res => { let done = false; const sh = sheet({title, onClose() { if (!done) res(null); }});
+    sh.body.innerHTML = L.length ? `<div class="whoRow">${L.map(u => `<button data-id="${esc(u.id)}">${esc(u.icon || '👤')} ${esc(u.name)}${u.tag ? `<small class="muted"> ${esc(u.tag)}</small>` : ''}</button>`).join('')}</div>` : '<div class="empty">沒有可以選的人</div>';
+    sh.body.onclick = e => { const b = e.target.closest('[data-id]'); if (!b) return; buzz(10); done = true; sh.close(); res(b.dataset.id); }; });
+  const main = mainId || await pick('① 記帳裡要顯示哪個名字？', accPeople()); if (!main) return false; const M = accPeople().find(u => u.id === main);
+  const cand = accPeople().filter(u => u.id !== main).map(u => Object.assign({tag: '記帳'}, u)).concat(((DB.mcfg && DB.mcfg.people) || []).filter(u => u.id !== main && !accPeople().some(x => x.id === u.id) && accPid(u.id) !== main).map(u => Object.assign({}, u, {tag: '日常點餐'})));
+  const al = await pick(`② 哪個名字其實也是「${M ? M.name : ''}」？`, cand); if (!al) return false; const A = accSameName(al), inAcc = accPeople().some(u => u.id === al);
+  if (!await ask(`「${A ? A.name : ''}」和「${M ? M.name : ''}」是同一個人？\n\n${inAcc ? `記帳裡「${A ? A.name : ''}」的紀錄、欠款都會併到「${M ? M.name : ''}」，記帳名單只留「${M ? M.name : ''}」。` : `日常點餐還是叫「${A ? A.name : ''}」，從分帳匯入記帳時會自動變成「${M ? M.name : ''}」。`}`, '是同一個人')) return false;
+  accLink(al, main); buzz(30); toast(`🔗 ${A ? A.name : ''} ＝ ${M ? M.name : ''}`); return true; }
+/* 從日常設定進來：先選日常的名字，再選記帳裡是誰 */
+async function accLinkAskMeal() {
+  const pick = (title, L) => new Promise(res => { let done = false; const sh = sheet({title, onClose() { if (!done) res(null); }});
+    sh.body.innerHTML = L.length ? `<div class="whoRow">${L.map(u => `<button data-id="${esc(u.id)}">${esc(u.icon || '👤')} ${esc(u.name)}</button>`).join('')}</div>` : '<div class="empty">沒有可以選的人</div>';
+    sh.body.onclick = e => { const b = e.target.closest('[data-id]'); if (!b) return; buzz(10); done = true; sh.close(); res(b.dataset.id); }; });
+  const al = await pick('① 日常點餐裡的哪個名字？', DB.mcfg.people); if (!al) return false; const A = mealWho(al);
+  const main = await pick(`② 「${A.name}」在記帳裡是誰？`, accPeople().filter(u => u.id !== al)); if (!main) return false; const M = accPeople().find(u => u.id === main);
+  if (!await ask(`「${A.name}」（日常）和「${M.name}」（記帳）是同一個人？\n日常還是顯示「${A.name}」，從分帳匯入記帳時會自動變成「${M.name}」${accPeople().some(u => u.id === al) ? `；記帳裡原本「${A.name}」的紀錄也會併到「${M.name}」` : ''}。`, '是同一個人')) return false;
+  accLink(al, main); buzz(30); toast(`🔗 ${A.name} ＝ ${M.name}`); return true; }
+const aWho = id => (id = accPid(id), accPeople().find(u => u.id === id)) || ((DB.mcfg && DB.mcfg.people) || []).find(u => u.id === id) || {id, name: '（已刪除）', icon: '👤'};
 const accMe = () => { const P = accPeople(); if (DB.acc.me && P.some(u => u.id === DB.acc.me)) return DB.acc.me; const u = P.find(x => x.name === '我') || P[0]; return u ? u.id : 'me'; };
 /* 找類別：回傳 {p: 母分類, s: 子分類} */
 function catFind(type, id) { const L = DB.acc.cats[type === 'in' ? 'in' : 'out'] || []; for (const p of L) { if (p.id === id) return {p, s: null}; const s = (p.subs || []).find(x => x.id === id); if (s) return {p, s}; } return {p: null, s: null}; }
@@ -251,13 +283,13 @@ function renderAcc() {
   const L = (Acc.day ? mon.filter(r => r.d === Acc.day) : mon).slice().sort(recSort);
   const days = []; L.forEach(r => { let g = days.find(x => x.d === r.d); if (!g) days.push(g = {d: r.d, L: []}); g.L.push(r); });
   $('#accSub').textContent = `${Mo + 1}月・${mon.length} 筆`;
-  box.innerHTML = `<button class="acTplBtn card" data-a="tpls"><span class="acTplI">⭐</span><span class="grow"><b>常用紀錄</b><small>${DB.acc.tpls.length ? esc(DB.acc.tpls.slice(0, 3).map(t => t.name).join('、')) + (DB.acc.tpls.length > 3 ? ` 等 ${DB.acc.tpls.length} 個` : '') : '每月房租、手機費…點一下就記好'}</small></span><span class="acDGo">打開 ›</span></button>
+  box.innerHTML = `<button class="acTplBtn card" data-a="tpls"><span class="acTplI">⭐</span><span class="grow"><b>常用紀錄</b><small>${DB.acc.tpls.length ? `${DB.acc.tpls.length} 個常用紀錄` : '每月房租、手機費…點一下就記好'}</small></span><span class="acDGo">打開 ›</span></button>
     <div class="acSum card"><div class="acT out"><small>支出（我的）</small><b>${money(out)}</b></div><div class="acT in"><small>收入</small><b>${money(inc)}</b></div><div class="acT bal"><small>結餘</small><b>${money(inc - out - lossM)}</b></div></div>${lossM ? `<div class="acLoss card">💸 這個月遺失 <b>${money(lossM)}</b><small>（另外統計，已算進結餘）</small></div>` : ''}
     ${dIds.length ? `<div class="acDebt card"><div class="acDH"><b>🤝 還沒結清的欠款</b><button class="btn sm" data-a="settleLog">對帳紀錄</button></div>${dIds.map(p => { const u = aWho(p), v = debts[p]; return `<button class="acDR" data-settle="${p}"><span class="acDI">${esc(u.icon)}</span><span class="grow"><b>${esc(u.name)}</b><small>${v > 0 ? '欠我' : '我欠他'}</small></span><span class="acDV ${v > 0 ? 'pos' : 'neg'}">${money(Math.abs(v))}</span><span class="acDGo">對帳 ›</span></button>`; }).join('')}</div>` : ''}
     <div class="cal card">${calHead(Y, Mo)}<div class="calWd">${MWD.map((w, i) => `<span class="${i === 0 || i === 6 ? 'we' : ''}">${w}</span>`).join('')}</div><div class="calG acCal">${cells}</div></div>
     ${Acc.day ? `<div class="invDayBar"><span class="grow">📅 只看 ${dayLabel(Acc.day)}</span><button class="btn sm" data-a="allDays">看整個月</button></div>` : ''}
     ${days.map(g => { const s = g.L.reduce((t, r) => t + accSign(r) * accMine(r), 0); return `<div class="acDay"><span>${dayLabel(g.d)}</span>${s ? `<b class="${s > 0 ? 'pos' : 'neg'}">${s > 0 ? '+' : ''}${money(s)}</b>` : ''}</div>${g.L.map(accCard).join('')}`; }).join('')
-      || `<div class="empty mealEmpty"><span class="big">📒</span>${Acc.day ? '這天' : '這個月'}還沒有記帳<br><span class="small">按上面的「＋ 記一筆」，或「從分帳匯入」把購物明細帶進來</span></div>`}`;
+      || `<div class="empty mealEmpty"><span class="big">📒</span>${Acc.day ? '這天' : '這個月'}還沒有記帳<br><span class="small">按上面的「＋ 記一筆」，或「從分帳匯入」把消費明細帶進來</span></div>`}`;
 }
 function accCard(r) {
   const c = accCat(r), me = accMe(), sp = (r.split || []).filter(s => s.p !== me), payer = r.payer || me;
@@ -444,7 +476,7 @@ function accEdit(r0, preset, opt = {}) {
         <div class="lbl">商家／對象</div><button class="acPayee" data-a="payee">${r.payee ? `<b>${esc(r.payee)}</b>` : '<span class="muted">選擇店名，或自訂名稱（例如：台灣電力公司）</span>'}<i>›</i></button>${r.payee && !isPcatPayee(r.payee) && r.type !== 'tr' ? (storeLoc(r.payee) ? `<div class="pyLocT on">📍 已連結地圖${storeLoc(r.payee).addr ? '・' + esc(storeLoc(r.payee).addr) : ''}</div>` : '<button class="pyLocT" data-a="pinP">📌 這間店還沒有地圖位置，點這裡釘選</button>') : ''}
         <div class="lbl">${r.type === 'in' ? '收進哪個帳戶' : '付款帳戶'}</div>${acctPickerHtml(r.acct, 'acct', r.fund)}`}
         ${r0 && Object.keys(r.settled || {}).length ? `<div class="acSetl">${Object.keys(r.settled).map(p => `<div class="row" style="gap:.5rem"><span class="grow">✓ 已和 ${esc(aWho(p).name)} 結清</span><button class="btn sm" data-unst="${p}">改回未結清</button></div>`).join('')}</div>` : ''}
-        <div class="field" style="margin-top:.7rem"><label class="row" style="gap:.4rem"><span class="grow">備註／購物明細</span></label>${tr ? '' : `<div class="acRow2" style="margin-bottom:.5rem"><button class="btn" data-a="billEd">🧾 ${r.bill ? '編輯明細（' + (r.bill.items || []).length + ' 項）' : '用分帳方式輸入'}</button><button class="btn" data-a="fromBill">📥 從分帳帶入</button></div>`}<textarea id="acNote" rows="${Math.min(10, Math.max(3, String(r.note || '').split('\n').length + 1))}" placeholder="例如：\n鮮奶 ×2  $95\n雞蛋  $60">${esc(r.note || '')}</textarea></div>
+        <div class="field" style="margin-top:.7rem"><label class="row" style="gap:.4rem"><span class="grow">備註／消費明細</span></label>${tr ? '' : `<div class="acRow2" style="margin-bottom:.5rem"><button class="btn" data-a="billEd">🧾 ${r.bill ? '編輯明細（' + (r.bill.items || []).length + ' 項）' : '用分帳方式輸入'}</button><button class="btn" data-a="fromBill">📥 從分帳帶入</button></div>`}<textarea id="acNote" rows="${Math.min(10, Math.max(3, String(r.note || '').split('\n').length + 1))}" placeholder="例如：\n鮮奶 ×2  $95\n雞蛋  $60">${esc(r.note || '')}</textarea></div>
         <div class="lbl">圖片</div><div class="acImgs">${r.imgs.map((id, i) => `<span class="acImg"><img data-img="${id}" data-i="${i}" alt=""><button data-rmimg="${i}" aria-label="移除">✕</button></span>`).join('')}<button class="acImgAdd" data-a="addImg">＋<small>加入圖片</small></button></div>
         ${r.type === 'out' ? `<div class="acSplit card"><div class="acSH"><b>🤝 分帳</b><small>${who.length ? '選了 ' + who.length + ' 人分' : '不分帳就不用選'}</small></div>
           <div class="lbl">誰付的錢</div><div class="whoRow">${accPeople().map(u => `<button data-payer="${u.id}" class="${payer === u.id ? 'on' : ''}">${esc(u.icon)} ${esc(u.name)}</button>`).join('')}</div>
@@ -618,23 +650,23 @@ function accGuessCat(b) {
 }
 /* 分帳明細 → 備註（日常「模板二」的寫法：每個人列自己的品項和小計；平台費、包材費、整單折扣照分帳方式分攤） */
 function accNoteFromBill(b) {
-  const c = billCalc(b), ids = pOrder(Object.keys(c.per)), out = [`🏪 ${billStore(b) || '購物明細'}${b.time ? ' ' + b.time : ''}`, `🛒 購物方式：${b.way || '實體店購物'}`, ''];
+  const c = billCalc(b), ids = pOrder(Object.keys(c.per)), out = [`🏪 ${billStore(b) || '消費明細'}${b.time ? ' ' + b.time : ''}`, `🛒 購物方式：${b.way || '實體店購物'}`, ''];
   if (ids.length) { const L = billBlock(b); out.push(...L.slice(1)); return out.join('\n').replace(/\n(小計：[^\n]+)\n(?!合計)/g, '\n$1\n\n'); }
   (b.items || []).forEach(x => { const unit = (numP(x.amt) - (c.itemDisc[x.id] || 0)) / (x.q || 1); out.push(`${tn(x.n)}${x.o ? '(' + x.o + ')' : ''}[${ntd(unit)}]×${x.q || 1}`); });
   (b.odisc || []).forEach(d => out.push(`${d.n}：-${ntd(d.amt)}`)); (b.fees || []).forEach(d => out.push(`${d.n}：${ntd(d.amt)}`)); out.push(`合計：${ntd(c.computed)}`); return out.join('\n');
 }
 function billToAccRec(b, k) {
   const c = billCalc(b), me = accMe(), tot = r2(c.total != null ? c.total : c.computed), per = c.per, ids = pOrder(Object.keys(per));
-  let split = ids.map(p => ({p, amt: r2(per[p])})); const diff = r2(tot - split.reduce((s, x) => s + x.amt, 0)); if (split.length && Math.abs(diff) < 1) split[split.length - 1].amt = r2(split[split.length - 1].amt + diff);
+  let split = []; ids.forEach(p0 => { const p = accPid(p0), o = split.find(x => x.p === p); if (o) o.amt = r2(o.amt + r2(per[p0])); else split.push({p, amt: r2(per[p0])}); }); const diff = r2(tot - split.reduce((s, x) => s + x.amt, 0)); if (split.length && Math.abs(diff) < 1) split[split.length - 1].amt = r2(split[split.length - 1].amt + diff);
   if (split.length === 1 && split[0].p === me) split = [];
-  const items = (b.items || []).map(x => ({n: x.n, amt: r2(numP(x.amt) - (c.itemDisc[x.id] || 0)), ppl: (x.ppl || []).slice(), q: x.q || 1}));
+  const items = (b.items || []).map(x => ({n: x.n, amt: r2(numP(x.amt) - (c.itemDisc[x.id] || 0)), ppl: [...new Set((x.ppl || []).map(accPid))], q: x.q || 1}));
   const note = accNoteFromBill(b);
   return {id: 'r' + uid(), d: k, t: b.time || '', type: 'out', amt: tot, cat: accGuessCat(b), acct: (DB.acc.accts[0] || {}).id || '', note, payee: billStore(b) || '', payer: me, split, items, imgs: [], src: {bill: b.id}};
 }
 function pickBillForAcc() {
   const all = []; Object.keys(DB.bills || {}).sort().reverse().forEach(k => DB.bills[k].forEach(b => all.push({k, b})));
   return new Promise(res => { let done = false; const sh = sheet({title: '📥 選一筆分帳明細', full: true, onClose() { if (!done) res(null); }});
-    sh.body.innerHTML = all.slice(0, 120).map(({k, b}, i) => `<button class="acImp card" data-i="${i}"><span class="grow"><b>${esc(billStore(b) || '購物明細')}</b><small>${dayLabel(k)}・${(b.items || []).length} 項${(b.imgs || []).length ? '・🖼️' + b.imgs.length : ''}${b.acc ? '・已匯入過' : ''}</small></span><b>${money(billCalc(b).total != null ? billCalc(b).total : billCalc(b).computed)}</b></button>`).join('') || '<div class="empty">分帳裡還沒有明細</div>';
+    sh.body.innerHTML = all.slice(0, 120).map(({k, b}, i) => `<button class="acImp card" data-i="${i}"><span class="grow"><b>${esc(billStore(b) || '消費明細')}</b><small>${dayLabel(k)}・${(b.items || []).length} 項${(b.imgs || []).length ? '・🖼️' + b.imgs.length : ''}${b.acc ? '・已匯入過' : ''}</small></span><b>${money(billCalc(b).total != null ? billCalc(b).total : billCalc(b).computed)}</b></button>`).join('') || '<div class="empty">分帳裡還沒有明細</div>';
     sh.body.onclick = e => { const t = e.target.closest('[data-i]'); if (!t) return; buzz(10); done = true; sh.close(); res(all[+t.dataset.i]); }; });
 }
 async function billToAcc(b) {
@@ -648,7 +680,7 @@ function accImportBills() {
   if (!all.length) { toast('分帳裡的明細都已經匯入過了，不會重複匯入'); return; }
   const sel = new Set();   /* 預設全不選 */
   const sh = sheet({title: '📥 從分帳匯入', full: true, foot: '<button class="btn" data-a="all">全選</button><button class="btn pri" data-a="ok">匯入</button>'});
-  const draw = () => { sh.body.innerHTML = `<div class="small muted" style="margin:-.2rem 0 .7rem">勾選要匯入的購物明細（已經匯入過的不會出現）。每個人分到的金額、品項明細和圖片都會一起帶進來，付錢的人預設是「${esc(aWho(accMe()).name)}」。</div>` + all.map(({k, b}) => { const c = billCalc(b), ids = pOrder(Object.keys(c.per)); return `<button class="acImp card ${sel.has(b.id) ? 'on' : ''}" data-b="${b.id}"><span class="acCk"></span><span class="grow"><b>${esc(billStore(b) || '購物明細')}</b><small>${dayLabel(k)}・${(b.items || []).length} 項${(b.imgs || []).length ? '・🖼️' + b.imgs.length : ''}${ids.length ? '・' + ids.map(p => esc(aWho(p).name) + ' ' + money(c.per[p])).join('、') : ''}</small></span><b>${money(c.total != null ? c.total : c.computed)}</b></button>`; }).join('');
+  const draw = () => { sh.body.innerHTML = `<div class="small muted" style="margin:-.2rem 0 .7rem">勾選要匯入的消費明細（已經匯入過的不會出現）。每個人分到的金額、品項明細和圖片都會一起帶進來，付錢的人預設是「${esc(aWho(accMe()).name)}」。</div>` + all.map(({k, b}) => { const c = billCalc(b), ids = pOrder(Object.keys(c.per)); return `<button class="acImp card ${sel.has(b.id) ? 'on' : ''}" data-b="${b.id}"><span class="acCk"></span><span class="grow"><b>${esc(billStore(b) || '消費明細')}</b><small>${dayLabel(k)}・${(b.items || []).length} 項${(b.imgs || []).length ? '・🖼️' + b.imgs.length : ''}${ids.length ? '・' + ids.map(p => esc(aWho(p).name) + ' ' + money(c.per[p])).join('、') : ''}</small></span><b>${money(c.total != null ? c.total : c.computed)}</b></button>`; }).join('');
     sh.foot.querySelector('[data-a="ok"]').textContent = `匯入 ${sel.size} 筆`; };
   draw(); sh.body.onclick = e => { const t = e.target.closest('[data-b]'); if (!t) return; buzz(8); const id = t.dataset.b; if (sel.has(id)) sel.delete(id); else sel.add(id); draw(); };
   sh.foot.onclick = async e => { const b = e.target.closest('[data-a]'); if (!b) return; buzz(10);
@@ -997,6 +1029,9 @@ function renderAccCfg() {
       <div class="setR" style="cursor:default"><span class="gRi">📱</span><div class="t"><b>桌面小工具、控制中心按鈕</b><small>桌面：長按空白處 →「小工具」→ 日日帳本。控制中心：下拉兩次 → 編輯（鉛筆）→ 把「記一筆」「常用記帳」拖進去。</small></div></div></div></div>` : ''}
     <div class="setG"><h3>說明</h3><div class="setC"><button class="setR" data-a="guide" style="width:100%;text-align:left"><span class="gRi">📖</span><div class="t"><b>記帳 圖解說明</b><small>記一筆、常用、欠款對帳、資產、分析、備份換機</small></div><span class="chev">›</span></button></div></div>
     <div class="setG"><h3>分帳的人</h3><div class="setC"><div class="setR col"><div class="t"><b>我是誰</b><small>分帳、對帳時「我」是哪一個人（記帳自己的名單，和日常點餐分開）</small></div><div class="whoRow">${accPeople().map(u => `<button data-me="${u.id}" class="${accMe() === u.id ? 'on' : ''}">${esc(u.icon)} ${esc(u.name)}</button>`).join('')}</div></div>
+      <div class="setR col"><div class="t"><b>🔗 同一個人，不同綽號</b><small>例如日常點餐叫「便當哥」、記帳叫「因因」：設定後分帳匯入記帳會自動對到同一個人，欠款、對帳也算在一起</small></div>
+        ${Object.keys(accSame()).length ? `<div class="sameL">${Object.keys(accSame()).map(k => { const a = accSameName(k), m = aWho(k); return `<div class="sameR"><span>${esc((a && a.icon) || '👤')} ${esc(a ? a.name : (DB.acc.sameN || {})[k] || k)}${mealWho(k) ? '<small>日常</small>' : ''}</span><b>＝</b><span>${esc(m.icon)} ${esc(m.name)}<small>記帳</small></span><button class="ic" data-unlink="${esc(k)}" aria-label="取消">✕</button></div>`; }).join('')}</div>` : ''}
+        <button class="btn block" data-a="link">🔗 設定同一個人</button></div>
       <button class="setR" data-a="people" style="width:100%;text-align:left"><span class="gRi">👥</span><div class="t"><b>管理名單</b><small>新增、改名、換圖示、刪除、拖曳排序</small></div><span class="chev">›</span></button></div></div>
     <div class="setG"><h3>分類</h3><div class="setC">
       <button class="setR" data-a="cats" data-ty="out" style="width:100%;text-align:left"><span class="gRi">📂</span><div class="t"><b>支出分類</b><small>${DB.acc.cats.out.map(p => p.n).join('、')}</small></div><span class="chev">›</span></button>
@@ -1007,7 +1042,7 @@ function renderAccCfg() {
       <button class="setR" data-a="accts" style="width:100%;text-align:left"><span class="gRi">🏦</span><div class="t"><b>帳戶</b><small>${DB.acc.accts.length} 個・現金、銀行、信用卡、行動支付</small></div><span class="chev">›</span></button>
       <button class="setR" data-a="tpls" style="width:100%;text-align:left"><span class="gRi">⭐</span><div class="t"><b>常用紀錄</b><small>${DB.acc.tpls.length ? `${DB.acc.tpls.length} 筆常用紀錄` : '在「記一筆」按「⭐ 存成常用」建立'}</small></div><span class="chev">›</span></button></div></div>
     <div class="setG"><h3>匯出</h3><div class="setC"><button class="setR" data-a="csv" style="width:100%;text-align:left"><span class="gRi">📤</span><div class="t"><b>匯出 CSV</b><small>選日期區間：所有消費明細（含品項、分帳），以及資產明細</small></div><span class="chev">›</span></button></div></div>
-    <div class="setG"><h3>備份與換機（整個日日帳本＋所有圖片）</h3><div class="setC">
+    <div class="setG"><h3>備份與換機（整個日日帳本＋所有圖片）</h3><div class="bkWhat">📦 會備份：${BACKUP_WHAT}。手機、雲端、QR Code 換機都一樣；只有雲端登入和記帳密碼不備份。</div><div class="setC">
       <div class="setR col"><div class="t"><b>☁️ Google 雲端硬碟</b><small>${(S.gd || {}).email || gi.email ? '帳戶：' + esc((S.gd || {}).email || gi.email) : '還沒登入（可以用瀏覽器登入，支援兩步驟驗證）'}・資料夾：${esc((S.gd || {}).folder || '日日帳本備份')}${S.gd && S.gd.last ? '・上次備份 ' + new Date(S.gd.last).toLocaleString('zh-TW') : ''}</small></div>
         <div class="acRow2"><button class="btn pri" data-a="gUp">⬆️ 上傳備份</button><button class="btn" data-a="gDown">⬇️ 從雲端還原</button></div><div class="acRow2"><button class="btn sm" data-a="gFolder">📁 選擇資料夾</button>${gi.email || (S.gd || {}).rt ? '<button class="btn sm" data-a="gOut">換帳戶／登出</button>' : '<button class="btn sm" data-a="gIn">🌐 登入 Google</button>'}</div><div class="gwBox"><b>🌐 網頁版雲端硬碟（免設定）</b><small>在 App 裡打開 drive.google.com，跟用瀏覽器一樣登入。登入後會自動建立「日日帳本備份」資料夾並上傳；還原時列出資料夾裡的備份讓你選。${S.gd && S.gd.wEmail ? '<br>已登入：' + esc(S.gd.wEmail) : ''}</small><div class="acRow2"><button class="btn" data-a="gwUp">⬆️ 上傳備份</button><button class="btn" data-a="gwDown">⬇️ 從雲端還原</button></div><button class="btn sm" data-a="gwMan" style="margin-top:.3rem">🖥️ 開電腦版網頁自己上傳／下載</button></div></div>
       <div class="setR col"><div class="t"><b>☁️ pCloud</b><small>${pc.auth ? '帳戶：' + esc(pc.email || '') + '・資料夾：' + esc((pc.folder || {}).path || '/日日帳本備份') + (pc.last ? '・上次備份 ' + new Date(pc.last).toLocaleString('zh-TW') : '') : '還沒登入（可以用 pCloud 網頁登入，支援 Google 登入、兩步驟驗證）'}</small></div>
@@ -1019,9 +1054,11 @@ function renderAccCfg() {
       <div class="setR col"><div class="t"><small>每張圖片都用自己的編號存在備份裡，記錄只記著圖片編號，所以還原後圖片會回到原本那一筆記帳、分帳明細、菜單和食譜，不會亂掉。</small></div></div></div></div>`;
 }
 async function accCfgClick(e) {
-  const t = e.target.closest('[data-a],[data-me]'); if (!t) return; buzz(8); const a = t.dataset.a;
+  const t = e.target.closest('[data-a],[data-me],[data-unlink]'); if (!t) return; buzz(8); const a = t.dataset.a;
   if (t.dataset.me) { DB.acc.me = t.dataset.me; saveAcc(); renderAccCfg(); return; }
+  if (t.dataset.unlink) { const k = t.dataset.unlink, a = accSameName(k); if (!await ask(`取消「${a ? a.name : (DB.acc.sameN || {})[k] || ''}」＝「${aWho(k).name}」？\n已經併在一起的紀錄不會拆開，之後從分帳匯入的才會分開算。`, '取消連結', true)) return; buzz(15); accUnlink(k); renderAccCfg(); return; }
   if (a === 'people') { await accPeopleEdit(); renderAccCfg(); return; }
+  if (a === 'link') { if (await accLinkAsk()) renderAccCfg(); return; }
   if (a === 'guard') { if (!NB.guardOn()) { Guard.asked = 1; NB.guardEnable(); return; }
     if (!await ask('關閉後，日日帳本就可以直接被解除安裝（帳本資料會一起刪除）。確定要關閉嗎？', '關閉保護', true)) return;
     if (AccLock.has() && !await new Promise(r => accPinPad({title: '關閉防誤刪要先驗證', onOk: () => r(true), onCancel: () => r(false)}))) return;

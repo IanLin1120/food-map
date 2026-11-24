@@ -562,7 +562,7 @@ function gmMenuGuide(p) {
 }
 /* ---------- 接收其他 App「分享」過來的圖片（截圖、相簿） ---------- */
 /* 分享進來的圖片要做什麼 */
-function shareKind(n) { return new Promise(res => { let done = false; const sh = sheet({title: `收到 ${n} 張圖片，要拿來做什麼？`, onClose() { if (!done) res(null); }, html: `<div class="actList"><button data-k="menu">📋 店家的菜單（存到收藏的店家，可以 AI 辨識成表格）</button><button data-k="shop">🧾 購物明細（AI 辨識品項，拿來分帳）</button><button data-k="inv">🎫 發票截圖（AI 讀發票號碼和品項）</button></div>`});
+function shareKind(n) { return new Promise(res => { let done = false; const sh = sheet({title: `收到 ${n} 張圖片，要拿來做什麼？`, onClose() { if (!done) res(null); }, html: `<div class="actList"><button data-k="menu">📋 店家的菜單（存到收藏的店家，可以 AI 辨識成表格）</button><button data-k="shop">🧾 消費明細（AI 辨識品項，拿來分帳）</button><button data-k="inv">🎫 發票截圖（AI 讀發票號碼和品項）</button></div>`});
   sh.body.onclick = e => { const t = e.target.closest('[data-k]'); if (!t) return; buzz(10); done = true; sh.close(); res(t.dataset.k); }; }); }
 var Share = {
   expect(id) { lsSet('fm.shareFor', {id, t: Date.now()}); },
@@ -675,9 +675,10 @@ function openMenuImgs(p) { const items = []; albumsOf(p).forEach((a, i) => a.img
 /* ---------- 收藏地點：明細 ---------- */
 function openPlace(id, toMenu) {
   const p = DB.places.find(x => x.id === id); if (!p) return; let editT = false, mq = '', mc = '';
-  /* 店家頁下面分兩個分頁：📋 菜單（美食）／🧾 購物紀錄（分帳），互不干擾 */
+  /* 店家頁下面分兩個分頁：📋 菜單（美食）／🧾 消費紀錄（分帳），互不干擾 */
   const nBills = () => Object.values(DB.bills || {}).reduce((t, L) => t + L.filter(b => b.place === p.id).length, 0);
-  let ptab = toMenu === 'recs' ? 'recs' : toMenu ? 'menu' : ((p.menu || []).length || (p.albums || []).some(a => (a.imgs || []).length) || !nBills() ? 'menu' : 'recs');
+  const HM = () => hasMenu(p);
+  let ptab = !HM() ? 'recs' : toMenu === 'recs' ? 'recs' : toMenu ? 'menu' : ((p.menu || []).length || (p.albums || []).some(a => (a.imgs || []).length) || !nBills() ? 'menu' : 'recs');
   /* 區域：目前選的區域＋不分區的列 */
   if ((p.menu || []).some(r => r.g)) { const f = fixRegions(p.menu); if (f !== p.menu) { p.menu = f; savePlace(p); } }
   const regsOf = () => { const r = []; (p.menu || []).forEach(x => { if (x.g && !r.includes(x.g)) r.push(x.g); }); return rgSorted(r); };
@@ -775,13 +776,13 @@ function openPlace(id, toMenu) {
     sh.body.innerHTML = `<div class="dHero" style="--c:${c.color}"><div class="ico">${esc(c.icon)}</div><div class="grow"><h2>${esc(p.name)}</h2>
         <div style="margin:.3rem 0"><span class="tag" style="--c:${c.color}">${esc(c.name)}</span>${p.rating ? ` <span class="small muted">⭐ ${p.rating}${p.ratingN ? '（' + p.ratingN + ' 則）' : ''}</span>` : ''}</div>
         ${stateHtml(p) ? `<div class="small muted row" style="gap:.35rem">${stateHtml(p)}</div>` : ''}</div></div>
-      <div class="dActs"><button class="btn olive" data-a="nav"><span>🧭</span>導航</button><button class="btn" data-a="gm"><span>🗺️</span>Google 地圖</button><button class="btn" data-a="show"><span>📍</span>在地圖上看</button>
+      <div class="dActs" style="--n:${(n => n === 4 ? 2 : 3)(3 + !!p.phone + !!p.web + !!S.gkey)}"><button class="btn olive" data-a="nav"><span>🧭</span>導航</button><button class="btn" data-a="gm"><span>🗺️</span>Google 地圖</button><button class="btn" data-a="show"><span>📍</span>在地圖上看</button>
         ${p.phone ? '<button class="btn" data-a="tel"><span>📞</span>撥打電話</button>' : ''}${p.web ? '<button class="btn" data-a="web"><span>🌐</span>網站</button>' : ''}${S.gkey ? '<button class="btn" data-a="gfill"><span>🔄</span>更新資訊</button>' : ''}</div>
       <div class="info"><div class="ln" data-a="copyAddr"><span class="k">📍</span><span class="v">${esc(p.addr || '（尚未填寫地址）')}</span></div>
         <div class="ln"><span class="k">🕒</span><span class="v hours">${(p.hours || []).length ? p.hours.map((h, i) => `<div class="${i === hi ? 'td' : ''}">${esc(h)}</div>`).join('') : '<span class="muted">（尚未填寫營業時間' + (S.gkey ? '，可按上方「更新資訊」從 Google 帶入' : '') + '）</span>'}</span></div>
         ${p.phone ? `<div class="ln"><span class="k">📞</span><span class="v">${esc(p.phone)}</span></div>` : ''}
         ${p.note ? `<div class="ln"><span class="k">📝</span><span class="v" style="white-space:pre-wrap">${esc(p.note)}</span></div>` : ''}</div>
-      <div class="pTabs" id="menuTop"><button data-pt="menu" class="${ptab === 'menu' ? 'on' : ''}">📋 菜單<em>${(p.menu || []).length || ''}</em></button><button data-pt="recs" class="${ptab === 'recs' ? 'on' : ''}">🧾 購物紀錄<em>${nBills() || ''}</em></button></div>
+      ${HM() ? '' : '<div id="menuTop"></div>'}<div class="pTabs ${HM() ? '' : 'hide'}" id="${HM() ? 'menuTop' : 'menuTop2'}"><button data-pt="menu" class="${ptab === 'menu' ? 'on' : ''}">📋 菜單<em>${(p.menu || []).length || ''}</em></button><button data-pt="recs" class="${ptab === 'recs' ? 'on' : ''}">🧾 消費紀錄<em>${nBills() || ''}</em></button></div>
       ${ptab === 'recs' ? shopPlaceHtml(p) : `      <div class="h3 pTabH"><span class="grow">📋 菜單 <span class="muted small" style="font-weight:600">${(p.menu || []).length ? p.menu.length + ' 個品項' : ''}</span></span></div>
       ${job ? `<div class="jobBar"><span class="spin"></span><span class="grow">${esc(job.msg || 'AI 處理中…')}<small>在背景執行中，完成後會自動帶入，可以先離開這個畫面</small></span></div>` : ''}
       <div class="mBtns"><button class="btn pri" data-a="imgs" ${ni ? '' : 'disabled'}>🖼️ 打開菜單圖檔${ni ? `（${nv > 1 ? nv + ' 個版本・' : ''}${ni} 張）` : ''}</button><button class="btn" data-a="albums">🗂️ ${ni ? '管理圖檔' : '加入菜單圖片'}</button>
@@ -865,10 +866,12 @@ function editCat(cat, done, kind) {
   sh.body.innerHTML = `<div class="row" style="justify-content:center;margin:.3rem 0 1.4rem;height:3.2rem">${K.flag ? '<div style="position:relative;width:3rem;height:3rem"><div class="pin" id="cPrev" style="position:absolute;left:.6rem;bottom:.2rem"><div class="base"></div><div class="pole"></div><div class="knob"></div><div class="flag"></div></div></div>' : ''}<span class="chip on" id="cChip"></span></div>
     <div class="field"><label>分類名稱</label><input id="cN" value="${esc(d.name)}" placeholder="${K.ph}" maxlength="12"></div>
     <div class="field"><label>圖示</label><div class="emoGrid" id="cE">${CAT_EMOJI.map(x => `<button data-e="${x}">${x}</button>`).join('')}</div><div class="row" style="margin-top:.5rem"><span class="small muted" style="white-space:nowrap">或自己輸入：</span><input id="cI" value="${esc(d.icon)}" maxlength="4" style="width:5rem;text-align:center;font-size:1.2rem"></div></div>
+    ${K.flag ? `<label class="field row" style="gap:.6rem;align-items:center;cursor:pointer"><input type="checkbox" id="cM" ${catMenu(d) ? 'checked' : ''} style="width:1.2rem;height:1.2rem"><span class="grow"><b>這類店家有菜單</b><br><small class="muted">吃的、喝的店才需要；停車場、加油站、超市這類不用勾，店家頁就只顯示消費紀錄</small></span></label>` : ''}
     <div class="field"><label>${K.color}</label><div class="swGrid" id="cS">${CAT_COLORS.map(c => `<button class="sw" data-c="${c}" style="--c:${c}" aria-label="${c}"></button>`).join('')}<label class="sw" style="--c:conic-gradient(red,orange,yellow,lime,cyan,blue,magenta,red);background:var(--c)" title="自訂顏色"><input type="color" id="cC" value="${/^#[0-9a-f]{6}$/i.test(d.color) ? d.color : '#a2613a'}"></label></div></div>`;
   const upd = () => { if (K.flag) { $('#cPrev', sh.body).style.setProperty('--c', d.color); $('#cPrev .flag', sh.body).textContent = d.icon; } const ch = $('#cChip', sh.body); ch.style.setProperty('--c', d.color); ch.textContent = d.icon + ' ' + (d.name || '分類名稱');
     $$('#cE button', sh.body).forEach(b => b.classList.toggle('on', b.dataset.e === d.icon)); $$('#cS .sw[data-c]', sh.body).forEach(b => b.classList.toggle('on', b.dataset.c.toLowerCase() === d.color.toLowerCase())); };
   upd();
+  const cm = $('#cM', sh.body); if (cm) cm.onchange = () => { d.menu = cm.checked; buzz(8); };
   $('#cN', sh.body).oninput = e => { d.name = e.target.value.trim(); upd(); }; $('#cI', sh.body).oninput = e => { d.icon = e.target.value.trim() || '🍴'; upd(); }; $('#cC', sh.body).oninput = e => { d.color = e.target.value; upd(); };
   $('#cE', sh.body).onclick = e => { const b = e.target.closest('button'); if (!b) return; d.icon = b.dataset.e; $('#cI', sh.body).value = d.icon; upd(); };
   $('#cS', sh.body).onclick = e => { const b = e.target.closest('.sw[data-c]'); if (!b) return; d.color = b.dataset.c; upd(); };

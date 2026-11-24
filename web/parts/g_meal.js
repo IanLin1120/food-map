@@ -298,11 +298,16 @@ function openMealSettings(after) {
     const days = Object.keys(DB.days).length;
     sh.body.innerHTML = ['types', 'people'].map(k => `<div class="msSec"><div class="msH"><b class="grow">${MK[k].title}</b><button class="btn sm" data-a="add" data-k="${k}">＋ 新增</button></div><div class="small muted" style="margin:-.2rem 0 .5rem">按住 ☰ 拖曳調整順序</div>
         <div class="msL" data-k="${k}">${DB.mcfg[k].map(t => `<div class="msR" data-id="${t.id}"><span class="grip"></span><span class="msI">${esc(t.icon)}</span><b class="grow">${esc(t.name)}</b><button class="btn sm" data-a="edit">✎ 編輯</button></div>`).join('') || '<div class="empty" style="padding:.8rem">還沒有' + MK[k].title + '</div>'}</div></div>`).join('')
+      + (DB.acc ? `<div class="msSec"><div class="msH"><b class="grow">🔗 同一個人，不同綽號</b></div><div class="small muted" style="margin:-.2rem 0 .5rem">例如這裡叫「便當哥」、記帳叫「因因」：從分帳匯入記帳時會自動對到同一個人</div>
+        ${(() => { const L = Object.keys(accSame()).filter(k => mealWho(k)); return L.length ? `<div class="sameL">${L.map(k => { const a = mealWho(k), m = aWho(k); return `<div class="sameR"><span>${esc(a.icon)} ${esc(a.name)}<small>日常</small></span><b>＝</b><span>${esc(m.icon)} ${esc(m.name)}<small>記帳</small></span><button class="ic" data-a="mUnlink" data-k="${esc(k)}" aria-label="取消">✕</button></div>`; }).join('')}</div>` : ''; })()}
+        <button class="btn block" data-a="mLink">🔗 設定同一個人</button></div>` : '')
       + `<div class="msSec"><div class="msH"><b class="grow">自訂品項</b></div><div class="small muted" style="margin:-.2rem 0 .5rem">點餐時自己輸入的品項，會依店家記住</div>${Object.keys(cus).map(k => `<div class="msG">🏪 ${esc(k)}</div>${cus[k].map(c => `<div class="msR" data-cid="${c.id}"><b class="grow">${esc(c.n)}</b><span class="muted">${money(c.p)}</span><button class="btn sm" data-a="cEdit">✎</button><button class="ic" data-a="cDel" style="color:var(--danger)" aria-label="刪除">🗑</button></div>`).join('')}`).join('') || '<div class="empty" style="padding:.8rem">還沒有自訂品項</div>'}</div>
       <div class="msSec"><div class="msH"><b class="grow">點餐紀錄</b></div><div class="small muted">共有 ${days} 天的紀錄。紀錄會一起放進「設定 → 匯出備份」。</div>${days ? '<button class="btn sm danger" data-a="wipeDays" style="margin-top:.6rem">清除所有點餐紀錄</button>' : ''}</div>`;
     $$('.msL', sh.body).forEach(l => sortable(l, {item: '.msR', handle: '.grip', scroller: sh.body, onSort(from, to) { moveItem(DB.mcfg[l.dataset.k], from, to); saveMcfg(); draw(); }})); };
   draw();
   sh.body.addEventListener('click', async e => { const b = e.target.closest('[data-a]'); if (!b) return; const a = b.dataset.a;
+    if (a === 'mLink') { buzz(10); if (!await AccLock.need()) return; if (await accLinkAskMeal()) draw(); return; }
+    if (a === 'mUnlink') { const k = b.dataset.k, u = mealWho(k); if (!await ask(`取消「${u ? u.name : ''}」＝「${aWho(k).name}」？\n之後從分帳匯入記帳時就會分開算。`, '取消連結', true)) return; buzz(15); accUnlink(k); draw(); return; }
     if (a === 'add') editMealCfg(b.dataset.k, null, draw);
     else if (a === 'edit') { const k = b.closest('.msL').dataset.k; editMealCfg(k, DB.mcfg[k].find(t => t.id === b.closest('.msR').dataset.id), draw); }
     else if (a === 'cEdit' || a === 'cDel') { const c = DB.mcfg.custom.find(x => x.id === b.closest('.msR').dataset.cid); if (!c) return;

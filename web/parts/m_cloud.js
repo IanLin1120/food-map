@@ -273,13 +273,14 @@ function localRestore() { importBackup(); }
 /* ---------- 快速換機：同一個 Wi-Fi，舊手機顯示 QR Code，新手機掃描後直接把整個日日帳本（含圖片）傳過去 ---------- */
 async function xferSend() {
   if (!(IS_APP && NB.xferStart)) { toast('快速換機要在 Android App 裡使用'); return; }
-  try { busy('打包資料和圖片…'); const blob = await makeBackupBlob(); const CH = 768 * 1024; let off = 0, first = true;
+  const withKeys = !(S.gkey || S.aikey) || await ask('要連同你的 Google Maps／AI 金鑰一起傳嗎？\n傳給自己的新手機：選「一起傳」\n傳給別人：選「不要」，對方要用自己的金鑰', '一起傳', false, '不要');
+  try { busy('打包資料和圖片…'); const blob = await makeBackupBlob({noKeys: !withKeys}); const CH = 768 * 1024; let off = 0, first = true;
     while (off < blob.size) { busy(`準備傳送…${Math.round(off / blob.size * 100)}%`); const b64 = await blobB64(blob.slice(off, off + CH)); if (!NB.tmpWrite('xfer_out.json', b64, !first)) throw new Error('寫入暫存檔失敗'); first = false; off += CH; }
     const info = JSON.parse(NB.xferStart()); busy(false); if (info.err || !info.ip) throw new Error(info.err || '找不到這支手機的 Wi-Fi 位址，請先連上 Wi-Fi');
     const url = `http://${info.ip}:${info.port}/${info.tok}`, qr = qrcode(0, 'M'); qr.addData('RIZHANG:' + url); qr.make();
     const sh = sheet({title: '📲 快速換機：在新手機掃描', full: true, onClose() { NB.xferStop(); window.__xferSent = null; }, html: `<div class="xfQR">${qr.createSvgTag({cellSize: 6, margin: 2, scalable: true})}</div>
       <ol class="invSteps"><li>兩支手機連同一個 Wi-Fi（或新手機連舊手機的熱點）</li><li>新手機打開日日帳本 → 記帳 → 設定 →「📷 掃描 QR Code 接收」</li><li>掃描上面的 QR Code，傳完會自動還原，<b>這個畫面請先不要關閉</b></li></ol>
-      <div class="small muted">要傳的資料：${(blob.size / 1048576).toFixed(1)} MB（收藏、點餐、分帳、發票、記帳、資產、食譜、設定和所有圖片）</div><div class="xfSt" id="xfSt">等待新手機連線…</div>`});
+      <div class="small muted">要傳的資料：${(blob.size / 1048576).toFixed(1)} MB（${BACKUP_WHAT}${withKeys ? '' : '；不含金鑰'}）</div><div class="xfSt" id="xfSt">等待新手機連線…</div>`});
     window.__xferSent = () => { buzz(60); const st = $('#xfSt', sh.body); if (st) st.innerHTML = '✅ 已經傳送完成！新手機會自動還原。'; };
   } catch (e) { busy(false); toast('❌ ' + e.message, 5000); }
 }
