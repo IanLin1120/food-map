@@ -175,7 +175,12 @@ B. 組合式（自選）菜單：顧客依步驟挑選，例如「1 主食（選
 16. 同一個品項有好幾種版本、各有價格時（例如蛋餅分 一般／酥皮／特酥、法式麵包／可頌），每個版本各寫一行，品名後面括號寫版本名稱，沒標版本的那個價格寫（一般），例如：品項|活力蛋餅|原味 (一般)|30、品項|活力蛋餅|原味 (酥皮)|35。份量說明（例如 厚牛堡(4 OZ)、熱狗(4條)）照抄在品名裡。
 17. 一個區塊只寫一次價格、下面一排編號套餐都適用時（例如「私房套餐 129 元 主餐單點80元」），每個套餐都要寫出價格；有套餐和單點兩種價格就各寫一行，例如：品項|私房套餐|1號餐-清爽鳳梨 (套餐)|129、品項|私房套餐|1號餐-清爽鳳梨 (單點)|80。套餐內容或條件寫成說明行：說明|私房套餐|主餐+薯餅+25元飲品（飲品超過25元請補差價）。
 18. 同一個價格、只是可以選不同麵包或做法時（例如表頭寫「法式麵包／可頌」但只有一個價格欄），不要拆成兩行，品名只寫一次、價格寫一次，再加選項：選項|法式麵包/可頌・麵包（選一）|法式麵包|、選項|法式麵包/可頌・麵包（選一）|可頌|。
-19. 品名裡的「(辣/原)」這種斜線分開的口味照抄在品名裡。`;
+19. 品名裡的「(辣/原)」這種斜線分開的口味照抄在品名裡。
+20. 品項右邊的「勾選框欄」是讓顧客勾選的選項，不是不同品項：例如「原味｜辣味」兩欄、「一般量｜麵量加大 +10元」兩欄。品項只寫一行原價，勾選欄寫成選項，而且只給有那些勾選框的品項：
+  ・只有一個品項有這組勾選框 → 分類寫「品名・選項名稱（選一）」，例如 選項|特製涼麵・口味（選一）|原味|、選項|特製涼麵・口味（選一）|辣味|。
+  ・同一區好幾個品項都有 → 分類寫「區塊名稱・選項名稱（選一）」，加價寫在價格欄，例如 選項|主食區・份量（選一）|一般量|、選項|主食區・份量（選一）|麵量加大|10。
+  ・同一區裡沒有這組勾選框、或註明不能選的品項（例如「滷肉飯無加大」、上面另外分欄的特製涼麵），寫在括號裡用「除外」，例如 選項|主食區・份量（選一，特製涼麵、滷肉飯除外）|麵量加大|10。
+  ・勾選框欄上面的價格欄（例如 一般量 55／特大量 65）才是尺寸，照第 3 條寫。`;
 const SZ = /\s*[（(]([^()（）]{1,8})[)）]\s*$/;
 /* 尺寸由小到大：S → M → L → XL → 瓶 */
 const SZ_ORDER = ['XS', 'S', '小', '小杯', '小碗', '小份', '薄', '薄片', '單', 'M', '中', '中杯', '中碗', '一般', '一般量', '正常', 'L', '大', '大杯', '大碗', '大份', '厚', '厚片', '雙', 'XL', '特大', '特大杯', '加大', '超大', 'XXL', '瓶', '瓶裝', '罐', '桶'];
@@ -184,11 +189,13 @@ const szRank = s => { const k = String(s || '').trim().toUpperCase().replace(/�
 const szOf = n => { const m = String(n || '').match(SZ); if (!m) return ''; const z = m[1].trim(); if (!z || /售完|限定|推薦|新品|招牌|必點|附|含|送|擇一|任選|[\/／]/.test(z) || /^[+＋]?[$＄]?[+＋]?\d+(\.\d+)?元?$/.test(z)) return '';
   return SZ_ORDER.includes(z.toUpperCase()) || z.length <= 3 || (z.length <= 5 && /杯|份|碗|瓶|罐|盒|入|吋|寸|片|個|顆|隻|串|oz|ml|cc|斤|兩|人|大|中|小|單|雙/i.test(z)) ? z : ''; };
 /* 真正的「尺寸」才分欄：S/M/L、大中小、杯／瓶／碗／份…；乾／湯、高麗菜／韭菜這種是不同品項，留在品名裡各自一行 */
-const isSizeWord = (z, multi) => !!z && (SZ_ORDER.includes(z.toUpperCase()) || /杯|瓶|罐|碗|份|盒|吋|寸|oz|ml|cc|公克|克|斤|兩/i.test(z) || (multi && /^\d+\s*(片|隻|顆|個|入|塊|串|粒|條|支|尾|人)$/.test(z)));
+const isSizeWord = (z, multi) => !!z && (SZ_ORDER.includes(z.toUpperCase()) || /杯|瓶|罐|碗|份|盒|吋|寸|oz|ml|cc|公克|克|斤|兩|^(一般|特大|大|小|中|加大|超大)量$/i.test(z) || (multi && /^\d+\s*(片|隻|顆|個|入|塊|串|粒|條|支|尾|人)$/.test(z)));
 /* 選項群組：「經典系列・麵包（選一）」→ 屬於「經典系列」、名稱「麵包」、標籤「選一」 */
 function optGroups(rows) { const gs = []; rows.forEach(r => { let g = gs.find(x => x.c === r.c); if (!g) gs.push(g = {c: r.c, L: []}); g.L.push(r); });
   gs.forEach(g => { const m = String(g.c || '').match(/^(.*?)[（(]([^()（）]+)[)）]$/), nm = (m ? m[1] : g.c || '').trim(), parts = nm.split(/\s*[・·‧．\-－:：]\s*/).filter(Boolean);
-    g.tag = m ? m[2] : ''; g.owner = parts.length > 1 ? parts[0] : ''; g.label = parts.length > 1 ? parts.slice(1).join('・') : nm; g.multi = /多選|可複選|複選|任選\s*[2-9二三四五]/.test(g.tag); });
+    g.tag = m ? m[2] : ''; g.owner = parts.length > 1 ? parts[0] : ''; g.label = parts.length > 1 ? parts.slice(1).join('・') : nm; g.multi = /多選|可複選|複選|任選\s*[2-9二三四五]/.test(g.tag);
+    /* 「（選一，滷肉飯除外）」：這些品項不能選這組 */
+    g.excl = []; g.tag = g.tag.replace(/[，,、\s]*([^，,（）()]+?)(除外|不適用|無加大|不可選)$/, (x, a) => { g.excl = a.split(/[、\/／和及]/).map(t => t.trim()).filter(Boolean); return ''; }).trim(); });
   return gs; }
 const ownsGroup = (c, g) => !!g.owner && (g.owner === c || String(c).includes(g.owner) || g.owner.includes(String(c).replace(/(系列|類|區)$/, '')));
 /* 選項群組是不是專屬某一個品項：標題裡有品名（「拿鐵咖啡溫度」「厚厚好食口味」）就只屬於那個品項 */
@@ -199,7 +206,7 @@ function groupItem(g, names) { let best = ''; names.forEach(n => { n = String(n 
   return sc[0] && sc[0].k >= 2 && (!sc[1] || sc[1].k < sc[0].k) && sc[0].k * 2 >= g.label.length ? sc[0].n : ''; }
 const shortLabel = (g, item) => (item ? g.label.replace(item, '').replace(/^[・\s的:：\-]+/, '').trim() : g.label) || g.label;
 /* 某個品項可以選的群組：系列共用的＋專屬這個品項的（別的品項專屬的不算） */
-function groupsFor(c, name, names, ogs) { return ogs.filter(g => { const gi = groupItem(g, names); return ownsGroup(c, g) ? !gi || gi === name : !g.owner && !!gi && gi === name; })
+function groupsFor(c, name, names, ogs) { return ogs.filter(g => { if ((g.excl || []).some(x => name === x || name.includes(x) || x.includes(name))) return false; if (g.owner && (g.owner === name || String(name).replace(SZ, '').trim() === g.owner)) return true; const gi = groupItem(g, names); return ownsGroup(c, g) ? !gi || gi === name : !g.owner && !!gi && gi === name; })
   .map(g => Object.assign({}, g, {label: shortLabel(g, groupItem(g, names))})); }
 /* 冰／熱：「拿鐵咖啡 (熱)」、尺寸「12oz冰」→ 同一品項，溫度另外列成選項 */
 const TEMP_RE = /^(熱|冰|溫|常溫|去冰|少冰|熱飲|冰飲)$/;

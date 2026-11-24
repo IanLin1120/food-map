@@ -5,7 +5,7 @@ let curTab = 'Map';
 /* 美食・日常和購物分帳已經合併成一個介面（底部：地圖、日常、分帳、發票、設定；食譜在設定裡） */
 function modeUI() { document.body.classList.remove('mShop'); $('#favTitle') && ($('#favTitle').textContent = '收藏分類'); $('#mQ') && ($('#mQ').placeholder = '搜尋店家、地址、量販店…'); }
 function setMode() { }
-function showTab(t) { if (t === 'AccA' && curTab !== 'AccA' && typeof Acc !== 'undefined') Acc.showAmt = false; curTab = t; $$('.page').forEach(p => p.classList.toggle('on', p.id === 'pg' + t)); $$('#tabbar button').forEach(b => b.classList.toggle('on', b.dataset.tab === (t === 'Fav' ? 'Map' : t === 'Rec' ? 'Set' : t))); document.body.classList.toggle('onFav', t === 'Fav');
+function showTab(t) { if (/^Acc/.test(t) && typeof AccLock !== 'undefined' && !AccLock.open() && S.inAcc) setTimeout(() => AccLock.gate(), 0); if (t === 'AccA' && curTab !== 'AccA' && typeof Acc !== 'undefined') Acc.showAmt = false; curTab = t; $$('.page').forEach(p => p.classList.toggle('on', p.id === 'pg' + t)); $$('#tabbar button').forEach(b => b.classList.toggle('on', b.dataset.tab === (t === 'Fav' ? 'Map' : t === 'Rec' ? 'Set' : t))); document.body.classList.toggle('onFav', t === 'Fav');
   if (t === 'Map') mapResize(); else if (t === 'Fav') renderFav(); else if (t === 'Rec') renderRec(); else if (t === 'Meal') renderMeal(); else if (t === 'Shop') renderShop(); else if (t === 'Inv') renderInv(); else if (t === 'Acc') renderAcc(); else if (t === 'AccA') renderAccAsset(); else if (t === 'AccM') renderAccMap(); else if (t === 'AccS') renderAccStat(); else if (t === 'AccC') renderAccCfg(); else renderSet(); updCounts(); }
 
 /* ---------- 全部展開／收合（收藏、食譜共用） ---------- */
@@ -147,7 +147,8 @@ function renderSet() {
   const sw = (id, on) => `<button class="sw2 ${on ? 'on' : ''}" data-sw="${id}" role="switch" aria-checked="${!!on}"></button>`;
   const dark = isDark(), navs = navApps({lat: 0, lon: 0});
   $('#setBody').innerHTML = `
-  <div class="setG"><h3>記帳</h3><div class="setC"><button class="recCard accCard2" data-a="acc"><span class="rcI">📒</span><span class="rcT"><b>記帳・對帳</b><small>${(() => { const d = DB.acc ? accDebts() : {}, v = Object.values(d).reduce((s, x) => s + (x > 0 ? x : 0), 0); return v ? '別人還欠我 ' + money(v) + '・' : ''; })()}收入支出、分帳欠款，不定期跟朋友對帳</small></span><span class="rcGo">進入記帳 ›</span></button></div></div>
+  <div class="setG"><h3>記帳</h3><div class="setC"><button class="recCard accCard2" data-a="acc"><span class="rcI">📒</span><span class="rcT"><b>記帳・對帳</b><small>${(() => { if (typeof AccLock !== 'undefined' && !AccLock.open()) return '🔒 已上鎖・'; const d = DB.acc ? accDebts() : {}, v = Object.values(d).reduce((s, x) => s + (x > 0 ? x : 0), 0); return v ? '別人還欠我 ' + money(v) + '・' : ''; })()}收入支出、分帳欠款，不定期跟朋友對帳</small></span><span class="rcGo">進入記帳 ›</span></button>
+    <div class="accLkRow"><button class="lkBtn ${typeof AccLock !== 'undefined' && AccLock.has() && !AccLock.open() ? 'on' : ''}" data-lk data-a="accLock">${typeof AccLock !== 'undefined' ? AccLock.label() : ''}</button><small>${typeof AccLock !== 'undefined' && AccLock.has() ? '螢幕關閉或關掉 App 會自動上鎖' : '可以設定密碼或指紋保護記帳資料'}</small></div></div></div>
   <div class="setG"><h3>食譜</h3><div class="setC"><button class="recCard" data-a="rec"><span class="rcI">📖</span><span class="rcT"><b>我的食譜</b><small>${(DB.recipes || []).length ? '共 ' + DB.recipes.length + ' 道・' : ''}記錄做法和食材，可以用圖片 AI 匯入</small></span><span class="rcGo">進入食譜 ›</span></button></div></div>
   <div class="setG"><h3>使用說明</h3><div class="setC">
     <button class="setR" data-a="guideFood" style="width:100%;text-align:left"><span class="gRi">🍽️</span><div class="t"><b>地圖・日常・食譜 圖解說明</b><small>找店收藏、AI 菜單表格、記一餐分帳、購物清單、食譜</small></div><span class="muted">›</span></button>
@@ -203,7 +204,7 @@ function initSet() {
     else if (a === 'updChk') Upd.check(true); else if (a === 'updApk') Upd.releases(); else if (a === 'updBack') Upd.restore(); else if (a === 'updShare') Upd.share(); else if (a === 'updWeb') openUrl(GH.pages);
     else if (a === 'aiStudio') openUrl('https://aistudio.google.com/rate-limit?timeRange=last-28-days'); else if (a === 'aiLog') { const o = $('#aiLogBox'); o.classList.toggle('hide'); b.textContent = o.classList.contains('hide') ? '查看最近 AI 紀錄' : '收起紀錄'; }
     else if (a === 'mcheck') openMenuCheck();
-    else if (a === 'rec') { buzz(15); showTab('Rec'); } else if (a === 'acc') { buzz(15); enterAcc(); } else if (a === 'guideFood') openGuide('food'); else if (a === 'guideAcc') openGuide('acc'); else if (a === 'guideShop') openGuide('shop'); else if (a === 'guideInv') openGuide('inv');
+    else if (a === 'rec') { buzz(15); showTab('Rec'); } else if (a === 'acc') { buzz(15); enterAcc(); } else if (a === 'accLock') { buzz(10); await AccLock.toggle(); renderSetKeep(); } else if (a === 'guideFood') openGuide('food'); else if (a === 'guideAcc') openGuide('acc'); else if (a === 'guideShop') openGuide('shop'); else if (a === 'guideInv') openGuide('inv');
     else if (a === 'cats') openCats('place'); else if (a === 'rcats') openCats('recipe'); else if (a.indexOf('off') === 0) Off.act(a); else if (a === 'exp') exportBackup(); else if (a === 'imp') importBackup(); else if (a === 'welcome') welcome();
     else if (a === 'wipe') { if (await ask('確定要清除「所有」收藏、菜單、食譜與設定嗎？\n這個動作無法復原，建議先匯出備份。', '全部清除', true) && await ask('再確認一次：真的要全部清除嗎？', '清除', true)) { for (const s of ['kv', 'places', 'recipes', 'imgs']) await IDB.clear(s).catch(() => {}); try { localStorage.clear(); } catch (er) {} location.reload(); } } });
 }

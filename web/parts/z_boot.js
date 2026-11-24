@@ -13,7 +13,8 @@
   window.addEventListener('resize', mapResize);
   Area.init(); renderChips(); updCounts();
   await initMap();
-  if (S.inAcc) showTab('Acc');
+  if (S.inAcc) { if (AccLock.open()) showTab('Acc'); else { showTab('Acc'); } }
+  AccLock.paint();
   if (!S.onboard) welcome();
   Upd.boot();
   Share.check(); document.addEventListener('visibilitychange', () => { if (!document.hidden) { setTimeout(() => Share.check(), 300); setTimeout(() => Quick.check(), 200); } });

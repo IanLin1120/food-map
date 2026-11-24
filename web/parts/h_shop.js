@@ -145,7 +145,7 @@ function billMore(b) {
   const sh = sheet({title: '🧾 ' + (billStore(b) || '購物明細'), html: `<div class="actList"><button data-a="exp">📤 匯出這筆（文字／Excel）</button>${(b.imgs || []).length ? '<button data-a="imgs">🖼️ 看明細圖片</button>' : ''}${shopPlaces().some(p => p.id === b.place) ? '<button data-a="open">🏪 打開店家</button>' : ''}<button data-a="toAcc">📒 匯入記帳（帶入每個人分到的金額）</button><button data-a="toInv">🧾 套用到發票（取代品項和折扣）</button><button data-a="move">📅 改到其他日期</button><button data-a="del" class="dng">🗑 刪除這筆</button></div>`});
   sh.body.onclick = async e => { const t = e.target.closest('[data-a]'); if (!t) return; const a = t.dataset.a; sh.close();
     if (a === 'exp') openShopExport(Shop.sel, b.id);
-    else if (a === 'toInv') billToInv(b); else if (a === 'toAcc') { enterAcc(); billToAcc(b); }
+    else if (a === 'toInv') billToInv(b); else if (a === 'toAcc') { if (await enterAcc()) billToAcc(b); }
     else if (a === 'imgs') Viewer.open(b.imgs.map((id, i) => ({id, label: `明細圖片 ${i + 1}/${b.imgs.length}`})), 0, billStore(b));
     else if (a === 'open') openPlace(b.place);
     else if (a === 'move') { const v = await askText('改到哪一天？（年-月-日）', Shop.sel); if (!v) return; const k = v.trim().replace(/[/.]/g, '-'), d = new Date(k + 'T00:00'); if (isNaN(d)) { toast('日期格式不正確'); return; }

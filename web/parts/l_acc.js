@@ -86,14 +86,15 @@ function accWidgetPush() {
   try { const now = new Date(), ym = ymd(now).slice(0, 7), td = ymd(now); let o = 0, i = 0, t = 0;
     DB.acc.recs.forEach(r => { if (!r.d || r.d.slice(0, 7) !== ym) return; const v = accMine(r);
       if (r.type === 'out' || r.type === 'loss') { o += v; if (r.d === td) t += v; } else if (r.type === 'in') i += v; });
-    const show = !(S.wHide), f = v => show ? money(Math.round(v)) : '$ ••••';
+    const show = !(S.wHide) && !AccLock.has(), f = v => show ? money(Math.round(v)) : '$ ••••';
     NB.widgetData(JSON.stringify({m: (now.getMonth() + 1) + '月', out: f(o), inc: f(i), today: f(t), accent: getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#a0562f'}));
   } catch (e) { console.log('widget', e); }
 }
 /* 從小工具、通知欄、控制中心打開：直接進記帳區開始記一筆 */
-const Quick = {check() { if (!(IS_APP && NB.quickTake)) return; const a = NB.quickTake(); if (!a) return;
+const Quick = {async check() { if (!(IS_APP && NB.quickTake)) return; const a = NB.quickTake(); if (!a) return;
   while (sheets.length) sheets[sheets.length - 1].close();
-  if (!S.inAcc) enterAcc('Acc'); else showTab('Acc'); buzz(15);
+  /* 有上鎖：先解鎖才能記帳 */
+  if (!S.inAcc) { if (!await enterAcc('Acc')) return; } else { if (!await AccLock.need()) return; showTab('Acc'); } buzz(15);
   setTimeout(() => { if (a === 'in') accEdit(null, {type: 'in'}); else if (a === 'tr') accEdit(null, {type: 'tr'}); else if (a === 'tpl') tplList(); else if (a === 'out') accEdit(null); }, 250); }};
 const mkCats = L => L.map(([n, i, subs], k) => ({id: 'p' + k + uid(), n, i, subs: subs.map(([sn, si, opt], j) => Object.assign({id: 'c' + k + j + uid(), n: sn, i: si}, opt ? {opt: 1} : {}))}));
 async function loadAcc() {
@@ -134,7 +135,86 @@ const accMine = r => r.type === 'in' ? +r.amt || 0 : r.type !== 'out' ? 0 : (r.s
 const recSort = (a, b) => (b.d + (b.t || '')).localeCompare(a.d + (a.t || ''));
 
 /* ---------- 進出記帳區 ---------- */
-function enterAcc(tab) { S.inAcc = true; saveS(); document.body.classList.add('mAcc'); showTab(tab || 'Acc'); }
+/* ============================================================
+   記帳・對帳的上鎖（跟 Terra 瀏覽器同一套）：6～16 位數字密碼（只存加鹽 PBKDF2 雜湊）＋指紋／臉部
+   解鎖一次後，直到 App 被關掉或螢幕關閉前都不用再輸入；連續輸錯 5 次起要等待，時間會加倍
+   密碼不強制：第一次進記帳時推薦設定；改密碼要先輸入舊密碼、移除密碼要輸入密碼
+   ============================================================ */
+const AccLock = {
+  webOk: false,
+  app: () => IS_APP && !!NB.lockHas,
+  has() { if (this.app()) return !!NB.lockHas(); try { return !!JSON.parse(localStorage.getItem('accPin') || 'null'); } catch (e) { return false; } },
+  open() { return !this.has() || (this.app() ? !!NB.lockSession() : this.webOk); },
+  bioOk() { return this.app() && !!NB.lockBioOk && !!NB.lockBioOk() && S.accBio !== false; },
+  relock() { if (this.app()) NB.lockRelock(); this.webOk = false; },
+  /* 網頁版（沒有 App 時）：瀏覽器裡用 WebCrypto PBKDF2 */
+  async webHash(pin, salt) { const k = await crypto.subtle.importKey('raw', new TextEncoder().encode(pin), 'PBKDF2', false, ['deriveBits']);
+    const b = await crypto.subtle.deriveBits({name: 'PBKDF2', salt: Uint8Array.from(atob(salt), c => c.charCodeAt(0)), iterations: 60000, hash: 'SHA-256'}, k, 256); return btoa(String.fromCharCode(...new Uint8Array(b))); },
+  async check(pin) { if (this.app()) { try { return JSON.parse(NB.lockCheck(pin)); } catch (e) { return {ok: false}; } }
+    const w = JSON.parse(localStorage.getItem('accPin') || 'null'); if (!w) return {ok: true}; const ok = await this.webHash(pin, w.salt) === w.hash; if (ok) this.webOk = true; return {ok}; },
+  len() { if (this.app()) return NB.lockLen() || 0; try { return (JSON.parse(localStorage.getItem('accPin') || 'null') || {}).len || 0; } catch (e) { return 0; } },
+  async set(old, pin) { if (this.app()) return NB.lockSet(old || '', pin);
+    if (this.has() && !(await this.check(old)).ok) return '舊密碼不正確'; const salt = btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(16))));
+    localStorage.setItem('accPin', JSON.stringify({salt, hash: await this.webHash(pin, salt), len: pin.length})); this.webOk = true; return ''; },
+  async clear(pin) { if (this.app()) return NB.lockClear(pin); if (!(await this.check(pin)).ok) return '密碼錯誤'; localStorage.removeItem('accPin'); this.webOk = false; return ''; },
+  /* 需要解鎖時呼叫：回傳 Promise<是否解鎖> */
+  need(title) { if (this.open()) return Promise.resolve(true); return new Promise(res => accPinPad({title: title || '🔒 解鎖記帳', bio: true, onOk: () => { res(true); this.paint(); }, onCancel: () => res(false)})); },
+  /* 原生事件：螢幕關閉 → 馬上上鎖 */
+  onNative(d) { try { d = typeof d === 'string' ? JSON.parse(d) : d; } catch (e) { return; } if (d.bio) { (this.bioCb || (() => {}))(d); return; } if (d.relock) { this.webOk = false; this.gate(); } },
+  /* 已經在記帳區、但被上鎖了：把記帳畫面蓋住，要求解鎖；取消就回到日日帳本 */
+  async gate() { this.paint(); if (!S.inAcc || this.open() || this.gating) return; this.gating = true;
+    while (sheets.length) sheets[sheets.length - 1].close(); document.body.classList.add('accLocked');
+    const ok = await this.need('🔒 記帳已上鎖'); this.gating = false; document.body.classList.remove('accLocked'); if (!ok) leaveAcc(); else this.paint(); },
+  /* 設定頁上的鎖頭按鈕 */
+  label() { const has = this.has(), op = this.open(); return !has ? '🔓 未設定密碼・點一下設定' : op ? '🔓 已解鎖・點一下上鎖' : '🔒 已上鎖・點一下解鎖'; },
+  paint() { $$('[data-lk]').forEach(b => { b.classList.toggle('on', this.has() && !this.open()); b.innerHTML = this.label(); }); },
+  async toggle() { if (!this.has()) { if (await ask('還沒有設定密碼。要現在設定嗎？\n設定後進入記帳・對帳要先輸入密碼或指紋。', '設定密碼')) await accSetPin(); this.paint(); return; }
+    if (this.open()) { this.relock(); this.paint(); buzz(30); toast('🔒 記帳已上鎖'); if (S.inAcc) this.gate(); }
+    else if (await this.need()) { buzz(20); toast('🔓 已解鎖'); } this.paint(); }
+};
+/* 數字鍵盤（像手機鎖屏） */
+function accPinPad(o) {
+  let pin = '', done = false; const target = o.mode === 'new' ? 0 : AccLock.len(), bio = o.bio && AccLock.bioOk() && o.mode !== 'new';
+  const sh = sheet({title: o.title || '輸入密碼', foot: target ? '' : `<button class="btn pri" data-a="ok" style="flex:1">${esc(o.okText || '確定')}</button>`, onClose() { if (!done && o.onCancel) o.onCancel(); }});
+  sh.body.innerHTML = `<div class="pinBox"><div class="pinLock">🔒</div><div class="pinDots"></div><div class="pinMsg">${esc(o.msg || (o.mode === 'new' ? '6～16 位數字' : ''))}</div><div class="pinKeys">${['1', '2', '3', '4', '5', '6', '7', '8', '9', 'bio', '0', 'del'].map(k => `<button class="pinKey ${k === 'bio' && !bio ? 'ghost' : ''}" data-k="${k}">${k === 'del' ? '⌫' : k === 'bio' ? (bio ? '👆' : '') : k}</button>`).join('')}</div></div>`;
+  const box = $('.pinBox', sh.body), dots = $('.pinDots', sh.body), msg = $('.pinMsg', sh.body);
+  const paint = () => { dots.innerHTML = Array.from({length: Math.max(6, pin.length)}, (_, i) => `<i class="${i < pin.length ? 'on' : ''}"></i>`).join(''); };
+  const fail = t => { buzz(60); msg.textContent = t; msg.classList.add('err'); box.classList.remove('shake'); void box.offsetWidth; box.classList.add('shake'); pin = ''; paint(); };
+  const finish = v => { done = true; buzz(25); sh.close(); o.onOk && o.onOk(v); };
+  const submit = async () => { if (pin.length < 6) { fail('至少要 6 位數字'); return; } if (o.mode === 'new' || o.raw) { finish(pin); return; }
+    const r = await AccLock.check(pin); if (r.ok) { finish(pin); return; }
+    if (r.wait) { const sec = Math.ceil(r.wait / 1000); fail('輸錯太多次，請 ' + (sec >= 60 ? Math.ceil(sec / 60) + ' 分鐘' : sec + ' 秒') + '後再試'); return; }
+    fail('密碼錯誤' + (r.fails ? `（已錯 ${r.fails} 次${r.fails >= 3 ? '，錯 5 次要等待' : ''}）` : '')); };
+  const doBio = () => { if (!bio) return; AccLock.bioCb = d => { AccLock.bioCb = null; if (d.ok) finish(''); }; NB.lockBio(o.title ? o.title.replace(/^🔒\s*/, '') : '解鎖記帳'); };
+  sh.body.onclick = e => { const b = e.target.closest('[data-k]'); if (!b) return; const k = b.dataset.k; buzz(10);
+    if (k === 'del') { pin = pin.slice(0, -1); paint(); return; } if (k === 'bio') { doBio(); return; } if (pin.length >= 16) return;
+    pin += k; paint(); msg.classList.remove('err'); if (target && pin.length === target) setTimeout(submit, 120); };
+  if (sh.foot) sh.foot.onclick = e => { if (e.target.closest('[data-a=ok]')) submit(); };
+  paint(); if (bio) setTimeout(doBio, 300);
+}
+/* 設定／更改密碼：輸入兩次；已經有密碼要先輸入舊密碼（不能用指紋） */
+function accSetPin() {
+  return new Promise(res => { const had = AccLock.has();
+    const askNew = old => accPinPad({title: had ? '設定新密碼' : '設定記帳密碼', mode: 'new', msg: '輸入 6～16 位數字', okText: '下一步', onCancel: () => res(false), onOk: p1 =>
+      accPinPad({title: '再輸入一次新密碼', mode: 'new', okText: '完成', onCancel: () => res(false), onOk: async p2 => {
+        if (p1 !== p2) { toast('兩次輸入的密碼不一樣，請重新設定', 3000); res(false); return; }
+        const e = await AccLock.set(old, p1); if (e) { toast('❌ ' + e, 3500); res(false); return; }
+        toast(had ? '✓ 已更改密碼' : '✓ 已設定密碼，記帳・對帳已上鎖保護'); AccLock.paint(); res(true); }})});
+    if (!had) { askNew(''); return; }
+    accPinPad({title: '先輸入目前的密碼', raw: true, okText: '下一步', onCancel: () => res(false), onOk: async old => { const r = await AccLock.check(old); if (!r.ok) { toast(r.wait ? '輸錯太多次，請稍後再試' : '密碼錯誤', 3000); res(false); return; } askNew(old); }}); });
+}
+async function accClearPin() {
+  if (!AccLock.has()) return; if (!await ask('移除密碼後，進入記帳・對帳就不用解鎖。確定要移除嗎？', '移除密碼', true)) return;
+  accPinPad({title: '輸入密碼以移除', raw: true, onOk: async p => { const e = await AccLock.clear(p); if (e) { toast('❌ ' + e, 3000); return; } toast('已移除密碼'); AccLock.paint(); renderAccCfg(); }});
+}
+/* 進入記帳：有密碼要先解鎖；第一次用而且沒有密碼時推薦設定（不強制） */
+async function enterAcc(tab) {
+  if (!await AccLock.need()) return false;
+  S.inAcc = true; saveS(); document.body.classList.add('mAcc'); showTab(tab || 'Acc');
+  if (!AccLock.has() && !S.accPinAsked) { S.accPinAsked = 1; saveS(); setTimeout(async () => {
+    if (await ask('記帳・對帳裡有你的收支和帳戶資料。\n建議設定一組 6 位數密碼（可以用指紋解鎖），進入前要先解鎖。\n不設定也可以照常使用，之後可以到 記帳 → 設定 → 上鎖 再設定。', '設定密碼')) accSetPin(); }, 500); }
+  return true;
+}
 function leaveAcc() { S.inAcc = false; saveS(); document.body.classList.remove('mAcc'); showTab('Set'); toast('已回到日日帳本'); }
 
 /* ---------- 帳戶餘額 ---------- */
@@ -764,7 +844,7 @@ function accMapSelect(n, fly) { AM.sel = n; AM.marks.forEach(m => m.getElement()
   accStoreCard(n); }
 /* 從其他地方（例如商家名單）跳到記帳的地圖，標出這間店 */
 function accMapFocus(n) { while (sheets.length) sheets[sheets.length - 1].close(); AM.f = 'all'; AM.q = ''; AM.area = null; AM.sel = n;
-  if (!S.inAcc) enterAcc('AccM'); else showTab('AccM'); setTimeout(() => accMapSelect(n, true), 350); }
+  (async () => { if (!S.inAcc) { if (!await enterAcc('AccM')) return; } else showTab('AccM'); setTimeout(() => accMapSelect(n, true), 350); })(); }
 /* 一間店：店名、地址、位置、記帳明細；可以改店名（同步到所有區） */
 function accStoreCard(n) {
   const sh = sheet({title: '🏪 ' + n, foot: `<button class="btn" data-a="ren">✎ 改店名</button><button class="btn" data-a="pin">📍 ${storeLoc(n) ? '更改位置' : '釘選位置'}</button>`});
@@ -852,6 +932,11 @@ function accPeopleEdit() {
 function renderAccCfg() {
   const box = $('#accCBody'); if (!box || !DB.acc) return; const pc = S.pc || {}, gi = (() => { try { return JSON.parse(NB.gInfo ? NB.gInfo() : '{}'); } catch (e) { return {}; } })();
   box.innerHTML = `<div class="setG"><h3>功能區</h3><div class="setC"><button class="recCard" data-a="leave"><span class="rcI">🍽️</span><span class="rcT"><b>回到日日帳本</b><small>地圖、日常、分帳、發票</small></span><span class="rcGo">切換 ›</span></button></div></div>
+    <div class="setG"><h3>上鎖</h3><div class="setC">
+      <button class="setR" data-a="lkSet" style="width:100%;text-align:left"><span class="gRi">🔑</span><div class="t"><b>${AccLock.has() ? '更改密碼' : '設定密碼'}</b><small>${AccLock.has() ? '要先輸入目前的密碼' : '6～16 位數字；不設定也可以使用'}</small></div><span class="chev">›</span></button>
+      ${AccLock.has() ? `${AccLock.app() && NB.lockBioOk && NB.lockBioOk() ? `<button class="setR" data-a="lkBio" style="width:100%;text-align:left"><span class="gRi">👆</span><div class="t"><b>可以用指紋／臉部解鎖</b><small>解鎖時自動跳出指紋，也可以改用密碼；關掉要先驗證密碼</small></div><span class="sw2 ${S.accBio !== false ? 'on' : ''}"></span></button>` : ''}
+      <div class="setR" style="cursor:default"><span class="gRi">🛡️</span><div class="t"><b>自動上鎖</b><small>螢幕關閉、或從最近使用把 App 滑掉再打開，都會馬上上鎖。連續輸錯 5 次要等待，時間會越來越長。</small></div></div>
+      <div class="accLkRow in"><button class="lkBtn ${!AccLock.open() ? 'on' : ''}" data-lk data-a="lkTog">${AccLock.label()}</button><button class="btn sm" data-a="lkDel">移除密碼</button></div>` : ''}</div></div>
     ${IS_APP && NB.widgetData ? `<div class="setG"><h3>快速記帳</h3><div class="setC">
       <button class="setR" data-a="qNotif" style="width:100%;text-align:left"><span class="gRi">🔔</span><div class="t"><b>通知欄快速記帳</b><small>通知欄常駐三顆按鈕（＋支出／＋收入／⭐常用），跟桌面小工具一樣</small></div><span class="sw2 ${S.qNotif ? 'on' : ''}"></span></button>
       <button class="setR" data-a="wHide" style="width:100%;text-align:left"><span class="gRi">👁</span><div class="t"><b>小工具和通知顯示金額</b><small>關掉後桌面小工具、通知只顯示 $ ••••</small></div><span class="sw2 ${S.wHide ? '' : 'on'}"></span></button>
@@ -883,7 +968,7 @@ async function accCfgClick(e) {
   const t = e.target.closest('[data-a],[data-me]'); if (!t) return; buzz(8); const a = t.dataset.a;
   if (t.dataset.me) { DB.acc.me = t.dataset.me; saveAcc(); renderAccCfg(); return; }
   if (a === 'people') { await accPeopleEdit(); renderAccCfg(); return; }
-  if (a === 'leave') leaveAcc(); else if (a === 'guide') openGuide('acc'); else if (a === 'qNotif') { S.qNotif = !S.qNotif; saveS(); NB.quickNotif(!!S.qNotif); accWidgetPush(); renderAccCfg(); toast(S.qNotif ? '🔔 已開啟通知欄快速記帳' : '已關閉通知欄快速記帳'); } else if (a === 'wHide') { S.wHide = !S.wHide; saveS(); accWidgetPush(); renderAccCfg(); } else if (a === 'cats') editCatTree(t.dataset.ty); else if (a === 'opt') optCfg(); else if (a === 'payees') managePayees(); else if (a === 'accts') enterAcc('AccA'); else if (a === 'tpls') manageTpls(); else if (a === 'csv') accCsv();
+  if (a === 'leave') leaveAcc(); else if (a === 'guide') openGuide('acc'); else if (a === 'lkSet') { await accSetPin(); renderAccCfg(); } else if (a === 'lkTog') { await AccLock.toggle(); renderAccCfg(); } else if (a === 'lkDel') { await accClearPin(); } else if (a === 'lkBio') { if (S.accBio !== false) { const ok = await new Promise(r => accPinPad({title: '關閉指紋解鎖要先驗證', onOk: () => r(true), onCancel: () => r(false)})); if (!ok) return; S.accBio = false; } else S.accBio = true; saveS(); renderAccCfg(); } else if (a === 'qNotif') { S.qNotif = !S.qNotif; saveS(); NB.quickNotif(!!S.qNotif); accWidgetPush(); renderAccCfg(); toast(S.qNotif ? '🔔 已開啟通知欄快速記帳' : '已關閉通知欄快速記帳'); } else if (a === 'wHide') { S.wHide = !S.wHide; saveS(); accWidgetPush(); renderAccCfg(); } else if (a === 'cats') editCatTree(t.dataset.ty); else if (a === 'opt') optCfg(); else if (a === 'payees') managePayees(); else if (a === 'accts') enterAcc('AccA'); else if (a === 'tpls') manageTpls(); else if (a === 'csv') accCsv();
   else if (a === 'gFolder') gPickFolder(); else if (a === 'pFolder') pPickFolder(); else if (a === 'pIn') pLogin(); else if (a === 'lUp') localBackup(); else if (a === 'lDown') localRestore(); else if (a === 'xSend') xferSend(); else if (a === 'xRecv') xferRecv();
   else if (a === 'gwUp') gDriveWeb('up'); else if (a === 'gwDown') gDriveWeb('down'); else if (a === 'gwMan') gwManual();
   else if (a === 'gUp') cloudUp('g'); else if (a === 'gDown') cloudDown('g'); else if (a === 'pUp') cloudUp('p'); else if (a === 'pDown') cloudDown('p');

@@ -185,6 +185,11 @@ function menuChoices(p, rg) {
   /* 有分欄的品項裡沒標尺寸的價格：放進剛好缺的那一欄，否則叫「一般」 */
   out.forEach(o => { if (!o.v.some(v => v.s && isCol(o.rc, v.s))) return; o.v.forEach(v => { if (v.s) return; const miss = [...(csz[o.rc] || [])].filter(z => !o.v.some(y => y.s === z)); v.s = miss.length === 1 ? miss[0] : '一般'; }); });
   const ct = {}; out.forEach(o => o.temps.forEach(t => (ct[o.rc] = ct[o.rc] || new Set()).add(t)));
+  /* 飲料：每一杯都可以選溫度（去冰、溫、熱）和甜度（正常糖、微糖、無糖）；不選就是店家預設 */
+  const DRINK_C = /飲|茶|咖啡|拿鐵|果汁|奶昔|冰沙|可可|鮮奶|豆漿|汽水|氣泡|調飲|特調/, DRINK_N = /茶|咖啡|拿鐵|美式|果汁|奶昔|冰沙|可可|鮮奶|豆漿|歐蕾|多多|養樂多|汽水|可樂|氣泡|檸檬|冬瓜|烏龍|紅茶|綠茶|青茶|奶茶|牛奶|豆奶|梅|蜜|飲/, NOT_D = /吐司|麵包|蛋糕|餅|麵|飯|鍋|湯|堡|捲|派|酥|布丁|凍|雞|豬|牛排|魚|蝦|丸|粥|塔|鬆|蛋$/;
+  out.forEach(o => { if (o.t !== 'item') return; const isD = DRINK_C.test(o.rc || '') ? !/湯|麵|飯|鍋/.test(o.n) : (DRINK_N.test(o.n) && !NOT_D.test(o.n)); if (!isD) return;
+    if (!o.og.some(g => /溫度|冰|熱/.test(g.label))) o.og = o.og.concat([{label: '溫度', tag: '選一', L: ['去冰', '溫', '熱'].map(n => ({n, p: ''})), drink: 1}]);
+    if (!o.og.some(g => /糖|甜/.test(g.label))) o.og = o.og.concat([{label: '甜度', tag: '選一', L: ['正常糖', '微糖', '無糖'].map(n => ({n, p: ''})), drink: 1}]); });
   const fin = []; out.forEach(o => { const tp = ct[o.rc]; if (tp && tp.size > 1 && o.t === 'item' && !o.og.some(g => /溫度/.test(g.label))) o.og = o.og.concat([{label: '溫度', tag: '選一', L: [...tp].map(n => ({n, p: ''}))}]);
     const keep = o.v.filter(v => !v.s || v.s === '一般' || isCol(o.rc, v.s));
     if (keep.length) fin.push(Object.assign({}, o, {v: keep.sort((a, b) => szRank(a.s) - szRank(b.s))}));
@@ -197,14 +202,14 @@ function pickOpts(o, v) {
     const sh = sheet({title: o.full + (v.s ? ` (${v.s})` : ''), foot: '<div class="grow ordTot" id="poT"></div><button class="btn pri" data-a="ok" style="flex:0 0 auto">加入</button>', onClose() { if (!done) res(null); }});
     const calc = () => { let add = 0; const names = []; o.og.forEach((g, gi) => ch[gi].filter(i => i >= 0).forEach(i => { add += numP(g.L[i].p); names.push(g.L[i].n); })); return {add, names}; };
     const draw = () => { sh.body.innerHTML = o.og.map((g, gi) => `<div class="poG"><div class="lbl">${esc(g.label)}${g.tag ? ` <span class="tag">${esc(g.tag)}</span>` : ''}</div><div class="whoRow">${g.multi ? '' : `<button data-g="${gi}" data-i="-1" class="${ch[gi][0] === -1 ? 'on' : ''}">不選</button>`}${g.L.map((r, i) => `<button data-g="${gi}" data-i="${i}" class="${ch[gi].includes(i) ? 'on' : ''}">${esc(r.n)}${numP(r.p) ? ` <small>+$${numP(r.p)}</small>` : ''}</button>`).join('')}</div></div>`).join('');
-      const c = calc(); $('#poT', sh.foot).innerHTML = `單價 <b>${money(numP(v.p) + c.add)}</b>${c.names.length ? ' · ' + esc(c.names.join('、')) : ''}`; };
+      const c = calc(); $('#poT', sh.foot).innerHTML = `單價 <b>${money(numP(v.p) + c.add)}</b>${c.names.length ? ' · ' + esc(c.names.join('，')) : ''}`; };
     draw();
     sh.body.onclick = e => { const b = e.target.closest('[data-g]'); if (!b) return; const gi = +b.dataset.g, i = +b.dataset.i, g = o.og[gi]; buzz(8);
       if (g.multi) { const k = ch[gi].indexOf(i); if (k < 0) ch[gi].push(i); else ch[gi].splice(k, 1); } else ch[gi] = [i]; draw(); };
-    sh.foot.onclick = e => { if (!e.target.closest('[data-a="ok"]')) return; const c = calc(); done = true; sh.close(); res({o: c.names.join('、'), add: c.add}); }; });
+    sh.foot.onclick = e => { if (!e.target.closest('[data-a="ok"]')) return; const c = calc(); done = true; sh.close(); res({o: c.names.join('，'), add: c.add}); }; });
 }
 const xTags = x => `${x.s ? ` <span class="szT">${esc(x.s)}</span>` : ''}${x.o ? ` <span class="opT">${esc(x.o)}</span>` : ''}`;
-const xParen = x => { const a = [x.s, x.o].filter(Boolean); return a.length ? '(' + a.join('、') + ')' : ''; };
+const xParen = x => { const a = [x.s, x.o].filter(Boolean); return a.length ? '(' + a.join('，') + ')' : ''; };
 function openOrder(m, opt = {}) {
   const P = FP().find(x => x.id === m.place), T = mType(m.type);
   let who = m.lastWho && keyIds(m.lastWho).every(id => DB.mcfg.people.some(u => u.id === id)) ? m.lastWho : (DB.mcfg.people[0] || {}).id, q = '', cat = '', rg = P ? P.rgSel : '';

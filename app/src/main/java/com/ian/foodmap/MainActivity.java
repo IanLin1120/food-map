@@ -56,7 +56,11 @@ public class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle b) {
         super.onCreate(b);
+        /* 記帳的鎖：App 每次重新開啟（包含從最近使用劃掉後再開）都要重新解鎖 */
+        Lock.session = false;
         cur = this;
+        /* 螢幕一關就上鎖 */
+        try { registerReceiver(screenOff, new android.content.IntentFilter(Intent.ACTION_SCREEN_OFF)); } catch (Throwable t) { }
         getWindow().setStatusBarColor(Color.parseColor("#efe5d3"));
         getWindow().setNavigationBarColor(Color.parseColor("#efe5d3"));
         setBarsLight(true);
@@ -562,15 +566,21 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onDestroy() {
+        try { unregisterReceiver(screenOff); } catch (Throwable t) { }
+        if (!isChangingConfigurations()) Lock.session = false;
         if (cur == this) cur = null;
         super.onDestroy();
     }
+
+    final android.content.BroadcastReceiver screenOff = new android.content.BroadcastReceiver() {
+        @Override public void onReceive(android.content.Context c, Intent i) { if (Lock.session) { Lock.session = false; emit("lock", "{\"relock\":true}"); } }
+    };
 
     /** 原生 → 網頁的事件（目前只有 App 內更新的進度：window.Upd.onApk） */
     static void emit(String type, final String json) {
         final MainActivity a = cur;
         if (a == null) return;
-        final String fn = "apk".equals(type) ? "window.Upd&&Upd.onApk(" : "off".equals(type) ? "window.Off&&Off.onNative(" : "loc".equals(type) ? "window.Loc&&Loc.onNative(" : "share".equals(type) ? "window.Share&&Share.onNative(" : null;
+        final String fn = "apk".equals(type) ? "window.Upd&&Upd.onApk(" : "off".equals(type) ? "window.Off&&Off.onNative(" : "loc".equals(type) ? "window.Loc&&Loc.onNative(" : "share".equals(type) ? "window.Share&&Share.onNative(" : "lock".equals(type) ? "typeof AccLock!=='undefined'&&AccLock.onNative(" : null;
         if (fn == null) return;
         a.runOnUiThread(new Runnable() {
             public void run() {
@@ -830,6 +840,16 @@ public class MainActivity extends Activity {
     }
 
     class Bridge {
+        /* ---------- 記帳的鎖 ---------- */
+        @JavascriptInterface public boolean lockHas() { return Lock.has(MainActivity.this); }
+        @JavascriptInterface public boolean lockSession() { return Lock.session; }
+        @JavascriptInterface public int lockLen() { return Lock.len(MainActivity.this); }
+        @JavascriptInterface public String lockSet(String oldPin, String pin) { return Lock.set(MainActivity.this, oldPin, pin); }
+        @JavascriptInterface public String lockClear(String pin) { return Lock.clear(MainActivity.this, pin); }
+        @JavascriptInterface public String lockCheck(String pin) { return Lock.check(MainActivity.this, pin).toString(); }
+        @JavascriptInterface public boolean lockBioOk() { return Lock.bioAvailable(MainActivity.this); }
+        @JavascriptInterface public void lockBio(final String title) { runOnUiThread(new Runnable() { public void run() { Lock.bio(MainActivity.this, title); } }); }
+        @JavascriptInterface public void lockRelock() { Lock.session = false; }
         @JavascriptInterface
         public String quickTake() { String q = quickPending; quickPending = null; return q == null ? "" : q; }
         @JavascriptInterface
