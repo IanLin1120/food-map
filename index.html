@@ -4,7 +4,7 @@
 <script>/* 線上更新開機程式：手機上若已下載比 APK 內建更新的介面版本，就改用新版（存在 IndexedDB）。
    新版連續兩次沒有正常開啟 → 自動退回 APK 內建版本。網址加上 #builtin 也會強制使用內建版本。 */
 (function () {
-  var B = '3.24.0'; if (!window.__OTA) window.APP_BUILTIN = B;
+  var B = '3.25.0'; if (!window.__OTA) window.APP_BUILTIN = B;
   if (window.__OTA || location.hash.indexOf('builtin') >= 0) return;
   var v = null; try { v = JSON.parse(localStorage.getItem('fm.ota') || 'null'); } catch (e) {}
   function gt(a, b) { a = String(a).split('.').map(Number); b = String(b).split('.').map(Number); for (var i = 0; i < Math.max(a.length, b.length); i++) { var p = a[i] || 0, q = b[i] || 0; if (p !== q) return p > q; } return false; }
@@ -1372,7 +1372,12 @@ body.accLocked .page[id^="pgAcc"] .pgBody,body.accLocked .page[id^="pgAcc"] .pgH
 .stUndo span{flex:1}
 table.ckT th small{display:block;font-size:.66rem;opacity:.8}
 table.ckT td.s{text-align:center}table.ckT th.s{text-align:center}
-.mcB table+table{margin-top:.2rem;border-top:2px solid var(--border-soft)}
+.mcB table+table{margin:0;border-top:0}
+
+.psChips{display:flex;gap:.4rem;overflow-x:auto;padding:.05rem .05rem .6rem;scrollbar-width:none}
+.psChips .chip{border:1.5px solid var(--border);background:var(--surface);flex:none}
+.psChips .chip.on{background:var(--c,var(--accent));border-color:var(--c,var(--accent));color:#fff}.psChips .chip.on .n{color:rgba(255,255,255,.85)}
+.psTools{display:flex;align-items:center;gap:.5rem;margin-bottom:.5rem}.psTools .psHint{flex:1;margin:0}.psTools .btn{border-radius:6px}
 </style>
 </head>
 <body>
@@ -3844,7 +3849,7 @@ var qrcode = function() {
 /* ============================================================
    日日帳本 — 核心：工具、資料儲存、主題、面板、拖曳排序、圖片
    ============================================================ */
-const APP_VERSION = '3.24.0';
+const APP_VERSION = '3.25.0';
 const APP_VER = APP_VERSION;
 /* 線上更新來源（GitHub Pages）：IanLin1120/food-map */
 const GH = {repo: 'https://github.com/IanLin1120/food-map', pages: 'https://ianlin1120.github.io/food-map/'};
@@ -4669,7 +4674,11 @@ function groupItem(g, names) { let best = ''; names.forEach(n => { n = String(n 
   return sc[0] && sc[0].k >= 2 && (!sc[1] || sc[1].k < sc[0].k) && sc[0].k * 2 >= g.label.length ? sc[0].n : ''; }
 const shortLabel = (g, item) => (item ? g.label.replace(item, '').replace(/^[・\s的:：\-]+/, '').trim() : g.label) || g.label;
 /* 某個品項可以選的群組：系列共用的＋專屬這個品項的（別的品項專屬的不算） */
-function groupsFor(c, name, names, ogs) { return ogs.filter(g => { if ((g.excl || []).some(x => name === x || name.includes(x) || x.includes(name))) return false; if (g.owner && (g.owner === name || String(name).replace(SZ, '').trim() === g.owner)) return true; const gi = groupItem(g, names); return ownsGroup(c, g) ? !gi || gi === name : !g.owner && !!gi && gi === name; })
+const colLike = g => !g.multi && g.L.length <= 3 && !/溫度|冰|熱|甜|糖/.test(g.label);
+/* 品項自己有一組勾選選項（例如涼麵的 原味／辣味）時，整區共用的勾選選項（麵量加大）就不套用到它，和菜單表格一致 */
+function groupsFor(c, name, names, ogs) { const L = groupsFor0(c, name, names, ogs), own = L.filter(g => colLike(g) && g.owner && (g.owner === name || String(name).replace(SZ, '').trim() === g.owner));
+  return own.length ? L.filter(g => own.includes(g) || !(colLike(g) && ownsGroup(c, g) && g.owner !== name && String(name).replace(SZ, '').trim() !== g.owner)) : L; }
+function groupsFor0(c, name, names, ogs) { return ogs.filter(g => { if ((g.excl || []).some(x => name === x || name.includes(x) || x.includes(name))) return false; if (g.owner && (g.owner === name || String(name).replace(SZ, '').trim() === g.owner)) return true; const gi = groupItem(g, names); return ownsGroup(c, g) ? !gi || gi === name : !g.owner && !!gi && gi === name; })
   .map(g => Object.assign({}, g, {label: shortLabel(g, groupItem(g, names))})); }
 /* 冰／熱：「拿鐵咖啡 (熱)」、尺寸「12oz冰」→ 同一品項，溫度另外列成選項 */
 const TEMP_RE = /^(熱|冰|溫|常溫|去冰|少冰|熱飲|冰飲)$/;
@@ -6057,15 +6066,22 @@ function pickMealType(cur) {
 }
 /* 回傳 place 物件、{name} 自填店名、null 不指定；undefined = 取消 */
 function pickStore(cur) {
-  return new Promise(res => { let done = false, q = ''; const sh = sheet({title: '選擇店家', full: true, onClose() { if (!done) res(undefined); }});
+  return new Promise(res => { let done = false, q = '', only = ''; const sh = sheet({title: '選擇店家', full: true, onClose() { if (!done) res(undefined); }});
     const fin = v => { done = true; sh.close(); res(v); };
-    const draw = () => { const hit = p => !q || (p.name + ' ' + (p.addr || '')).toLowerCase().includes(q);
-      const secs = DB.cats.concat([UNCAT]).map(c => ({c, ps: placesIn(c.id).filter(hit)})).filter(s => s.ps.length);
-      $('#psL', sh.body).innerHTML = secs.map(({c, ps}) => `<div class="psSec" style="--c:${c.color}"><div class="psSH"><span>${esc(c.icon)}</span>${esc(c.name)}</div>${ps.map(p => `<button class="psP ${p.id === cur ? 'on' : ''}" data-id="${p.id}"><b>${esc(p.name)}</b><small>${(p.menu || []).length ? '📋 ' + p.menu.length + ' 個品項' : '<span class="muted">沒有菜單表格</span>'}${p.addr ? ' · ' + esc(p.addr) : ''}</small></button>`).join('')}</div>`).join('')
-        || `<div class="empty">${FP().length ? '找不到符合的收藏店家' : '還沒有收藏店家<br><span class="small">可以先在地圖頁收藏，或用下面的「自己輸入店名」</span>'}</div>`; };
-    sh.body.innerHTML = `<div class="searchBox" style="margin-bottom:.7rem"><input id="psQ" type="search" placeholder="搜尋收藏的店家…"></div><div class="row" style="margin-bottom:.7rem;gap:.5rem"><button class="btn sm" data-a="free">✏️ 自己輸入店名</button><button class="btn sm" data-a="none">先不選店家</button></div><div id="psL"></div>`;
+    const curP = FP().find(p => p.id === cur), open = new Set(); if (curP) open.add(curP.cat || '');
+    const draw = () => { const hit = p => !q || (p.name + ' ' + (p.addr || '')).toLowerCase().includes(q), cats = DB.cats.concat([UNCAT]);
+      const all = cats.map(c => ({c, ps: placesIn(c.id).filter(hit)})).filter(x => x.ps.length), secs = all.filter(x => !only || (x.c.id || '_') === only);
+      const anyOpen = secs.some(x => open.has(x.c.id || ''));
+      $('#psBar', sh.body).innerHTML = `<div class="psChips">${[['', '🗺️ 全部', FP().filter(hit).length]].concat(all.map(x => [x.c.id || '_', `${x.c.icon} ${x.c.name}`, x.ps.length, x.c.color])).map(([k, t, n, col]) => `<button class="chip ${only === k ? 'on' : ''}" data-only="${k}" ${col ? `style="--c:${col}"` : ''}>${esc(t)} <span class="n">${n}</span></button>`).join('')}</div>
+        ${secs.length > 1 && !q ? `<div class="psTools"><span class="psHint">點分類展開店家</span><button class="btn sm" data-a="foldAll">${anyOpen ? '⊟ 全部收合' : '⊞ 全部展開'}</button></div>` : ''}`;
+      $('#psL', sh.body).innerHTML = secs.map(({c, ps}) => { const on = q || only || open.has(c.id || ''); return `<div class="psSec ${on ? 'open' : ''}" style="--c:${c.color}"><button class="psSH" data-cat="${c.id || ''}"><span>${esc(c.icon)}</span><b>${esc(c.name)}</b><em>${ps.length}</em><i class="psCv">▾</i></button>${on ? `<div class="psPL">${ps.map(p => `<button class="psP ${p.id === cur ? 'on' : ''}" data-id="${p.id}"><b>${esc(p.name)}</b><small>${(p.menu || []).length ? '📋 ' + p.menu.length + ' 個品項' : '<span class="muted">沒有菜單表格</span>'}${p.addr ? '・' + esc(p.addr) : ''}</small></button>`).join('')}</div>` : ''}</div>`; }).join('')
+        || `<div class="empty">${FP().length ? '找不到符合的收藏店家' : '還沒有收藏店家<br><span class="small">可以先在地圖頁收藏，或用上面的「自己輸入店名」</span>'}</div>`; };
+    sh.body.innerHTML = `<div class="searchBox" style="margin-bottom:.7rem"><input id="psQ" type="search" placeholder="搜尋收藏的店家…"></div><div class="row" style="margin-bottom:.7rem;gap:.5rem"><button class="btn sm" data-a="free">✏️ 自己輸入店名</button><button class="btn sm" data-a="none">先不選店家</button></div><div id="psBar"></div><div id="psL"></div>`;
     draw(); $('#psQ', sh.body).oninput = e => { q = e.target.value.trim().toLowerCase(); draw(); };
-    sh.body.addEventListener('click', async e => { const b = e.target.closest('button'); if (!b) return;
+    sh.body.addEventListener('click', async e => { const b = e.target.closest('button'); if (!b) return; buzz(8);
+      if (b.dataset.only != null) { only = b.dataset.only; draw(); return; }
+      if (b.dataset.a === 'foldAll') { const ks = [...$$('.psSH', sh.body)].map(x => x.dataset.cat), any = ks.some(k => open.has(k)); ks.forEach(k => any ? open.delete(k) : open.add(k)); draw(); return; }
+      if (b.dataset.cat != null) { if (only || q) return; const k = b.dataset.cat; if (open.has(k)) open.delete(k); else open.add(k); draw(); if (open.has(k)) { const el = $(`.psSH[data-cat="${k}"]`, sh.body); if (el) el.scrollIntoView({behavior: 'smooth', block: 'nearest'}); } return; }
       if (b.dataset.id) fin(FP().find(p => p.id === b.dataset.id));
       else if (b.dataset.a === 'none') fin(null);
       else if (b.dataset.a === 'free') { const v = ((await askText('店名', '', '例如：巷口早餐店')) || '').trim(); if (v) fin({id: '', name: v.slice(0, 30)}); } }); });
