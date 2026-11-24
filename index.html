@@ -4,7 +4,7 @@
 <script>/* 線上更新開機程式：手機上若已下載比 APK 內建更新的介面版本，就改用新版（存在 IndexedDB）。
    新版連續兩次沒有正常開啟 → 自動退回 APK 內建版本。網址加上 #builtin 也會強制使用內建版本。 */
 (function () {
-  var B = '3.27.0'; if (!window.__OTA) window.APP_BUILTIN = B;
+  var B = '3.28.0'; if (!window.__OTA) window.APP_BUILTIN = B;
   if (window.__OTA || location.hash.indexOf('builtin') >= 0) return;
   var v = null; try { v = JSON.parse(localStorage.getItem('fm.ota') || 'null'); } catch (e) {}
   function gt(a, b) { a = String(a).split('.').map(Number); b = String(b).split('.').map(Number); for (var i = 0; i < Math.max(a.length, b.length); i++) { var p = a[i] || 0, q = b[i] || 0; if (p !== q) return p > q; } return false; }
@@ -1398,6 +1398,7 @@ table.ckT td.s{text-align:center}table.ckT th.s{text-align:center}
 .amPin.res span{background:#c0392b!important;border-color:#fff!important}.amPin.res span i{filter:grayscale(1) brightness(3)}.amPin.res.has span{background:#8a9a5b!important}.amPin.res b{font-size:.66rem}
 .amGFoot{display:grid;grid-template-columns:repeat(auto-fit,minmax(0,1fr));gap:.45rem;width:100%}.amGFoot .btn{min-width:0;white-space:nowrap;padding-left:.4rem;padding-right:.4rem;justify-content:center}
 .arList .arH{display:flex;align-items:center;gap:.35rem;font-weight:700;font-size:.82rem;color:var(--c,var(--accent));padding:.55rem .2rem .25rem;border-bottom:2px solid color-mix(in srgb,var(--c,#9a5a34) 35%,transparent)}.arList .arH em{font-style:normal;margin-left:auto;font-size:.74rem;color:var(--muted);font-weight:600}
+.mapFabs.tight .zm{display:none}
 </style>
 </head>
 <body>
@@ -1415,6 +1416,8 @@ table.ckT td.s{text-align:center}table.ckT th.s{text-align:center}
       <div id="areaBar"><select id="arC" class="glass" aria-label="縣市"></select><select id="arT" class="glass" aria-label="鄉鎮市區"></select><button class="ic glass" id="arMe" aria-label="我所在的鄉鎮市區">📍</button><button class="ic glass hide" id="arX" aria-label="取消區域">✕</button></div>
     </div>
     <div class="mapFabs" id="mapFabs">
+      <button class="fab glass zm" id="fbZin" aria-label="放大"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
+      <button class="fab glass zm" id="fbZout" aria-label="縮小"><svg viewBox="0 0 24 24"><path d="M5 12h14"/></svg></button>
       <button class="fab glass" id="fb3d" aria-label="切換 2D／3D">3D</button>
       <button class="fab glass" id="fbN" aria-label="轉回北方朝上"><svg viewBox="0 0 24 24"><path d="M12 3l4 9H8z" fill="currentColor"/><path d="M12 21l-4-9h8z"/></svg></button>
       <button class="fab glass" id="fbMe" aria-label="我的位置"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg></button>
@@ -3869,7 +3872,7 @@ var qrcode = function() {
 /* ============================================================
    日日帳本 — 核心：工具、資料儲存、主題、面板、拖曳排序、圖片
    ============================================================ */
-const APP_VERSION = '3.27.0';
+const APP_VERSION = '3.28.0';
 const APP_VER = APP_VERSION;
 /* 線上更新來源（GitHub Pages）：IanLin1120/food-map */
 const GH = {repo: 'https://github.com/IanLin1120/food-map', pages: 'https://ianlin1120.github.io/food-map/'};
@@ -4241,8 +4244,8 @@ async function initMap() {
     cv.addEventListener('touchmove', e => { const t = e.touches[0]; if (!t || e.touches.length > 1 || Math.hypot(t.clientX - sx, t.clientY - sy) > 10) clearTimeout(lt); }, {passive: true});
     ['touchend', 'touchcancel'].forEach(ev => cv.addEventListener(ev, () => clearTimeout(lt), {passive: true})); }
   syncMarkers();
-  /* 一進 App 就定位到現在的位置 */
-  locWarm(); Loc.start(); Loc.want = 1;
+  /* 一進 App 就定位到現在的位置、朝北，並選好目前的鄉鎮 */
+  locWarm(); Loc.start(); Loc.want = 3;
 }
 function mapResize() { if (M.map) setTimeout(() => M.map.resize(), 30); }
 function flyTo(lat, lon, z) { if (!M.map) return; M.map.flyTo({center: [lon, lat], zoom: Math.max(M.map.getZoom(), z || 16), pitch: S.map3d ? Math.max(M.map.getPitch(), 50) : M.map.getPitch(), duration: 900, essential: true}); }
@@ -4298,8 +4301,10 @@ function openState(p) {
 function stateHtml(p) { const s = openState(p); if (!s) return ''; return `<span class="dot ${s.open === true ? 'ok' : s.open === false ? 'no' : ''}"></span>${s.open === true ? '營業中 · ' : s.open === false && s.txt !== '今日休息' ? '休息中 · ' : ''}${esc(s.txt)}`; }
 
 /* ---------- 地圖下方資訊卡 ---------- */
-function showCard(html) { const c = $('#mCard'); c.innerHTML = html; c.classList.add('on'); requestAnimationFrame(() => { $('#mapFabs').style.bottom = c.offsetHeight + 22 + 'px'; }); }
-function hideCard() { $('#mCard').classList.remove('on'); $('#mapFabs').style.bottom = ''; }
+function showCard(html) { const c = $('#mCard'); c.innerHTML = html; c.classList.add('on'); requestAnimationFrame(() => { const f = $('#mapFabs'); f.style.bottom = c.offsetHeight + 22 + 'px'; fabFit(); }); }
+/* 下方清冊打開、空間不夠時，先把 ＋／－ 收起來，避免按鈕疊到上面的區域選單 */
+function fabFit() { const f = $('#mapFabs'), bar = $('#areaBar'); if (!f) return; f.classList.remove('tight'); if (!bar) return; const top = bar.getBoundingClientRect().bottom; if (f.getBoundingClientRect().top < top + 8) f.classList.add('tight'); }
+function hideCard() { $('#mCard').classList.remove('on'); $('#mapFabs').style.bottom = ''; $('#mapFabs').classList.remove('tight'); }
 function clearSel() { M.sel = null; M.draft = null; if (M.temp) { M.temp.remove(); M.temp = null; } hideCard(); syncMarkers(); if (S.area && !Area.hideList) Area.card(); }
 function mapBack() { if (curTab !== 'Map') return false; if (!$('#mResults').classList.contains('hide')) { hideResults(); return true; } if (M.sel || M.draft) { clearSel(); return true; } if (S.area) { Area.set(null); return true; } return false; }
 function selectPlace(id, fly) {
@@ -4359,7 +4364,8 @@ var Loc = {last: null, on: false, wid: null, want: 0, err: '', native() { return
     if (L && Date.now() - L.t < 10000 && acc > L.acc * 2.5 && L.acc < 80) return; /* 剛有精準 GPS 時，不要被粗略的網路定位拉走 */
     this.last = {lat, lon, acc: acc || 0, t: t || Date.now(), src}; this.err = ''; M.meLL = [lat, lon]; this.draw();
     if (this.want) { const fresh = Date.now() - this.last.t < 30000;
-      if (this.want === 1 || (fresh && acc < 120)) { this.fly(this.want === 1); this.want = fresh && acc < 60 ? 0 : 2; if (!this.want) this.busy(false); } }
+      if (this.want === 3) { this.entry(); this.want = fresh && acc < 60 ? 0 : 2; if (!this.want) this.busy(false); }
+      else if (this.want === 1 || (fresh && acc < 120)) { this.fly(this.want === 1); this.want = fresh && acc < 60 ? 0 : 2; if (!this.want) this.busy(false); } }
   },
   fail(code) { this.err = code; if (this.want && !this.last) { this.want = 0; this.busy(false);
     toast(code === 'denied' ? '請允許定位權限才能顯示你的位置' : code === 'off' ? '手機的定位功能是關閉的，請到系統設定開啟「位置」' : '暫時抓不到位置，請到室外或確認已開啟定位', 3500); } },
@@ -4368,6 +4374,13 @@ var Loc = {last: null, on: false, wid: null, want: 0, err: '', native() { return
     else M.me.setLngLat([L.lon, L.lat]); this.acc(); },
   acc() { if (!M.me || !this.last) return; const z = M.map.getZoom(), mpp = 156543.03 * Math.cos(this.last.lat * Math.PI / 180) / Math.pow(2, z), px = Math.min(400, Math.max(0, this.last.acc / mpp * 2));
     const a = M.me.getElement().querySelector('.meAcc'); a.style.width = a.style.height = px + 'px'; a.style.display = px > 22 ? '' : 'none'; },
+  /* 進 App：飛到目前位置、轉回朝北，並自動選好目前所在的鄉鎮市區 */
+  entry() { if (!M.map || !this.last) return; const L = this.last; M.map.flyTo({center: [L.lon, L.lat], zoom: Math.max(M.map.getZoom(), 15.5), bearing: 0, duration: 700, essential: true});
+    const tw = TW.init() && TW.townAt(L.lon, L.lat); if (tw && !(S.area && S.area.c === tw.county && S.area.t === tw.name) && !M.sel && !M.draft) Area.set({c: tw.county, t: tw.name}, false);
+    if (typeof AM !== 'undefined' && AM.map && curTab === 'AccM') accMapLocate('entry'); },
+  /* 回到 App（離開超過 3 分鐘）也當作重新進來 */
+  resume() { if (!this.hidAt || Date.now() - this.hidAt < 180000) return; this.hidAt = 0; if (curTab === 'AccM') { if (typeof accMapLocate === 'function') accMapLocate('entry'); return; }
+    if (this.last && Date.now() - this.last.t < 20000) this.entry(); else this.want = 3; },
   fly(first) { if (!M.map || !this.last) return; const c = [this.last.lon, this.last.lat];
     if (first) M.map.flyTo({center: c, zoom: Math.max(M.map.getZoom(), 16), duration: 700, essential: true}); else M.map.easeTo({center: c, duration: 500}); },
   busy(b) { const f = $('#fbMe'); if (f) f.classList.toggle('locating', !!b); clearTimeout(this.bt); if (b) this.bt = setTimeout(() => { if (this.want) { this.want = 0; this.busy(false); if (!this.last) toast('暫時抓不到位置，請到室外或確認已開啟定位', 3500); } }, 25000); }
@@ -4383,7 +4396,7 @@ function locateMe(quiet) {
 async function locWarm() {
   let ok = false; try { if (Loc.native()) ok = !!(NB.locHasPerm && NB.locHasPerm()); else if (navigator.permissions) ok = (await navigator.permissions.query({name: 'geolocation'})).state === 'granted'; } catch (e) {}
   if (ok || S.locOn) Loc.start();
-  document.addEventListener('visibilitychange', () => { if (document.hidden) { Loc.wasOn = Loc.on; Loc.stop(); } else if (Loc.wasOn) Loc.start(); });
+  document.addEventListener('visibilitychange', () => { if (document.hidden) { Loc.wasOn = Loc.on; Loc.hidAt = Date.now(); Loc.stop(); } else { if (Loc.wasOn) Loc.start(); Loc.resume(); } });
 }
 
 /* ---------- 搜尋：Google Places API (New)，與行跡導航相同；沒有金鑰時改用 OpenStreetMap ---------- */
@@ -5999,7 +6012,12 @@ const dayTotal = k => (DB.days[k] || []).reduce((s, m) => s + mealTotal(m), 0);
 const Meal = {sel: ymd(new Date()), ym: null};
 
 /* ---------- 主畫面 ---------- */
-function renderMeal() {
+/* 舊版點餐的選項可能跟品項本身的份量矛盾（例如「特製涼麵 (特大量)」卻記著「一般量」）：份量以品項為準，把矛盾的份量選項拿掉 */
+function itemSize(x) { if (x.s) return x.s; const m = String(x.n || '').match(/[（(]([^()（）]+)[)）]\s*$/); return m && isSizeWord(m[1].trim()) ? m[1].trim() : ''; }
+function fixOptSize(x) { const z = itemSize(x); if (!z || !x.o) return false; const sz = w => isSizeWord(w) || /^(麵|飯|份)?量?加大$|^加大/.test(w);
+  const a = String(x.o).split(/[，,]/).map(w => w.trim()).filter(Boolean), b = a.filter(w => !sz(w) || w === z); if (b.length === a.length) return false; if (b.length) x.o = b.join('，'); else delete x.o; return true; }
+function fixAllOptSize() { if (fixAllOptSize.done) return; fixAllOptSize.done = 1; let n = 0; Object.values(DB.days || {}).forEach(L => (L || []).forEach(m => (m.items || []).forEach(x => { if (fixOptSize(x)) n++; }))); if (n) saveDays(); }
+function renderMeal() { fixAllOptSize();
   const box = $('#mealBody'); if (!box) return; const sel = ymdDate(Meal.sel); if (!Meal.ym) Meal.ym = [sel.getFullYear(), sel.getMonth()];
   const [Y, Mo] = Meal.ym, first = new Date(Y, Mo, 1), nd = new Date(Y, Mo + 1, 0).getDate(), today = ymd(new Date()), yNow = new Date().getFullYear();
   const yrs = []; for (let y = Math.min(yNow - 5, Y); y <= Math.max(yNow + 2, Y); y++) yrs.push(y);
@@ -6188,7 +6206,7 @@ function openOrder(m, opt = {}) {
   const cnt = (n, s) => m.items.filter(x => wkey(x) === who && x.n === n && (x.s || '') === (s || '')).reduce((a, x) => a + x.q, 0);
   const add = (n, s, p, o) => { if (!who) { toast('請先新增要點餐的人'); return; } const pv = numP(p), x = m.items.find(i => wkey(i) === who && i.n === n && (i.s || '') === (s || '') && (i.o || '') === (o || '') && numP(i.p) === pv);
     const sh0 = who.startsWith('S:') ? {who: SHARE, share: keyIds(who)} : {who};
-    if (x) x.q++; else m.items.push(Object.assign({id: 'i' + uid(), n, s: s || '', p: pv, q: 1}, sh0, o ? {o} : {})); m.lastWho = who; buzz(12); saveDays(); draw(); };
+    if (x) x.q++; else { const it = Object.assign({id: 'i' + uid(), n, s: s || '', p: pv, q: 1}, sh0, o ? {o} : {}); fixOptSize(it); m.items.push(it); } m.lastWho = who; buzz(12); saveDays(); draw(); };
   const draw = () => { const C = P ? menuChoices(P, rg) : {list: [], regs: [], cur: ''}; rg = C.cur;
     const cus = DB.mcfg.custom.filter(c => (m.place ? c.place === m.place : c.pname === m.pname)).map(c => ({t: 'cus', c: '⭐ 自訂品項', n: c.n, full: c.n, og: [], v: [{s: '', p: c.p}], cid: c.id}));
     const all = cus.concat(C.list), cats = [...new Set(all.map(o => o.c))], hit = o => (!q || o.n.toLowerCase().includes(q)) && (!cat || o.c === cat);
@@ -8604,7 +8622,7 @@ async function accMapInit() {
       else if (m === 'me') accMapLocate(); });
     accGSInit(); AM.map.on('click', () => { const b = $('#amGR'); if (b) b.classList.add('hide'); const i = $('#amGQ'); if (i) i.blur(); });
     /* 一進到記帳的地圖就定位到現在的位置 */
-    AM.map.once('load', () => accMapLocate(true));
+    AM.map.once('load', () => accMapLocate('entry'));
   } catch (e) { $('#accMap').innerHTML = '<div class="empty">這台裝置不支援地圖</div>'; }
 }
 function accMapMarks(L) { if (!AM.map) return; AM.marks.forEach(m => m.remove()); AM.marks = [];
@@ -8618,7 +8636,7 @@ function accMapLocate(auto) { if (!AM.map) return; Loc.start(); const b = $('#am
       if (!AM.me) { const e = el('<div class="meWrap"><div class="meDot"></div></div>'); AM.me = new maplibregl.Marker({element: e}).setLngLat([L.lon, L.lat]).addTo(AM.map); } else AM.me.setLngLat([L.lon, L.lat]);
       /* 依目前位置自動選縣市、鄉鎮市區，直接顯示那一區的收藏 */
       const tw = TW.init() && TW.townAt(L.lon, L.lat);
-      if (!auto && tw && !(AM.area && AM.area.c === tw.county && AM.area.t === tw.name)) { AM.area = {c: tw.county, t: tw.name}; AM.f = 'all'; AM.q = ''; S.amFold = S.amFold || {}; Object.keys(S.amFold).forEach(k => { S.amFold[k] = false; }); DB.cats.map(c => c.id).concat(['', '_acc']).forEach(k => { S.amFold[k] = false; }); saveS(); AM.fit = false; renderAccMap(); toast(`📍 ${tw.county} ${tw.name}`); }
+      if (auto !== true && tw && !(AM.area && AM.area.c === tw.county && AM.area.t === tw.name)) { AM.area = {c: tw.county, t: tw.name}; AM.f = 'all'; AM.q = ''; S.amFold = S.amFold || {}; Object.keys(S.amFold).forEach(k => { S.amFold[k] = false; }); DB.cats.map(c => c.id).concat(['', '_acc']).forEach(k => { S.amFold[k] = false; }); saveS(); AM.fit = false; renderAccMap(); if (!auto) toast(`📍 ${tw.county} ${tw.name}`); }
       AM.map.flyTo({center: [L.lon, L.lat], zoom: Math.max(AM.map.getZoom(), 15.5), duration: 700}); return; }
     if (++n > 30 || Loc.err === 'denied' || Loc.err === 'off') { b && b.classList.remove('locating'); if (!auto) toast(Loc.err === 'denied' ? '請允許定位權限才能顯示你的位置' : Loc.err === 'off' ? '手機的定位功能是關閉的' : '暫時抓不到位置，請到室外或確認已開啟定位', 3500); return; }
     setTimeout(go, 500); };
@@ -9190,6 +9208,7 @@ async function xferRecv() {
   applyTheme(); modeUI(); initViewer(); initChips(); initSearch(); initCard(); initFav(); initRec(); initMeal(); initShop(); initInv(); initAcc(); initSet();
   $('#tabbar').addEventListener('click', e => { const b = e.target.closest('button'); if (b) { buzz(8); showTab(b.dataset.tab); } });
   $('#fb3d').onclick = () => { if (!M.map) return; const to3 = M.map.getPitch() <= 5; S.map3d = to3; saveS(); buzz(10); M.map.easeTo({pitch: to3 ? 55 : 0, duration: 500}); };
+  $('#fbZin').onclick = () => { buzz(10); if (M.map) M.map.zoomIn({duration: 250}); }; $('#fbZout').onclick = () => { buzz(10); if (M.map) M.map.zoomOut({duration: 250}); };
   $('#fbN').onclick = () => { if (M.map) M.map.easeTo({bearing: 0, duration: 400}); };
   $('#fbMe').onclick = () => { S.locOn = true; saveS(); locateMe(); }; $('#fbAdd').onclick = openAdd;
   window.addEventListener('resize', mapResize);
