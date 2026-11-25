@@ -4,7 +4,7 @@
 <script>/* 線上更新開機程式：手機上若已下載比 APK 內建更新的介面版本，就改用新版（存在 IndexedDB）。
    新版連續兩次沒有正常開啟 → 自動退回 APK 內建版本。網址加上 #builtin 也會強制使用內建版本。 */
 (function () {
-  var B = '3.31.0'; if (!window.__OTA) window.APP_BUILTIN = B;
+  var B = '3.32.0'; if (!window.__OTA) window.APP_BUILTIN = B;
   if (window.__OTA || location.hash.indexOf('builtin') >= 0) return;
   var v = null; try { v = JSON.parse(localStorage.getItem('fm.ota') || 'null'); } catch (e) {}
   function gt(a, b) { a = String(a).split('.').map(Number); b = String(b).split('.').map(Number); for (var i = 0; i < Math.max(a.length, b.length); i++) { var p = a[i] || 0, q = b[i] || 0; if (p !== q) return p > q; } return false; }
@@ -1467,6 +1467,48 @@ table.ckT td.s{text-align:center}table.ckT th.s{text-align:center}
 .stTbl{margin:.6rem 0;border:1px solid var(--border-soft);border-radius:6px;overflow:hidden;font-size:.8rem}
 .stTbl>div{display:grid;grid-template-columns:1fr 1.1fr 1.1fr 1.1fr 1.1fr;gap:.2rem;padding:.38rem .55rem;border-top:1px solid var(--border-soft)}.stTbl>div:first-child{border-top:0}
 .stTbl .th{background:var(--surface-2);font-weight:800;color:var(--muted)}.stTbl span{text-align:right;white-space:nowrap}.stTbl span:first-child{text-align:left}
+.tpTop{display:flex;align-items:flex-start;gap:.6rem;margin:-.2rem 0 .7rem}.tpTop .small{flex:1;line-height:1.5}.tpTop .btn{flex:none;white-space:nowrap}
+.tpGH{cursor:pointer}.tpArr{font-style:normal;color:var(--muted);margin-left:.4rem;font-size:.85rem}.tpG.fold{margin-bottom:.5rem}
+/* 說明書／金鑰教學：示意圖不再被壓扁裁切（字放大時也一樣），並加上進場動畫 */
+.tut{height:auto;min-height:100%}
+.tut>*{flex-shrink:0}
+.mock,.ph,.gHero,.gGrid,.gKeys,.gPick{flex-shrink:0}
+.mock .bd .row{flex-wrap:wrap}
+.tut>*{animation:tutIn .42s cubic-bezier(.2,.8,.2,1) both}
+.tut.back>*{animation-name:tutInB}
+.tut>*:nth-child(2){animation-delay:.03s}.tut>*:nth-child(3){animation-delay:.06s}.tut>*:nth-child(4){animation-delay:.1s}.tut>*:nth-child(5){animation-delay:.16s}.tut>*:nth-child(6){animation-delay:.22s}.tut>*:nth-child(n+7){animation-delay:.28s}
+.tut ul li{animation:tutLi .4s ease-out both}.tut ul li:nth-child(1){animation-delay:.25s}.tut ul li:nth-child(2){animation-delay:.33s}.tut ul li:nth-child(3){animation-delay:.41s}.tut ul li:nth-child(4){animation-delay:.49s}.tut ul li:nth-child(n+5){animation-delay:.57s}
+.ph .phBd>*,.mock .bd>*{animation:tutPop .45s cubic-bezier(.2,.9,.3,1.2) both}
+.ph .phBd>*:nth-child(1),.mock .bd>*:nth-child(1){animation-delay:.12s}.ph .phBd>*:nth-child(2),.mock .bd>*:nth-child(2){animation-delay:.2s}.ph .phBd>*:nth-child(3),.mock .bd>*:nth-child(3){animation-delay:.28s}.ph .phBd>*:nth-child(4),.mock .bd>*:nth-child(4){animation-delay:.36s}.ph .phBd>*:nth-child(n+5),.mock .bd>*:nth-child(n+5){animation-delay:.44s}
+.pMap .flag{animation:flagDrop .6s cubic-bezier(.3,1.5,.5,1) .35s both}.pMap .f2{animation-delay:.5s}
+.tutDots i{transition:width .3s,background .3s}
+@keyframes tutIn{from{opacity:0;transform:translateX(26px)}to{opacity:1;transform:none}}
+@keyframes tutInB{from{opacity:0;transform:translateX(-26px)}to{opacity:1;transform:none}}
+@keyframes tutLi{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@keyframes tutPop{from{opacity:0;transform:scale(.94) translateY(6px)}to{opacity:1;transform:none}}
+@keyframes flagDrop{from{opacity:0;transform:translateY(-22px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.tut>*,.tut ul li,.ph .phBd>*,.mock .bd>*,.pMap .flag{animation:none!important}}
+/* 按鈕群組：自動換行時每一排都撐滿寬度、平均分配，右邊不留大空白；文字不換行、不超出 */
+.row.wrap>.btn,.row.wrap>a.btn{flex:1 1 auto;justify-content:center;white-space:nowrap;text-align:center}
+.row.wrap>.grow:empty{display:none}
+/* 付款帳戶種類：圖示在上、文字在下，五個一排；字放大放不下時自動換成兩排，不再出現「行動…」 */
+.dkSeg.acKind{grid-template-columns:repeat(auto-fit,minmax(3.4rem,1fr))}
+.dkSeg.acKind button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.1rem;font-size:.74rem;line-height:1.2;padding:.45rem .1rem;text-overflow:clip}
+.dkSeg.acKind button .ic,.dkSeg.acKind button>span:first-child{font-size:1.05rem}
+.acRow2{grid-template-columns:repeat(auto-fit,minmax(9.5rem,1fr))}.acRow2 .btn{text-overflow:clip}
+.dkSeg.acKind button b{font-weight:800;white-space:nowrap}
+/* 自訂下拉清單 */
+.spk{display:grid;gap:.45rem;margin-bottom:.6rem}.spk.c3{grid-template-columns:repeat(3,minmax(0,1fr))}.spk.c2{grid-template-columns:repeat(2,minmax(0,1fr))}.spk.c1{grid-template-columns:1fr}
+.spk button{position:relative;display:flex;align-items:center;justify-content:center;gap:.3rem;min-height:2.9rem;padding:.5rem .4rem;border:1px solid var(--border);border-radius:6px;background:var(--surface-3);font-weight:700;font-size:.95rem;color:var(--text);min-width:0}
+.spk.c1 button{justify-content:flex-start;padding-left:.9rem}
+.spk button span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.spk button.on{background:var(--accent);border-color:var(--accent);color:#fff}.spk button i{font-style:normal;font-size:.8rem}
+.spk button:disabled{opacity:.45}
+.spkG{font-size:.78rem;font-weight:800;color:var(--muted);margin:.4rem 0 .35rem}
+select:not([multiple]){-webkit-appearance:none;appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);background-position:calc(100% - 1.05rem) 50%,calc(100% - .7rem) 50%;background-size:.35rem .35rem;background-repeat:no-repeat;padding-right:1.8rem!important;text-overflow:ellipsis;white-space:nowrap;overflow:hidden}
+.dkSeg.acKind{grid-template-columns:repeat(5,minmax(0,1fr))!important}
+.dkSeg.acKind button b{font-size:.7rem;letter-spacing:-.02em}
+.mock .bd .row>.card2{min-width:6.5rem}
 </style>
 </head>
 <body>
@@ -1481,7 +1523,7 @@ table.ckT td.s{text-align:center}table.ckT th.s{text-align:center}
       </div><button id="favBtn" class="glass" aria-label="收藏"><svg viewBox="0 0 24 24"><path d="M6.5 3.5h11v17l-5.5-3.8-5.5 3.8z"/></svg><span>收藏</span><em id="favBadge"></em></button></div>
       <div id="mResults" class="card hide"></div>
       <div id="chips" class="noSel"></div>
-      <div id="areaBar"><select id="arC" class="glass" aria-label="縣市"></select><select id="arT" class="glass" aria-label="鄉鎮市區"></select><button class="ic glass" id="arMe" aria-label="我所在的鄉鎮市區">📍</button><button class="ic glass hide" id="arX" aria-label="取消區域">✕</button></div>
+      <div id="areaBar"><select id="arC" class="glass" aria-label="選擇縣市"></select><select id="arT" class="glass" aria-label="選擇鄉鎮市區"></select><button class="ic glass" id="arMe" aria-label="我所在的鄉鎮市區">📍</button><button class="ic glass hide" id="arX" aria-label="取消區域">✕</button></div>
     </div>
     <div class="mapFabs" id="mapFabs">
       <button class="fab glass zm" id="fbZin" aria-label="放大"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
@@ -3940,7 +3982,7 @@ var qrcode = function() {
 /* ============================================================
    日日帳本 — 核心：工具、資料儲存、主題、面板、拖曳排序、圖片
    ============================================================ */
-const APP_VERSION = '3.31.0';
+const APP_VERSION = '3.32.0';
 const APP_VER = APP_VERSION;
 /* 線上更新來源（GitHub Pages）：IanLin1120/food-map */
 const GH = {repo: 'https://github.com/IanLin1120/food-map', pages: 'https://ianlin1120.github.io/food-map/'};
@@ -5772,14 +5814,14 @@ const TUT = {
     {t: '把金鑰貼到這裡', paste: true, h: '<p>把剛剛複製的金鑰貼到下面，按「測試金鑰」確認可以使用。</p>'}]}
 };
 function openTutorial(kind) {
-  const T = TUT[kind]; let i = 0; const sh = sheet({title: T.title, full: true, foot: '<button class="btn" data-a="prev">‹ 上一步</button><button class="btn pri" data-a="next">下一步 ›</button>', onClose() { if (curTab === 'Set') renderSet(); }});
+  const T = TUT[kind]; let i = 0, dir = 1; const sh = sheet({title: T.title, full: true, foot: '<button class="btn" data-a="prev">‹ 上一步</button><button class="btn pri" data-a="next">下一步 ›</button>', onClose() { if (curTab === 'Set') renderSet(); }});
   const render = () => { const s = T.steps[i], last = i === T.steps.length - 1;
-    sh.body.innerHTML = `<div class="tut"><div class="tutDots">${T.steps.map((_, k) => `<i class="${k === i ? 'on' : ''}"></i>`).join('')}</div><div class="tutStep">步驟 ${i + 1} / ${T.steps.length}</div><h2>${s.t}</h2>${s.h}
+    sh.body.innerHTML = `<div class="tut ${dir < 0 ? 'back' : 'fwd'}"><div class="tutDots">${T.steps.map((_, k) => `<i class="${k === i ? 'on' : ''}"></i>`).join('')}</div><div class="tutStep">步驟 ${i + 1} / ${T.steps.length}</div><h2>${s.t}</h2>${s.h}
       ${s.paste ? `<div class="keyBox"><input id="tK" value="${esc(S[T.key])}" placeholder="在這裡貼上金鑰（AIza…）" autocomplete="off"><button class="btn sm" data-a="paste">貼上</button></div><div style="margin:.7rem 0"><button class="btn olive block" data-a="test">測試金鑰</button></div><div class="testOut" id="tOut"></div>` : ''}
       ${s.url ? `<button class="btn pri block" data-a="go" style="margin-top:.8rem">${s.btn} ↗</button><div class="small muted" style="text-align:center;margin-top:.4rem">會用瀏覽器開啟，完成後回到這裡按「下一步」</div>` : ''}</div>`;
     sh.body.scrollTop = 0; $('[data-a="prev"]', sh.foot).disabled = i === 0; $('[data-a="next"]', sh.foot).textContent = last ? '完成' : '下一步 ›'; };
   render();
-  sh.foot.addEventListener('click', e => { const b = e.target.closest('[data-a]'); if (!b) return; if (b.dataset.a === 'prev') { if (i > 0) i--; render(); } else if (i < T.steps.length - 1) { i++; render(); } else sh.close(); });
+  sh.foot.addEventListener('click', e => { const b = e.target.closest('[data-a]'); if (!b) return; buzz(8); if (b.dataset.a === 'prev') { if (i > 0) i--; dir = -1; render(); } else if (i < T.steps.length - 1) { i++; dir = 1; render(); } else sh.close(); });
   sh.body.addEventListener('input', e => { if (e.target.id === 'tK') { S[T.key] = e.target.value.trim(); if (kind === 'maps') GPC.clear(); saveS(); } });
   sh.body.addEventListener('click', async e => { const b = e.target.closest('[data-a]'); if (!b) return; const a = b.dataset.a;
     if (a === 'go') openUrl(T.steps[i].url);
@@ -7207,7 +7249,7 @@ const GUIDE = {
     {t: '② 備註、圖片、分帳', h: phone('📒 記一筆', `<div class="pBtns">${pb('🧾 用分帳方式輸入', 'pri hl') + tap}${pb('📥 從分帳帶入')}</div>${pc('<b>備註／消費明細</b><small>小美：泡菜鍋[NT$ 200]×1　小計 $343</small>')}<div class="pImgs"><i>🖼️</i><i>＋</i></div>`, '記帳', 'acc') +
       `<ul><li><b>🧾 用分帳方式輸入</b>：跟分帳一樣輸入品項、誰付、折扣、平台費，完成後寫進備註</li><li><b>📥 從分帳帶入</b>（或記帳頁的「從分帳匯入」）：品項、每人金額和圖片一起帶入，不會重複匯入</li><li>可以加截圖；下面的 🤝 分帳選誰付的錢、誰要分（平均或自己填）</li></ul>`},
     {t: '③ 常用紀錄', h: phone('⭐ 常用紀錄', `<div class="pSeg"><i class="on">支出</i><i>收入</i><i>轉帳</i></div>${pc('<b>春日公寓-3F-房租</b><small>$10,000</small>')}${pc('<b>電費</b><small>💬 每次輸入金額</small>')}<div class="pBtns">${pb('🗑 刪除')}${pb('＋ 另存常用', 'hl') + tap}${pb('✓ 儲存', 'pri')}</div>`, '記帳', 'acc') +
-      `<ul><li>記一筆填好後按 <b>⭐ 存成常用</b>（金額可以不填，每次使用時再輸入）；記帳頁的「⭐ 常用紀錄」顯示有幾個常用，按「打開」</li><li>點一個常用紀錄會打開 <b>記一筆</b>，內容都帶好，<b>確認後再儲存</b>；沒有輸入金額就按儲存會跳出提醒</li><li>編輯時按 <b>＋ 另存常用</b> 可以複製成一個新的（例如另一間房租）</li><li>按住拖曳排序；分類也可以拖曳調整順序</li></ul>`},
+      `<ul><li>記一筆填好後按 <b>⭐ 存成常用</b>（金額可以不填，每次使用時再輸入）；記帳頁的「⭐ 常用紀錄」顯示有幾個常用，按「打開」</li><li>點一個常用紀錄會打開 <b>記一筆</b>，內容都帶好，<b>確認後再儲存</b>；沒有輸入金額就按儲存會跳出提醒</li><li>編輯時按 <b>＋ 另存常用</b> 可以複製成一個新的（例如另一間房租）</li><li>點分類名稱可以收合，右上角「全部收合／全部展開」一鍵切換；按住拖曳排序，分類也可以按住整組上下移動</li></ul>`},
     {t: '④ 欠款和對帳', h: phone('🤝 和小美對帳', `${pc('<b>小美 欠我</b><small>$587</small>')}${pc('<b>☑ 11/21 晨曦早午餐　$285</b><small>☑ 11/22 好鄰居超市　$302</small>')}<div class="pBtns">${pb('✅ 結清', 'pri wide hl') + tap}</div>`, '記帳', 'acc') +
       `<ul><li>有分帳的紀錄會自動算出誰欠誰</li><li>按 <b>🤝 對帳</b>，選日期範圍，勾選這次要結清的幾筆</li><li>選錢收進哪個帳戶（銀行或現金）和對方怎麼付的（LINE Pay、台灣 Pay、轉帳…），結清後會記一筆還款並更新資產</li><li><b>對帳紀錄</b>：可以整批復原，或單獨把某一筆改回未結清；已經從記帳刪掉的紀錄不會再出現；確認沒問題的按「確認此批沒有問題」就會收起來</li></ul>`},
     {t: '⑤ 資產', h: phone('資產', `<div class="pBtns" style="justify-content:flex-end">${pb('👁 顯示金額', 'hl') + tap}</div>${pc('<b>淨資產</b><small>$ ••••</small>')}${pc('<b>🏦 銀行</b><small>我的銀行　$ ••••</small>')}`, '資產', 'acc') +
@@ -7228,14 +7270,14 @@ const GUIDE = {
       `<ul><li><b>桌面小工具</b>：長按桌面空白處 →「小工具」→ 日日帳本，按「＋ 支出」直接打開記一筆</li><li><b>通知欄</b>：記帳 → 設定 → 快速記帳，打開「通知欄快速記帳」，通知上有「＋ 支出／＋ 收入／⭐ 常用」三顆按鈕</li><li><b>控制中心</b>：下拉兩次 → 編輯（鉛筆）→ 把「記一筆」和「常用記帳」拖進去</li><li>不想讓別人看到金額：關掉「小工具和通知顯示金額」</li></ul>`}]}
 };
 function openGuide(kind) {
-  const G = GUIDE[kind]; let i = 0; buzz(10);
+  const G = GUIDE[kind]; let i = 0, dir = 1; buzz(10);
   const sh = sheet({title: G.title, full: true, foot: '<button class="btn" data-a="prev">‹ 上一步</button><button class="btn pri" data-a="next">下一步 ›</button>'});
   const render = () => { const s = G.steps[i], last = i === G.steps.length - 1;
-    sh.body.innerHTML = `<div class="tut gd"><div class="tutDots">${G.steps.map((_, k) => `<i class="${k === i ? 'on' : ''}" data-k="${k}"></i>`).join('')}</div><div class="tutStep">${i + 1} / ${G.steps.length}</div><h2>${s.t}</h2>${s.h}</div>`;
+    sh.body.innerHTML = `<div class="tut gd ${dir < 0 ? 'back' : 'fwd'}"><div class="tutDots">${G.steps.map((_, k) => `<i class="${k === i ? 'on' : ''}" data-k="${k}"></i>`).join('')}</div><div class="tutStep">${i + 1} / ${G.steps.length}</div><h2>${s.t}</h2>${s.h}</div>`;
     sh.body.scrollTop = 0; $('[data-a="prev"]', sh.foot).disabled = i === 0; $('[data-a="next"]', sh.foot).textContent = last ? '完成 ✓' : '下一步 ›'; };
   render();
-  sh.foot.addEventListener('click', e => { const b = e.target.closest('[data-a]'); if (!b) return; buzz(8); if (b.dataset.a === 'prev') { if (i > 0) i--; render(); } else if (i < G.steps.length - 1) { i++; render(); } else sh.close(); });
-  sh.body.addEventListener('click', e => { const t = e.target.closest('[data-tut],[data-k]'); if (!t) return; if (t.dataset.tut) openTutorial(t.dataset.tut); else { i = +t.dataset.k; render(); } });
+  sh.foot.addEventListener('click', e => { const b = e.target.closest('[data-a]'); if (!b) return; buzz(8); if (b.dataset.a === 'prev') { if (i > 0) i--; dir = -1; render(); } else if (i < G.steps.length - 1) { i++; dir = 1; render(); } else sh.close(); });
+  sh.body.addEventListener('click', e => { const t = e.target.closest('[data-tut],[data-k]'); if (!t) return; if (t.dataset.tut) openTutorial(t.dataset.tut); else { const k = +t.dataset.k; dir = k < i ? -1 : 1; i = k; buzz(8); render(); } });
   let x0 = null; sh.body.addEventListener('touchstart', e => { x0 = e.touches[0].clientX; }, {passive: true});
   sh.body.addEventListener('touchend', e => { if (x0 == null) return; const dx = e.changedTouches[0].clientX - x0; x0 = null; if (Math.abs(dx) < 60) return; if (dx < 0 && i < G.steps.length - 1) i++; else if (dx > 0 && i > 0) i--; else return; buzz(8); render(); }, {passive: true});
 }
@@ -8321,7 +8363,7 @@ const emojiSplit = s => { const m = String(s).trim().match(/^(\p{Extended_Pictog
 function acctPickerHtml(cur, key, fund) {
   const a = accAcct(cur), kind = (a && a.kind) || (acctPickerHtml.k || {})[key] || 'cash', L = DB.acc.accts.filter(x => x.kind === kind);
   const fk = key === 'to' ? 'fund2' : 'fund', F = a && a.kind === 'pay' ? (fund || a.fund || '') : '';
-  return `<div class="dkSeg acKind">${Object.entries(AK).map(([k, [n, i]]) => `<button data-kind="${k}" data-key="${key}" class="${k === kind ? 'on' : ''}">${i} ${n}</button>`).join('')}</div>
+  return `<div class="dkSeg acKind">${Object.entries(AK).map(([k, [n, i]]) => `<button data-kind="${k}" data-key="${key}" class="${k === kind ? 'on' : ''}"><span>${i}</span><b>${n}</b></button>`).join('')}</div>
     <div class="acAccts">${L.map(x => `<button data-acct="${x.id}" data-key="${key}" class="${x.id === cur ? 'on' : ''}">${aIco(x)} ${esc(x.n)}</button>`).join('')}<button data-a="addAcct" data-kind="${kind}" data-key="${key}" class="add">＋ 新增${AK[kind][0]}</button></div>
     ${a && a.kind === 'pay' ? `<div class="acFund"><small>實際從哪裡扣款</small><div class="acAccts">${DB.acc.accts.filter(x => x.kind === 'bank' || x.kind === 'card' || x.kind === 'stored').map(x => `<button data-fund="${x.id}" data-fk="${fk}" class="${x.id === F ? 'on' : ''}">${aIco(x)} ${esc(x.n)}</button>`).join('') || '<span class="muted small">先新增銀行、信用卡或儲值帳戶</span>'}</div></div>` : ''}`;
 }
@@ -8710,7 +8752,7 @@ function editAcct(a) {
   /* 收支明細依月份分組，可以收合；預設只打開最新的月份 */
   const moOpen = new Set(); { const f = (flows[0] || payUse[0]); if (f) moOpen.add(f.d.slice(0, 7)); }
   const draw = () => { const cur = acctBal(a); sh.body.innerHTML = `<div class="niRow"><button class="niIc" data-a="ic">${aIco({i: ic, logo, kind})}<small>換圖示</small></button><div class="field grow" style="margin:0"><label>名稱</label><input id="eaN" value="${esc(a.n)}"></div></div>
-    <div class="lbl">種類</div><div class="dkSeg acKind">${Object.entries(AK).map(([k, [n, i]]) => `<button data-k="${k}" class="${kind === k ? 'on' : ''}">${i} ${n}</button>`).join('')}</div>
+    <div class="lbl">種類</div><div class="dkSeg acKind">${Object.entries(AK).map(([k, [n, i]]) => `<button data-k="${k}" class="${kind === k ? 'on' : ''}"><span>${i}</span><b>${n}</b></button>`).join('')}</div>
     ${kind === 'pay' ? `<div class="lbl" style="margin-top:.8rem">綁定哪個帳戶扣款（記帳時預設從這裡扣）</div><div class="acAccts">${DB.acc.accts.filter(x => x.kind === 'bank' || x.kind === 'card' || x.kind === 'stored').map(x => `<button data-fd="${x.id}" class="${fund === x.id ? 'on' : ''}">${aIco(x)} ${esc(x.n)}</button>`).join('') || '<span class="muted small">先新增銀行、信用卡或儲值帳戶</span>'}</div>`
       : `<div class="field" style="margin-top:.8rem"><label>目前餘額${kind === 'card' ? '（信用卡欠款請填負數，例如 -3500）' : ''}</label><input id="eaB" value="${cur}" inputmode="decimal"></div>`}
     ${kind === 'card' ? `<div class="field"><label>每月幾號還款（1～28）</label><input id="eaD" value="${a.payDay || ''}" inputmode="numeric" placeholder="例如 5"></div><div class="lbl">從哪個帳戶自動扣款還款</div><div class="acAccts">${DB.acc.accts.filter(x => x.kind === 'bank').map(x => `<button data-pf="${x.id}" class="${pf === x.id ? 'on' : ''}">${aIco(x)} ${esc(x.n)}</button>`).join('') || '<span class="muted small">先在「銀行」新增帳戶</span>'}</div>` : ''}
@@ -8858,7 +8900,7 @@ async function renderAccMap() {
   const ordOf = k => ((DB.acc.amOrd || {})[k]) || [], anyOpen = AM.f === 'all' && cats.some(k => !amFolded(k));
   const towns = AM.area && TW.counties[AM.area.c] ? TW.counties[AM.area.c].towns : [];
   $('#accMList').innerHTML = `<div class="amChips">${[['all', '🗺️ 全部', '']].concat(cats.map(k => { const c = amCat(k); return [k, `${c.icon} ${c.name}`, c.color]; })).map(([k, t, c]) => `<button class="chip ${AM.f === k ? 'on' : ''}" data-f="${k}" ${c ? `style="--c:${c}"` : ''}>${esc(t)} <span class="n">${cnt(k)}</span></button>`).join('')}</div>
-    ${TW.ready ? `<div class="amArea"><select id="amC"><option value="">全部縣市</option>${TW.names.map(n => `<option ${AM.area && AM.area.c === n ? 'selected' : ''}>${n}</option>`).join('')}</select><select id="amT" ${AM.area ? '' : 'disabled'}><option value="">全部鄉鎮市區</option>${towns.map(t => `<option ${AM.area && AM.area.t === t.name ? 'selected' : ''}>${t.name}</option>`).join('')}</select>${AM.area ? '<button class="ic" data-a="arX" aria-label="取消區域">✕</button>' : ''}</div>` : ''}
+    ${TW.ready ? `<div class="amArea"><select id="amC" aria-label="選擇縣市"><option value="">全部縣市</option>${TW.names.map(n => `<option ${AM.area && AM.area.c === n ? 'selected' : ''}>${n}</option>`).join('')}</select><select id="amT" aria-label="選擇鄉鎮市區" ${AM.area ? '' : 'disabled'}><option value="">全部鄉鎮市區</option>${towns.map(t => `<option ${AM.area && AM.area.t === t.name ? 'selected' : ''}>${t.name}</option>`).join('')}</select>${AM.area ? '<button class="ic" data-a="arX" aria-label="取消區域">✕</button>' : ''}</div>` : ''}
     <div class="amBar"><div class="searchBox amQ"><input id="amQ" type="search" placeholder="搜尋店名或地址" value="${esc(AM.q)}"></div>${AM.f === 'all' && cats.length > 1 ? `<button class="btn sm amFoldAll" data-a="foldAll">${anyOpen ? '⊟ 全部收合' : '⊞ 全部展開'}</button>` : ''}</div>
     <div class="small muted amTip">按住分類標題可以上下移動；展開後按住店家可以排序</div><div id="amSecs">
     ${(AM.f === 'all' ? cats : [AM.f]).map(k => { const c = amCat(k), od = ordOf(k), oi = o => { const i = od.indexOf(o.n); return i < 0 ? 1e6 : i; }, L = V.filter(o => o.cat === k).sort((a, b) => oi(a) - oi(b) || ((b.st || {}).last || '').localeCompare((a.st || {}).last || '') || a.n.localeCompare(b.n, 'zh-Hant')); if (!L.length) return '';
@@ -9120,6 +9162,7 @@ function managePayees() {
 }
 function manageTpls() { tplList(); }
 /* 常用紀錄完整清單：支出／收入／轉帳，依分類排列；長按拖曳排序 */
+const tpFolded = k => !!(S.tpFold || {})[k];
 function tplList() {
   let ty = 'out'; const sh = sheet({title: '⭐ 常用紀錄', full: true, foot: '<button class="btn pri" data-a="new">＋ 新增常用紀錄</button>'});
   const groups = () => { const L = DB.acc.tpls.filter(t => (t.type || 'out') === ty), G = [];
@@ -9130,15 +9173,17 @@ function tplList() {
     return G.map((g, i) => [g, i]).sort((a, b) => at(a[0].k) - at(b[0].k) || a[1] - b[1]).map(x => x[0]); };
   const draw = () => { const G = groups(), n = k => DB.acc.tpls.filter(t => (t.type || 'out') === k).length;
     sh.body.innerHTML = `<div class="acType three"><button data-ty="out" class="${ty === 'out' ? 'on' : ''}">支出 ${n('out') || ''}</button><button data-ty="in" class="${ty === 'in' ? 'on' : ''}">收入 ${n('in') || ''}</button><button data-ty="tr" class="${ty === 'tr' ? 'on' : ''}">轉帳 ${n('tr') || ''}</button></div>
-      <div class="small muted" style="margin:-.2rem 0 .7rem">點一下就用今天的日期記帳；按住紀錄拖曳可以在分類裡排序，按住分類名稱可以整組上下移動；按 ✎ 編輯。</div>
-      <div id="tpL">${G.map(g => `<div class="tpG" data-g="${g.k}"><div class="tpGH">${G.length > 1 ? '<span class="grip"></span>' : ''}<span class="lbl">${esc(g.n)}</span><em>${g.L.length}</em></div>${g.L.map(t => `<div class="tpR card" data-t="${t.id}"><span class="grip"></span><button class="tpUse" data-use="${t.id}"><b>${esc(t.name)}</b><small>${esc([t.payee, t.type === 'tr' ? acctName(t.acct) + ' → ' + acctName(t.to) : acctName(t.acct), (t.split || []).length ? '分帳 ' + t.split.length + ' 人' : ''].filter(Boolean).join('・'))}</small><span class="tpV ${!+t.amt ? '' : t.type === 'in' ? 'pos' : t.type === 'out' ? 'neg' : ''}">${+t.amt ? money(t.amt) : '💬 每次輸入金額'}</span></button><button class="ic" data-ed="${t.id}" aria-label="編輯">✎</button></div>`).join('')}</div>`).join('') || '<div class="empty">這一類還沒有常用紀錄<br><span class="small">按下面「＋ 新增常用紀錄」，或在記一筆時按「⭐ 存成常用」</span></div>'}</div>`;
+      <div class="tpTop"><span class="small muted">點一下打開記一筆確認；點分類名稱收合，按住可以整組上下移動；按住紀錄拖曳排序；按 ✎ 編輯。</span>${G.length > 1 ? `<button class="btn sm" data-fa="1">${G.every(g => tpFolded(g.k)) ? '⊞ 全部展開' : '⊟ 全部收合'}</button>` : ''}</div>
+      <div id="tpL">${G.map(g => `<div class="tpG ${tpFolded(g.k) ? 'fold' : ''}" data-g="${g.k}"><div class="tpGH" data-fg="${g.k}">${G.length > 1 ? '<span class="grip"></span>' : ''}<span class="lbl">${esc(g.n)}</span><em>${g.L.length}</em><i class="tpArr">${tpFolded(g.k) ? '▸' : '▾'}</i></div>${(tpFolded(g.k) ? [] : g.L).map(t => `<div class="tpR card" data-t="${t.id}"><span class="grip"></span><button class="tpUse" data-use="${t.id}"><b>${esc(t.name)}</b><small>${esc([t.payee, t.type === 'tr' ? acctName(t.acct) + ' → ' + acctName(t.to) : acctName(t.acct), (t.split || []).length ? '分帳 ' + t.split.length + ' 人' : ''].filter(Boolean).join('・'))}</small><span class="tpV ${!+t.amt ? '' : t.type === 'in' ? 'pos' : t.type === 'out' ? 'neg' : ''}">${+t.amt ? money(t.amt) : '💬 每次輸入金額'}</span></button><button class="ic" data-ed="${t.id}" aria-label="編輯">✎</button></div>`).join('')}</div>`).join('') || '<div class="empty">這一類還沒有常用紀錄<br><span class="small">按下面「＋ 新增常用紀錄」，或在記一筆時按「⭐ 存成常用」</span></div>'}</div>`;
     sortable($('#tpL', sh.body), {item: '.tpR', scope: '.tpG', scroller: sh.body, onSort(f, t, scope) { const ids = $$('.tpR', scope).map(e => e.dataset.t), mv = ids.splice(f, 1)[0]; ids.splice(t, 0, mv);
       const pos = DB.acc.tpls.map((x, i) => ids.includes(x.id) ? i : -1).filter(i => i >= 0), objs = ids.map(id => DB.acc.tpls.find(x => x.id === id)); pos.forEach((p, i) => { DB.acc.tpls[p] = objs[i]; }); saveAcc(); draw(); renderAcc(); }});
     /* 分類整組上下移動 */
     if (G.length > 1) sortable($('#tpL', sh.body), {item: '.tpG', handle: '.tpGH', handleOnly: true, scroller: sh.body, onSort(f, t) { const ks = G.map(g => g.k), mv = ks.splice(f, 1)[0]; ks.splice(t, 0, mv);
       DB.acc.tgord = DB.acc.tgord || {}; DB.acc.tgord[ty] = ks; saveAcc(); draw(); renderAcc(); }}); };
   draw();
-  sh.body.addEventListener('click', async e => { const t = e.target.closest('button'); if (!t) return; buzz(8); const d = t.dataset;
+  sh.body.addEventListener('click', async e => { const fg = e.target.closest('[data-fg]'); if (fg && !e.target.closest('button')) { buzz(8); const k = fg.dataset.fg; S.tpFold = S.tpFold || {}; S.tpFold[k] = !tpFolded(k); saveS(); draw(); return; }
+    const t = e.target.closest('button'); if (!t) return; buzz(8); const d = t.dataset;
+    if (d.fa) { const G = groups(), all = G.every(g => tpFolded(g.k)); S.tpFold = S.tpFold || {}; G.forEach(g => { S.tpFold[g.k] = !all; }); saveS(); draw(); return; }
     if (d.ty) { ty = d.ty; draw(); return; }
     if (d.use) { const tp = DB.acc.tpls.find(x => x.id === d.use); sh.close(); useTpl(tp); return; }
     if (d.ed) { const tp = DB.acc.tpls.find(x => x.id === d.ed); await accEdit(tp, null, {tpl: true}); draw(); renderAcc(); } });
@@ -9502,6 +9547,24 @@ async function xferRecv() {
   Share.check(); document.addEventListener('visibilitychange', () => { if (!document.hidden) { setTimeout(() => Share.check(), 300); setTimeout(() => Quick.check(), 200); } });
   setTimeout(() => { Quick.check(); accWidgetPush(); }, 400);
   window.__ready = true;
+})();
+
+/* 下拉選單：不用系統那個白底的原生選單，改成跟 App 一樣風格的底部清單；按鈕一樣大、對齊，文字不會跑出去 */
+(() => {
+  let last = 0;
+  const label = sel => { const r = sel.closest('.setR,.field,label'); const t = sel.getAttribute('aria-label') || (r && (r.querySelector('b,label') || {}).textContent) || (sel.options[0] && sel.options[0].disabled ? sel.options[0].textContent : '') || '請選擇'; return String(t).trim().slice(0, 24); };
+  function pick(sel) { if (Date.now() - last < 400) return; last = Date.now(); buzz(8);
+    const groups = []; [...sel.children].forEach(c => { if (c.tagName === 'OPTGROUP') groups.push({g: c.label, L: [...c.children]}); else { const g = groups[groups.length - 1]; if (g && g.g == null) g.L.push(c); else groups.push({g: null, L: [c]}); } });
+    const all = [...sel.options].filter(o => !o.hidden), mx = Math.max(...all.map(o => [...o.textContent.trim()].length)), cols = mx <= 5 ? 3 : mx <= 9 ? 2 : 1;
+    const sh = sheet({title: label(sel)}), cur = sel.value;
+    sh.body.innerHTML = groups.map(g => `${g.g ? `<div class="spkG">${esc(g.g)}</div>` : ''}<div class="spk c${cols}">${g.L.filter(o => !o.hidden).map(o => `<button data-v="${esc(o.value)}" class="${o.value === cur ? 'on' : ''}" ${o.disabled ? 'disabled' : ''}>${o.value === cur ? '<i>✓</i>' : ''}<span>${esc(o.textContent.trim())}</span></button>`).join('')}</div>`).join('');
+    requestAnimationFrame(() => { const on = $('.spk .on', sh.body); if (on) on.scrollIntoView({block: 'center'}); });
+    sh.body.onclick = e => { const b = e.target.closest('[data-v]'); if (!b || b.disabled) return; buzz(10); sh.close(); if (sel.value !== b.dataset.v) { sel.value = b.dataset.v; sel.dispatchEvent(new Event('input', {bubbles: true})); sel.dispatchEvent(new Event('change', {bubbles: true})); } }; }
+  const skip = s => !s || s.multiple || s.disabled || s.dataset.native != null;
+  document.addEventListener('pointerdown', e => { const s = e.target.closest && e.target.closest('select'); if (skip(s)) return; e.preventDefault(); }, true);
+  document.addEventListener('mousedown', e => { const s = e.target.closest && e.target.closest('select'); if (skip(s)) return; e.preventDefault(); }, true);
+  document.addEventListener('click', e => { const s = e.target.closest && e.target.closest('select'); if (skip(s)) return; e.preventDefault(); s.blur(); pick(s); }, true);
+  document.addEventListener('keydown', e => { const s = e.target; if (s && s.tagName === 'SELECT' && !skip(s) && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); pick(s); } }, true);
 })();
 </script>
 </body>
