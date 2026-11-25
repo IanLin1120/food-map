@@ -4,7 +4,7 @@
 <script>/* 線上更新開機程式：手機上若已下載比 APK 內建更新的介面版本，就改用新版（存在 IndexedDB）。
    新版連續兩次沒有正常開啟 → 自動退回 APK 內建版本。網址加上 #builtin 也會強制使用內建版本。 */
 (function () {
-  var B = '3.34.1'; if (!window.__OTA) window.APP_BUILTIN = B;
+  var B = '3.35.0'; if (!window.__OTA) window.APP_BUILTIN = B;
   if (window.__OTA || location.hash.indexOf('builtin') >= 0) return;
   var v = null; try { v = JSON.parse(localStorage.getItem('fm.ota') || 'null'); } catch (e) {}
   function gt(a, b) { a = String(a).split('.').map(Number); b = String(b).split('.').map(Number); for (var i = 0; i < Math.max(a.length, b.length); i++) { var p = a[i] || 0, q = b[i] || 0; if (p !== q) return p > q; } return false; }
@@ -1561,6 +1561,8 @@ table.ckT td.s{text-align:center}table.ckT th.s{text-align:center}
 .rptPrev{display:grid;grid-template-columns:repeat(3,1fr);gap:.4rem;padding:.7rem;margin:.2rem 0 .7rem}.rptPrev>div{display:flex;flex-direction:column;align-items:center;gap:.1rem}.rptPrev small{color:var(--muted);font-size:.74rem;font-weight:700}.rptPrev b{font-size:1.05rem}
 .einvSw{display:flex;margin-top:.7rem}.einvSw .btn{flex:1;justify-content:center}
 .einvTxt{white-space:pre-wrap;font-family:inherit;font-size:.82rem;color:#333;background:#f7f7f7;border-radius:6px;padding:.5rem .7rem;margin:.3rem 0 0}
+.catPick.also button{border-style:dashed}.catPick.also button.on{border-style:solid}
+.alsoI{font-style:normal;font-size:.75rem;margin-left:.35rem;opacity:.85}
 </style>
 </head>
 <body>
@@ -1569,7 +1571,7 @@ table.ckT td.s{text-align:center}table.ckT th.s{text-align:center}
     <div id="map"></div>
     <div class="mapTop">
       <div class="mTopRow"><div id="mSearch" class="glass">
-        <input id="mQ" type="search" placeholder="搜尋店家、地址…" autocomplete="off" enterkeyhint="search">
+        <input id="mQ" type="search" placeholder="搜尋地點、店名、地址…" autocomplete="off" enterkeyhint="search">
         <button class="ic" id="mQx" aria-label="清除" style="display:none">✕</button>
         <button class="ic" id="mQgo" aria-label="搜尋">🔍</button>
       </div><button id="favBtn" class="glass" aria-label="收藏"><svg viewBox="0 0 24 24"><path d="M6.5 3.5h11v17l-5.5-3.8-5.5 3.8z"/></svg><span>收藏</span><em id="favBadge"></em></button></div>
@@ -1593,7 +1595,7 @@ table.ckT td.s{text-align:center}table.ckT th.s{text-align:center}
   <section class="page" id="pgFav">
     <div class="pgHead"><button class="favBack" id="favBack" aria-label="回地圖"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button><div class="grow"><h1 id="favTitle">收藏分類</h1><div class="sub" id="favSub"></div></div><div class="phBtns"><button class="btn sm foldAll" id="favFold">全部收合</button><button class="btn sm" id="favCats">管理分類</button></div></div>
     <div class="pgBody"><div class="pgInner">
-      <div class="searchBox" style="margin-bottom:.9rem"><input id="favQ" type="search" placeholder="搜尋店名、地址、菜單品項…"></div>
+      <div class="searchBox" style="margin-bottom:.9rem"><input id="favQ" type="search" placeholder="搜尋名稱、地址、菜單品項…"></div>
       <div id="favList" class="noSel"></div>
     </div></div>
   </section>
@@ -1626,7 +1628,7 @@ table.ckT td.s{text-align:center}table.ckT th.s{text-align:center}
     <div class="pgBody"><div class="pgInner" id="accBody"></div></div>
   </section>
   <section class="page" id="pgAccM">
-    <div class="pgHead"><div class="grow"><h1>店家地圖</h1><div class="sub" id="accMSub"></div></div></div>
+    <div class="pgHead"><div class="grow"><h1>地點地圖</h1><div class="sub" id="accMSub"></div></div></div>
     <div class="pgBody"><div class="pgInner" id="accMBody"><div class="amMapBox card"><div id="accMap"></div></div><div id="accMList"></div></div></div>
   </section>
   <section class="page" id="pgAccA">
@@ -4036,7 +4038,7 @@ var qrcode = function() {
 /* ============================================================
    日日帳本 — 核心：工具、資料儲存、主題、面板、拖曳排序、圖片
    ============================================================ */
-const APP_VERSION = '3.34.1';
+const APP_VERSION = '3.35.0';
 const APP_VER = APP_VERSION;
 /* 線上更新來源（GitHub Pages）：IanLin1120/food-map */
 const GH = {repo: 'https://github.com/IanLin1120/food-map', pages: 'https://ianlin1120.github.io/food-map/'};
@@ -4105,6 +4107,8 @@ const emoGroupsHtml = (G, cur) => Object.entries(G).map(([t, v]) => `<div class=
 const SHOP_CATS = [['量販店', '🛒', '#C23B4E'], ['超市', '🧺', '#5A7A44'], ['超商', '🏪', '#3F6E8C'], ['外送', '🛵', '#D2603A'], ['藥妝', '💊', '#8A5A9E'], ['其他', '🛍️', '#6B5344']];
 const UNCAT = {id: '', name: '未分類', icon: '📍', color: '#7d6c57'};
 const catOf = id => DB.cats.find(c => c.id === id) || UNCAT;
+/* 一個地點可以放在好幾個分類（例如午餐、晚餐都會去的店）：cat 是主要分類（旗子顏色），cats2 是「也屬於」的分類；總數只算一次 */
+const pCats = p => { const ok = id => DB.cats.some(c => c.id === id), m = ok(p.cat) ? p.cat : ''; return [m].concat((p.cats2 || []).filter(c => c && c !== m && ok(c))); };
 /* 菜單只有吃的、喝的店才需要：分類可以自己設定「有菜單」，沒設定就看分類名稱；停車場、加油站這類一律不顯示菜單 */
 const FOOD_RE = /早餐|午餐|晚餐|宵夜|消夜|點心|甜點|飲|咖啡|小吃|餐|食|麵|飯|吃|茶|酒|甜|烘焙|麵包|鍋|燒烤|燒肉|便當|冰|手搖|早午|料理|拉麵|壽司|披薩|漢堡|牛排|滷味|鹹酥|雞排|豆花|蛋糕/,
   NOMENU_RE = /停車|加油|充電|洗車|機車|汽車|修車|保養|輪胎|銀行|郵局|ATM|醫院|診所|藥局|藥妝|牙醫|眼科|學校|公園|車站|捷運|公車|客運|五金|家具|家居|服飾|鞋|超市|量販|便利|美髮|理髮|美甲|健身|電信|通訊|旅館|民宿|住宿|公所|戶政|寺|廟|宮|教會|文具|書局|寵物|動物醫院|洗衣|影印|3C|電器|百貨|市場|停車場|加油站/i;
@@ -4137,7 +4141,7 @@ async function loadAll() {
   const rc = await IDB.get('kv', 'rcats').catch(() => null);
   if (rc) DB.rcats = rc; else { DB.rcats = DEF_RCATS.map(([name, icon, color], i) => ({id: 'r' + i + uid(), name, icon, color})); saveRcats(); }
   await loadMeal(); await loadShop();
-  /* 美食點餐和購物分帳共用同一份收藏店家和分類（v3.4 起）。舊版購物分帳自己的店家：
+  /* 美食點餐和購物分帳共用同一份收藏地點和分類（v3.4 起）。舊版購物分帳自己的店家：
      同名（或很近又名字相似）的店合併成一家、明細改指向美食那家；「外送」分類拿掉，那些店先放「未分類」讓你自己選 */
   let allPl = allP;
   if (!await IDB.get('kv', 'shared1').catch(() => null)) {
@@ -4449,10 +4453,10 @@ function syncMarkers() {
     if (mk && mk._sig !== sig) { mk.remove(); M.marks.delete(p.id); mk = null; }
     if (!mk) { const e = pinEl(p); e.addEventListener('click', ev => { ev.stopPropagation(); selectPlace(p.id); });
       mk = new maplibregl.Marker({element: e, anchor: 'center'}).setLngLat([p.lon, p.lat]).addTo(M.map); mk._sig = sig; M.marks.set(p.id, mk); }
-    const show = (M.filter === 'all' || (p.cat || '') === M.filter || !DB.cats.some(c => c.id === p.cat) && M.filter === '') && (Area.has(p) || M.sel === p.id);
+    const show = (M.filter === 'all' || pCats(p).includes(M.filter)) && (Area.has(p) || M.sel === p.id);
     mk.getElement().style.display = show ? '' : 'none'; mk.getElement().classList.toggle('sel', M.sel === p.id); });
 }
-function placesIn(f) { return f === 'all' ? DB.places : DB.places.filter(p => (DB.cats.some(c => c.id === p.cat) ? p.cat : '') === f); }
+function placesIn(f) { return f === 'all' ? DB.places : DB.places.filter(p => pCats(p).includes(f)); }
 /* 目前地圖上看得到的：分類 ＋ 選取的縣市／鄉鎮市區 */
 function placesShown(f) { return placesIn(f).filter(p => Area.has(p)); }
 
@@ -4677,7 +4681,7 @@ function initSearch() {
 }
 function openAdd() {
   const sh = sheet({title: '新增收藏地點', html: `<div class="setC">
-    <button class="setR" data-a="search" style="width:100%;text-align:left"><span style="font-size:1.4rem">🔍</span><span class="t"><b>搜尋店家</b><small>輸入店名或地址，從搜尋結果加入</small></span></button>
+    <button class="setR" data-a="search" style="width:100%;text-align:left"><span style="font-size:1.4rem">🔍</span><span class="t"><b>搜尋地點</b><small>輸入名稱或地址，從搜尋結果加入</small></span></button>
     <button class="setR" data-a="center" style="width:100%;text-align:left"><span style="font-size:1.4rem">🎯</span><span class="t"><b>用地圖中心點</b><small>先把地圖移到店家位置，再按這裡</small></span></button>
     <button class="setR" data-a="me" style="width:100%;text-align:left"><span style="font-size:1.4rem">🧭</span><span class="t"><b>用我現在的位置</b><small>人在店裡時最方便</small></span></button></div>
     <div class="callout">💡 小技巧：直接<b>長按地圖</b>上任何一個位置，也可以插旗收藏。</div>`});
@@ -5288,8 +5292,8 @@ var Share = {
     const render = () => { const p = DB.places.find(x => x.id === pid), la = latest(); if (la && mode === 'new' && !sh.modeSet) mode = 'add';
       const list = DB.places.filter(x => !q || (x.name + ' ' + (x.addr || '')).toLowerCase().includes(q.toLowerCase())).sort((a, b) => (b.id === pid) - (a.id === pid));
       sh.body.innerHTML = `<div class="thumbs" style="margin-bottom:.8rem">${urls.map(u => `<div class="th"><img src="${u}" alt=""></div>`).join('')}</div>
-        <div class="field"><label>存到哪一家店的菜單</label><div class="searchBox" style="margin-bottom:.5rem"><input id="shQ" type="search" placeholder="搜尋收藏的店家…" value="${esc(q)}"></div>
-          <div class="shList">${list.slice(0, 30).map(x => { const c = catOf(x.cat); return `<button class="res ${x.id === pid ? 'on' : ''}" data-id="${x.id}"><span class="rIc" style="background:${c.color}">${esc(c.icon)}</span><span class="grow"><b>${esc(x.name)}</b><small>${esc(x.addr || '')}</small></span>${x.id === pid ? '<span class="tag">已選</span>' : ''}</button>`; }).join('') || '<div class="resNote">找不到收藏的店家</div>'}</div></div>
+        <div class="field"><label>存到哪一家店的菜單</label><div class="searchBox" style="margin-bottom:.5rem"><input id="shQ" type="search" placeholder="搜尋收藏的地點…" value="${esc(q)}"></div>
+          <div class="shList">${list.slice(0, 30).map(x => { const c = catOf(x.cat); return `<button class="res ${x.id === pid ? 'on' : ''}" data-id="${x.id}"><span class="rIc" style="background:${c.color}">${esc(c.icon)}</span><span class="grow"><b>${esc(x.name)}</b><small>${esc(x.addr || '')}</small></span>${x.id === pid ? '<span class="tag">已選</span>' : ''}</button>`; }).join('') || '<div class="resNote">找不到收藏的地點</div>'}</div></div>
         ${p ? `<div class="field"><label>放在</label><div class="seg" id="shM"><button data-v="new" class="${mode === 'new' ? 'on' : ''}">新的菜單版本</button><button data-v="add" class="${mode === 'add' ? 'on' : ''}" ${albumsOf(p).length ? '' : 'disabled'}>加到最新版本${albumsOf(p)[0] ? '「' + esc(albumsOf(p)[0].name) + '」' : ''}</button></div></div>` : ''}`;
       const b = $('[data-a="ok"]', sh.foot); b.disabled = !p; b.textContent = p ? `存成「${p.name}」的菜單` : '先選擇店家'; };
     render();
@@ -5525,10 +5529,12 @@ function openPlace(id, toMenu) {
 function editPlace(src, isNew, done) {
   const d = JSON.parse(JSON.stringify(src));
   const sh = sheet({title: isNew ? '加入收藏' : '編輯地點', full: true, foot: `${isNew ? '' : '<button class="btn danger" data-a="del" style="flex:0 0 auto">刪除</button>'}<button class="btn pri" data-a="ok">${isNew ? '加入收藏' : '儲存'}</button>`});
+  function cat2Html() { return DB.cats.filter(c => c.id !== d.cat).map(c => `<button data-c2="${c.id}" class="${(d.cats2 || []).includes(c.id) ? 'on' : ''}" style="--c:${c.color}">${(d.cats2 || []).includes(c.id) ? '✓ ' : ''}${esc(c.icon)} ${esc(c.name)}</button>`).join('') || '<span class="small muted">先新增其他分類</span>'; }
   function catHtml() { return DB.cats.map(c => `<button data-c="${c.id}" class="${d.cat === c.id ? 'on' : ''}" style="--c:${c.color}">${esc(c.icon)} ${esc(c.name)}</button>`).join('') + '<button data-c="+">＋ 新分類</button>'; }
   function fill() { sh.body.innerHTML = `
-    <div class="field"><label>店名</label><input id="eN" value="${esc(d.name)}" placeholder="例如：HEN厚食早午餐"></div>
-    <div class="field"><label>放到哪個分類（旗子顏色會跟著分類）</label><div class="catPick" id="eC">${catHtml()}</div></div>
+    <div class="field"><label>名稱</label><input id="eN" value="${esc(d.name)}" placeholder="例如：HEN厚食早午餐"></div>
+    <div class="field"><label>主要分類（旗子顏色會跟著它）</label><div class="catPick" id="eC">${catHtml()}</div></div>
+    <div class="field"><label>也放在這些分類（可以複選，例如午餐、晚餐都會去）</label><div class="catPick also" id="eC2">${cat2Html()}</div><div class="small muted" style="margin-top:.3rem">同一個地點放在好幾個分類，各分類都找得到它，但總數只算一次。</div></div>
     <div class="field"><label>地址</label><input id="eA" value="${esc(d.addr)}" placeholder="地址"></div>
     <div class="field"><label>營業時間（每行一天）</label><textarea id="eH" rows="7" placeholder="星期一: 06:00 – 13:00&#10;星期二: 06:00 – 13:00&#10;…">${esc((d.hours || []).join('\n'))}</textarea>
       ${S.gkey ? '<button class="btn sm olive" data-a="g" style="margin-top:.4rem">🔄 從 Google 地圖帶入地址、營業時間、電話</button>' : '<div class="small muted" style="margin-top:.3rem">設定 Google Maps 金鑰後，可以自動從 Google 帶入營業時間。<button class="btn sm" data-a="key">看教學</button></div>'}</div>
@@ -5538,14 +5544,15 @@ function editPlace(src, isNew, done) {
   const read = () => { d.name = $('#eN', sh.body).value.trim(); d.addr = $('#eA', sh.body).value.trim(); d.hours = $('#eH', sh.body).value.split('\n').map(s => s.trim()).filter(Boolean); d.phone = $('#eP', sh.body).value.trim(); d.note = $('#eM', sh.body).value.trim(); };
   fill();
   sh.body.addEventListener('click', async e => { const cb = e.target.closest('#eC button');
-    if (cb) { if (cb.dataset.c === '+') { read(); editCat(null, c => { if (c) d.cat = c.id; fill(); }, 'place'); return; } d.cat = cb.dataset.c; $$('#eC button', sh.body).forEach(b => b.classList.toggle('on', b === cb)); return; }
+    if (cb) { buzz(8); if (cb.dataset.c === '+') { read(); editCat(null, c => { if (c) d.cat = c.id; fill(); }, 'place'); return; } d.cat = cb.dataset.c; d.cats2 = (d.cats2 || []).filter(x => x !== d.cat); $$('#eC button', sh.body).forEach(b => b.classList.toggle('on', b === cb)); $('#eC2', sh.body).innerHTML = cat2Html(); return; }
+    const c2 = e.target.closest('#eC2 button'); if (c2) { buzz(8); const k = c2.dataset.c2, L = d.cats2 = d.cats2 || []; const i = L.indexOf(k); i < 0 ? L.push(k) : L.splice(i, 1); $('#eC2', sh.body).innerHTML = cat2Html(); return; }
     const b = e.target.closest('[data-a]'); if (!b) return;
     if (b.dataset.a === 'key') openTutorial('maps');
     if (b.dataset.a === 'g') { read(); busy('向 Google 查詢…'); try { await gFill(d, !d.name); toast('已帶入 Google 資料'); } catch (er) { toast('❌ ' + er.message, 4000); } busy(false); fill(); } });
   sh.foot.addEventListener('click', async e => { const b = e.target.closest('[data-a]'); if (!b) return;
     if (b.dataset.a === 'del') { if (!await ask(`確定要刪除「${src.name}」嗎？\n菜單圖片與表格也會一併刪除。`, '刪除', true)) return;
       for (const al of src.albums || []) for (const im of al.imgs || []) await imgDel(im); DB.places.splice(DB.places.indexOf(src), 1); await IDB.del('places', src.id).catch(() => {}); if (M.sel === src.id) clearSel(); sh.close(); refreshAll(); toast('已刪除'); done && done(true); return; }
-    read(); if (!d.name) { toast('請輸入店名'); $('#eN', sh.body).focus(); return; }
+    read(); if (!d.name) { toast('請輸入名稱'); $('#eN', sh.body).focus(); return; }
     if (isNew) { d.id = 'p' + uid(); d.t = Date.now(); d.ord = DB.places.length ? Math.max(...DB.places.map(x => x.ord || 0)) + 1 : 0; DB.places.push(d); await savePlace(d); sh.close(); clearSel(); refreshAll(); buzz(25); toast('已加入收藏 🚩'); if (done) done(d); else selectPlace(d.id); }
     else { const oldN = src.name; Object.assign(src, d); await savePlace(src); sh.close(); refreshAll(); if (M.sel === src.id) selectPlace(src.id); toast('已儲存'); done && done(false);
       if (oldN && oldN !== d.name) await renameStoreAsk(oldN, d.name); } });
@@ -5554,7 +5561,7 @@ function editPlace(src, isNew, done) {
 /* ---------- 分類管理（收藏分類、食譜分類共用：自訂名稱、圖示、顏色、拖曳排序） ---------- */
 const CK = {
   place: {list: () => DB.cats, save: saveCats, count: id => placesIn(id).length, unit: '間', title: '管理收藏分類', tip: '地圖上方的分類列與收藏頁會跟著變。', ph: '例如：火鍋、拉麵、早午餐', pre: 'c', color: '旗子顏色', flag: true,
-    drop(id) { DB.places.forEach(p => { if (p.cat === id) { p.cat = ''; savePlace(p); } }); }, after() { refreshAll(); }},
+    drop(id) { DB.places.forEach(p => { let ch = false; if (p.cat === id) { p.cat = (p.cats2 || []).find(x => x !== id) || ''; ch = true; } if ((p.cats2 || []).includes(id) || (p.cats2 || []).includes(p.cat)) { p.cats2 = p.cats2.filter(x => x !== id && x !== p.cat); ch = true; } if (ch) savePlace(p); }); }, after() { refreshAll(); }},
   recipe: {list: () => DB.rcats, save: saveRcats, count: id => DB.recipes.filter(r => r.cat === id).length, unit: '道', title: '管理食譜分類', tip: '食譜頁的資料夾會跟著變。', ph: '例如：煎、炒、電鍋、湯、氣炸鍋', pre: 'r', color: '資料夾顏色', flag: false,
     drop(id) { DB.recipes.forEach(r => { if (r.cat === id) { r.cat = ''; saveRecipe(r); } }); }, after() { if (curTab === 'Rec') renderRec(); }}
 };
@@ -5597,8 +5604,8 @@ function renderFav() {
   const html = secs.map(({c, srt}) => { const all = placesIn(c.id), ps = all.filter(hit); if (q && !ps.length) return '';
     return `<div class="sec ${S.fold[c.id] && !q ? 'fold' : ''}" data-cat="${c.id}" ${srt && !q ? 'data-srt' : ''} style="--c:${c.color}"><div class="secHead">${srt && !q ? '<span class="grip secGrip"></span>' : ''}<span class="ico">${esc(c.icon)}</span><b class="grow" data-a="fold">${esc(c.name)} <span class="cnt">${ps.length} 間</span></b><button class="ic chev" data-a="fold" aria-label="收合">▾</button></div>
       <div class="secList">${ps.map(p => { const st = stateHtml(p), n = (p.menu || []).length, ni = imgCount(p);
-        return `<div class="pl" data-id="${p.id}"><div class="grow" data-a="open"><b>${esc(p.name)}</b>${st ? `<div class="meta">${st}</div>` : ''}<div class="meta">${esc(p.addr || '')}</div>${n || ni || p.phone ? `<div class="meta">${n ? '<span>📋 ' + n + ' 個品項</span>' : ''}${ni ? '<span>🖼️ ' + ni + ' 張菜單</span>' : ''}${p.phone ? '<span>📞 ' + esc(p.phone) + '</span>' : ''}</div>` : ''}</div><button class="ic go" data-a="nav" aria-label="導航">🧭</button><button class="ic go" data-a="map" aria-label="在地圖上看">📍</button>${q ? '' : '<span class="grip plGrip"></span>'}</div>`; }).join('') || '<div class="secEmpty">這個分類還沒有收藏的店家</div>'}</div></div>`; }).join('');
-  box.innerHTML = html || `<div class="empty"><span class="big">🚩</span>${q ? '找不到符合的收藏' : '還沒有任何收藏<br><span class="small">到「地圖」頁搜尋店家，或長按地圖插旗收藏</span>'}</div>`;
+        return `<div class="pl" data-id="${p.id}"><div class="grow" data-a="open"><b>${esc(p.name)}</b>${st ? `<div class="meta">${st}</div>` : ''}<div class="meta">${esc(p.addr || '')}</div>${n || ni || p.phone ? `<div class="meta">${n ? '<span>📋 ' + n + ' 個品項</span>' : ''}${ni ? '<span>🖼️ ' + ni + ' 張菜單</span>' : ''}${p.phone ? '<span>📞 ' + esc(p.phone) + '</span>' : ''}</div>` : ''}</div><button class="ic go" data-a="nav" aria-label="導航">🧭</button><button class="ic go" data-a="map" aria-label="在地圖上看">📍</button>${q ? '' : '<span class="grip plGrip"></span>'}</div>`; }).join('') || '<div class="secEmpty">這個分類還沒有收藏的地點</div>'}</div></div>`; }).join('');
+  box.innerHTML = html || `<div class="empty"><span class="big">🚩</span>${q ? '找不到符合的收藏' : '還沒有任何收藏<br><span class="small">到「地圖」頁搜尋地點，或長按地圖插旗收藏</span>'}</div>`;
   foldBtn('fav');
 }
 function initFav() {
@@ -5618,7 +5625,7 @@ function updCounts() { const fb = $('#favBadge'); if (fb) fb.textContent = DB.pl
    ============================================================ */
 let curTab = 'Map';
 /* 美食・日常和購物分帳已經合併成一個介面（底部：地圖、日常、分帳、發票、設定；食譜在設定裡） */
-function modeUI() { document.body.classList.remove('mShop'); $('#favTitle') && ($('#favTitle').textContent = '收藏分類'); $('#mQ') && ($('#mQ').placeholder = '搜尋店家、地址、量販店…'); }
+function modeUI() { document.body.classList.remove('mShop'); $('#favTitle') && ($('#favTitle').textContent = '收藏分類'); $('#mQ') && ($('#mQ').placeholder = '搜尋地點、店名、地址…'); }
 function setMode() { }
 function showTab(t) { if (/^Acc/.test(t) && typeof AccLock !== 'undefined' && !AccLock.open() && S.inAcc) setTimeout(() => AccLock.gate(), 0); if (t === 'AccA' && curTab !== 'AccA' && typeof Acc !== 'undefined') Acc.showAmt = false; curTab = t; $$('.page').forEach(p => p.classList.toggle('on', p.id === 'pg' + t)); $$('#tabbar button').forEach(b => b.classList.toggle('on', b.dataset.tab === (t === 'Fav' ? 'Map' : t === 'Rec' ? 'Set' : t))); document.body.classList.toggle('onFav', t === 'Fav');
   if (t === 'Map') mapResize(); else if (t === 'Fav') renderFav(); else if (t === 'Rec') renderRec(); else if (t === 'Meal') renderMeal(); else if (t === 'Shop') renderShop(); else if (t === 'Inv') renderInv(); else if (t === 'Acc') renderAcc(); else if (t === 'AccA') renderAccAsset(); else if (t === 'AccM') renderAccMap(); else if (t === 'AccS') renderAccStat(); else if (t === 'AccC') renderAccCfg(); else renderSet(); updCounts(); }
@@ -5792,7 +5799,7 @@ function renderSet() {
     <div class="setR"><div class="t"><b>導航軟體</b><small>按「導航」時要用哪個 App</small></div><select id="sNav"><option value="ask">每次詢問</option>${navs.map(n => `<option value="${n.id}" ${S.navApp === n.id ? 'selected' : ''}>${n.name}</option>`).join('')}</select></div>
     ${Off.card()}</div></div>
   <div class="setG"><h3>Google 地圖搜尋金鑰</h3><div class="setC">
-    <div class="setR col"><div class="t"><small>填入後，搜尋店家會和 Google 地圖一樣準確，並能自動帶入營業時間、電話。${S.gkey ? '' : '<br>沒有金鑰也能用，只是搜尋改用 OpenStreetMap，店家較不齊全。'}<br>💡 行跡導航用的那把金鑰可以直接貼過來共用。</small></div>
+    <div class="setR col"><div class="t"><small>填入後，搜尋地點會和 Google 地圖一樣準確，並能自動帶入營業時間、電話。${S.gkey ? '' : '<br>沒有金鑰也能用，只是搜尋改用 OpenStreetMap，地點較不齊全。'}<br>💡 行跡導航用的那把金鑰可以直接貼過來共用。</small></div>
       <div class="keyBox"><input id="sG" type="password" value="${esc(S.gkey)}" placeholder="貼上 Google Maps API 金鑰（AIza…）" autocomplete="off"><button class="btn sm" data-a="eyeG">顯示</button></div>
       <div class="row wrap"><button class="btn sm pri" data-a="tutG">📘 圖文教學</button><button class="btn sm" data-a="getG">申請金鑰 ↗</button><button class="btn sm olive" data-a="testG">測試金鑰</button></div><div class="testOut" id="outG"></div></div></div></div>
   <div class="setG"><h3>AI 圖片辨識金鑰（Gemini）</h3><div class="setC">
@@ -5856,7 +5863,7 @@ const mock = (url, inner, g) => `<div class="mock"><div class="bar ${g ? 'g' : '
 const TUT = {
   maps: {title: 'Google 地圖搜尋金鑰 · 圖文教學', key: 'gkey', steps: [
     {t: '這把金鑰是做什麼的？', h: mock('日日帳本', '<div class="inp">🔍 HEN厚食早午餐</div><div class="card2"><b>HEN厚食早午餐</b><div class="lbl">早午餐餐廳 · 距離 350 公尺</div></div><div class="card2">🕒 星期一: 06:00 – 13:00<div class="lbl">營業時間自動帶入</div></div>', 1) +
-      '<p>填入 <b>Google Maps 金鑰</b>後，搜尋店家就會和 Google 地圖一樣準確，加入收藏時還會<b>自動帶入地址、營業時間、電話</b>。</p><div class="callout">💡 如果你已經在<b>行跡導航</b>設定過 Google 金鑰，直接把同一把金鑰貼過來就可以了，不用重新申請——請直接跳到最後一步。</div><div class="callout warn">Google 會要求綁定信用卡做身分驗證，並提供每月免費用量；一般個人使用通常不會超過。實際收費方式請以 Google 官方說明為準。</div>'},
+      '<p>填入 <b>Google Maps 金鑰</b>後，搜尋地點就會和 Google 地圖一樣準確，加入收藏時還會<b>自動帶入地址、營業時間、電話</b>。</p><div class="callout">💡 如果你已經在<b>行跡導航</b>設定過 Google 金鑰，直接把同一把金鑰貼過來就可以了，不用重新申請——請直接跳到最後一步。</div><div class="callout warn">Google 會要求綁定信用卡做身分驗證，並提供每月免費用量；一般個人使用通常不會超過。實際收費方式請以 Google 官方說明為準。</div>'},
     {t: '建立一個專案', url: 'https://console.cloud.google.com/projectcreate', btn: '開啟 Google Cloud Console', h: mock('console.cloud.google.com/projectcreate', '<b>新增專案</b><div class="lbl">專案名稱</div><div class="inp">MyFoodMap</div><div class="lbl">位置</div><div class="inp">無機構</div><span class="b hl">建立<span class="tap">👆</span></span><span class="b o">取消</span>') +
       '<p>按下方按鈕開啟 Google Cloud Console，用你的 Google 帳號登入。</p><ul><li>「專案名稱」隨意取，例如 <b>MyFoodMap</b></li><li>按「<b>建立</b>」，等右上角通知顯示完成</li></ul>'},
     {t: '設定帳單帳戶', url: 'https://console.cloud.google.com/billing', btn: '開啟「帳單」頁面', h: mock('console.cloud.google.com/billing', '<b>帳單</b><div class="card2">這個專案沒有帳單帳戶<br><span class="b hl">連結帳單帳戶<span class="tap">👆</span></span></div><div class="lbl">依畫面指示填寫國家、付款資料（信用卡）</div>') +
@@ -5912,9 +5919,9 @@ async function saveFile(name, blob) {
   const u = URL.createObjectURL(blob), a = document.createElement('a'); a.href = u; a.download = name; document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 5000); return name;
 }
 /* 整個日日帳本打包成一個 JSON（含所有圖片）：本機匯出、雲端備份共用 */
-/* 備份內容：收藏店家、菜單、點餐、分帳、發票、記帳（常用紀錄、帳戶、對帳、商家）、資產、購物清單、食譜、所有分類與設定、所有圖片；
+/* 備份內容：收藏地點、菜單、點餐、分帳、發票、記帳（常用紀錄、帳戶、對帳、商家）、資產、購物清單、食譜、所有分類與設定、所有圖片；
    自己輸入的 Google Maps／AI 金鑰也一起備份（傳給別人時可以不帶）。只有雲端登入狀態和記帳密碼不備份（綁在這支手機）。 */
-const BACKUP_WHAT = '收藏店家與菜單、點餐、分帳、發票、記帳（常用紀錄、帳戶、對帳、商家）、資產、購物清單、食譜、分類、所有設定、API 金鑰和所有圖片';
+const BACKUP_WHAT = '收藏地點與菜單、點餐、分帳、發票、記帳（常用紀錄、帳戶、對帳、商家）、資產、購物清單、食譜、分類、所有設定、API 金鑰和所有圖片';
 async function makeBackupBlob(opt = {}) {
   const Sx = Object.assign({}, S); delete Sx.gkey; delete Sx.aikey; delete Sx.pc; delete Sx.gd;
   const apik = opt.noKeys ? null : {gkey: S.gkey || '', aikey: S.aikey || ''}, cs = await IDB.get('kv', 'cats_shop').catch(() => null);
@@ -6134,7 +6141,7 @@ var Area = {cache: new Map(), hideList: false,
     /* 依分類排（跟上方分類標籤同順序），同一類裡離我近的在前面 */
     const ps = placesShown(M.filter).slice().sort((x, y) => ci(x.cat) - ci(y.cat) || dist(x) - dist(y) || (x.ord || 0) - (y.ord || 0)), f = M.filter === 'all' ? null : (M.filter === '' ? UNCAT : catOf(M.filter));
     showCard(`<div class="row"><div class="grow"><h3>${esc(a.c)}${a.t ? ' ' + esc(a.t) : ''}</h3><div class="small muted">${f ? esc(f.icon + ' ' + f.name) + ' · ' : ''}${ps.length} 間收藏${a.t ? '' : ' · 點地圖上的鄉鎮市區可只看那一區'}</div></div><button class="ic" data-a="ax" aria-label="收起清冊">✕</button></div>
-      <div class="arList">${ps.map((p, i) => { const c = catOf(p.cat), st = stateHtml(p), hd = M.filter === 'all' && (!i || (ps[i - 1].cat || '') !== (p.cat || '')) ? `<div class="arH" style="--c:${c.color}">${esc(c.icon)} ${esc(c.name)}<em>${ps.filter(x => (x.cat || '') === (p.cat || '')).length}</em></div>` : ''; return hd + `<button class="res" data-a="ap" data-id="${p.id}"><span class="rIc" style="background:${c.color}">${esc(c.icon)}</span><span class="grow"><b>${esc(p.name)}</b><small>${st ? `<span class="row" style="gap:.3rem;display:inline-flex">${st}</span> · ` : ''}${esc(p.addr || '')}</small></span></button>`; }).join('') || '<div class="resNote">這一區還沒有' + (f ? '「' + esc(f.name) + '」的' : '') + '收藏</div>'}</div>`); }
+      <div class="arList">${ps.map((p, i) => { const c = catOf(p.cat), st = stateHtml(p), hd = M.filter === 'all' && (!i || (ps[i - 1].cat || '') !== (p.cat || '')) ? `<div class="arH" style="--c:${c.color}">${esc(c.icon)} ${esc(c.name)}<em>${ps.filter(x => (x.cat || '') === (p.cat || '')).length}</em></div>` : ''; return hd + `<button class="res" data-a="ap" data-id="${p.id}"><span class="rIc" style="background:${c.color}">${esc(c.icon)}</span><span class="grow"><b>${esc(p.name)}${pCats(p).length > 1 ? `<i class="alsoI">${pCats(p).filter(id => id !== (M.filter === 'all' ? pCats(p)[0] : M.filter)).map(id => esc(catOf(id).icon)).join('')}</i>` : ''}</b><small>${st ? `<span class="row" style="gap:.3rem;display:inline-flex">${st}</span> · ` : ''}${esc(p.addr || '')}</small></span></button>`; }).join('') || '<div class="resNote">這一區還沒有' + (f ? '「' + esc(f.name) + '」的' : '') + '收藏</div>'}</div>`); }
 };
 
 /* ---------------- 離線地圖 ---------------- */
@@ -6362,8 +6369,8 @@ function pickStore(cur) {
       $('#psBar', sh.body).innerHTML = `<div class="psChips">${[['', '🗺️ 全部', FP().filter(hit).length]].concat(all.map(x => [x.c.id || '_', `${x.c.icon} ${x.c.name}`, x.ps.length, x.c.color])).map(([k, t, n, col]) => `<button class="chip ${only === k ? 'on' : ''}" data-only="${k}" ${col ? `style="--c:${col}"` : ''}>${esc(t)} <span class="n">${n}</span></button>`).join('')}</div>
         ${secs.length > 1 && !q ? `<div class="psTools"><span class="psHint">點分類展開店家</span><button class="btn sm" data-a="foldAll">${anyOpen ? '⊟ 全部收合' : '⊞ 全部展開'}</button></div>` : ''}`;
       $('#psL', sh.body).innerHTML = secs.map(({c, ps}) => { const on = q || only || open.has(c.id || ''); return `<div class="psSec ${on ? 'open' : ''}" style="--c:${c.color}"><button class="psSH" data-cat="${c.id || ''}"><span>${esc(c.icon)}</span><b>${esc(c.name)}</b><em>${ps.length}</em><i class="psCv">▾</i></button>${on ? `<div class="psPL">${ps.map(p => `<button class="psP ${p.id === cur ? 'on' : ''}" data-id="${p.id}"><b>${esc(p.name)}</b><small>${(p.menu || []).length ? '📋 ' + p.menu.length + ' 個品項' : '<span class="muted">沒有菜單表格</span>'}${p.addr ? '・' + esc(p.addr) : ''}</small></button>`).join('')}</div>` : ''}</div>`; }).join('')
-        || `<div class="empty">${FP().length ? '找不到符合的收藏店家' : '還沒有收藏店家<br><span class="small">可以先在地圖頁收藏，或用上面的「自己輸入店名」</span>'}</div>`; };
-    sh.body.innerHTML = `<div class="searchBox" style="margin-bottom:.7rem"><input id="psQ" type="search" placeholder="搜尋收藏的店家…"></div><div class="row" style="margin-bottom:.7rem;gap:.5rem"><button class="btn sm" data-a="free">✏️ 自己輸入店名</button><button class="btn sm" data-a="none">先不選店家</button></div><div id="psBar"></div><div id="psL"></div>`;
+        || `<div class="empty">${FP().length ? '找不到符合的收藏地點' : '還沒有收藏地點<br><span class="small">可以先在地圖頁收藏，或用上面的「自己輸入店名」</span>'}</div>`; };
+    sh.body.innerHTML = `<div class="searchBox" style="margin-bottom:.7rem"><input id="psQ" type="search" placeholder="搜尋收藏的地點…"></div><div class="row" style="margin-bottom:.7rem;gap:.5rem"><button class="btn sm" data-a="free">✏️ 自己輸入店名</button><button class="btn sm" data-a="none">先不選店家</button></div><div id="psBar"></div><div id="psL"></div>`;
     draw(); $('#psQ', sh.body).oninput = e => { q = e.target.value.trim().toLowerCase(); draw(); };
     sh.body.addEventListener('click', async e => { const b = e.target.closest('button'); if (!b) return; buzz(8);
       if (b.dataset.only != null) { only = b.dataset.only; draw(); return; }
@@ -7005,7 +7012,7 @@ function pickShopStore(cur) {
       const pys = c => ((DB.acc || {}).payees || []).filter(y => c.id && y.g === c.id && (!q || y.n.toLowerCase().includes(q)) && !shopPlaces().some(p => p.name === y.n));
       const secs = cats.map(c => ({c, ps: shopPlaces().filter(p => (c.id ? p.cat === c.id : !cats.some(x => x.id && x.id === p.cat)) && hit(p)), ys: pys(c)})).filter(s => s.ps.length || s.ys.length);
       $('#psL', sh.body).innerHTML = secs.map(({c, ps, ys}) => { const on = q || open.has(c.id || ''); return `<div class="psSec ${on ? 'open' : ''}" style="--c:${c.color}"><button class="psSH" data-cat="${c.id || ''}"><span>${esc(c.icon)}</span><b>${esc(c.name)}</b><em>${ps.length + ys.length}</em><i class="psCv">▾</i></button>${on ? `<div class="psPL">${ps.map(p => `<button class="psP ${p.id === cur ? 'on' : ''}" data-id="${p.id}"><b>${esc(p.name)}</b><small>${esc(p.addr || '')}</small></button>`).join('')}${ys.map(y => `<button class="psP" data-pn="${esc(y.n)}"><b>${esc(y.n)}</b><small>記帳裡建立的名稱</small></button>`).join('')}</div>` : ''}</div>`; }).join('')
-        || `<div class="empty">${shopPlaces().length ? '找不到符合的店家' : '還沒有收藏店家<br><span class="small">可以到地圖頁搜尋全聯、全家…加入「我的店家」，或用上面的「自己輸入店名」</span>'}</div>`; };
+        || `<div class="empty">${shopPlaces().length ? '找不到符合的店家' : '還沒有收藏地點<br><span class="small">可以到地圖頁搜尋全聯、全家…加入「我的店家」，或用上面的「自己輸入店名」</span>'}</div>`; };
     sh.body.innerHTML = `<div class="searchBox" style="margin-bottom:.7rem"><input id="psQ" type="search" placeholder="搜尋我的店家…"></div><div class="row" style="margin-bottom:.8rem;gap:.5rem"><button class="btn sm" data-a="free">✏️ 自己輸入店名</button><button class="btn sm" data-a="none">先不選店家</button></div><div class="psHint">點分類展開店家</div><div id="psL"></div>`;
     draw(); $('#psQ', sh.body).oninput = e => { q = e.target.value.trim().toLowerCase(); draw(); };
     sh.body.addEventListener('click', async e => { const t = e.target.closest('button'); if (!t) return; buzz(8);
@@ -7241,10 +7248,10 @@ const GUIDE = {
     {t: '歡迎使用日日帳本', h: `<div class="gHero"><div class="gIcon">${APP_ICON}</div><b>收藏愛店・菜單・點餐・分帳・記帳</b></div>
       <div class="gGrid"><div><i>🗺️</i><b>地圖</b>自動定位、找店、收藏</div><div><i>🔖</i><b>收藏</b>店家、菜單、消費紀錄</div><div><i>📒</i><b>日常</b>記一餐、點餐、購物清單</div><div><i>🧾</i><b>分帳</b>消費明細誰付多少</div><div><i>🎫</i><b>發票</b>手機條碼、掃描、匯入</div><div><i>📖</i><b>食譜</b>在設定頁裡</div><div><i>💰</i><b>記帳</b>設定頁進入，收支、資產、對帳</div><div><i>🛡️</i><b>備份</b>手機、雲端、QR 換機</div></div>
       <p>跟著這份說明走一遍，大約 3 分鐘。看完可以隨時到 <b>設定 → 使用說明</b> 再打開。分帳、發票、記帳另外有自己的說明。</p>`},
-    {t: '① 打開就定位，自動選好鄉鎮', h: phone('地圖', `<div class="pSrch">🔍 搜尋店家、地址、量販店…</div><div class="pWho"><i class="on">全部 12</i><i>🍳 早餐 3</i><i>🍱 午餐 4</i><i>🍲 晚餐 5</i></div><div class="pBtns">${pb('星河市 ▾')}${pb('幸福區 ▾')}${pb('📍', 'hl') + tap}</div><div class="pMap"><span class="flag">🍳</span><span class="flag f2">🍱</span></div>${pc('<b>星河市 幸福區・12 間收藏</b><small>🍳 早餐　晨曦早午餐、陽光蛋餅…</small>')}`, '地圖') +
+    {t: '① 打開就定位，自動選好鄉鎮', h: phone('地圖', `<div class="pSrch">🔍 搜尋地點、店名、地址…</div><div class="pWho"><i class="on">全部 12</i><i>🍳 早餐 3</i><i>🍱 午餐 4</i><i>🍲 晚餐 5</i></div><div class="pBtns">${pb('星河市 ▾')}${pb('幸福區 ▾')}${pb('📍', 'hl') + tap}</div><div class="pMap"><span class="flag">🍳</span><span class="flag f2">🍱</span></div>${pc('<b>星河市 幸福區・12 間收藏</b><small>🍳 早餐　晨曦早午餐、陽光蛋餅…</small>')}`, '地圖') +
       `<ul><li>一打開 App（或離開超過 3 分鐘再回來），地圖會<b>自動飛到你的位置、轉回朝北</b>，並<b>選好你現在所在的縣市、鄉鎮</b></li><li>下面列出這一區的收藏，<b>依分類排</b>（跟上方分類按鈕同順序），同一類裡離你近的在前面</li><li>按 <b>📍</b> 重新抓目前的鄉鎮，地圖停在你附近，不會縮到整個鄉鎮那麼小；按 <b>✕</b> 取消區域，看全部</li><li>右邊的按鈕由上到下：<b>＋／－</b> 放大縮小、<b>2D／3D</b>、<b>指北針</b>（轉回北方）、<b>◎</b> 我的位置、<b>＋</b> 新增收藏</li></ul>${tip('地圖不畫縣市、鄉鎮的邊界線，畫面比較乾淨；選區域時只顯示那一區的收藏。')}`},
     {t: '② 搜尋地點，一鍵收藏', h: phone('🔍 停車場', `<div class="pSrch">🔍 停車場</div><div class="pMap"><span class="flag">📍</span><span class="flag f2">📍</span></div>${pc(`<b>星河立體停車場</b><small>停車場・星河市幸福區光明路 8 號</small><div class="pBtns">${pb('🧭 導航')}${pb('⭐ 收藏', 'pri hl') + tap}</div>`)}`, '地圖') +
-      `<ul><li>上方搜尋框可以打<b>店名</b>，也可以打<b>停車場、加油站、咖啡廳</b>這類關鍵字</li><li>所有結果都會用紅色標籤<b>標在地圖上</b>，地圖自動縮放到剛好看得到全部；點標籤就能收藏，選一個分類</li><li>下面有選縣市、鄉鎮時，<b>只找那一區</b>（Google 最多 60 筆）</li><li>也可以<b>長按地圖</b>任何地方直接插旗</li></ul>${tip('有填 Google 金鑰的話搜尋最齊全，地址、電話、營業時間會自動帶入；沒有金鑰會改用 OpenStreetMap。')}`},
+      `<ul><li>上方搜尋框可以打<b>店名</b>，也可以打<b>停車場、加油站、咖啡廳</b>這類關鍵字</li><li>所有結果都會用紅色標籤<b>標在地圖上</b>，地圖自動縮放到剛好看得到全部；點標籤就能收藏，選一個分類；之後在「編輯地點」可以再勾<b>「也放在這些分類」</b>（例如午餐、晚餐都會去），每個分類都找得到，但「全部」只算一次</li><li>下面有選縣市、鄉鎮時，<b>只找那一區</b>（Google 最多 60 筆）</li><li>也可以<b>長按地圖</b>任何地方直接插旗</li></ul>${tip('有填 Google 金鑰的話搜尋最齊全，地址、電話、營業時間會自動帶入；沒有金鑰會改用 OpenStreetMap。')}`},
     {t: '③ 菜單：吃喝的店才有', h: phone('晨曦早午餐 幸福店', `<div class="pBtns">${pb('🧭 導航')}${pb('🗺️ Google 地圖')}${pb('📍 在地圖上看')}${pb('🔄 更新資訊')}</div><div class="pSeg"><i class="on">📋 菜單</i><i>🧾 消費紀錄</i></div>${pc('<b>📋 菜單</b><div class="pImgs"><i>🖼️</i><i>🖼️</i></div>' + pb('✨ AI 辨識成表格', 'pri hl') + tap)}<div class="pTable"><div><b>品名</b><b>原味</b><b>辣味</b></div><div><span>特製涼麵</span><span>55</span><span>55</span></div><div><span>麵量加大</span><span>+10</span><span>+10</span></div></div>`, '地圖') +
       `<ul><li>點店家 → <b>詳細資料</b>，有「📋 菜單」和「🧾 消費紀錄」兩個分頁</li><li>加入菜單照片後按 <b>✨ AI 辨識成表格</b>，大小杯、口味、份量、加購都會照紙本菜單分欄</li><li><b>停車場、加油站、超市</b>這類店家不會顯示菜單，只有消費紀錄</li><li>哪些分類有菜單可以自己改：設定 → 分類 → 編輯 →「這類店家有菜單」</li></ul>${tip('菜單照片也可以在 Google 地圖截圖後，用「分享」傳給日日帳本。')}`},
     {t: '④ 日常：記一餐、選店家', h: phone('選擇店家', `<div class="pWho"><i class="on">全部</i><i>🍳 早餐</i><i>🍱 午餐</i><i>🍲 晚餐</i></div><div class="pBtns">${pb('⊟ 全部收合')}</div>${pc('<b>🍱 午餐 ▾</b><small>森林小廚房・月光拉麵・幸福便當</small>' + tap)}${pc('<b>🍳 早餐 ▸</b><small>3 間</small>')}`, '日常') +
@@ -7260,9 +7267,9 @@ const GUIDE = {
     {t: '⑨ 食譜（在設定頁）', h: phone('設定', `<div class="pWho"><i class="on">全部</i><i>🍳 煎</i><i>🥘 炒</i><i>🍚 電鍋</i></div>${pc('<b>電鍋蒸飯</b><small>米 1 杯：水 1 杯・外鍋 1 杯水</small>')}${pc('<b>番茄炒蛋</b><small>2 人份・5 個步驟</small>')}${pb('＋ 新增食譜', 'pri wide hl') + tap}`, '設定') +
       `<ul><li>到 <b>設定</b> 頁的「食譜」按 <b>進入食譜 ›</b>，左上角 ‹ 回設定</li><li>記錄拿手菜：食材表格＋自己的步驟；也有「比例表」模板（幾杯米配幾杯水）</li><li>自訂資料夾（煎、炒、電鍋、湯…），按住拖曳排序或移到其他資料夾</li><li>很像的食譜不用重打：打開食譜按 <b>📄 另存</b>，或編輯時按 <b>📄 另存新檔</b>，取個新名字就多一份，再改食材就好（原本那份不會變）</li></ul>`},
     {t: '⑩ 備份、外觀、防誤刪', h: phone('設定', `${pc('<b>外觀</b><small>主題・重點顏色・介面大小・震動強度</small>')}${pc('<b>資料</b><div class="pBtns">' + pb('📤 匯出備份', 'pri hl') + pb('📥 匯入備份') + '</div>' + tap)}${pc('<b>🧷 防止誤刪 App</b><small>要刪除得先停用保護、輸入手機密碼</small>')}`, '設定') +
-      `<ul><li><b>備份會包含全部</b>：收藏店家和菜單、點餐、分帳、發票、記帳（常用紀錄、帳戶、對帳、商家）、資產、購物清單、食譜、分類、所有設定、API 金鑰和所有圖片</li><li>手機（匯出備份檔）、雲端（Google 雲端、pCloud）、<b>📲 QR Code 快速換機</b>內容都一樣；雲端和 QR 在 <b>記帳 → 設定 → 備份與換機</b></li><li>用 QR 傳給別人時可以選<b>不帶金鑰</b></li><li><b>🧷 防止誤刪 App</b>（記帳 → 設定 → 上鎖）：開啟後不能直接解除安裝</li><li>有新版本時 App 會提醒，按一下就能更新；<b>分享這個 App</b> 可以選傳連結，或顯示 QR Code 讓朋友掃描、存成圖片分享</li></ul>`},
+      `<ul><li><b>備份會包含全部</b>：收藏地點和菜單、點餐、分帳、發票、記帳（常用紀錄、帳戶、對帳、商家）、資產、購物清單、食譜、分類、所有設定、API 金鑰和所有圖片</li><li>手機（匯出備份檔）、雲端（Google 雲端、pCloud）、<b>📲 QR Code 快速換機</b>內容都一樣；雲端和 QR 在 <b>記帳 → 設定 → 備份與換機</b></li><li>用 QR 傳給別人時可以選<b>不帶金鑰</b></li><li><b>🧷 防止誤刪 App</b>（記帳 → 設定 → 上鎖）：開啟後不能直接解除安裝</li><li>有新版本時 App 會提醒，按一下就能更新；<b>分享這個 App</b> 可以選傳連結，或顯示 QR Code 讓朋友掃描、存成圖片分享</li></ul>`},
     {t: '⑪ 先設定金鑰（只要一次）', h: `<div class="gKeys"><div><i>🔑</i><b>AI 辨識金鑰（建議）</b><small>菜單照片、消費明細變成表格都靠它。免費申請，不用信用卡。</small><button class="btn sm pri" data-tut="ai">📘 看教學</button></div>
-        <div><i>🗺️</i><b>Google 搜尋金鑰（選用）</b><small>搜尋店家、停車場最齊全，自動帶入地址電話。</small><button class="btn sm" data-tut="maps">📘 看教學</button></div></div>
+        <div><i>🗺️</i><b>Google 搜尋金鑰（選用）</b><small>搜尋店家、停車場、加油站最齊全，自動帶入地址電話。</small><button class="btn sm" data-tut="maps">📘 看教學</button></div></div>
       <p>不設定也能先用，之後到 <b>設定</b> 頁再補上就可以。金鑰會一起備份，換手機不用重新申請。</p>`}]},
   shop: {title: '🧾 分帳 使用說明', steps: [
     {t: '分帳是什麼？', h: `<div class="gHero"><div class="gIcon">${APP_ICON}</div><b>一張明細，自動算出每個人要付多少</b></div>
@@ -7306,7 +7313,7 @@ const GUIDE = {
       `<ul><li>按 <b>🧾 拿去分帳</b>，會在發票日期建立一筆分帳，品項、折扣（含勾選的品項）、購物方式都會帶過去</li><li>接著選每一項是誰付的就完成了</li><li>已分帳的發票會標示「✓ 已分帳」，點一下直接打開那筆分帳</li><li>反過來：發票明細最下面「📥 用消費明細的內容取代」，可以把分帳裡比較完整的品項、折扣、整單折扣、費用套用到這張發票</li></ul>`}]},
   acc: {title: '💰 記帳 使用說明', steps: [
     {t: '記帳區可以做什麼？', h: `<div class="gHero"><div class="gIcon">${APP_ICON}</div><b>收支・資產・分帳欠款・對帳</b></div>
-      <div class="gGrid"><div><i>🗺️</i><b>地圖</b>店家地圖、搜尋收藏</div><div><i>📒</i><b>記帳</b>月曆、記一筆、常用</div><div><i>🏛️</i><b>資產</b>每個帳戶剩多少</div><div><i>📊</i><b>分析</b>圓餅圖、非必要消費</div><div><i>⚙️</i><b>設定</b>分類、上鎖、備份換機</div></div>
+      <div class="gGrid"><div><i>🗺️</i><b>地圖</b>地點地圖、搜尋收藏</div><div><i>📒</i><b>記帳</b>月曆、記一筆、常用</div><div><i>🏛️</i><b>資產</b>每個帳戶剩多少</div><div><i>📊</i><b>分析</b>圓餅圖、非必要消費</div><div><i>⚙️</i><b>設定</b>分類、上鎖、備份換機</div></div>
       <p>從 <b>設定 → 記帳・對帳</b> 進入（有設密碼要先解鎖），底部會換成記帳專用的五個分頁；在記帳的 <b>設定 → 回到日日帳本</b> 切回來。重開 App 會回到上次的區域。</p>`},
     {t: '① 記一筆', h: phone('📒 記一筆', `<div class="pSeg"><i class="on">支出</i><i>收入</i><i>轉帳</i><i>遺失</i></div>${pc('<b>NT$ 12×3+4 = 40</b>')}<div class="pWho"><i class="on">🍽️ 吃喝</i><i>🛍️ 購物</i><i>🏠 生活</i></div><div class="pWho"><i class="on">🍳 早餐</i><i>🍱 午餐</i><i>🍲 晚餐</i></div>`, '記帳', 'acc') +
       `<ul><li>計算機可以 + − × ÷，按 = 算出結果；記帳頁的 <b>📅 今天</b> 跳回今天</li><li>類別是 <b>母分類 → 子分類</b>（吃喝 → 早餐），都可以自訂名稱和圖示</li><li><b>商家／對象</b>：和收藏的店家同一份清單，也可以建立台電、台水這種只在記帳用的名稱；有 📍 的是已經連結地圖的店家</li><li><b>🧾 發票</b>：發票比較晚收到也沒關係，之後打開這筆按「選擇發票」或手動輸入號碼，日期時間會換成發票上的，並可選品項名稱以你的或發票的為主；按「發票 QR Code」會產生像紙本一樣的左右兩個碼，別的手機掃描就能看到號碼和品項</li><li><b>付款帳戶</b>：先選現金、銀行、信用卡、儲值、行動支付，再選是哪一個</li></ul>`},
@@ -7319,17 +7326,17 @@ const GUIDE = {
     {t: '⑤ 資產', h: phone('資產', `<div class="pBtns" style="justify-content:flex-end">${pb('👁 顯示金額', 'hl') + tap}</div>${pc('<b>淨資產</b><small>$ ••••</small>')}${pc('<b>🏦 銀行</b><small>我的銀行　$ ••••</small>')}`, '資產', 'acc') +
       `<ul><li>金額預設隱藏，按右上角 👁 顯示</li><li>每個帳戶的餘額會隨支出、收入、轉帳、遺失自動計算；點帳戶可以設定目前餘額、換圖示</li><li>帳戶裡的<b>收支明細依月份分組</b>，點月份收合，或按「全部展開／全部收合」；點一筆可以直接修改</li><li>信用卡設定每月還款日和扣款銀行，到了會自動記一筆還款</li><li>按住拖曳排序</li></ul>`},
     {t: '⑥ 消費分析', h: phone('消費分析', `${`<div class="pSeg"><i>日</i><i>週</i><i class="on">月</i><i>半年</i><i>年</i></div>` + pc('<b>11 月支出 $12,480</b><small>比上個月 ▼ 8%・非必要 23%</small>')}<div class="pTable"><div><span>🍽️ 吃喝</span><span>42%</span></div><div><span>🏠 生活</span><span>30%</span></div></div>`, '分析', 'acc') +
-      `<ul><li>上方切換 <b>日／週／月／半年／年</b>，◀ ▶ 換上一期、下一期，點中間可以直接選日期或月份</li><li>支出、收入、平均每天三個數字，和上一期比較；<b>💡 分析重點</b>自動整理花最多的分類、增減、非必要比例、儲蓄率</li><li>長條圖分成必要（綠）和非必要（橘），點長條看那天／那個月的金額；半年和年還有每月收支表</li><li>圓餅圖看各分類佔比，點分類看子分類；<b>必要</b>和<b>非必要</b>各有自己的分類佔比圓餅圖（在「設定哪些是非必要」選）</li><li>星期幾花最多、最大筆的支出、最常花錢的地方、金額遺失統計</li><li>右上角 <b>📤 匯出報告</b>：選日／週／月／半年／年和期間，匯出圖表加數據的 <b>PDF</b>（列印畫面選「另存為 PDF」）或 <b>Excel</b>（總覽含圖表、分類、必要與非必要、趨勢、明細、商家排行）</li></ul>`},
-    {t: '⑦ 店家地圖：定位、搜尋、收藏', h: phone('店家地圖', `<div class="pSrch">🔍 加油站</div><div class="pMap"><span class="flag">📍</span><span class="flag f2">🍳</span></div><div class="pBtns">${pb('星河市 ▾')}${pb('幸福區 ▾')}${pb('✕')}</div>${pc('<b>🍳 早餐 ▾</b><small>晨曦早午餐・消費 3 次・$420</small>' + tap)}`, '地圖', 'acc') +
-      `<ul><li>一進來就<b>定位到你的位置</b>，並<b>自動選好目前的鄉鎮</b>，下面列出那一區的店家</li><li>地圖上方的搜尋列可以搜店名，或搜<b>停車場、加油站</b>這類關鍵字：結果全部標在地圖上，點標籤或「＋ 收藏」就能加入收藏；有選鄉鎮時只找那一區</li><li>左下 ＋／－ 放大縮小，右下 ➤ 固定朝北、◎ 移到目前位置（會重新選好鄉鎮）</li><li>清冊依分類排，「全部展開／全部收合」一鍵切換；按住分類標題上下移動，展開後按住店家排序</li></ul>`},
-    {t: '⑧ 店家資料、改名、釘選', h: phone('店家地圖', `${pc('<b>📍 晨曦早午餐</b><small>星河路1號・消費 3 次・$420</small><div class="pBtns">' + pb('✎ 改店名') + pb('🧭 導航') + '</div>')}${pc('<b>📌 好鄰居超市 中央店</b><small>還沒有位置</small><div class="pBtns">' + pb('📍 釘選', 'pri hl') + '</div>' + tap)}`, '地圖', 'acc') +
-      `<ul><li>點店家會在地圖上標出來，下面顯示地址、分類和每一筆記帳明細</li><li>只在記帳出現、還沒有位置的店家按 <b>📍 釘選</b>，用 Google 地圖搜尋找到位置</li><li>在發票、地圖、記帳任何一區<b>改店名</b>，會問要不要一起改其他區；台灣電力公司這類「只用在記帳」的名稱不會跟著改</li><li>在記帳設定的「商家／對象名稱」點收藏店家，會直接跳到這張地圖</li></ul>`},
+      `<ul><li>上方切換 <b>日／週／月／半年／年</b>，◀ ▶ 換上一期、下一期，點中間可以直接選日期或月份</li><li>支出、收入、平均每天三個數字，和上一期比較；<b>💡 分析重點</b>自動整理花最多的分類、增減、非必要比例、儲蓄率</li><li>長條圖分成必要（綠）和非必要（橘），點長條看那天／那個月的金額；半年和年還有每月收支表</li><li>圓餅圖看各分類佔比，點分類看子分類；<b>必要</b>和<b>非必要</b>各有自己的分類佔比圓餅圖（在「設定哪些是非必要」選）</li><li>星期幾花最多、最大筆的支出、最常花錢的地方、金額遺失統計</li><li>右上角 <b>📤 匯出報告</b>：選日／週／月／半年／年和期間，匯出圖表加數據的 <b>PDF</b>（直接存成檔案）、<b>🖼️ 圖片</b>（一張長圖 PNG，存到相簿，日報表有每 2 小時的時段長條圖）或 <b>Excel</b>（總覽含圖表、分類、必要與非必要、趨勢、明細、商家排行）</li></ul>`},
+    {t: '⑦ 地點地圖：定位、搜尋、收藏', h: phone('地點地圖', `<div class="pSrch">🔍 加油站</div><div class="pMap"><span class="flag">📍</span><span class="flag f2">🍳</span></div><div class="pBtns">${pb('星河市 ▾')}${pb('幸福區 ▾')}${pb('✕')}</div>${pc('<b>🍳 早餐 ▾</b><small>晨曦早午餐・消費 3 次・$420</small>' + tap)}`, '地圖', 'acc') +
+      `<ul><li>一進來就<b>定位到你的位置</b>，並<b>自動選好目前的鄉鎮</b>，下面列出那一區的收藏地點</li><li>地圖上方的搜尋列可以搜店名，或搜<b>停車場、加油站</b>這類關鍵字：結果全部標在地圖上，點標籤或「＋ 收藏」就能加入收藏；有選鄉鎮時只找那一區</li><li>左下 ＋／－ 放大縮小，右下 ➤ 固定朝北、◎ 移到目前位置（會重新選好鄉鎮）</li><li>清冊依分類排，「全部展開／全部收合」一鍵切換；按住分類標題上下移動，展開後按住店家排序</li></ul>`},
+    {t: '⑧ 店家資料、改名、釘選', h: phone('地點地圖', `${pc('<b>📍 晨曦早午餐</b><small>星河路1號・消費 3 次・$420</small><div class="pBtns">' + pb('✎ 改店名') + pb('🧭 導航') + '</div>')}${pc('<b>📌 好鄰居超市 中央店</b><small>還沒有位置</small><div class="pBtns">' + pb('📍 釘選', 'pri hl') + '</div>' + tap)}`, '地圖', 'acc') +
+      `<ul><li>點店家會在地圖上標出來，下面顯示地址、分類和每一筆記帳明細</li><li>只在記帳出現、還沒有位置的店家按 <b>📍 釘選</b>，用 Google 地圖搜尋找到位置</li><li>在發票、地圖、記帳任何一區<b>改店名</b>，會問要不要一起改其他區；台灣電力公司這類「只用在記帳」的名稱不會跟著改</li><li>在記帳設定的「商家／對象名稱」點收藏地點，會直接跳到這張地圖</li></ul>`},
     {t: '⑨ 分帳的人、同一個人', h: phone('記帳設定', `${pc('<b>我是誰</b><div class="pWho"><i class="on">🙂 小美</i><i>🧑 明哥</i><i>👵 阿嬤</i></div>')}${pc('<b>🔗 同一個人，不同綽號</b><div class="sameR" style="margin-top:.3rem"><span>👦 阿明<small>日常</small></span><b>＝</b><span>🧑 明哥<small>記帳</small></span></div>' + pb('🔗 設定同一個人', 'hl') + tap)}`, '設定', 'acc') +
       `<ul><li><b>我是誰</b>：分帳、對帳時「我」是哪一個人</li><li><b>管理名單</b>：新增、改名、換圖示、刪除、拖曳排序；名單只用在記帳，和日常點餐分開</li><li><b>🔗 同一個人，不同綽號</b>：例如日常點餐叫「阿明」、記帳叫「明哥」。設定後，從分帳匯入記帳會自動變成「明哥」，欠款、對帳算在一起</li><li>如果記帳名單裡兩個名字其實是同一人，連起來後紀錄會併在一起，只留一個名字</li></ul>`},
     {t: '⑩ 上鎖、防止誤刪', h: phone('記帳設定', `${pc('<b>🔒 記帳密碼</b><small>6 位數・可用指紋解鎖</small><div class="pBtns">' + pb('🔓 立刻上鎖', 'hl') + pb('變更密碼') + '</div>' + tap)}${pc('<b>🧷 防止誤刪 App</b><small>不能直接解除安裝</small>')}`, '設定', 'acc') +
       `<ul><li><b>上鎖</b>：設定 6 位數密碼，可以用指紋解鎖；螢幕關閉或把 App 滑掉就會自動上鎖，在 App 裡切換分頁不用重新解鎖</li><li>設定頁的鎖頭按鈕可以立刻上鎖／解鎖；變更或移除密碼要先解鎖；從分帳匯入記帳也要先解鎖</li><li>有密碼時，桌面小工具和通知會把金額藏起來</li><li><b>🧷 防止誤刪 App</b>：開啟後手機不能直接解除安裝日日帳本，要先到手機設定停用保護，停用時要輸入手機的解鎖密碼；在 App 裡關閉要先輸入記帳密碼</li></ul>${tip('防誤刪是多一道確認，不是絕對擋得住；最可靠的還是定期備份。')}`},
     {t: '⑪ 匯出、備份、換機', h: phone('記帳設定', `${pc('<b>📤 匯出 CSV</b><small>消費明細・資產明細</small>')}${pc('<b>☁️ Google 雲端・pCloud</b><small>上傳／還原・選資料夾</small>')}${pc('<b>📲 快速換機</b><small>舊手機顯示 QR，新手機掃描</small>' + tap)}`, '設定', 'acc') +
-      `<ul><li><b>匯出 CSV</b>：選日期區間，消費明細（含品項、分帳）或資產明細</li><li><b>備份內容是整個日日帳本</b>：收藏店家和菜單、點餐、分帳、發票、記帳（常用紀錄、帳戶、對帳、商家）、資產、購物清單、食譜、分類、所有設定、API 金鑰和所有圖片；只有雲端登入和記帳密碼不備份</li><li><b>Google 雲端、pCloud</b>：上傳或還原，可以選資料夾；也可以在 App 裡用網頁版雲端硬碟登入</li><li><b>手機內建儲存</b>：存成一個備份檔放在「下載」資料夾</li><li><b>📲 快速換機 QR Code</b>：同一個 Wi-Fi 直接傳到新手機（新手機只要掃一個 QR，可以放大縮小）；傳給別人時選「不要」就不會帶你的金鑰</li></ul>`},
+      `<ul><li><b>匯出 CSV</b>：選日期區間，消費明細（含品項、分帳）或資產明細</li><li><b>備份內容是整個日日帳本</b>：收藏地點和菜單、點餐、分帳、發票、記帳（常用紀錄、帳戶、對帳、商家）、資產、購物清單、食譜、分類、所有設定、API 金鑰和所有圖片；只有雲端登入和記帳密碼不備份</li><li><b>Google 雲端、pCloud</b>：上傳或還原，可以選資料夾；也可以在 App 裡用網頁版雲端硬碟登入</li><li><b>手機內建儲存</b>：存成一個備份檔放在「下載」資料夾</li><li><b>📲 快速換機 QR Code</b>：同一個 Wi-Fi 直接傳到新手機（新手機只要掃一個 QR，可以放大縮小）；傳給別人時選「不要」就不會帶你的金鑰</li></ul>`},
     {t: '⑫ 小工具、通知欄、控制中心', h: phone('桌面', `${pc('<b>📒 日日帳本　11月</b><small>本月支出 $8,420・收入 $36,000・今天 $185</small><div class="pBtns">' + pb('＋ 支出', 'pri hl') + pb('＋ 收入') + pb('⭐ 常用') + '</div>' + tap)}${pc('<b>🔔 日日帳本・快速記帳</b><small>11月 支出 $8,420・今天 $185</small>')}`, '設定', 'acc') +
       `<ul><li><b>桌面小工具</b>：長按桌面空白處 →「小工具」→ 日日帳本，按「＋ 支出」直接打開記一筆</li><li><b>通知欄</b>：記帳 → 設定 → 快速記帳，打開「通知欄快速記帳」，通知上有「＋ 支出／＋ 收入／⭐ 常用」三顆按鈕</li><li><b>控制中心</b>：下拉兩次 → 編輯（鉛筆）→ 把「記一筆」和「常用記帳」拖進去</li><li>不想讓別人看到金額：關掉「小工具和通知顯示金額」</li></ul>`}]}
 };
@@ -8454,13 +8461,13 @@ const payGroups = () => { const A = DB.acc; A.pcats = A.pcats || []; A.gord = A.
   const ix = id => { const i = A.gord.indexOf(id); return i < 0 ? 1e4 + L.findIndex(x => x.id === id) : i; }; return L.sort((x, y) => ix(x.id) - ix(y.id)); };
 const isShopG = g => DB.cats.some(c => c.id === g);
 const autoCat = (gname, type = 'out') => { let id = ''; (DB.acc.cats[type] || []).forEach(P => (P.subs || []).forEach(sc => { if (!id && sc.n === gname) id = sc.id; })); return id; };
-/* 舊的商家名稱（沒有分類）：同名的收藏店家就跟著它，其他依記帳母分類建一個「只用在記帳」的分類 */
+/* 舊的商家名稱（沒有分類）：同名的收藏地點就跟著它，其他依記帳母分類建一個「只用在記帳」的分類 */
 function payMigrate() { const A = DB.acc; A.pcats = A.pcats || []; A.iord = A.iord || {}; let ch = 0;
   A.payees.forEach(py => { if (py.g !== undefined) return; const P = (DB.places || []).find(x => x.name === py.n); if (P) { py.g = P.cat || ''; py.dupe = 1; ch++; return; }
     const f = catFind('out', py.cat).p ? catFind('out', py.cat) : catFind('in', py.cat), sameC = f.s && DB.cats.find(c => c.name === f.s.n); if (sameC) { py.g = sameC.id; ch++; return; } const nm = f.p ? f.p.n + (f.p.n === '生活' ? '繳費' : '') : '其他';
     let g = A.pcats.find(x => x.name === nm); if (!g) { g = {id: 'g' + uid(), name: nm, icon: f.p ? f.p.i : '🏷️', color: '#8a6a4a'}; A.pcats.push(g); } py.g = g.id; ch++; });
   const n0 = A.payees.length; A.payees = A.payees.filter(py => !py.dupe); if (ch || A.payees.length !== n0) saveAcc(); }
-/* 某個分類裡的所有項目（收藏店家＋自訂名稱），依自訂順序 */
+/* 某個分類裡的所有項目（收藏地點＋自訂名稱），依自訂順序 */
 function payItems(g, hit) { const A = DB.acc, ord = (A.iord || {})[g || '_'] || [];
   const pl = (DB.places || []).filter(p => (g ? p.cat === g : !DB.cats.some(c => c.id === p.cat)) && (!hit || hit(p.name))).map(p => ({k: 'p:' + p.id, n: p.name, pl: p}));
   const py = A.payees.filter(x => (x.g || '') === (g || '') && (!hit || hit(x.n)) && !pl.some(z => z.n === x.n)).map(x => ({k: 'y:' + x.id, n: x.n, py: x}));
@@ -8501,7 +8508,7 @@ function pickPayee(type, cur) {
 }
 /* 新分類：可以選要不要也放進收藏分類（購物分帳的店家會用到） */
 async function newPayGroup() {
-  const v = await nameIcon('新增分類', {n: '', i: '🏷️'}, {ph: '例如：早午餐、生活繳費', extra: `<button class="ckRow on" data-a="shopck" id="pyShopCk"><span class="acCk"></span>也當成收藏店家的分類（購物分帳選店家時看得到）</button><div class="small muted">像台電、台水這種只在記帳用的，就把勾勾拿掉。</div>`, read: b => ({shop: $('#pyShopCk', b).classList.contains('on')})});
+  const v = await nameIcon('新增分類', {n: '', i: '🏷️'}, {ph: '例如：早午餐、生活繳費', extra: `<button class="ckRow on" data-a="shopck" id="pyShopCk"><span class="acCk"></span>也當成收藏地點的分類（購物分帳選店家時看得到）</button><div class="small muted">像台電、台水這種只在記帳用的，就把勾勾拿掉。</div>`, read: b => ({shop: $('#pyShopCk', b).classList.contains('on')})});
   if (!v) return null;
   if (v.shop) { const c = {id: 'c' + uid(), name: v.n, icon: v.i, color: CAT_COLORS.find(x => !DB.cats.some(y => y.color.toLowerCase() === x.toLowerCase())) || CAT_COLORS[DB.cats.length % CAT_COLORS.length]}; DB.cats.push(c); saveCats(); return c.id; }
   const g = {id: 'g' + uid(), name: v.n, icon: v.i, color: '#8a6a4a'}; (DB.acc.pcats = DB.acc.pcats || []).push(g); saveAcc(); return g.id;
@@ -8522,7 +8529,7 @@ function editPayee(type, p0) {
       sh.body.innerHTML = `<div class="field"><label>名稱</label><input id="pyN" value="${esc(p.n)}" placeholder="例如：台灣電力公司、好鄰居超市"></div>
         <div class="pyLocR card"><span class="grow">${lc ? `📍 <b>已連結地圖</b><small>${esc(lc.addr || '')}${lc.fav ? '・日日帳本地圖收藏' : ''}</small>` : '📌 <b>還沒有地圖位置</b><small>釘選後會出現在記帳的「地圖」分頁</small>'}</span>${lc && lc.fav ? '' : `<button class="btn sm" data-a="pin">📍 ${lc ? '更改' : '釘選'}</button>`}</div>
         <div class="lbl">放在哪個分類</div><div class="pgPick">${G.map(g => `<button data-g="${g.id}" class="${g.id === p.g ? 'on' : ''}" style="--c:${g.color}">${esc(g.icon)} ${esc(g.name)}${g.shop ? '' : '<small>記帳</small>'}</button>`).join('')}<button data-a="newG" class="add">＋ 新分類</button></div>
-        <div class="small muted" style="margin:-.2rem 0 .8rem">${gs ? '🛒 這個分類是收藏店家的分類，購物分帳「選擇店家」時也看得到這個名稱。' : '📒 只用在記帳，不會出現在購物分帳。'}</div>
+        <div class="small muted" style="margin:-.2rem 0 .8rem">${gs ? '🛒 這個分類是收藏地點的分類，購物分帳「選擇店家」時也看得到這個名稱。' : '📒 只用在記帳，不會出現在購物分帳。'}</div>
         <div class="lbl">記帳時自動帶入的類別</div><div class="acType"><button data-ty="out" class="${ty === 'out' ? 'on' : ''}">支出</button><button data-ty="in" class="${ty === 'in' ? 'on' : ''}">收入</button></div>${catPickerHtml(ty, p.cat, openP)}`; };
     draw();
     sh.body.addEventListener('click', async e => { const t = e.target.closest('button'); if (!t) return; buzz(8); p.n = $('#pyN', sh.body).value.trim();
@@ -8560,7 +8567,7 @@ function accEdit(r0, preset, opt = {}) { accMigVia();
         ${tr && r.settle ? (() => { const inn = !r.acct, k = inn ? 'to' : 'acct'; return `<div class="lbl">${inn ? '從哪裡轉進來' : '轉給對方'}</div><div class="acExt">🌐 外部（對方的帳戶／支付）</div><div class="lbl">付款方式</div><div class="acAccts">${SETTLE_VIA.map(v => `<button data-via="${v}" class="${v === r.via ? 'on' : ''}">${v}</button>`).join('')}</div><div class="lbl">${inn ? '收進我的哪個帳戶' : '從我的哪個帳戶付'}</div><div class="acAccts">${DB.acc.accts.filter(x => x.kind === 'bank' || x.kind === 'cash').map(x => `<button data-sacct="${k}:${x.id}" class="${x.id === r[k] ? 'on' : ''}">${aIco(x)}<span class="acN ${[...x.n].length > 7 ? 'lg' : ''}">${esc(x.n)}</span></button>`).join('')}</div>`; })() : tr ? `<div class="lbl">從哪個帳戶轉出</div>${acctPickerHtml(r.acct, 'acct', r.fund)}<div class="lbl">轉入哪個帳戶</div>${acctPickerHtml(r.to, 'to', r.fund2)}<div class="field" style="margin-top:.6rem"><label>手續費（沒有就留空）</label><input id="acFee" value="${+r.fee ? r.fee : ''}" inputmode="decimal" placeholder="0"></div>`
         : r.type === 'loss' ? `<div class="lbl">從哪裡遺失的（現金、銀行、卡片…）</div>${acctPickerHtml(r.acct, 'acct', r.fund)}<div class="small muted" style="margin:.2rem 0 .4rem">💸 金額遺失會從這個帳戶扣掉，另外統計，不算在支出裡。</div>`
         : `<div class="lbl">類別</div>${catPickerHtml(r.type, r.cat, openP)}
-        <div class="lbl">商家／對象</div><button class="acPayee" data-a="payee">${r.payee ? `<b>${esc(r.payee)}</b>` : '<span class="muted">選擇店名，或自訂名稱（例如：台灣電力公司）</span>'}<i>›</i></button>${r.payee && !isPcatPayee(r.payee) && r.type !== 'tr' ? (storeLoc(r.payee) ? `<div class="pyLocT on">📍 已連結地圖${storeLoc(r.payee).addr ? '・' + esc(storeLoc(r.payee).addr) : ''}</div>` : '<button class="pyLocT" data-a="pinP">📌 這間店還沒有地圖位置，點這裡釘選</button>') : ''}
+        <div class="lbl">商家／對象</div><button class="acPayee" data-a="payee">${r.payee ? `<b>${esc(r.payee)}</b>` : '<span class="muted">選擇店名，或自訂名稱（例如：台灣電力公司）</span>'}<i>›</i></button>${r.payee && !isPcatPayee(r.payee) && r.type !== 'tr' ? (storeLoc(r.payee) ? `<div class="pyLocT on">📍 已連結地圖${storeLoc(r.payee).addr ? '・' + esc(storeLoc(r.payee).addr) : ''}</div>` : '<button class="pyLocT" data-a="pinP">📌 這個地點還沒有地圖位置，點這裡釘選</button>') : ''}
         <div class="lbl">${r.type === 'in' ? '收進哪個帳戶' : '付款帳戶'}</div>${acctPickerHtml(r.acct, 'acct', r.fund)}`}
         ${r0 && Object.keys(r.settled || {}).length ? `<div class="acSetl">${Object.keys(r.settled).map(p => `<div class="row" style="gap:.5rem"><span class="grow">✓ 已和 ${esc(aWho(p).name)} 結清</span><button class="btn sm" data-unst="${p}">改回未結清</button></div>`).join('')}</div>` : ''}
         <div class="field" style="margin-top:.7rem"><label class="row" style="gap:.4rem"><span class="grow">備註／消費明細</span></label>${tr ? '' : `<div class="acRow2" style="margin-bottom:.5rem"><button class="btn" data-a="billEd">🧾 ${r.bill ? '編輯明細（' + (r.bill.items || []).length + ' 項）' : '用分帳方式輸入'}</button><button class="btn" data-a="fromBill">📥 從分帳帶入</button></div>`}<textarea id="acNote" rows="${Math.min(10, Math.max(3, String(r.note || '').split('\n').length + 1))}" placeholder="例如：\n鮮奶 ×2  $95\n雞蛋  $60">${esc(r.note || '')}</textarea></div>
@@ -8954,7 +8961,7 @@ function gwManual() { const sh = sheet({title: '🖥️ 電腦版雲端硬碟'})
   <button class="card setR" data-m="up" style="width:100%;text-align:left;margin-bottom:.5rem"><span class="gRi">⬆️</span><div class="t"><b>上傳備份</b><small>按左上角「＋ 新增 → 檔案上傳」，備份檔會自動選好</small></div><span class="chev">›</span></button>
   <button class="card setR" data-m="down" style="width:100%;text-align:left"><span class="gRi">⬇️</span><div class="t"><b>下載備份還原</b><small>找到備份檔，按「⋮ → 下載」就會自動還原</small></div><span class="chev">›</span></button>`;
   sh.body.onclick = e => { const t = e.target.closest('[data-m]'); if (!t) return; buzz(8); sh.close(); gDriveWeb(t.dataset.m, true); }; }
-/* ---------- 記帳區的店家地圖：只顯示店名、地址、位置和消費紀錄；跟日日帳本的地圖分開，只共用店名 ----------
+/* ---------- 記帳區的地點地圖：只顯示店名、地址、位置和消費紀錄；跟日日帳本的地圖分開，只共用店名 ----------
    位置來源：日日帳本地圖上的收藏（同名就算連結）＞ 在記帳這邊自己釘選的位置 DB.acc.locs[店名] */
 const AM = {map: null, marks: [], q: '', f: 'all', area: null, sel: '', tw: new Map(), me: null, res: [], rMarks: [], gseq: 0};
 /* 收合狀態記在 S.amFold（沒記過的分類預設收合） */
@@ -8965,28 +8972,28 @@ function storeLoc(n) { n = String(n || '').trim(); if (!n) return null; const p 
 function accStoreStats() { const m = {}; DB.acc.recs.forEach(r => { const n = (r.payee || '').trim(); if (!n || r.type === 'tr') return; const o = m[n] = m[n] || {cnt: 0, sum: 0, last: ''}; o.cnt++; o.sum += r.type === 'out' || r.type === 'loss' ? accMine(r) : 0; if (r.d > o.last) o.last = r.d; }); return m; }
 /* 地圖上的店：日日帳本所有收藏 ＋ 記帳裡出現過、但不在收藏裡的店（台電這類只用在記帳的不算） */
 function accStores() { const A = DB.acc, st = accStoreStats(), out = [], seen = new Set();
-  (DB.places || []).forEach(p => { if (seen.has(p.name)) return; seen.add(p.name); out.push({n: p.name, place: p, cat: p.cat || '', loc: p.lat != null ? {lat: p.lat, lon: p.lon, addr: p.addr || '', fav: true} : null, st: st[p.name]}); });
+  (DB.places || []).forEach(p => { if (seen.has(p.name)) return; seen.add(p.name); out.push({n: p.name, place: p, cat: pCats(p)[0], cats: pCats(p), loc: p.lat != null ? {lat: p.lat, lon: p.lon, addr: p.addr || '', fav: true} : null, st: st[p.name]}); });
   const add = n => { n = (n || '').trim(); if (!n || seen.has(n) || isPcatPayee(n)) return; seen.add(n); const l = (A.locs || {})[n]; out.push({n, cat: '_acc', loc: l ? Object.assign({own: true}, l) : null, st: st[n]}); };
   A.recs.forEach(r => { if (r.type !== 'tr') add(r.payee); }); A.payees.forEach(y => { if (isShopG(y.g)) add(y.n); });
   return out; }
 function amTown(o) { if (!o.loc || !TW.ready) return null; const k = o.loc.lat + ',' + o.loc.lon; let t = AM.tw.get(k); if (t === undefined) { const tw = TW.townAt(o.loc.lon, o.loc.lat); t = tw ? {c: tw.county, t: tw.name} : null; AM.tw.set(k, t); } return t; }
 const amInArea = o => { const a = AM.area; if (!a) return true; const t = amTown(o); return !!t && t.c === a.c && (!a.t || t.t === a.t); };
-const amCat = id => id === '_acc' ? {id, name: '記帳店家', icon: '📒', color: '#8a6d4b'} : catOf(id);
+const amCat = id => id === '_acc' ? {id, name: '記帳商家', icon: '📒', color: '#8a6d4b'} : catOf(id);
 async function renderAccMap() {
   TW.init(); const all = accStores(), q = AM.q.toLowerCase();
   const inQ = o => !q || o.n.toLowerCase().includes(q) || (o.loc && (o.loc.addr || '').toLowerCase().includes(q));
-  const base = all.filter(o => amInArea(o) && inQ(o)), cnt = k => base.filter(o => k === 'all' || o.cat === k).length;
+  const base = all.filter(o => amInArea(o) && inQ(o)), cnt = k => base.filter(o => k === 'all' || (o.cats || [o.cat]).includes(k)).length;
   if (AM.f !== 'all' && !cnt(AM.f)) AM.f = 'all';
-  const V = base.filter(o => AM.f === 'all' || o.cat === AM.f), pinned = all.filter(o => o.loc).length;
-  $('#accMSub').textContent = `${all.length} 間店・${pinned} 間在地圖上`;
+  const V = base.filter(o => AM.f === 'all' || (o.cats || [o.cat]).includes(AM.f)), pinned = all.filter(o => o.loc).length;
+  $('#accMSub').textContent = `${all.length} 個地點・${pinned} 間在地圖上`;
   const co = DB.acc.amCord || [], cats0 = DB.cats.map(c => c.id).concat(['', '_acc']), cats = cats0.map((k, i) => [k, co.indexOf(k) < 0 ? 1e4 + i : co.indexOf(k)]).sort((a, b) => a[1] - b[1]).map(x => x[0]).filter(k => cnt(k));
   const ordOf = k => ((DB.acc.amOrd || {})[k]) || [], anyOpen = AM.f === 'all' && cats.some(k => !amFolded(k));
   const towns = AM.area && TW.counties[AM.area.c] ? TW.counties[AM.area.c].towns : [];
   $('#accMList').innerHTML = `<div class="amChips">${[['all', '🗺️ 全部', '']].concat(cats.map(k => { const c = amCat(k); return [k, `${c.icon} ${c.name}`, c.color]; })).map(([k, t, c]) => `<button class="chip ${AM.f === k ? 'on' : ''}" data-f="${k}" ${c ? `style="--c:${c}"` : ''}>${esc(t)} <span class="n">${cnt(k)}</span></button>`).join('')}</div>
     ${TW.ready ? `<div class="amArea"><select id="amC" aria-label="選擇縣市"><option value="">全部縣市</option>${TW.names.map(n => `<option ${AM.area && AM.area.c === n ? 'selected' : ''}>${n}</option>`).join('')}</select><select id="amT" aria-label="選擇鄉鎮市區" ${AM.area ? '' : 'disabled'}><option value="">全部鄉鎮市區</option>${towns.map(t => `<option ${AM.area && AM.area.t === t.name ? 'selected' : ''}>${t.name}</option>`).join('')}</select>${AM.area ? '<button class="ic" data-a="arX" aria-label="取消區域">✕</button>' : ''}</div>` : ''}
-    <div class="amBar"><div class="searchBox amQ"><input id="amQ" type="search" placeholder="搜尋店名或地址" value="${esc(AM.q)}"></div>${AM.f === 'all' && cats.length > 1 ? `<button class="btn sm amFoldAll" data-a="foldAll">${anyOpen ? '⊟ 全部收合' : '⊞ 全部展開'}</button>` : ''}</div>
-    <div class="small muted amTip">按住分類標題可以上下移動；展開後按住店家可以排序</div><div id="amSecs">
-    ${(AM.f === 'all' ? cats : [AM.f]).map(k => { const c = amCat(k), od = ordOf(k), oi = o => { const i = od.indexOf(o.n); return i < 0 ? 1e6 : i; }, L = V.filter(o => o.cat === k).sort((a, b) => oi(a) - oi(b) || ((b.st || {}).last || '').localeCompare((a.st || {}).last || '') || a.n.localeCompare(b.n, 'zh-Hant')); if (!L.length) return '';
+    <div class="amBar"><div class="searchBox amQ"><input id="amQ" type="search" placeholder="搜尋名稱或地址" value="${esc(AM.q)}"></div>${AM.f === 'all' && cats.length > 1 ? `<button class="btn sm amFoldAll" data-a="foldAll">${anyOpen ? '⊟ 全部收合' : '⊞ 全部展開'}</button>` : ''}</div>
+    <div class="small muted amTip">按住分類標題可以上下移動；展開後按住地點可以排序</div><div id="amSecs">
+    ${(AM.f === 'all' ? cats : [AM.f]).map(k => { const c = amCat(k), od = ordOf(k), oi = o => { const i = od.indexOf(o.n); return i < 0 ? 1e6 : i; }, L = V.filter(o => (o.cats || [o.cat]).includes(k)).sort((a, b) => oi(a) - oi(b) || ((b.st || {}).last || '').localeCompare((a.st || {}).last || '') || a.n.localeCompare(b.n, 'zh-Hant')); if (!L.length) return '';
       const fd = AM.f === 'all' && amFolded(k) && !AM.q;
       return `<div class="amSec ${fd ? 'fold' : ''}" data-k="${k}"><button class="amSecH" data-fold="${k}" style="--c:${c.color}"><span class="grip"></span><span>${esc(c.icon)}</span><b>${esc(c.name)}</b><em>${L.length}</em>${AM.f === 'all' ? `<i>${fd ? '▸' : '▾'}</i>` : ''}</button>
         ${fd ? '' : L.map(o => `<button class="amR card ${AM.sel === o.n ? 'sel' : ''}" data-st="${esc(o.n)}"><span class="amPinI ${o.loc ? 'on' : ''}">${o.loc ? '📍' : '📌'}</span><span class="grow"><b>${esc(o.n)}</b><small>${o.loc ? esc(o.loc.addr || '已釘選位置') : '還沒有位置'}</small><small>${o.st ? `記帳 ${o.st.cnt} 筆・${money(o.st.sum)}・最近 ${o.st.last.slice(5).replace('-', '/')}` : '還沒有記帳紀錄'}</small></span>${o.loc ? '<span class="chev">›</span>' : `<span class="btn sm" data-pin="${esc(o.n)}">📍 釘選</span>`}</button>`).join('')}</div>`; }).join('') || '<div class="empty">沒有符合的店家</div>'}</div>`;
@@ -9085,7 +9092,7 @@ function accStoreCard(n) {
   const draw = () => { const lc = storeLoc(n), R = DB.acc.recs.filter(r => (r.payee || '').trim() === n && r.type !== 'tr').sort((a, b) => (b.d + (b.t || '')).localeCompare(a.d + (a.t || ''))), sum = R.reduce((t, r) => t + (r.type === 'out' || r.type === 'loss' ? accMine(r) : 0), 0);
     const P = (DB.places || []).find(x => x.name === n), tw = lc ? amTown({loc: lc}) : null;
     sh.el.querySelector('.shH b, .shT, h2') && (sh.el.querySelector('.shH b, .shT, h2').textContent = '🏪 ' + n);
-    sh.body.innerHTML = `<div class="amInfo card"><div><b>📍 地址</b><span>${lc ? esc(lc.addr || '（沒有地址）') : '還沒有位置'}</span></div>${tw ? `<div><b>🏙️ 地區</b><span>${esc(tw.c + ' ' + tw.t)}</span></div>` : ''}<div><b>🗂️ 分類</b><span>${P ? esc(catOf(P.cat).icon + ' ' + catOf(P.cat).name) + '（日日帳本收藏）' : lc ? '記帳店家（在記帳這邊釘選）' : '記帳店家'}</span></div><div><b>🧾 記帳</b><span>${R.length} 筆・我的支出 ${money(sum)}</span></div>${lc && lc.own ? '<div><b></b><span><button class="lnk" data-a="unpin">取消釘選</button></span></div>' : ''}</div>
+    sh.body.innerHTML = `<div class="amInfo card"><div><b>📍 地址</b><span>${lc ? esc(lc.addr || '（沒有地址）') : '還沒有位置'}</span></div>${tw ? `<div><b>🏙️ 地區</b><span>${esc(tw.c + ' ' + tw.t)}</span></div>` : ''}<div><b>🗂️ 分類</b><span>${P ? esc(catOf(P.cat).icon + ' ' + catOf(P.cat).name) + '（日日帳本收藏）' : lc ? '記帳商家（在記帳這邊釘選）' : '記帳店家'}</span></div><div><b>🧾 記帳</b><span>${R.length} 筆・我的支出 ${money(sum)}</span></div>${lc && lc.own ? '<div><b></b><span><button class="lnk" data-a="unpin">取消釘選</button></span></div>' : ''}</div>
       <div class="lbl">記帳明細</div>${R.map(accCard).join('') || '<div class="empty">還沒有記帳紀錄</div>'}`; };
   draw();
   sh.body.onclick = async e => { const t = e.target.closest('[data-a],[data-r]'); if (!t) return; buzz(8);
@@ -9233,7 +9240,7 @@ function editCatTree(ty) {
 function managePayees() {
   payMigrate();
   return new Promise(res => { const sh = sheet({title: '🏪 商家／對象名稱', full: true, foot: '<button class="btn" data-a="newG">＋ 新分類</button><button class="btn pri" data-a="add">＋ 新增名稱</button>', onClose() { res(); }});
-    const draw = () => { const r = payListHtml('', '', true); sh.body.innerHTML = `<div class="small muted" style="margin:-.2rem 0 .6rem">收藏的店家和自訂名稱在同一份清單；點自訂名稱可以編輯，點分類名稱可以收合。收藏店家要在地圖或收藏頁編輯。</div><div class="pyW">${r.html}</div>`; payBindSort($('.pyW', sh.body), sh.body, draw); };
+    const draw = () => { const r = payListHtml('', '', true); sh.body.innerHTML = `<div class="small muted" style="margin:-.2rem 0 .6rem">收藏的店家和自訂名稱在同一份清單；點自訂名稱可以編輯，點分類名稱可以收合。收藏地點要在地圖或收藏頁編輯。</div><div class="pyW">${r.html}</div>`; payBindSort($('.pyW', sh.body), sh.body, draw); };
     draw(); sh.body.onclick = async e => { const ge = e.target.closest('[data-gedit]'); if (ge) { e.stopPropagation(); buzz(8); await editPayGroup(ge.dataset.gedit); draw(); return; }
       const t = e.target.closest('button'); if (!t) return; buzz(8); if (payFold(t, sh.body, draw)) return;
       if (t.dataset.k && t.dataset.k[0] === 'y') { const p = DB.acc.payees.find(x => x.id === t.dataset.k.slice(2)); await editPayee(catFind('in', p.cat).p && !catFind('out', p.cat).p ? 'in' : 'out', p); draw(); }
@@ -9399,7 +9406,8 @@ function accStatData(u, a) {
   const grp = L => { const by = {}; L.forEach(r => { const f = catFind('out', r.cat), k = f.p ? f.p.id : '_'; const g = by[k] = by[k] || {id: k, n: f.p ? f.p.n : '其他', i: f.p ? f.p.i : '📦', v: 0, cnt: 0, subs: {}}; const v = accMine(r); g.v += v; g.cnt++; const sk = f.s ? f.s.id : '_'; const sg = g.subs[sk] = g.subs[sk] || {n: f.s ? f.s.n : g.n, v: 0, cnt: 0}; sg.v += v; sg.cnt++; });
     return Object.values(by).filter(g => g.v > 0).sort((x, y) => y.v - x.v).map((g, i) => Object.assign(g, {c: PAL[i % PAL.length], subL: Object.values(g.subs).sort((x, y) => y.v - x.v)})); };
   const B = []; const bk = (lab, s, e, tip) => { const L = outs.filter(r => r.d >= s && r.d <= e), o = L.filter(isOpt).reduce((t, r) => t + accMine(r), 0), all = L.reduce((t, r) => t + accMine(r), 0); B.push({lab, tip, e: all - o, o, v: all, inc: ins.filter(r => r.d >= s && r.d <= e).reduce((t, r) => t + (+r.amt || 0), 0)}); };
-  if (u === 'w' || u === 'm') { const d0 = new Date(Rg.s + 'T00:00:00'); for (let k = 0; k < Rg.days; k++) { const d = new Date(d0); d.setDate(d0.getDate() + k); const x = ymd(d); bk(u === 'w' ? '一二三四五六日'[k] : String(k + 1), x, x, `${d.getMonth() + 1}/${d.getDate()}（${'日一二三四五六'[d.getDay()]}）`); } }
+  if (u === 'd') { /* 每日報告：依時段（每 2 小時）看花在什麼時候 */ for (let h = 0; h < 24; h += 2) { const L = outs.filter(r => { const hh = parseInt(String(r.t || '12').slice(0, 2), 10); return hh >= h && hh < h + 2; }), o = L.filter(isOpt).reduce((t, r) => t + accMine(r), 0), all = L.reduce((t, r) => t + accMine(r), 0); B.push({lab: String(h), tip: `${String(h).padStart(2, '0')}:00–${String(h + 2).padStart(2, '0')}:00`, e: all - o, o, v: all, inc: 0}); } }
+  else if (u === 'w' || u === 'm') { const d0 = new Date(Rg.s + 'T00:00:00'); for (let k = 0; k < Rg.days; k++) { const d = new Date(d0); d.setDate(d0.getDate() + k); const x = ymd(d); bk(u === 'w' ? '一二三四五六日'[k] : String(k + 1), x, x, `${d.getMonth() + 1}/${d.getDate()}（${'日一二三四五六'[d.getDay()]}）`); } }
   else if (u === 'h' || u === 'y') { const Y = +Rg.s.slice(0, 4), m0 = +Rg.s.slice(5, 7) - 1, n = u === 'h' ? 6 : 12; for (let k = 0; k < n; k++) { const m = m0 + k; bk(`${m + 1}月`, ymd(new Date(Y, m, 1)), ymd(new Date(Y, m + 1, 0)), `${Y}年${m + 1}月`); } }
   const WD = [0, 0, 0, 0, 0, 0, 0]; outs.forEach(r => { WD[(new Date(r.d + 'T00:00:00').getDay() + 6) % 7] += accMine(r); });
   const byPy = {}; outs.forEach(r => { const n = r.payee || accCat(r).n; const o = byPy[n] = byPy[n] || {v: 0, c: 0}; o.v += accMine(r); o.c++; });
@@ -9446,12 +9454,12 @@ function rptCharts(D) { return {bars: D.B.length ? rptBars(D.B) : null, all: rpt
 /* ---------- 選期間與格式 ---------- */
 function accReportAsk() {
   const st = Object.assign({u: 'm', a: ymd(new Date())}, Acc.sp || {}); buzz(10);
-  const sh = sheet({title: '📤 匯出分析報告', foot: '<div class="tplFoot new" style="grid-template-columns:1fr 1fr"><button class="btn" data-f="xlsx">📊 Excel</button><button class="btn pri" data-f="pdf">📄 PDF</button></div>'});
+  const sh = sheet({title: '📤 匯出分析報告', foot: '<div class="tplFoot new" style="grid-template-columns:1fr 1fr 1fr"><button class="btn" data-f="xlsx">📊 Excel</button><button class="btn" data-f="png">🖼️ 圖片</button><button class="btn pri" data-f="pdf">📄 PDF</button></div>'});
   const draw = () => { const R = spRange(st.u, st.a), D = accStatData(st.u, st.a);
     sh.body.innerHTML = `<div class="lbl">報告期間</div><div class="spSeg">${SPU.map(([k, n]) => `<button data-u="${k}" class="${st.u === k ? 'on' : ''}">${n}</button>`).join('')}</div>
       <div class="spNav"><button class="btn" data-a="p-">◀</button><button class="btn spLab" data-a="pick">${R.lab}</button><button class="btn" data-a="p+">▶</button></div>
       <div class="rptPrev card"><div><small>支出</small><b class="neg">${money(Math.round(D.tot))}</b></div><div><small>收入</small><b class="pos">${money(Math.round(D.inc))}</b></div><div><small>筆數</small><b>${D.outs.length}</b></div></div>
-      <div class="small muted" style="line-height:1.6">報告內容：重點摘要、各項指標、${D.B.length ? '每日／每月長條圖、' : ''}支出分類圓餅圖、必要與非必要消費分類佔比、${D.u !== 'd' && D.u !== 'w' ? '星期分布、' : ''}最大筆支出、最常消費的地方，以及這段期間的完整明細。<br>PDF 和 Excel 都會直接存成檔案（手機的「下載」資料夾）。</div>`; };
+      <div class="small muted" style="line-height:1.6">報告內容：重點摘要、各項指標、${D.B.length ? '每日／每月長條圖、' : ''}支出分類圓餅圖、必要與非必要消費分類佔比、${D.u !== 'd' && D.u !== 'w' ? '星期分布、' : ''}最大筆支出、最常消費的地方，以及這段期間的完整明細。${D.B.length ? '' : ''}<br>PDF、Excel 存到手機的「下載」資料夾；🖼️ 圖片是一整張長圖，存到相簿，適合傳 LINE（每日消費分析特別好用）。</div>`; };
   draw();
   sh.body.onclick = async e => { const t = e.target.closest('[data-u],[data-a]'); if (!t) return; buzz(8);
     if (t.dataset.u) st.u = t.dataset.u; else if (t.dataset.a === 'p-' || t.dataset.a === 'p+') st.a = spShift(st.u, st.a, t.dataset.a === 'p-' ? -1 : 1);
@@ -9459,12 +9467,12 @@ function accReportAsk() {
     draw(); };
   sh.foot.onclick = async e => { const b = e.target.closest('[data-f]'); if (!b) return; buzz(15); const D = accStatData(st.u, st.a);
     if (!D.outs.length && !D.ins.length && !await ask('這段期間沒有任何收支紀錄，還是要匯出嗎？', '匯出')) return;
-    busy('製作報告中…'); try { if (b.dataset.f === 'pdf') await accReportPdf(D); else await accReportXlsx(D); } catch (er) { toast('❌ ' + er.message); } busy(false); };
+    busy('製作報告中…'); try { if (b.dataset.f === 'pdf') await accReportPdf(D); else if (b.dataset.f === 'png') await accReportPng(D); else await accReportXlsx(D); } catch (er) { toast('❌ ' + er.message); } busy(false); };
 }
 const rptName = D => `消費分析_${D.Rg.lab.replace(/[（）\s]/g, '').replace(/[\/:]/g, '-')}`;
 
 /* ---------- PDF：排版成 A4 報告，交給系統列印（可另存為 PDF） ---------- */
-async function accReportPdf(D) {
+function accReportHtml(D) {
   const C = rptCharts(D), img = c => c ? `<img src="${c.toDataURL('image/png')}">` : '', pct = (v, t) => t ? (v / t * 100).toFixed(1) + '%' : '—', now = new Date();
   const catT = (L, T) => L.length ? `<table><thead><tr><th>分類</th><th>子分類</th><th class="r">筆數</th><th class="r">金額</th><th class="r">佔比</th></tr></thead><tbody>${L.map(g => g.subL.map((s, j) => `<tr class="${j ? '' : 'g'}">${j ? '<td></td>' : `<td rowspan="1"><i style="background:${g.c}"></i>${esc(g.n)}</td>`}<td>${esc(s.n)}</td><td class="r">${s.cnt}</td><td class="r">${money(Math.round(s.v))}</td><td class="r">${pct(s.v, T)}</td></tr>`).join('') + `<tr class="sub"><td colspan="3">${esc(g.n)} 小計</td><td class="r">${money(Math.round(g.v))}</td><td class="r">${pct(g.v, T)}</td></tr>`).join('')}</tbody></table>` : '<p class="muted">沒有資料</p>';
   const html = `<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><title>${rptName(D)}</title><style>
@@ -9484,7 +9492,7 @@ async function accReportPdf(D) {
     <div class="hero"><div class="ic">${APP_ICON}</div><div><h1>消費分析報告</h1><p>${esc(D.Rg.lab)}・${D.Rg.s.replace(/-/g, '/')} – ${D.Rg.e.replace(/-/g, '/')}</p></div></div>
     <div class="kpi"><div><small>支出（我的）</small><b class="neg">${money(Math.round(D.tot))}</b><em>${D.last ? `${D.chg > 0 ? '▲' : '▼'} ${Math.abs(D.chg).toFixed(0)}% vs ${D.pN}` : `${D.pN}沒有資料`}</em></div><div><small>收入</small><b class="pos">${money(Math.round(D.inc))}</b><em>結餘 ${money(Math.round(D.inc - D.tot))}</em></div><div><small>平均每天</small><b>${money(Math.round(D.tot / D.Rg.days))}</b><em>${D.Rg.days} 天</em></div><div><small>支出筆數</small><b>${D.outs.length}</b><em>每筆平均 ${money(D.outs.length ? Math.round(D.tot / D.outs.length) : 0)}</em></div></div>
     ${D.tips.length ? `<section><h2>重點摘要</h2><ul class="tips">${D.tips.map(t => `<li>${esc(t)}</li>`).join('')}</ul></section>` : ''}
-    ${C.bars ? `<section><h2>${D.u === 'w' ? '這週每天' : D.u === 'm' ? '每天' : '每個月'}支出（必要／非必要）</h2><div class="chart">${img(C.bars)}</div></section>` : ''}
+    ${C.bars ? `<section><h2>${D.u === 'd' ? '這天各時段' : D.u === 'w' ? '這週每天' : D.u === 'm' ? '每天' : '每個月'}支出（必要／非必要）</h2><div class="chart">${img(C.bars)}</div></section>` : ''}
     ${D.u === 'h' || D.u === 'y' ? `<section><h2>每月收支</h2><table><thead><tr><th>月份</th><th class="r">必要</th><th class="r">非必要</th><th class="r">支出</th><th class="r">收入</th><th class="r">結餘</th></tr></thead><tbody>${D.B.map(x => `<tr><td>${x.tip}</td><td class="r">${money(Math.round(x.e))}</td><td class="r">${money(Math.round(x.o))}</td><td class="r neg">${money(Math.round(x.v))}</td><td class="r pos">${money(Math.round(x.inc))}</td><td class="r ${x.inc - x.v < 0 ? 'neg' : 'pos'}">${money(Math.round(x.inc - x.v))}</td></tr>`).join('')}</tbody></table></section>` : ''}
     <section><h2>支出分類</h2><div class="chart" style="max-width:62%">${img(C.all)}</div>${catT(D.G, D.tot)}</section>
     <section><h2>必要／非必要消費</h2><div class="bar"><i style="width:${D.tot ? (D.ess / D.tot * 100).toFixed(1) : 100}%"></i></div><p>必要 <b>${money(Math.round(D.ess))}</b>（${pct(D.ess, D.tot)}）　非必要 <b class="opt">${money(Math.round(D.opt))}</b>（${pct(D.opt, D.tot)}）</p>
@@ -9494,7 +9502,8 @@ async function accReportPdf(D) {
     ${D.PY.length ? `<section><h2>最常消費的地方</h2><table><thead><tr><th>商家</th><th class="r">次數</th><th class="r">金額</th><th class="r">佔比</th></tr></thead><tbody>${D.PY.map(([n, o]) => `<tr><td>${esc(n)}</td><td class="r">${o.c}</td><td class="r">${money(Math.round(o.v))}</td><td class="r">${pct(o.v, D.tot)}</td></tr>`).join('')}</tbody></table></section>` : ''}
     <h2 class="pb">收支明細</h2><table><thead><tr><th>日期</th><th>時間</th><th>類型</th><th>分類</th><th>商家／說明</th><th>帳戶</th><th class="r">金額</th></tr></thead><tbody>${D.outs.concat(D.ins).sort((x, y) => (x.d + (x.t || '')).localeCompare(y.d + (y.t || ''))).map(r => `<tr><td>${r.d.replace(/-/g, '/')}</td><td>${esc(r.t || '')}</td><td>${r.type === 'in' ? '收入' : D.isOpt(r) ? '<span class="opt">非必要</span>' : '支出'}</td><td>${esc(accCat(r).n)}</td><td>${esc(r.payee || String(r.note || '').split('\n')[0] || '')}</td><td>${esc(acctName(r.acct) || '')}</td><td class="r ${r.type === 'in' ? 'pos' : 'neg'}">${r.type === 'in' ? '+' : '-'}${money(Math.round(r.type === 'in' ? +r.amt : accMine(r)))}</td></tr>`).join('') || '<tr><td colspan="7" class="muted">沒有紀錄</td></tr>'}</tbody></table>
     <div class="foot">日日帳本・製作時間 ${now.getFullYear()}/${now.getMonth() + 1}/${now.getDate()} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}・金額為「我的」支出（已扣掉別人分攤的部分）</div></body></html>`;
-  const blob = await htmlToPdf(html); const p = await saveFile(rptName(D) + '.pdf', blob); buzz(30); toast('📄 已存成 PDF：' + (String(p).split('/').pop() || ''), 3500);
+  return html; }
+async function accReportPdf(D) { const blob = await htmlToPdf(accReportHtml(D)); const p = await saveFile(rptName(D) + '.pdf', blob); buzz(30); toast('📄 已存成 PDF：' + (String(p).split('/').pop() || ''), 3500);
 }
 
 /* ---------- Excel：多個工作表（總覽含圖表、分類、必要／非必要、趨勢、明細、商家），有樣式、欄寬、凍結窗格 ---------- */
@@ -9506,7 +9515,7 @@ async function accReportXlsx(D) {
   /* 總覽 */
   const ov = [[{v: '消費分析報告', s: 1}], [{v: `${D.Rg.lab}　${D.Rg.s.replace(/-/g, '/')} – ${D.Rg.e.replace(/-/g, '/')}`, s: 2}], [],
     [{v: '支出（我的）', s: 11}, {v: '收入', s: 11}, {v: '結餘', s: 11}, {v: '平均每天', s: 11}, {v: '支出筆數', s: 11}, {v: `比${D.pN}`, s: 11}],
-    [{v: R0(D.tot), s: 12}, {v: R0(D.inc), s: 12}, {v: R0(D.inc - D.tot), s: 12}, {v: R0(D.tot / D.Rg.days), s: 12}, {v: D.outs.length, s: 12}, {v: D.last ? D.chg / 100 : '—', s: D.last ? 5 : 0}], [],
+    [{v: R0(D.tot), s: 12}, {v: R0(D.inc), s: 12}, {v: R0(D.inc - D.tot), s: 12}, {v: R0(D.tot / D.Rg.days), s: 12}, {v: D.outs.length, s: 16}, {v: D.last ? D.chg / 100 : '—', s: D.last ? 17 : 16}], [],
     [{v: '重點摘要', s: 6}], ...D.tips.map(t => [{v: '・' + t, s: 15, m: 6}]), []];
   const chartRow = ov.length; ov.push([{v: '圖表', s: 6}]);
   /* 圖表一張一張往下排（每列約 24px），不會超出列印範圍 */
@@ -9516,18 +9525,18 @@ async function accReportXlsx(D) {
   const catRows = (L, T, title) => [[{v: title, s: 6}], ['分類', '子分類', '筆數', '金額', '佔比'].map(v => ({v, s: 3})), ...L.flatMap(g => [...g.subL.map((s, j) => [j ? '' : {v: g.n, s: 6}, s.n, s.cnt, {v: R0(s.v), s: 4}, {v: pc(s.v, T), s: 5}]), [{v: g.n + ' 小計', s: 7}, {v: '', s: 7}, {v: g.cnt, s: 7}, {v: R0(g.v), s: 8}, {v: pc(g.v, T), s: 14}]]), [{v: '合計', s: 7}, {v: '', s: 7}, {v: L.reduce((t, g) => t + g.cnt, 0), s: 7}, {v: R0(T), s: 8}, {v: T ? 1 : 0, s: 14}], []];
   S('支出分類', [16, 18, 8, 14, 10], [[{v: '支出分類', s: 1}], [{v: D.Rg.lab, s: 2}], [], ...catRows(D.G, D.tot, '全部支出')], {bar: [4]});
   S('必要與非必要', [16, 18, 8, 14, 10], [[{v: '必要／非必要消費', s: 1}], [{v: `必要 ${money(R0(D.ess))}（${(pc(D.ess, D.tot) * 100).toFixed(1)}%）　非必要 ${money(R0(D.opt))}（${(pc(D.opt, D.tot) * 100).toFixed(1)}%）`, s: 2}], [], ...catRows(D.GE, D.ess, '✅ 必要消費'), ...catRows(D.GO, D.opt, '🎈 非必要消費')]);
-  if (D.B.length) S('趨勢', [14, 12, 12, 12, 12, 12], [[{v: D.u === 'h' || D.u === 'y' ? '每月收支' : '每天支出', s: 1}], [], ['期間', '必要', '非必要', '支出', '收入', '結餘'].map(v => ({v, s: 3})), ...D.B.map(x => [x.tip, {v: R0(x.e), s: 4}, {v: R0(x.o), s: 4}, {v: R0(x.v), s: 9}, {v: R0(x.inc), s: 10}, {v: R0(x.inc - x.v), s: x.inc - x.v < 0 ? 9 : 10}]),
+  if (D.B.length) S('趨勢', [14, 12, 12, 12, 12, 12], [[{v: D.u === 'h' || D.u === 'y' ? '每月收支' : D.u === 'd' ? '各時段支出' : '每天支出', s: 1}], [], ['期間', '必要', '非必要', '支出', '收入', '結餘'].map(v => ({v, s: 3})), ...D.B.map(x => [x.tip, {v: R0(x.e), s: 4}, {v: R0(x.o), s: 4}, {v: R0(x.v), s: 9}, {v: R0(x.inc), s: 10}, {v: R0(x.inc - x.v), s: x.inc - x.v < 0 ? 9 : 10}]),
     [{v: '合計', s: 7}, {v: R0(D.ess), s: 8}, {v: R0(D.opt), s: 8}, {v: R0(D.tot), s: 8}, {v: R0(D.inc), s: 8}, {v: R0(D.inc - D.tot), s: 8}]], {bar: [3]});
   const all = D.outs.concat(D.ins).sort((x, y) => (x.d + (x.t || '')).localeCompare(y.d + (y.t || '')));
   S('明細', [12, 7, 9, 12, 12, 24, 16, 12, 40], [[{v: '收支明細', s: 1}], [], ['日期', '時間', '類型', '母分類', '子分類', '商家／說明', '帳戶', '金額', '備註'].map(v => ({v, s: 3})),
-    ...all.map(x => { const f = catFind(x.type, x.cat); return [x.d, x.t || '', x.type === 'in' ? '收入' : D.isOpt(x) ? '非必要' : '必要', f.p ? f.p.n : '', f.s ? f.s.n : '', x.payee || '', acctName(x.acct) || '', {v: R0(x.type === 'in' ? +x.amt : -accMine(x)), s: x.type === 'in' ? 10 : 9}, String(x.note || '').replace(/\n/g, '　').slice(0, 200)]; })], {freeze: 3, filter: true});
+    ...all.map(x => { const f = catFind(x.type, x.cat); return [x.d, x.t || '', x.type === 'in' ? '收入' : D.isOpt(x) ? '非必要' : '必要', f.p ? f.p.n : '', f.s ? f.s.n : '', x.payee || '', (accAcct(x.acct) || {}).n || '', {v: R0(x.type === 'in' ? +x.amt : -accMine(x)), s: x.type === 'in' ? 10 : 9}, {v: String(x.note || '').replace(/\n+/g, '　').trim().slice(0, 300), s: 15, w: 1}]; })], {freeze: 3, filter: true});
   if (D.PY.length) S('商家排行', [24, 8, 14, 10], [[{v: '最常消費的地方', s: 1}], [], ['商家', '次數', '金額', '佔比'].map(v => ({v, s: 3})), ...D.PY.map(([n, o]) => [n, o.c, {v: R0(o.v), s: 4}, {v: pc(o.v, D.tot), s: 5}])], {bar: [2]});
   const X = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   const col = i => (i >= 26 ? String.fromCharCode(64 + Math.floor(i / 26)) : '') + String.fromCharCode(65 + i % 26);
   /* 欄寬最適化：依每一欄最長的內容（中文算 2 格）決定寬度，標題列、合併列不算 */
   const dispLen = o => { const v = o && typeof o === 'object' ? o.v : o; if (v == null || v === '') return 0; let t = typeof v === 'number' ? (o.s === 5 || o.s === 14 ? (v * 100).toFixed(1) + '%' : [4, 8, 9, 10, 12].includes(o.s) ? '$' + Math.round(v).toLocaleString('en-US') : String(v)) : String(v);
     let n = 0; for (const ch of t) n += /[\u2E80-\uFFEF]/.test(ch) ? 2.1 : 1.15; return n; };
-  const autofit = sh => sh.cols.map((w0, ci) => { let m = 6; sh.rows.forEach(r => { const o = r[ci]; if (!o || (typeof o === 'object' && (o.s === 1 || o.s === 2 || o.m))) return; m = Math.max(m, dispLen(o)); }); return Math.min(60, Math.max(w0 * .6, Math.ceil(m + 2.5))); });
+  const autofit = sh => sh.cols.map((w0, ci) => { let m = 6; sh.rows.forEach(r => { const o = r[ci]; if (!o || (typeof o === 'object' && (o.s === 1 || o.s === 2 || o.m))) return; m = Math.max(m, typeof o === 'object' && o.w ? Math.min(46, dispLen(o)) : dispLen(o)); }); return Math.min(60, Math.max(w0 * .6, Math.ceil(m + 2.5))); });
   const sheetXml = (sh, si) => { const rows = sh.rows, last = rows.length, maxC = Math.max(1, ...rows.map(r => r.length)); sh.cols = autofit(sh); const merges = []; rows.forEach((r, ri) => r.forEach((c, ci) => { if (c && typeof c === 'object' && c.m) merges.push(`${col(ci)}${ri + 1}:${col(ci + c.m - 1)}${ri + 1}`); }));
     return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheetViews><sheetView workbookViewId="0" showGridLines="0"${si === 0 ? ' tabSelected="1"' : ''}>${sh.opt.freeze ? `<pane ySplit="${sh.opt.freeze}" topLeftCell="A${sh.opt.freeze + 1}" activePane="bottomLeft" state="frozen"/>` : ''}</sheetView></sheetViews><sheetFormatPr defaultRowHeight="18"/>
       <cols>${sh.cols.map((w, i) => `<col min="${i + 1}" max="${i + 1}" width="${w}" customWidth="1"/>`).join('')}</cols><sheetData>${rows.map((r, ri) => `<row r="${ri + 1}"${ri === 0 ? ' ht="30" customHeight="1"' : (() => { const c = r.find(c => c && typeof c === 'object' && c.m); if (!c) return ''; const wsum = sh.cols.slice(0, c.m).reduce((t, w) => t + w, 0), lines = Math.max(1, Math.ceil(dispLen(c) / (wsum * .95))); return ` ht="${lines * 17 + 3}" customHeight="1"`; })()}>${r.map((c, ci) => { const o = c && typeof c === 'object' ? c : {v: c}, ref = col(ci) + (ri + 1), st = o.s ? ` s="${o.s}"` : '';
@@ -9539,12 +9548,12 @@ async function accReportXlsx(D) {
   const styles = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><numFmts count="2"><numFmt numFmtId="164" formatCode="&quot;$&quot;#,##0;[Red]-&quot;$&quot;#,##0"/><numFmt numFmtId="165" formatCode="0.0%"/></numFmts>
     <fonts count="8"><font><sz val="11"/><color rgb="FF3B2B1D"/><name val="Microsoft JhengHei"/></font><font><b/><sz val="18"/><color rgb="FF6F5A3F"/><name val="Microsoft JhengHei"/></font><font><sz val="11"/><color rgb="FF7A6550"/><name val="Microsoft JhengHei"/></font><font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Microsoft JhengHei"/></font><font><b/><sz val="11"/><color rgb="FF3B2B1D"/><name val="Microsoft JhengHei"/></font><font><b/><sz val="11"/><color rgb="FFA8472F"/><name val="Microsoft JhengHei"/></font><font><b/><sz val="11"/><color rgb="FF4F6E34"/><name val="Microsoft JhengHei"/></font><font><b/><sz val="15"/><color rgb="FF3B2B1D"/><name val="Microsoft JhengHei"/></font></fonts>
     <fills count="5"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FFB5653A"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFF6EFE2"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFFAF5EC"/></patternFill></fill></fills>
-    <borders count="2"><border/><border><bottom style="thin"><color rgb="FFEADFCB"/></bottom></border></borders><cellStyleXfs count="1"><xf/></cellStyleXfs><cellXfs count="16">
+    <borders count="2"><border/><border><bottom style="thin"><color rgb="FFEADFCB"/></bottom></border></borders><cellStyleXfs count="1"><xf/></cellStyleXfs><cellXfs count="18">
     <xf fontId="0" borderId="0"/><xf fontId="1" applyFont="1"/><xf fontId="2" applyFont="1"/><xf fontId="3" fillId="2" borderId="0" applyFont="1" applyFill="1"><alignment horizontal="center" vertical="center"/></xf>
     <xf fontId="0" numFmtId="164" borderId="1" applyNumberFormat="1" applyBorder="1"/><xf fontId="0" numFmtId="165" borderId="1" applyNumberFormat="1" applyBorder="1"/><xf fontId="4" applyFont="1"/>
     <xf fontId="4" fillId="4" borderId="1" applyFont="1" applyFill="1" applyBorder="1"/><xf fontId="4" fillId="4" numFmtId="164" borderId="1" applyFont="1" applyFill="1" applyNumberFormat="1" applyBorder="1"/>
     <xf fontId="5" numFmtId="164" borderId="1" applyFont="1" applyNumberFormat="1" applyBorder="1"/><xf fontId="6" numFmtId="164" borderId="1" applyFont="1" applyNumberFormat="1" applyBorder="1"/>
-    <xf fontId="2" fillId="3" applyFont="1" applyFill="1"><alignment horizontal="center"/></xf><xf fontId="7" fillId="3" numFmtId="164" applyFont="1" applyFill="1" applyNumberFormat="1"><alignment horizontal="center"/></xf><xf fontId="2" applyFont="1"/><xf fontId="4" fillId="4" numFmtId="165" borderId="1" applyFont="1" applyFill="1" applyNumberFormat="1" applyBorder="1"/><xf fontId="0" applyAlignment="1"><alignment wrapText="1" vertical="top"/></xf></cellXfs></styleSheet>`;
+    <xf fontId="2" fillId="3" applyFont="1" applyFill="1"><alignment horizontal="center"/></xf><xf fontId="7" fillId="3" numFmtId="164" applyFont="1" applyFill="1" applyNumberFormat="1"><alignment horizontal="center"/></xf><xf fontId="2" applyFont="1"/><xf fontId="4" fillId="4" numFmtId="165" borderId="1" applyFont="1" applyFill="1" applyNumberFormat="1" applyBorder="1"/><xf fontId="0" applyAlignment="1"><alignment wrapText="1" vertical="top"/></xf><xf fontId="7" fillId="3" applyFont="1" applyFill="1"><alignment horizontal="center"/></xf><xf fontId="7" fillId="3" numFmtId="165" applyFont="1" applyFill="1" applyNumberFormat="1"><alignment horizontal="center"/></xf></cellXfs></styleSheet>`;
   const files = [
     {name: '[Content_Types].xml', data: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Default Extension="png" ContentType="image/png"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>${sheets.map((_, i) => `<Override PartName="/xl/worksheets/sheet${i + 1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join('')}${pngs.length ? '<Override PartName="/xl/drawings/drawing1.xml" ContentType="application/vnd.openxmlformats-officedocument.drawing+xml"/>' : ''}</Types>`},
     {name: '_rels/.rels', data: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>'},
@@ -9560,38 +9569,49 @@ async function accReportXlsx(D) {
 
 /* ---------- HTML → PDF（不用列印）：在隱藏的框架排版、算好分頁（表格列、標題、圖表不會被切半），
    每一頁畫成高解析度圖片，再自己組成 A4 PDF 檔 ---------- */
-async function htmlToPdf(html) {
-  const W = 794, PH = 1123, MT = 46, MB = 46, CH = PH - MT - MB, SC = 2;
+async function htmlToPdf(html) { const pages = await renderPages(html, true); return pdfFromJpegs(pages.map(c => { const b64 = c.toDataURL('image/jpeg', .9).split(',')[1]; return Uint8Array.from(atob(b64), x => x.charCodeAt(0)); }), pages[0].width, pages[0].height); }
+/* 把報告 HTML 排版後畫成一頁一頁的畫布（A4）；paged=false 時畫成一整張長圖（PNG 用）。
+   1) 在隱藏框架排版、先依區塊插空白讓表格列／圖表不跨頁；2) 實際畫出來後再用像素檢查：
+   每頁只在「一整排都是空白」的地方切開，所以不會切到字；並以實際畫出的高度為準，最後一列一定完整。 */
+async function renderPages(html, paged) {
+  const W = 794, PH = 1123, MT = paged ? 46 : 30, MB = paged ? 46 : 30, CH = PH - MT - MB, SC = 2;
   const f = document.createElement('iframe'); f.style.cssText = `position:fixed;left:-10000px;top:0;width:${W}px;height:${PH}px;border:0;visibility:hidden`; document.body.append(f);
   try {
     const d = f.contentDocument; d.open(); d.write(html); d.close();
     await new Promise(r => setTimeout(r, 80)); await Promise.all([...d.images].map(im => im.decode ? im.decode().catch(() => {}) : null)); if (d.fonts && d.fonts.ready) await d.fonts.ready;
-    /* 分頁：遇到會跨頁的區塊，就在它前面塞空白把它推到下一頁 */
     const top = e => e.getBoundingClientRect().top + (f.contentWindow.scrollY || 0);
-    const units = () => [...d.body.querySelectorAll('.hero,.kpi,h2,.tips li,.chart,.two img,.bar,section>p,tr,.foot')];
-    for (let guard = 0; guard < 400; guard++) { let moved = false;
-      for (const e of units()) { if (e.closest('thead') || e.classList.contains('pgsp')) continue; const t = top(e), h = e.getBoundingClientRect().height, pg = Math.floor(t / CH), end = (pg + 1) * CH;
-        const keep = e.tagName === 'H2' ? 180 : 0; /* 標題至少要跟著下面一點內容 */
-        if (h < CH && t + h + keep > end && t < end) { const gap = end - t + 2;
-          if (e.tagName === 'TR') { const sp = d.createElement('tr'); sp.className = 'pgsp'; sp.innerHTML = `<td colspan="20" style="height:${gap}px;padding:0;border:0;background:#fff"></td>`; e.before(sp); const th = e.closest('table').querySelector('thead tr'); if (th) { const c = th.cloneNode(true); c.classList.add('pgsp'); e.before(c); } }
-          else { const sp = d.createElement('div'); sp.className = 'pgsp'; sp.style.height = gap + 'px'; e.before(sp); }
-          moved = true; break; } }
-      if (!moved) break; }
-    const total = Math.max(d.documentElement.scrollHeight, d.body.scrollHeight), pages = Math.max(1, Math.ceil(total / CH));
-    d.documentElement.style.height = total + 'px';
+    if (paged) { const units = () => [...d.body.querySelectorAll('.hero,.kpi,h2,.tips li,.chart,.two img,.bar,section>p,tr,.foot')];
+      for (let guard = 0; guard < 400; guard++) { let moved = false;
+        for (const e of units()) { if (e.closest('thead') || e.classList.contains('pgsp')) continue; const t = top(e), h = e.getBoundingClientRect().height, end = (Math.floor(t / CH) + 1) * CH, keep = e.tagName === 'H2' ? 180 : 0;
+          if (h < CH && t + h + keep > end && t < end) { const gap = end - t + 2;
+            if (e.tagName === 'TR') { const sp = d.createElement('tr'); sp.className = 'pgsp'; sp.innerHTML = `<td colspan="20" style="height:${gap}px;padding:0;border:0;background:#fff"></td>`; e.before(sp); const th = e.closest('table').querySelector('thead tr'); if (th) { const c = th.cloneNode(true); c.classList.add('pgsp'); e.before(c); } }
+            else { const sp = d.createElement('div'); sp.className = 'pgsp'; sp.style.height = gap + 'px'; e.before(sp); }
+            moved = true; break; } }
+        if (!moved) break; } }
+    const total = Math.max(d.documentElement.scrollHeight, d.body.scrollHeight), FH = Math.ceil(total * 1.5) + 600;
     const xml = new XMLSerializer().serializeToString(d.documentElement);
-    const jpgs = [];
-    for (let k = 0; k < pages; k++) {
-      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${CH}" viewBox="0 0 ${W} ${CH}"><foreignObject x="0" y="${-k * CH}" width="${W}" height="${total}">${xml}</foreignObject></svg>`;
-      const im = new Image(); im.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg); await im.decode();
-      const c = document.createElement('canvas'); c.width = W * SC; c.height = PH * SC; const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.scale(SC, SC);
-      g.drawImage(im, 0, MT, W, CH);
-      g.fillStyle = '#9a8a76'; g.font = `500 10px ${RPT_F}`; g.textAlign = 'center'; g.fillText(`${k + 1} / ${pages}`, W / 2, PH - 20);
-      const b64 = c.toDataURL('image/jpeg', .9).split(',')[1]; jpgs.push(Uint8Array.from(atob(b64), x => x.charCodeAt(0)));
-    }
-    return pdfFromJpegs(jpgs, W * SC, PH * SC);
+    /* 畫出 [y, y+h) 這一段（版面座標） */
+    const draw = async (y, h, sc) => { const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${h}" viewBox="0 0 ${W} ${h}"><foreignObject x="0" y="${-y}" width="${W}" height="${FH}">${xml}</foreignObject></svg>`;
+      const im = new Image(); im.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg); await im.decode(); const c = document.createElement('canvas'); c.width = Math.round(W * sc); c.height = Math.round(h * sc); const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.drawImage(im, 0, 0, c.width, c.height); return c; };
+    /* 一排像素是不是空白（同一個顏色、最多幾個點不同，例如外框） */
+    const blankRows = c => { const g = c.getContext('2d'), w = c.width, D = g.getImageData(0, 0, w, c.height).data, out = new Uint8Array(c.height);
+      for (let y = 0; y < c.height; y++) { const o = y * w * 4, r0 = D[o], g0 = D[o + 1], b0 = D[o + 2]; let n = 0; for (let x = 0; x < w; x += 2) { const k = o + x * 4; if (Math.abs(D[k] - r0) + Math.abs(D[k + 1] - g0) + Math.abs(D[k + 2] - b0) > 36 && ++n > 6) break; } out[y] = n <= 6 ? 1 : 0; } return out; };
+    /* 實際內容到哪裡結束（用低解析度從排版底部往下找最後一排有東西的位置） */
+    let end = total; { const y0 = Math.max(0, total - 300), probe = await draw(y0, FH - y0, .5), B = blankRows(probe); let last = -1; for (let y = B.length - 1; y >= 0; y--) if (!B[y]) { last = y; break; } if (last >= 0) end = Math.max(Math.min(total, y0 + 1), y0 + Math.ceil((last + 1) / .5) + 8); }
+    if (!paged) { const cap = 30000, sc = Math.min(SC, cap / (end + MT + MB)); const body = await draw(0, end, sc), c = document.createElement('canvas'); c.width = body.width; c.height = Math.round((end + MT + MB) * sc); const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.drawImage(body, 0, Math.round(MT * sc)); return [c]; }
+    const out = []; let y = 0;
+    while (y < end - 2 && out.length < 80) { let h = Math.min(CH, end - y); const pc = await draw(y, h, SC);
+      if (y + h < end - 2) { /* 不是最後一頁：從底部往上找一整排空白的地方切 */ const B = blankRows(pc); let cut = -1; for (let k = pc.height - 1; k >= pc.height - 260 * SC && k > 40 * SC; k--) if (B[k]) { cut = k; break; } if (cut > 0) h = Math.floor(cut / SC); }
+      const c = document.createElement('canvas'); c.width = W * SC; c.height = PH * SC; const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.drawImage(pc, 0, 0, pc.width, h * SC, 0, MT * SC, pc.width, h * SC);
+      out.push(c); y += h; }
+    out.forEach((c, k) => { const g = c.getContext('2d'); g.fillStyle = '#9a8a76'; g.font = `500 ${10 * SC}px ${RPT_F}`; g.textAlign = 'center'; g.fillText(`${k + 1} / ${out.length}`, c.width / 2, c.height - 20 * SC); });
+    return out;
   } finally { f.remove(); }
 }
+/* PNG：整份報告畫成一張長圖，存到相簿（手機）或下載 */
+async function accReportPng(D) { const html = accReportHtml(D), [c] = await renderPages(html, false), name = rptName(D) + '.png', b64 = c.toDataURL('image/png').split(',')[1];
+  if (IS_APP && NB.shareImg) { const ok = NB.shareImg(b64, name, '', false); toast(ok ? '🖼️ 已存到相簿（圖片／日日帳本）' : '存檔失敗', 3500); return; }
+  const blob = await (await fetch(c.toDataURL('image/png'))).blob(); const p = await saveFile(name, blob); toast('🖼️ 已存成圖片：' + (String(p).split('/').pop() || ''), 3500); }
 /* 最簡 PDF：每頁一張 JPEG，滿版 A4（595×842 pt） */
 function pdfFromJpegs(jpgs, iw, ih) {
   const enc = new TextEncoder(), parts = [], offs = []; let len = 0; const push = x => { const b = typeof x === 'string' ? enc.encode(x) : x; parts.push(b); len += b.length; };
