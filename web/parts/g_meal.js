@@ -440,7 +440,7 @@ function mealXlsx(k, L) {
 function crc32(u) { const t = crc32.t || (crc32.t = Array.from({length: 256}, (_, n) => { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; return c >>> 0; })); let c = -1; for (let i = 0; i < u.length; i++) c = (c >>> 8) ^ t[(c ^ u[i]) & 255]; return (c ^ -1) >>> 0; }
 function zipStore(files) {
   const enc = new TextEncoder(), parts = [], cen = []; let off = 0;
-  files.forEach(f => { const nm = enc.encode(f.name), d = enc.encode(f.data), crc = crc32(d), h = new DataView(new ArrayBuffer(30)), c = new DataView(new ArrayBuffer(46));
+  files.forEach(f => { const nm = enc.encode(f.name), d = f.data instanceof Uint8Array ? f.data : enc.encode(f.data), crc = crc32(d), h = new DataView(new ArrayBuffer(30)), c = new DataView(new ArrayBuffer(46));
     [[0, 0x04034b50, 4], [4, 20, 2], [6, 0x0800, 2], [8, 0, 2], [10, 0, 2], [12, 0x21, 2], [14, crc, 4], [18, d.length, 4], [22, d.length, 4], [26, nm.length, 2], [28, 0, 2]].forEach(([o, v, n]) => n === 4 ? h.setUint32(o, v, true) : h.setUint16(o, v, true));
     [[0, 0x02014b50, 4], [4, 20, 2], [6, 20, 2], [8, 0x0800, 2], [10, 0, 2], [12, 0, 2], [14, 0x21, 2], [16, crc, 4], [20, d.length, 4], [24, d.length, 4], [28, nm.length, 2], [30, 0, 2], [32, 0, 2], [34, 0, 2], [36, 0, 2], [38, 0, 4], [42, off, 4]].forEach(([o, v, n]) => n === 4 ? c.setUint32(o, v, true) : c.setUint16(o, v, true));
     parts.push(h.buffer, nm, d); cen.push(c.buffer, nm); off += 30 + nm.length + d.length; });

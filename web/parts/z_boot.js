@@ -40,3 +40,8 @@
   document.addEventListener('click', e => { const s = e.target.closest && e.target.closest('select'); if (skip(s)) return; e.preventDefault(); s.blur(); pick(s); }, true);
   document.addEventListener('keydown', e => { const s = e.target; if (s && s.tagName === 'SELECT' && !skip(s) && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); pick(s); } }, true);
 })();
+
+/* 長名稱一行放不下時，自動把字縮小到剛好放得下（最小 8px），不換行、不裁切 */
+(() => { let q = false;
+  const fit = () => { q = false; document.querySelectorAll('.acN.lg:not([data-fit])').forEach(e => { if (!e.offsetParent) return; e.dataset.fit = 1; let f = parseFloat(getComputedStyle(e).fontSize) || 13; e.style.fontSize = ''; while (e.scrollWidth > e.clientWidth + 1 && f > 8) { f -= .5; e.style.fontSize = f + 'px'; } }); };
+  new MutationObserver(() => { if (!q) { q = true; requestAnimationFrame(() => requestAnimationFrame(fit)); } }).observe(document.body, {childList: true, subtree: true}); })();

@@ -1512,3 +1512,8 @@ table.ckT td.s{text-align:center}table.ckT th.s{text-align:center}
 .acAccts .acN.lg{font-size:.78rem;white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;text-align:left;word-break:break-all}
 .acAccts button>img,.acAccts button>.aIco{flex:none}
 .acAccts button>.aLogo,.acAccts button>i,.acAccts button>svg{flex:none}
+.acI .acSvg{width:78%;height:78%;display:block}
+.acI.tr.wd{background:#e3ece9}.acI.tr.dp{background:#f4e3d8}
+/* 帳戶長名稱：一行顯示，字自動縮小到放得下 */
+.acAccts .acN.lg{display:block;white-space:nowrap;-webkit-line-clamp:unset;text-align:center;word-break:normal;overflow:hidden;text-overflow:clip}
+.rptPrev{display:grid;grid-template-columns:repeat(3,1fr);gap:.4rem;padding:.7rem;margin:.2rem 0 .7rem}.rptPrev>div{display:flex;flex-direction:column;align-items:center;gap:.1rem}.rptPrev small{color:var(--muted);font-size:.74rem;font-weight:700}.rptPrev b{font-size:1.05rem}

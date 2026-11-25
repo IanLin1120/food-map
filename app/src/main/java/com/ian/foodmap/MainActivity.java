@@ -54,6 +54,7 @@ public class MainActivity extends Activity {
     String saveName;
 
     /* 高更新率螢幕（90／120Hz）：請系統用最高的更新率，畫面滑動才會順 */
+    private WebView printView;
     private void maxRefresh() {
         try {
             if (Build.VERSION.SDK_INT < 23) return;
@@ -1256,6 +1257,18 @@ public class MainActivity extends Activity {
                     } catch (Throwable t) { }
                 }
             });
+        }
+
+        /* 分析報告：用一個看不見的 WebView 載入報告，交給系統列印（可選「另存為 PDF」） */
+        @JavascriptInterface
+        public void printHtml(final String html, final String name) {
+            runOnUiThread(() -> { try {
+                final WebView pw = new WebView(MainActivity.this); printView = pw;
+                pw.setWebViewClient(new android.webkit.WebViewClient() { @Override public void onPageFinished(WebView v, String u) {
+                    v.postDelayed(() -> { try { android.print.PrintManager pm = (android.print.PrintManager) getSystemService(Context.PRINT_SERVICE);
+                        pm.print(name, v.createPrintDocumentAdapter(name), new android.print.PrintAttributes.Builder().setMediaSize(android.print.PrintAttributes.MediaSize.ISO_A4).build()); } catch (Throwable t) { } }, 400); } });
+                pw.loadDataWithBaseURL("https://app.local/", html, "text/html", "utf-8", null);
+            } catch (Throwable t) { } });
         }
 
         /* 把圖片存到相簿（圖片／日日帳本），share=true 時接著叫出分享選單 */
