@@ -253,14 +253,14 @@ const TUT = {
     {t: '把金鑰貼到這裡', paste: true, h: '<p>把剛剛複製的金鑰貼到下面，按「測試金鑰」確認可以使用。</p>'}]}
 };
 function openTutorial(kind) {
-  const T = TUT[kind]; let i = 0; const sh = sheet({title: T.title, full: true, foot: '<button class="btn" data-a="prev">‹ 上一步</button><button class="btn pri" data-a="next">下一步 ›</button>', onClose() { if (curTab === 'Set') renderSet(); }});
+  const T = TUT[kind]; let i = 0, dir = 1; const sh = sheet({title: T.title, full: true, foot: '<button class="btn" data-a="prev">‹ 上一步</button><button class="btn pri" data-a="next">下一步 ›</button>', onClose() { if (curTab === 'Set') renderSet(); }});
   const render = () => { const s = T.steps[i], last = i === T.steps.length - 1;
-    sh.body.innerHTML = `<div class="tut"><div class="tutDots">${T.steps.map((_, k) => `<i class="${k === i ? 'on' : ''}"></i>`).join('')}</div><div class="tutStep">步驟 ${i + 1} / ${T.steps.length}</div><h2>${s.t}</h2>${s.h}
+    sh.body.innerHTML = `<div class="tut ${dir < 0 ? 'back' : 'fwd'}"><div class="tutDots">${T.steps.map((_, k) => `<i class="${k === i ? 'on' : ''}"></i>`).join('')}</div><div class="tutStep">步驟 ${i + 1} / ${T.steps.length}</div><h2>${s.t}</h2>${s.h}
       ${s.paste ? `<div class="keyBox"><input id="tK" value="${esc(S[T.key])}" placeholder="在這裡貼上金鑰（AIza…）" autocomplete="off"><button class="btn sm" data-a="paste">貼上</button></div><div style="margin:.7rem 0"><button class="btn olive block" data-a="test">測試金鑰</button></div><div class="testOut" id="tOut"></div>` : ''}
       ${s.url ? `<button class="btn pri block" data-a="go" style="margin-top:.8rem">${s.btn} ↗</button><div class="small muted" style="text-align:center;margin-top:.4rem">會用瀏覽器開啟，完成後回到這裡按「下一步」</div>` : ''}</div>`;
     sh.body.scrollTop = 0; $('[data-a="prev"]', sh.foot).disabled = i === 0; $('[data-a="next"]', sh.foot).textContent = last ? '完成' : '下一步 ›'; };
   render();
-  sh.foot.addEventListener('click', e => { const b = e.target.closest('[data-a]'); if (!b) return; if (b.dataset.a === 'prev') { if (i > 0) i--; render(); } else if (i < T.steps.length - 1) { i++; render(); } else sh.close(); });
+  sh.foot.addEventListener('click', e => { const b = e.target.closest('[data-a]'); if (!b) return; buzz(8); if (b.dataset.a === 'prev') { if (i > 0) i--; dir = -1; render(); } else if (i < T.steps.length - 1) { i++; dir = 1; render(); } else sh.close(); });
   sh.body.addEventListener('input', e => { if (e.target.id === 'tK') { S[T.key] = e.target.value.trim(); if (kind === 'maps') GPC.clear(); saveS(); } });
   sh.body.addEventListener('click', async e => { const b = e.target.closest('[data-a]'); if (!b) return; const a = b.dataset.a;
     if (a === 'go') openUrl(T.steps[i].url);

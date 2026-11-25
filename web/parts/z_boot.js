@@ -22,3 +22,21 @@
   setTimeout(() => { Quick.check(); accWidgetPush(); }, 400);
   window.__ready = true;
 })();
+
+/* 下拉選單：不用系統那個白底的原生選單，改成跟 App 一樣風格的底部清單；按鈕一樣大、對齊，文字不會跑出去 */
+(() => {
+  let last = 0;
+  const label = sel => { const r = sel.closest('.setR,.field,label'); const t = sel.getAttribute('aria-label') || (r && (r.querySelector('b,label') || {}).textContent) || (sel.options[0] && sel.options[0].disabled ? sel.options[0].textContent : '') || '請選擇'; return String(t).trim().slice(0, 24); };
+  function pick(sel) { if (Date.now() - last < 400) return; last = Date.now(); buzz(8);
+    const groups = []; [...sel.children].forEach(c => { if (c.tagName === 'OPTGROUP') groups.push({g: c.label, L: [...c.children]}); else { const g = groups[groups.length - 1]; if (g && g.g == null) g.L.push(c); else groups.push({g: null, L: [c]}); } });
+    const all = [...sel.options].filter(o => !o.hidden), mx = Math.max(...all.map(o => [...o.textContent.trim()].length)), cols = mx <= 5 ? 3 : mx <= 9 ? 2 : 1;
+    const sh = sheet({title: label(sel)}), cur = sel.value;
+    sh.body.innerHTML = groups.map(g => `${g.g ? `<div class="spkG">${esc(g.g)}</div>` : ''}<div class="spk c${cols}">${g.L.filter(o => !o.hidden).map(o => `<button data-v="${esc(o.value)}" class="${o.value === cur ? 'on' : ''}" ${o.disabled ? 'disabled' : ''}>${o.value === cur ? '<i>✓</i>' : ''}<span>${esc(o.textContent.trim())}</span></button>`).join('')}</div>`).join('');
+    requestAnimationFrame(() => { const on = $('.spk .on', sh.body); if (on) on.scrollIntoView({block: 'center'}); });
+    sh.body.onclick = e => { const b = e.target.closest('[data-v]'); if (!b || b.disabled) return; buzz(10); sh.close(); if (sel.value !== b.dataset.v) { sel.value = b.dataset.v; sel.dispatchEvent(new Event('input', {bubbles: true})); sel.dispatchEvent(new Event('change', {bubbles: true})); } }; }
+  const skip = s => !s || s.multiple || s.disabled || s.dataset.native != null;
+  document.addEventListener('pointerdown', e => { const s = e.target.closest && e.target.closest('select'); if (skip(s)) return; e.preventDefault(); }, true);
+  document.addEventListener('mousedown', e => { const s = e.target.closest && e.target.closest('select'); if (skip(s)) return; e.preventDefault(); }, true);
+  document.addEventListener('click', e => { const s = e.target.closest && e.target.closest('select'); if (skip(s)) return; e.preventDefault(); s.blur(); pick(s); }, true);
+  document.addEventListener('keydown', e => { const s = e.target; if (s && s.tagName === 'SELECT' && !skip(s) && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); pick(s); } }, true);
+})();

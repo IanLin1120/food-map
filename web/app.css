@@ -1425,3 +1425,45 @@ table.ckT td.s{text-align:center}table.ckT th.s{text-align:center}
 .stTbl{margin:.6rem 0;border:1px solid var(--border-soft);border-radius:6px;overflow:hidden;font-size:.8rem}
 .stTbl>div{display:grid;grid-template-columns:1fr 1.1fr 1.1fr 1.1fr 1.1fr;gap:.2rem;padding:.38rem .55rem;border-top:1px solid var(--border-soft)}.stTbl>div:first-child{border-top:0}
 .stTbl .th{background:var(--surface-2);font-weight:800;color:var(--muted)}.stTbl span{text-align:right;white-space:nowrap}.stTbl span:first-child{text-align:left}
+.tpTop{display:flex;align-items:flex-start;gap:.6rem;margin:-.2rem 0 .7rem}.tpTop .small{flex:1;line-height:1.5}.tpTop .btn{flex:none;white-space:nowrap}
+.tpGH{cursor:pointer}.tpArr{font-style:normal;color:var(--muted);margin-left:.4rem;font-size:.85rem}.tpG.fold{margin-bottom:.5rem}
+/* 說明書／金鑰教學：示意圖不再被壓扁裁切（字放大時也一樣），並加上進場動畫 */
+.tut{height:auto;min-height:100%}
+.tut>*{flex-shrink:0}
+.mock,.ph,.gHero,.gGrid,.gKeys,.gPick{flex-shrink:0}
+.mock .bd .row{flex-wrap:wrap}
+.tut>*{animation:tutIn .42s cubic-bezier(.2,.8,.2,1) both}
+.tut.back>*{animation-name:tutInB}
+.tut>*:nth-child(2){animation-delay:.03s}.tut>*:nth-child(3){animation-delay:.06s}.tut>*:nth-child(4){animation-delay:.1s}.tut>*:nth-child(5){animation-delay:.16s}.tut>*:nth-child(6){animation-delay:.22s}.tut>*:nth-child(n+7){animation-delay:.28s}
+.tut ul li{animation:tutLi .4s ease-out both}.tut ul li:nth-child(1){animation-delay:.25s}.tut ul li:nth-child(2){animation-delay:.33s}.tut ul li:nth-child(3){animation-delay:.41s}.tut ul li:nth-child(4){animation-delay:.49s}.tut ul li:nth-child(n+5){animation-delay:.57s}
+.ph .phBd>*,.mock .bd>*{animation:tutPop .45s cubic-bezier(.2,.9,.3,1.2) both}
+.ph .phBd>*:nth-child(1),.mock .bd>*:nth-child(1){animation-delay:.12s}.ph .phBd>*:nth-child(2),.mock .bd>*:nth-child(2){animation-delay:.2s}.ph .phBd>*:nth-child(3),.mock .bd>*:nth-child(3){animation-delay:.28s}.ph .phBd>*:nth-child(4),.mock .bd>*:nth-child(4){animation-delay:.36s}.ph .phBd>*:nth-child(n+5),.mock .bd>*:nth-child(n+5){animation-delay:.44s}
+.pMap .flag{animation:flagDrop .6s cubic-bezier(.3,1.5,.5,1) .35s both}.pMap .f2{animation-delay:.5s}
+.tutDots i{transition:width .3s,background .3s}
+@keyframes tutIn{from{opacity:0;transform:translateX(26px)}to{opacity:1;transform:none}}
+@keyframes tutInB{from{opacity:0;transform:translateX(-26px)}to{opacity:1;transform:none}}
+@keyframes tutLi{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@keyframes tutPop{from{opacity:0;transform:scale(.94) translateY(6px)}to{opacity:1;transform:none}}
+@keyframes flagDrop{from{opacity:0;transform:translateY(-22px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.tut>*,.tut ul li,.ph .phBd>*,.mock .bd>*,.pMap .flag{animation:none!important}}
+/* 按鈕群組：自動換行時每一排都撐滿寬度、平均分配，右邊不留大空白；文字不換行、不超出 */
+.row.wrap>.btn,.row.wrap>a.btn{flex:1 1 auto;justify-content:center;white-space:nowrap;text-align:center}
+.row.wrap>.grow:empty{display:none}
+/* 付款帳戶種類：圖示在上、文字在下，五個一排；字放大放不下時自動換成兩排，不再出現「行動…」 */
+.dkSeg.acKind{grid-template-columns:repeat(auto-fit,minmax(3.4rem,1fr))}
+.dkSeg.acKind button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.1rem;font-size:.74rem;line-height:1.2;padding:.45rem .1rem;text-overflow:clip}
+.dkSeg.acKind button .ic,.dkSeg.acKind button>span:first-child{font-size:1.05rem}
+.acRow2{grid-template-columns:repeat(auto-fit,minmax(9.5rem,1fr))}.acRow2 .btn{text-overflow:clip}
+.dkSeg.acKind button b{font-weight:800;white-space:nowrap}
+/* 自訂下拉清單 */
+.spk{display:grid;gap:.45rem;margin-bottom:.6rem}.spk.c3{grid-template-columns:repeat(3,minmax(0,1fr))}.spk.c2{grid-template-columns:repeat(2,minmax(0,1fr))}.spk.c1{grid-template-columns:1fr}
+.spk button{position:relative;display:flex;align-items:center;justify-content:center;gap:.3rem;min-height:2.9rem;padding:.5rem .4rem;border:1px solid var(--border);border-radius:6px;background:var(--surface-3);font-weight:700;font-size:.95rem;color:var(--text);min-width:0}
+.spk.c1 button{justify-content:flex-start;padding-left:.9rem}
+.spk button span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.spk button.on{background:var(--accent);border-color:var(--accent);color:#fff}.spk button i{font-style:normal;font-size:.8rem}
+.spk button:disabled{opacity:.45}
+.spkG{font-size:.78rem;font-weight:800;color:var(--muted);margin:.4rem 0 .35rem}
+select:not([multiple]){-webkit-appearance:none;appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);background-position:calc(100% - 1.05rem) 50%,calc(100% - .7rem) 50%;background-size:.35rem .35rem;background-repeat:no-repeat;padding-right:1.8rem!important;text-overflow:ellipsis;white-space:nowrap;overflow:hidden}
+.dkSeg.acKind{grid-template-columns:repeat(5,minmax(0,1fr))!important}
+.dkSeg.acKind button b{font-size:.7rem;letter-spacing:-.02em}
+.mock .bd .row>.card2{min-width:6.5rem}

@@ -87,7 +87,7 @@ const GUIDE = {
     {t: '② 備註、圖片、分帳', h: phone('📒 記一筆', `<div class="pBtns">${pb('🧾 用分帳方式輸入', 'pri hl') + tap}${pb('📥 從分帳帶入')}</div>${pc('<b>備註／消費明細</b><small>小美：泡菜鍋[NT$ 200]×1　小計 $343</small>')}<div class="pImgs"><i>🖼️</i><i>＋</i></div>`, '記帳', 'acc') +
       `<ul><li><b>🧾 用分帳方式輸入</b>：跟分帳一樣輸入品項、誰付、折扣、平台費，完成後寫進備註</li><li><b>📥 從分帳帶入</b>（或記帳頁的「從分帳匯入」）：品項、每人金額和圖片一起帶入，不會重複匯入</li><li>可以加截圖；下面的 🤝 分帳選誰付的錢、誰要分（平均或自己填）</li></ul>`},
     {t: '③ 常用紀錄', h: phone('⭐ 常用紀錄', `<div class="pSeg"><i class="on">支出</i><i>收入</i><i>轉帳</i></div>${pc('<b>春日公寓-3F-房租</b><small>$10,000</small>')}${pc('<b>電費</b><small>💬 每次輸入金額</small>')}<div class="pBtns">${pb('🗑 刪除')}${pb('＋ 另存常用', 'hl') + tap}${pb('✓ 儲存', 'pri')}</div>`, '記帳', 'acc') +
-      `<ul><li>記一筆填好後按 <b>⭐ 存成常用</b>（金額可以不填，每次使用時再輸入）；記帳頁的「⭐ 常用紀錄」顯示有幾個常用，按「打開」</li><li>點一個常用紀錄會打開 <b>記一筆</b>，內容都帶好，<b>確認後再儲存</b>；沒有輸入金額就按儲存會跳出提醒</li><li>編輯時按 <b>＋ 另存常用</b> 可以複製成一個新的（例如另一間房租）</li><li>按住拖曳排序；分類也可以拖曳調整順序</li></ul>`},
+      `<ul><li>記一筆填好後按 <b>⭐ 存成常用</b>（金額可以不填，每次使用時再輸入）；記帳頁的「⭐ 常用紀錄」顯示有幾個常用，按「打開」</li><li>點一個常用紀錄會打開 <b>記一筆</b>，內容都帶好，<b>確認後再儲存</b>；沒有輸入金額就按儲存會跳出提醒</li><li>編輯時按 <b>＋ 另存常用</b> 可以複製成一個新的（例如另一間房租）</li><li>點分類名稱可以收合，右上角「全部收合／全部展開」一鍵切換；按住拖曳排序，分類也可以按住整組上下移動</li></ul>`},
     {t: '④ 欠款和對帳', h: phone('🤝 和小美對帳', `${pc('<b>小美 欠我</b><small>$587</small>')}${pc('<b>☑ 11/21 晨曦早午餐　$285</b><small>☑ 11/22 好鄰居超市　$302</small>')}<div class="pBtns">${pb('✅ 結清', 'pri wide hl') + tap}</div>`, '記帳', 'acc') +
       `<ul><li>有分帳的紀錄會自動算出誰欠誰</li><li>按 <b>🤝 對帳</b>，選日期範圍，勾選這次要結清的幾筆</li><li>選錢收進哪個帳戶（銀行或現金）和對方怎麼付的（LINE Pay、台灣 Pay、轉帳…），結清後會記一筆還款並更新資產</li><li><b>對帳紀錄</b>：可以整批復原，或單獨把某一筆改回未結清；已經從記帳刪掉的紀錄不會再出現；確認沒問題的按「確認此批沒有問題」就會收起來</li></ul>`},
     {t: '⑤ 資產', h: phone('資產', `<div class="pBtns" style="justify-content:flex-end">${pb('👁 顯示金額', 'hl') + tap}</div>${pc('<b>淨資產</b><small>$ ••••</small>')}${pc('<b>🏦 銀行</b><small>我的銀行　$ ••••</small>')}`, '資產', 'acc') +
@@ -108,14 +108,14 @@ const GUIDE = {
       `<ul><li><b>桌面小工具</b>：長按桌面空白處 →「小工具」→ 日日帳本，按「＋ 支出」直接打開記一筆</li><li><b>通知欄</b>：記帳 → 設定 → 快速記帳，打開「通知欄快速記帳」，通知上有「＋ 支出／＋ 收入／⭐ 常用」三顆按鈕</li><li><b>控制中心</b>：下拉兩次 → 編輯（鉛筆）→ 把「記一筆」和「常用記帳」拖進去</li><li>不想讓別人看到金額：關掉「小工具和通知顯示金額」</li></ul>`}]}
 };
 function openGuide(kind) {
-  const G = GUIDE[kind]; let i = 0; buzz(10);
+  const G = GUIDE[kind]; let i = 0, dir = 1; buzz(10);
   const sh = sheet({title: G.title, full: true, foot: '<button class="btn" data-a="prev">‹ 上一步</button><button class="btn pri" data-a="next">下一步 ›</button>'});
   const render = () => { const s = G.steps[i], last = i === G.steps.length - 1;
-    sh.body.innerHTML = `<div class="tut gd"><div class="tutDots">${G.steps.map((_, k) => `<i class="${k === i ? 'on' : ''}" data-k="${k}"></i>`).join('')}</div><div class="tutStep">${i + 1} / ${G.steps.length}</div><h2>${s.t}</h2>${s.h}</div>`;
+    sh.body.innerHTML = `<div class="tut gd ${dir < 0 ? 'back' : 'fwd'}"><div class="tutDots">${G.steps.map((_, k) => `<i class="${k === i ? 'on' : ''}" data-k="${k}"></i>`).join('')}</div><div class="tutStep">${i + 1} / ${G.steps.length}</div><h2>${s.t}</h2>${s.h}</div>`;
     sh.body.scrollTop = 0; $('[data-a="prev"]', sh.foot).disabled = i === 0; $('[data-a="next"]', sh.foot).textContent = last ? '完成 ✓' : '下一步 ›'; };
   render();
-  sh.foot.addEventListener('click', e => { const b = e.target.closest('[data-a]'); if (!b) return; buzz(8); if (b.dataset.a === 'prev') { if (i > 0) i--; render(); } else if (i < G.steps.length - 1) { i++; render(); } else sh.close(); });
-  sh.body.addEventListener('click', e => { const t = e.target.closest('[data-tut],[data-k]'); if (!t) return; if (t.dataset.tut) openTutorial(t.dataset.tut); else { i = +t.dataset.k; render(); } });
+  sh.foot.addEventListener('click', e => { const b = e.target.closest('[data-a]'); if (!b) return; buzz(8); if (b.dataset.a === 'prev') { if (i > 0) i--; dir = -1; render(); } else if (i < G.steps.length - 1) { i++; dir = 1; render(); } else sh.close(); });
+  sh.body.addEventListener('click', e => { const t = e.target.closest('[data-tut],[data-k]'); if (!t) return; if (t.dataset.tut) openTutorial(t.dataset.tut); else { const k = +t.dataset.k; dir = k < i ? -1 : 1; i = k; buzz(8); render(); } });
   let x0 = null; sh.body.addEventListener('touchstart', e => { x0 = e.touches[0].clientX; }, {passive: true});
   sh.body.addEventListener('touchend', e => { if (x0 == null) return; const dx = e.changedTouches[0].clientX - x0; x0 = null; if (Math.abs(dx) < 60) return; if (dx < 0 && i < G.steps.length - 1) i++; else if (dx > 0 && i > 0) i--; else return; buzz(8); render(); }, {passive: true});
 }

@@ -343,7 +343,7 @@ const emojiSplit = s => { const m = String(s).trim().match(/^(\p{Extended_Pictog
 function acctPickerHtml(cur, key, fund) {
   const a = accAcct(cur), kind = (a && a.kind) || (acctPickerHtml.k || {})[key] || 'cash', L = DB.acc.accts.filter(x => x.kind === kind);
   const fk = key === 'to' ? 'fund2' : 'fund', F = a && a.kind === 'pay' ? (fund || a.fund || '') : '';
-  return `<div class="dkSeg acKind">${Object.entries(AK).map(([k, [n, i]]) => `<button data-kind="${k}" data-key="${key}" class="${k === kind ? 'on' : ''}">${i} ${n}</button>`).join('')}</div>
+  return `<div class="dkSeg acKind">${Object.entries(AK).map(([k, [n, i]]) => `<button data-kind="${k}" data-key="${key}" class="${k === kind ? 'on' : ''}"><span>${i}</span><b>${n}</b></button>`).join('')}</div>
     <div class="acAccts">${L.map(x => `<button data-acct="${x.id}" data-key="${key}" class="${x.id === cur ? 'on' : ''}">${aIco(x)} ${esc(x.n)}</button>`).join('')}<button data-a="addAcct" data-kind="${kind}" data-key="${key}" class="add">＋ 新增${AK[kind][0]}</button></div>
     ${a && a.kind === 'pay' ? `<div class="acFund"><small>實際從哪裡扣款</small><div class="acAccts">${DB.acc.accts.filter(x => x.kind === 'bank' || x.kind === 'card' || x.kind === 'stored').map(x => `<button data-fund="${x.id}" data-fk="${fk}" class="${x.id === F ? 'on' : ''}">${aIco(x)} ${esc(x.n)}</button>`).join('') || '<span class="muted small">先新增銀行、信用卡或儲值帳戶</span>'}</div></div>` : ''}`;
 }
@@ -732,7 +732,7 @@ function editAcct(a) {
   /* 收支明細依月份分組，可以收合；預設只打開最新的月份 */
   const moOpen = new Set(); { const f = (flows[0] || payUse[0]); if (f) moOpen.add(f.d.slice(0, 7)); }
   const draw = () => { const cur = acctBal(a); sh.body.innerHTML = `<div class="niRow"><button class="niIc" data-a="ic">${aIco({i: ic, logo, kind})}<small>換圖示</small></button><div class="field grow" style="margin:0"><label>名稱</label><input id="eaN" value="${esc(a.n)}"></div></div>
-    <div class="lbl">種類</div><div class="dkSeg acKind">${Object.entries(AK).map(([k, [n, i]]) => `<button data-k="${k}" class="${kind === k ? 'on' : ''}">${i} ${n}</button>`).join('')}</div>
+    <div class="lbl">種類</div><div class="dkSeg acKind">${Object.entries(AK).map(([k, [n, i]]) => `<button data-k="${k}" class="${kind === k ? 'on' : ''}"><span>${i}</span><b>${n}</b></button>`).join('')}</div>
     ${kind === 'pay' ? `<div class="lbl" style="margin-top:.8rem">綁定哪個帳戶扣款（記帳時預設從這裡扣）</div><div class="acAccts">${DB.acc.accts.filter(x => x.kind === 'bank' || x.kind === 'card' || x.kind === 'stored').map(x => `<button data-fd="${x.id}" class="${fund === x.id ? 'on' : ''}">${aIco(x)} ${esc(x.n)}</button>`).join('') || '<span class="muted small">先新增銀行、信用卡或儲值帳戶</span>'}</div>`
       : `<div class="field" style="margin-top:.8rem"><label>目前餘額${kind === 'card' ? '（信用卡欠款請填負數，例如 -3500）' : ''}</label><input id="eaB" value="${cur}" inputmode="decimal"></div>`}
     ${kind === 'card' ? `<div class="field"><label>每月幾號還款（1～28）</label><input id="eaD" value="${a.payDay || ''}" inputmode="numeric" placeholder="例如 5"></div><div class="lbl">從哪個帳戶自動扣款還款</div><div class="acAccts">${DB.acc.accts.filter(x => x.kind === 'bank').map(x => `<button data-pf="${x.id}" class="${pf === x.id ? 'on' : ''}">${aIco(x)} ${esc(x.n)}</button>`).join('') || '<span class="muted small">先在「銀行」新增帳戶</span>'}</div>` : ''}
@@ -880,7 +880,7 @@ async function renderAccMap() {
   const ordOf = k => ((DB.acc.amOrd || {})[k]) || [], anyOpen = AM.f === 'all' && cats.some(k => !amFolded(k));
   const towns = AM.area && TW.counties[AM.area.c] ? TW.counties[AM.area.c].towns : [];
   $('#accMList').innerHTML = `<div class="amChips">${[['all', '🗺️ 全部', '']].concat(cats.map(k => { const c = amCat(k); return [k, `${c.icon} ${c.name}`, c.color]; })).map(([k, t, c]) => `<button class="chip ${AM.f === k ? 'on' : ''}" data-f="${k}" ${c ? `style="--c:${c}"` : ''}>${esc(t)} <span class="n">${cnt(k)}</span></button>`).join('')}</div>
-    ${TW.ready ? `<div class="amArea"><select id="amC"><option value="">全部縣市</option>${TW.names.map(n => `<option ${AM.area && AM.area.c === n ? 'selected' : ''}>${n}</option>`).join('')}</select><select id="amT" ${AM.area ? '' : 'disabled'}><option value="">全部鄉鎮市區</option>${towns.map(t => `<option ${AM.area && AM.area.t === t.name ? 'selected' : ''}>${t.name}</option>`).join('')}</select>${AM.area ? '<button class="ic" data-a="arX" aria-label="取消區域">✕</button>' : ''}</div>` : ''}
+    ${TW.ready ? `<div class="amArea"><select id="amC" aria-label="選擇縣市"><option value="">全部縣市</option>${TW.names.map(n => `<option ${AM.area && AM.area.c === n ? 'selected' : ''}>${n}</option>`).join('')}</select><select id="amT" aria-label="選擇鄉鎮市區" ${AM.area ? '' : 'disabled'}><option value="">全部鄉鎮市區</option>${towns.map(t => `<option ${AM.area && AM.area.t === t.name ? 'selected' : ''}>${t.name}</option>`).join('')}</select>${AM.area ? '<button class="ic" data-a="arX" aria-label="取消區域">✕</button>' : ''}</div>` : ''}
     <div class="amBar"><div class="searchBox amQ"><input id="amQ" type="search" placeholder="搜尋店名或地址" value="${esc(AM.q)}"></div>${AM.f === 'all' && cats.length > 1 ? `<button class="btn sm amFoldAll" data-a="foldAll">${anyOpen ? '⊟ 全部收合' : '⊞ 全部展開'}</button>` : ''}</div>
     <div class="small muted amTip">按住分類標題可以上下移動；展開後按住店家可以排序</div><div id="amSecs">
     ${(AM.f === 'all' ? cats : [AM.f]).map(k => { const c = amCat(k), od = ordOf(k), oi = o => { const i = od.indexOf(o.n); return i < 0 ? 1e6 : i; }, L = V.filter(o => o.cat === k).sort((a, b) => oi(a) - oi(b) || ((b.st || {}).last || '').localeCompare((a.st || {}).last || '') || a.n.localeCompare(b.n, 'zh-Hant')); if (!L.length) return '';
@@ -1142,6 +1142,7 @@ function managePayees() {
 }
 function manageTpls() { tplList(); }
 /* 常用紀錄完整清單：支出／收入／轉帳，依分類排列；長按拖曳排序 */
+const tpFolded = k => !!(S.tpFold || {})[k];
 function tplList() {
   let ty = 'out'; const sh = sheet({title: '⭐ 常用紀錄', full: true, foot: '<button class="btn pri" data-a="new">＋ 新增常用紀錄</button>'});
   const groups = () => { const L = DB.acc.tpls.filter(t => (t.type || 'out') === ty), G = [];
@@ -1152,15 +1153,17 @@ function tplList() {
     return G.map((g, i) => [g, i]).sort((a, b) => at(a[0].k) - at(b[0].k) || a[1] - b[1]).map(x => x[0]); };
   const draw = () => { const G = groups(), n = k => DB.acc.tpls.filter(t => (t.type || 'out') === k).length;
     sh.body.innerHTML = `<div class="acType three"><button data-ty="out" class="${ty === 'out' ? 'on' : ''}">支出 ${n('out') || ''}</button><button data-ty="in" class="${ty === 'in' ? 'on' : ''}">收入 ${n('in') || ''}</button><button data-ty="tr" class="${ty === 'tr' ? 'on' : ''}">轉帳 ${n('tr') || ''}</button></div>
-      <div class="small muted" style="margin:-.2rem 0 .7rem">點一下就用今天的日期記帳；按住紀錄拖曳可以在分類裡排序，按住分類名稱可以整組上下移動；按 ✎ 編輯。</div>
-      <div id="tpL">${G.map(g => `<div class="tpG" data-g="${g.k}"><div class="tpGH">${G.length > 1 ? '<span class="grip"></span>' : ''}<span class="lbl">${esc(g.n)}</span><em>${g.L.length}</em></div>${g.L.map(t => `<div class="tpR card" data-t="${t.id}"><span class="grip"></span><button class="tpUse" data-use="${t.id}"><b>${esc(t.name)}</b><small>${esc([t.payee, t.type === 'tr' ? acctName(t.acct) + ' → ' + acctName(t.to) : acctName(t.acct), (t.split || []).length ? '分帳 ' + t.split.length + ' 人' : ''].filter(Boolean).join('・'))}</small><span class="tpV ${!+t.amt ? '' : t.type === 'in' ? 'pos' : t.type === 'out' ? 'neg' : ''}">${+t.amt ? money(t.amt) : '💬 每次輸入金額'}</span></button><button class="ic" data-ed="${t.id}" aria-label="編輯">✎</button></div>`).join('')}</div>`).join('') || '<div class="empty">這一類還沒有常用紀錄<br><span class="small">按下面「＋ 新增常用紀錄」，或在記一筆時按「⭐ 存成常用」</span></div>'}</div>`;
+      <div class="tpTop"><span class="small muted">點一下打開記一筆確認；點分類名稱收合，按住可以整組上下移動；按住紀錄拖曳排序；按 ✎ 編輯。</span>${G.length > 1 ? `<button class="btn sm" data-fa="1">${G.every(g => tpFolded(g.k)) ? '⊞ 全部展開' : '⊟ 全部收合'}</button>` : ''}</div>
+      <div id="tpL">${G.map(g => `<div class="tpG ${tpFolded(g.k) ? 'fold' : ''}" data-g="${g.k}"><div class="tpGH" data-fg="${g.k}">${G.length > 1 ? '<span class="grip"></span>' : ''}<span class="lbl">${esc(g.n)}</span><em>${g.L.length}</em><i class="tpArr">${tpFolded(g.k) ? '▸' : '▾'}</i></div>${(tpFolded(g.k) ? [] : g.L).map(t => `<div class="tpR card" data-t="${t.id}"><span class="grip"></span><button class="tpUse" data-use="${t.id}"><b>${esc(t.name)}</b><small>${esc([t.payee, t.type === 'tr' ? acctName(t.acct) + ' → ' + acctName(t.to) : acctName(t.acct), (t.split || []).length ? '分帳 ' + t.split.length + ' 人' : ''].filter(Boolean).join('・'))}</small><span class="tpV ${!+t.amt ? '' : t.type === 'in' ? 'pos' : t.type === 'out' ? 'neg' : ''}">${+t.amt ? money(t.amt) : '💬 每次輸入金額'}</span></button><button class="ic" data-ed="${t.id}" aria-label="編輯">✎</button></div>`).join('')}</div>`).join('') || '<div class="empty">這一類還沒有常用紀錄<br><span class="small">按下面「＋ 新增常用紀錄」，或在記一筆時按「⭐ 存成常用」</span></div>'}</div>`;
     sortable($('#tpL', sh.body), {item: '.tpR', scope: '.tpG', scroller: sh.body, onSort(f, t, scope) { const ids = $$('.tpR', scope).map(e => e.dataset.t), mv = ids.splice(f, 1)[0]; ids.splice(t, 0, mv);
       const pos = DB.acc.tpls.map((x, i) => ids.includes(x.id) ? i : -1).filter(i => i >= 0), objs = ids.map(id => DB.acc.tpls.find(x => x.id === id)); pos.forEach((p, i) => { DB.acc.tpls[p] = objs[i]; }); saveAcc(); draw(); renderAcc(); }});
     /* 分類整組上下移動 */
     if (G.length > 1) sortable($('#tpL', sh.body), {item: '.tpG', handle: '.tpGH', handleOnly: true, scroller: sh.body, onSort(f, t) { const ks = G.map(g => g.k), mv = ks.splice(f, 1)[0]; ks.splice(t, 0, mv);
       DB.acc.tgord = DB.acc.tgord || {}; DB.acc.tgord[ty] = ks; saveAcc(); draw(); renderAcc(); }}); };
   draw();
-  sh.body.addEventListener('click', async e => { const t = e.target.closest('button'); if (!t) return; buzz(8); const d = t.dataset;
+  sh.body.addEventListener('click', async e => { const fg = e.target.closest('[data-fg]'); if (fg && !e.target.closest('button')) { buzz(8); const k = fg.dataset.fg; S.tpFold = S.tpFold || {}; S.tpFold[k] = !tpFolded(k); saveS(); draw(); return; }
+    const t = e.target.closest('button'); if (!t) return; buzz(8); const d = t.dataset;
+    if (d.fa) { const G = groups(), all = G.every(g => tpFolded(g.k)); S.tpFold = S.tpFold || {}; G.forEach(g => { S.tpFold[g.k] = !all; }); saveS(); draw(); return; }
     if (d.ty) { ty = d.ty; draw(); return; }
     if (d.use) { const tp = DB.acc.tpls.find(x => x.id === d.use); sh.close(); useTpl(tp); return; }
     if (d.ed) { const tp = DB.acc.tpls.find(x => x.id === d.ed); await accEdit(tp, null, {tpl: true}); draw(); renderAcc(); } });
