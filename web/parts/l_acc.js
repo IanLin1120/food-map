@@ -287,7 +287,7 @@ function renderAcc() {
   const days = []; L.forEach(r => { let g = days.find(x => x.d === r.d); if (!g) days.push(g = {d: r.d, L: []}); g.L.push(r); });
   $('#accSub').textContent = `${Mo + 1}月・${mon.length} 筆`;
   box.innerHTML = `<button class="acTplBtn card" data-a="tpls"><span class="acTplI">⭐</span><span class="grow"><b>常用紀錄</b><small>${DB.acc.tpls.length ? `${DB.acc.tpls.length} 個常用紀錄` : '每月房租、手機費…點一下就記好'}</small></span><span class="acDGo">打開 ›</span></button>
-    <div class="acSum card"><div class="acT out"><small>支出（我的）</small><b>${money(out)}</b></div><div class="acT in"><small>收入</small><b>${money(inc)}</b></div><div class="acT bal"><small>結餘</small><b>${money(inc - out - lossM)}</b></div></div>${lossM ? `<div class="acLoss card">💸 這個月遺失 <b>${money(lossM)}</b><small>（另外統計，已算進結餘）</small></div>` : ''}
+    <div class="acSum card"><div class="acT out" data-a="outBk"><small>支出（我的）ⓘ</small><b>${money(out)}</b></div><div class="acT in"><small>收入</small><b>${money(inc)}</b></div><div class="acT bal"><small>結餘</small><b>${money(inc - out - lossM)}</b></div></div>${lossM ? `<div class="acLoss card">💸 這個月遺失 <b>${money(lossM)}</b><small>（另外統計，已算進結餘）</small></div>` : ''}
     ${dIds.length ? `<div class="acDebt card"><div class="acDH"><b>🤝 還沒結清的欠款</b><span class="row" style="gap:.35rem"><button class="btn sm" data-a="settleHist">📚 歷史</button><button class="btn sm" data-a="settleLog">對帳紀錄</button></span></div>${dIds.map(p => { const u = aWho(p), v = debts[p]; return `<button class="acDR" data-settle="${p}"><span class="acDI">${esc(u.icon)}</span><span class="grow"><b>${esc(u.name)}</b><small>${v > 0 ? '欠我' : '我欠他'}</small></span><span class="acDV ${v > 0 ? 'pos' : 'neg'}">${money(Math.abs(v))}</span><span class="acDGo">對帳 ›</span></button>`; }).join('')}</div>` : ''}
     <div class="cal card">${calHead(Y, Mo)}<div class="calWd">${MWD.map((w, i) => `<span class="${i === 0 || i === 6 ? 'we' : ''}">${w}</span>`).join('')}</div><div class="calG acCal">${cells}</div></div>
     ${Acc.day ? `<div class="invDayBar"><span class="grow">📅 只看 ${dayLabel(Acc.day)}</span><button class="btn sm" data-a="allDays">看整個月</button></div>` : ''}
@@ -328,7 +328,7 @@ function initAcc() {
     if (a === 'pm' || a === 'nm') { const d = new Date(Y, Mo + (a === 'pm' ? -1 : 1), 1); Acc.ym = [d.getFullYear(), d.getMonth()]; Acc.day = null; renderAcc(); }
     else if (a === 'ymY' || a === 'ymM') { const r = await ymPick(Y, Mo, a === 'ymY' ? 'y' : 'm'); if (r) { Acc.ym = r; Acc.day = null; renderAcc(); } }
     else if (a === 'allDays') { Acc.day = null; renderAcc(); }
-    else if (a === 'settleLog') accSettleLog(); else if (a === 'settleHist') accSettleHist(); else if (a === 'tpls') tplList(); });
+    else if (a === 'settleLog') accSettleLog(); else if (a === 'settleHist') accSettleHist(); else if (a === 'tpls') tplList(); else if (a === 'outBk') accOutBreak(); });
   $('#accABody').addEventListener('click', accAssetClick); $('#accEye').onclick = () => { buzz(15); Acc.showAmt = !Acc.showAmt; renderAccAsset(); };
   $('#accSBody').addEventListener('click', accStatClick);
   $('#accCBody').addEventListener('click', accCfgClick);
@@ -1303,3 +1303,13 @@ function accSettleHist() {
     if (d.settle) { sh.close(); accSettle(d.settle); return; }
     if (d.r) { const r = DB.acc.recs.find(x => x.id === d.r); if (r) { await accEdit(r); draw(); } } };
 }
+
+/* 「支出（我的）」怎麼算的：分帳的紀錄只算我自己那一份，別人先付、我欠的也只算我那份 */
+function accOutBreak() { const [Y, Mo] = Acc.ym, pre = `${Y}-${String(Mo + 1).padStart(2, '0')}`, me = accMe();
+  const L = DB.acc.recs.filter(r => r.d && r.d.startsWith(pre) && r.type === 'out' && accMine(r)).sort((a, b) => (a.d + (a.t || '')).localeCompare(b.d + (b.t || '')));
+  const tot = L.reduce((s, r) => s + accMine(r), 0), days = [];
+  L.forEach(r => { let g = days.find(x => x.d === r.d); if (!g) days.push(g = {d: r.d, L: []}); g.L.push(r); });
+  sheet({title: `支出（我的）${Mo + 1} 月 ${money(tot)}`, full: true, html: `<div class="small muted" style="margin-bottom:.7rem">有分帳的紀錄只算<b>你自己那一份</b>：別人先付、你欠他的，也只算你那份（例如總額 $968 兩人平分＝你的支出 $484）。欠款另外在「還沒結清的欠款」計算，不會重複算進支出。</div>`
+    + days.map(g => `<div class="obD"><span>${esc(g.d.slice(5).replace('-', '/'))}</span><b>${money(g.L.reduce((s, r) => s + accMine(r), 0))}</b></div>` + g.L.map(r => { const sp = (r.split || []).length, payer = r.payer || me;
+      return `<div class="obR"><span class="grow"><b>${esc(r.payee || accCat(r).n)}</b><small>${sp ? `總額 ${money(r.amt)}・${payer === me ? '我付' : esc(aWho(payer).name) + ' 付'}・${sp} 人分` : '自己的'}</small></span><b>${money(accMine(r))}</b></div>`; }).join('')).join('')
+    + `<div class="obD tot"><span>合計</span><b>${money(tot)}</b></div>`}); }

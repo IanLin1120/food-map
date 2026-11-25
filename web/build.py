@@ -7,7 +7,9 @@ ver = os.environ.get('VER') or open(os.path.join(root, 'VERSION')).read().strip(
 R = lambda *p: open(os.path.join(here, *p), encoding='utf-8').read()
 
 order = ['a_core', 'b_map', 'c_places', 'd_app', 'e_update', 'f_area', 'g_meal', 'h_shop', 'i_guide', 'j_inv', 'k_list', 'l_acc', 'n_report', 'm_cloud', 'z_boot']
-app = '\n'.join(R('parts', n + '.js') for n in order).replace('__VER__', ver)
+import json as _j
+_g = _j.load(open(os.path.join(here, 'guide', 'guide.json'), encoding='utf-8'))
+app = '\n'.join(R('parts', n + '.js') for n in order).replace('__VER__', ver).replace('__GV__', _g['v']).replace('__GMETA__', R('guide', 'meta.json'))
 assert '</script' not in app.lower()
 assert "const APP_VERSION = '" + ver + "'" in app          # 線上更新靠這一行確認下載到的版本
 shell = R('shell.html').strip()
@@ -24,4 +26,6 @@ assets = os.path.join(root, 'app', 'src', 'main', 'assets'); os.makedirs(assets,
 shutil.copy(os.path.join(dist, 'index.html'), os.path.join(assets, 'index.html'))
 for n in ['icon-192.png', 'icon-512.png']:
     shutil.copy(os.path.join(here, n), os.path.join(dist, n)); shutil.copy(os.path.join(here, n), os.path.join(assets, n))
+for d in (dist, assets, root):
+    shutil.copy(os.path.join(here, 'guide', 'guide.json'), os.path.join(d, 'guide.json'))
 print('built v%s  %d bytes' % (ver, len(html)))
