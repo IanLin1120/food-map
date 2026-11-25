@@ -83,10 +83,10 @@ function syncMarkers() {
     if (mk && mk._sig !== sig) { mk.remove(); M.marks.delete(p.id); mk = null; }
     if (!mk) { const e = pinEl(p); e.addEventListener('click', ev => { ev.stopPropagation(); selectPlace(p.id); });
       mk = new maplibregl.Marker({element: e, anchor: 'center'}).setLngLat([p.lon, p.lat]).addTo(M.map); mk._sig = sig; M.marks.set(p.id, mk); }
-    const show = (M.filter === 'all' || (p.cat || '') === M.filter || !DB.cats.some(c => c.id === p.cat) && M.filter === '') && (Area.has(p) || M.sel === p.id);
+    const show = (M.filter === 'all' || pCats(p).includes(M.filter)) && (Area.has(p) || M.sel === p.id);
     mk.getElement().style.display = show ? '' : 'none'; mk.getElement().classList.toggle('sel', M.sel === p.id); });
 }
-function placesIn(f) { return f === 'all' ? DB.places : DB.places.filter(p => (DB.cats.some(c => c.id === p.cat) ? p.cat : '') === f); }
+function placesIn(f) { return f === 'all' ? DB.places : DB.places.filter(p => pCats(p).includes(f)); }
 /* 目前地圖上看得到的：分類 ＋ 選取的縣市／鄉鎮市區 */
 function placesShown(f) { return placesIn(f).filter(p => Area.has(p)); }
 
@@ -311,7 +311,7 @@ function initSearch() {
 }
 function openAdd() {
   const sh = sheet({title: '新增收藏地點', html: `<div class="setC">
-    <button class="setR" data-a="search" style="width:100%;text-align:left"><span style="font-size:1.4rem">🔍</span><span class="t"><b>搜尋店家</b><small>輸入店名或地址，從搜尋結果加入</small></span></button>
+    <button class="setR" data-a="search" style="width:100%;text-align:left"><span style="font-size:1.4rem">🔍</span><span class="t"><b>搜尋地點</b><small>輸入名稱或地址，從搜尋結果加入</small></span></button>
     <button class="setR" data-a="center" style="width:100%;text-align:left"><span style="font-size:1.4rem">🎯</span><span class="t"><b>用地圖中心點</b><small>先把地圖移到店家位置，再按這裡</small></span></button>
     <button class="setR" data-a="me" style="width:100%;text-align:left"><span style="font-size:1.4rem">🧭</span><span class="t"><b>用我現在的位置</b><small>人在店裡時最方便</small></span></button></div>
     <div class="callout">💡 小技巧：直接<b>長按地圖</b>上任何一個位置，也可以插旗收藏。</div>`});

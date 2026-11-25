@@ -581,8 +581,8 @@ var Share = {
     const render = () => { const p = DB.places.find(x => x.id === pid), la = latest(); if (la && mode === 'new' && !sh.modeSet) mode = 'add';
       const list = DB.places.filter(x => !q || (x.name + ' ' + (x.addr || '')).toLowerCase().includes(q.toLowerCase())).sort((a, b) => (b.id === pid) - (a.id === pid));
       sh.body.innerHTML = `<div class="thumbs" style="margin-bottom:.8rem">${urls.map(u => `<div class="th"><img src="${u}" alt=""></div>`).join('')}</div>
-        <div class="field"><label>存到哪一家店的菜單</label><div class="searchBox" style="margin-bottom:.5rem"><input id="shQ" type="search" placeholder="搜尋收藏的店家…" value="${esc(q)}"></div>
-          <div class="shList">${list.slice(0, 30).map(x => { const c = catOf(x.cat); return `<button class="res ${x.id === pid ? 'on' : ''}" data-id="${x.id}"><span class="rIc" style="background:${c.color}">${esc(c.icon)}</span><span class="grow"><b>${esc(x.name)}</b><small>${esc(x.addr || '')}</small></span>${x.id === pid ? '<span class="tag">已選</span>' : ''}</button>`; }).join('') || '<div class="resNote">找不到收藏的店家</div>'}</div></div>
+        <div class="field"><label>存到哪一家店的菜單</label><div class="searchBox" style="margin-bottom:.5rem"><input id="shQ" type="search" placeholder="搜尋收藏的地點…" value="${esc(q)}"></div>
+          <div class="shList">${list.slice(0, 30).map(x => { const c = catOf(x.cat); return `<button class="res ${x.id === pid ? 'on' : ''}" data-id="${x.id}"><span class="rIc" style="background:${c.color}">${esc(c.icon)}</span><span class="grow"><b>${esc(x.name)}</b><small>${esc(x.addr || '')}</small></span>${x.id === pid ? '<span class="tag">已選</span>' : ''}</button>`; }).join('') || '<div class="resNote">找不到收藏的地點</div>'}</div></div>
         ${p ? `<div class="field"><label>放在</label><div class="seg" id="shM"><button data-v="new" class="${mode === 'new' ? 'on' : ''}">新的菜單版本</button><button data-v="add" class="${mode === 'add' ? 'on' : ''}" ${albumsOf(p).length ? '' : 'disabled'}>加到最新版本${albumsOf(p)[0] ? '「' + esc(albumsOf(p)[0].name) + '」' : ''}</button></div></div>` : ''}`;
       const b = $('[data-a="ok"]', sh.foot); b.disabled = !p; b.textContent = p ? `存成「${p.name}」的菜單` : '先選擇店家'; };
     render();
@@ -818,10 +818,12 @@ function openPlace(id, toMenu) {
 function editPlace(src, isNew, done) {
   const d = JSON.parse(JSON.stringify(src));
   const sh = sheet({title: isNew ? '加入收藏' : '編輯地點', full: true, foot: `${isNew ? '' : '<button class="btn danger" data-a="del" style="flex:0 0 auto">刪除</button>'}<button class="btn pri" data-a="ok">${isNew ? '加入收藏' : '儲存'}</button>`});
+  function cat2Html() { return DB.cats.filter(c => c.id !== d.cat).map(c => `<button data-c2="${c.id}" class="${(d.cats2 || []).includes(c.id) ? 'on' : ''}" style="--c:${c.color}">${(d.cats2 || []).includes(c.id) ? '✓ ' : ''}${esc(c.icon)} ${esc(c.name)}</button>`).join('') || '<span class="small muted">先新增其他分類</span>'; }
   function catHtml() { return DB.cats.map(c => `<button data-c="${c.id}" class="${d.cat === c.id ? 'on' : ''}" style="--c:${c.color}">${esc(c.icon)} ${esc(c.name)}</button>`).join('') + '<button data-c="+">＋ 新分類</button>'; }
   function fill() { sh.body.innerHTML = `
-    <div class="field"><label>店名</label><input id="eN" value="${esc(d.name)}" placeholder="例如：HEN厚食早午餐"></div>
-    <div class="field"><label>放到哪個分類（旗子顏色會跟著分類）</label><div class="catPick" id="eC">${catHtml()}</div></div>
+    <div class="field"><label>名稱</label><input id="eN" value="${esc(d.name)}" placeholder="例如：HEN厚食早午餐"></div>
+    <div class="field"><label>主要分類（旗子顏色會跟著它）</label><div class="catPick" id="eC">${catHtml()}</div></div>
+    <div class="field"><label>也放在這些分類（可以複選，例如午餐、晚餐都會去）</label><div class="catPick also" id="eC2">${cat2Html()}</div><div class="small muted" style="margin-top:.3rem">同一個地點放在好幾個分類，各分類都找得到它，但總數只算一次。</div></div>
     <div class="field"><label>地址</label><input id="eA" value="${esc(d.addr)}" placeholder="地址"></div>
     <div class="field"><label>營業時間（每行一天）</label><textarea id="eH" rows="7" placeholder="星期一: 06:00 – 13:00&#10;星期二: 06:00 – 13:00&#10;…">${esc((d.hours || []).join('\n'))}</textarea>
       ${S.gkey ? '<button class="btn sm olive" data-a="g" style="margin-top:.4rem">🔄 從 Google 地圖帶入地址、營業時間、電話</button>' : '<div class="small muted" style="margin-top:.3rem">設定 Google Maps 金鑰後，可以自動從 Google 帶入營業時間。<button class="btn sm" data-a="key">看教學</button></div>'}</div>
@@ -831,14 +833,15 @@ function editPlace(src, isNew, done) {
   const read = () => { d.name = $('#eN', sh.body).value.trim(); d.addr = $('#eA', sh.body).value.trim(); d.hours = $('#eH', sh.body).value.split('\n').map(s => s.trim()).filter(Boolean); d.phone = $('#eP', sh.body).value.trim(); d.note = $('#eM', sh.body).value.trim(); };
   fill();
   sh.body.addEventListener('click', async e => { const cb = e.target.closest('#eC button');
-    if (cb) { if (cb.dataset.c === '+') { read(); editCat(null, c => { if (c) d.cat = c.id; fill(); }, 'place'); return; } d.cat = cb.dataset.c; $$('#eC button', sh.body).forEach(b => b.classList.toggle('on', b === cb)); return; }
+    if (cb) { buzz(8); if (cb.dataset.c === '+') { read(); editCat(null, c => { if (c) d.cat = c.id; fill(); }, 'place'); return; } d.cat = cb.dataset.c; d.cats2 = (d.cats2 || []).filter(x => x !== d.cat); $$('#eC button', sh.body).forEach(b => b.classList.toggle('on', b === cb)); $('#eC2', sh.body).innerHTML = cat2Html(); return; }
+    const c2 = e.target.closest('#eC2 button'); if (c2) { buzz(8); const k = c2.dataset.c2, L = d.cats2 = d.cats2 || []; const i = L.indexOf(k); i < 0 ? L.push(k) : L.splice(i, 1); $('#eC2', sh.body).innerHTML = cat2Html(); return; }
     const b = e.target.closest('[data-a]'); if (!b) return;
     if (b.dataset.a === 'key') openTutorial('maps');
     if (b.dataset.a === 'g') { read(); busy('向 Google 查詢…'); try { await gFill(d, !d.name); toast('已帶入 Google 資料'); } catch (er) { toast('❌ ' + er.message, 4000); } busy(false); fill(); } });
   sh.foot.addEventListener('click', async e => { const b = e.target.closest('[data-a]'); if (!b) return;
     if (b.dataset.a === 'del') { if (!await ask(`確定要刪除「${src.name}」嗎？\n菜單圖片與表格也會一併刪除。`, '刪除', true)) return;
       for (const al of src.albums || []) for (const im of al.imgs || []) await imgDel(im); DB.places.splice(DB.places.indexOf(src), 1); await IDB.del('places', src.id).catch(() => {}); if (M.sel === src.id) clearSel(); sh.close(); refreshAll(); toast('已刪除'); done && done(true); return; }
-    read(); if (!d.name) { toast('請輸入店名'); $('#eN', sh.body).focus(); return; }
+    read(); if (!d.name) { toast('請輸入名稱'); $('#eN', sh.body).focus(); return; }
     if (isNew) { d.id = 'p' + uid(); d.t = Date.now(); d.ord = DB.places.length ? Math.max(...DB.places.map(x => x.ord || 0)) + 1 : 0; DB.places.push(d); await savePlace(d); sh.close(); clearSel(); refreshAll(); buzz(25); toast('已加入收藏 🚩'); if (done) done(d); else selectPlace(d.id); }
     else { const oldN = src.name; Object.assign(src, d); await savePlace(src); sh.close(); refreshAll(); if (M.sel === src.id) selectPlace(src.id); toast('已儲存'); done && done(false);
       if (oldN && oldN !== d.name) await renameStoreAsk(oldN, d.name); } });
@@ -847,7 +850,7 @@ function editPlace(src, isNew, done) {
 /* ---------- 分類管理（收藏分類、食譜分類共用：自訂名稱、圖示、顏色、拖曳排序） ---------- */
 const CK = {
   place: {list: () => DB.cats, save: saveCats, count: id => placesIn(id).length, unit: '間', title: '管理收藏分類', tip: '地圖上方的分類列與收藏頁會跟著變。', ph: '例如：火鍋、拉麵、早午餐', pre: 'c', color: '旗子顏色', flag: true,
-    drop(id) { DB.places.forEach(p => { if (p.cat === id) { p.cat = ''; savePlace(p); } }); }, after() { refreshAll(); }},
+    drop(id) { DB.places.forEach(p => { let ch = false; if (p.cat === id) { p.cat = (p.cats2 || []).find(x => x !== id) || ''; ch = true; } if ((p.cats2 || []).includes(id) || (p.cats2 || []).includes(p.cat)) { p.cats2 = p.cats2.filter(x => x !== id && x !== p.cat); ch = true; } if (ch) savePlace(p); }); }, after() { refreshAll(); }},
   recipe: {list: () => DB.rcats, save: saveRcats, count: id => DB.recipes.filter(r => r.cat === id).length, unit: '道', title: '管理食譜分類', tip: '食譜頁的資料夾會跟著變。', ph: '例如：煎、炒、電鍋、湯、氣炸鍋', pre: 'r', color: '資料夾顏色', flag: false,
     drop(id) { DB.recipes.forEach(r => { if (r.cat === id) { r.cat = ''; saveRecipe(r); } }); }, after() { if (curTab === 'Rec') renderRec(); }}
 };
@@ -890,8 +893,8 @@ function renderFav() {
   const html = secs.map(({c, srt}) => { const all = placesIn(c.id), ps = all.filter(hit); if (q && !ps.length) return '';
     return `<div class="sec ${S.fold[c.id] && !q ? 'fold' : ''}" data-cat="${c.id}" ${srt && !q ? 'data-srt' : ''} style="--c:${c.color}"><div class="secHead">${srt && !q ? '<span class="grip secGrip"></span>' : ''}<span class="ico">${esc(c.icon)}</span><b class="grow" data-a="fold">${esc(c.name)} <span class="cnt">${ps.length} 間</span></b><button class="ic chev" data-a="fold" aria-label="收合">▾</button></div>
       <div class="secList">${ps.map(p => { const st = stateHtml(p), n = (p.menu || []).length, ni = imgCount(p);
-        return `<div class="pl" data-id="${p.id}"><div class="grow" data-a="open"><b>${esc(p.name)}</b>${st ? `<div class="meta">${st}</div>` : ''}<div class="meta">${esc(p.addr || '')}</div>${n || ni || p.phone ? `<div class="meta">${n ? '<span>📋 ' + n + ' 個品項</span>' : ''}${ni ? '<span>🖼️ ' + ni + ' 張菜單</span>' : ''}${p.phone ? '<span>📞 ' + esc(p.phone) + '</span>' : ''}</div>` : ''}</div><button class="ic go" data-a="nav" aria-label="導航">🧭</button><button class="ic go" data-a="map" aria-label="在地圖上看">📍</button>${q ? '' : '<span class="grip plGrip"></span>'}</div>`; }).join('') || '<div class="secEmpty">這個分類還沒有收藏的店家</div>'}</div></div>`; }).join('');
-  box.innerHTML = html || `<div class="empty"><span class="big">🚩</span>${q ? '找不到符合的收藏' : '還沒有任何收藏<br><span class="small">到「地圖」頁搜尋店家，或長按地圖插旗收藏</span>'}</div>`;
+        return `<div class="pl" data-id="${p.id}"><div class="grow" data-a="open"><b>${esc(p.name)}</b>${st ? `<div class="meta">${st}</div>` : ''}<div class="meta">${esc(p.addr || '')}</div>${n || ni || p.phone ? `<div class="meta">${n ? '<span>📋 ' + n + ' 個品項</span>' : ''}${ni ? '<span>🖼️ ' + ni + ' 張菜單</span>' : ''}${p.phone ? '<span>📞 ' + esc(p.phone) + '</span>' : ''}</div>` : ''}</div><button class="ic go" data-a="nav" aria-label="導航">🧭</button><button class="ic go" data-a="map" aria-label="在地圖上看">📍</button>${q ? '' : '<span class="grip plGrip"></span>'}</div>`; }).join('') || '<div class="secEmpty">這個分類還沒有收藏的地點</div>'}</div></div>`; }).join('');
+  box.innerHTML = html || `<div class="empty"><span class="big">🚩</span>${q ? '找不到符合的收藏' : '還沒有任何收藏<br><span class="small">到「地圖」頁搜尋地點，或長按地圖插旗收藏</span>'}</div>`;
   foldBtn('fav');
 }
 function initFav() {

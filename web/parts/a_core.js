@@ -71,6 +71,8 @@ const emoGroupsHtml = (G, cur) => Object.entries(G).map(([t, v]) => `<div class=
 const SHOP_CATS = [['量販店', '🛒', '#C23B4E'], ['超市', '🧺', '#5A7A44'], ['超商', '🏪', '#3F6E8C'], ['外送', '🛵', '#D2603A'], ['藥妝', '💊', '#8A5A9E'], ['其他', '🛍️', '#6B5344']];
 const UNCAT = {id: '', name: '未分類', icon: '📍', color: '#7d6c57'};
 const catOf = id => DB.cats.find(c => c.id === id) || UNCAT;
+/* 一個地點可以放在好幾個分類（例如午餐、晚餐都會去的店）：cat 是主要分類（旗子顏色），cats2 是「也屬於」的分類；總數只算一次 */
+const pCats = p => { const ok = id => DB.cats.some(c => c.id === id), m = ok(p.cat) ? p.cat : ''; return [m].concat((p.cats2 || []).filter(c => c && c !== m && ok(c))); };
 /* 菜單只有吃的、喝的店才需要：分類可以自己設定「有菜單」，沒設定就看分類名稱；停車場、加油站這類一律不顯示菜單 */
 const FOOD_RE = /早餐|午餐|晚餐|宵夜|消夜|點心|甜點|飲|咖啡|小吃|餐|食|麵|飯|吃|茶|酒|甜|烘焙|麵包|鍋|燒烤|燒肉|便當|冰|手搖|早午|料理|拉麵|壽司|披薩|漢堡|牛排|滷味|鹹酥|雞排|豆花|蛋糕/,
   NOMENU_RE = /停車|加油|充電|洗車|機車|汽車|修車|保養|輪胎|銀行|郵局|ATM|醫院|診所|藥局|藥妝|牙醫|眼科|學校|公園|車站|捷運|公車|客運|五金|家具|家居|服飾|鞋|超市|量販|便利|美髮|理髮|美甲|健身|電信|通訊|旅館|民宿|住宿|公所|戶政|寺|廟|宮|教會|文具|書局|寵物|動物醫院|洗衣|影印|3C|電器|百貨|市場|停車場|加油站/i;
@@ -103,7 +105,7 @@ async function loadAll() {
   const rc = await IDB.get('kv', 'rcats').catch(() => null);
   if (rc) DB.rcats = rc; else { DB.rcats = DEF_RCATS.map(([name, icon, color], i) => ({id: 'r' + i + uid(), name, icon, color})); saveRcats(); }
   await loadMeal(); await loadShop();
-  /* 美食點餐和購物分帳共用同一份收藏店家和分類（v3.4 起）。舊版購物分帳自己的店家：
+  /* 美食點餐和購物分帳共用同一份收藏地點和分類（v3.4 起）。舊版購物分帳自己的店家：
      同名（或很近又名字相似）的店合併成一家、明細改指向美食那家；「外送」分類拿掉，那些店先放「未分類」讓你自己選 */
   let allPl = allP;
   if (!await IDB.get('kv', 'shared1').catch(() => null)) {

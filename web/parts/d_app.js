@@ -3,7 +3,7 @@
    ============================================================ */
 let curTab = 'Map';
 /* 美食・日常和購物分帳已經合併成一個介面（底部：地圖、日常、分帳、發票、設定；食譜在設定裡） */
-function modeUI() { document.body.classList.remove('mShop'); $('#favTitle') && ($('#favTitle').textContent = '收藏分類'); $('#mQ') && ($('#mQ').placeholder = '搜尋店家、地址、量販店…'); }
+function modeUI() { document.body.classList.remove('mShop'); $('#favTitle') && ($('#favTitle').textContent = '收藏分類'); $('#mQ') && ($('#mQ').placeholder = '搜尋地點、店名、地址…'); }
 function setMode() { }
 function showTab(t) { if (/^Acc/.test(t) && typeof AccLock !== 'undefined' && !AccLock.open() && S.inAcc) setTimeout(() => AccLock.gate(), 0); if (t === 'AccA' && curTab !== 'AccA' && typeof Acc !== 'undefined') Acc.showAmt = false; curTab = t; $$('.page').forEach(p => p.classList.toggle('on', p.id === 'pg' + t)); $$('#tabbar button').forEach(b => b.classList.toggle('on', b.dataset.tab === (t === 'Fav' ? 'Map' : t === 'Rec' ? 'Set' : t))); document.body.classList.toggle('onFav', t === 'Fav');
   if (t === 'Map') mapResize(); else if (t === 'Fav') renderFav(); else if (t === 'Rec') renderRec(); else if (t === 'Meal') renderMeal(); else if (t === 'Shop') renderShop(); else if (t === 'Inv') renderInv(); else if (t === 'Acc') renderAcc(); else if (t === 'AccA') renderAccAsset(); else if (t === 'AccM') renderAccMap(); else if (t === 'AccS') renderAccStat(); else if (t === 'AccC') renderAccCfg(); else renderSet(); updCounts(); }
@@ -177,7 +177,7 @@ function renderSet() {
     <div class="setR"><div class="t"><b>導航軟體</b><small>按「導航」時要用哪個 App</small></div><select id="sNav"><option value="ask">每次詢問</option>${navs.map(n => `<option value="${n.id}" ${S.navApp === n.id ? 'selected' : ''}>${n.name}</option>`).join('')}</select></div>
     ${Off.card()}</div></div>
   <div class="setG"><h3>Google 地圖搜尋金鑰</h3><div class="setC">
-    <div class="setR col"><div class="t"><small>填入後，搜尋店家會和 Google 地圖一樣準確，並能自動帶入營業時間、電話。${S.gkey ? '' : '<br>沒有金鑰也能用，只是搜尋改用 OpenStreetMap，店家較不齊全。'}<br>💡 行跡導航用的那把金鑰可以直接貼過來共用。</small></div>
+    <div class="setR col"><div class="t"><small>填入後，搜尋地點會和 Google 地圖一樣準確，並能自動帶入營業時間、電話。${S.gkey ? '' : '<br>沒有金鑰也能用，只是搜尋改用 OpenStreetMap，地點較不齊全。'}<br>💡 行跡導航用的那把金鑰可以直接貼過來共用。</small></div>
       <div class="keyBox"><input id="sG" type="password" value="${esc(S.gkey)}" placeholder="貼上 Google Maps API 金鑰（AIza…）" autocomplete="off"><button class="btn sm" data-a="eyeG">顯示</button></div>
       <div class="row wrap"><button class="btn sm pri" data-a="tutG">📘 圖文教學</button><button class="btn sm" data-a="getG">申請金鑰 ↗</button><button class="btn sm olive" data-a="testG">測試金鑰</button></div><div class="testOut" id="outG"></div></div></div></div>
   <div class="setG"><h3>AI 圖片辨識金鑰（Gemini）</h3><div class="setC">
@@ -241,7 +241,7 @@ const mock = (url, inner, g) => `<div class="mock"><div class="bar ${g ? 'g' : '
 const TUT = {
   maps: {title: 'Google 地圖搜尋金鑰 · 圖文教學', key: 'gkey', steps: [
     {t: '這把金鑰是做什麼的？', h: mock('日日帳本', '<div class="inp">🔍 HEN厚食早午餐</div><div class="card2"><b>HEN厚食早午餐</b><div class="lbl">早午餐餐廳 · 距離 350 公尺</div></div><div class="card2">🕒 星期一: 06:00 – 13:00<div class="lbl">營業時間自動帶入</div></div>', 1) +
-      '<p>填入 <b>Google Maps 金鑰</b>後，搜尋店家就會和 Google 地圖一樣準確，加入收藏時還會<b>自動帶入地址、營業時間、電話</b>。</p><div class="callout">💡 如果你已經在<b>行跡導航</b>設定過 Google 金鑰，直接把同一把金鑰貼過來就可以了，不用重新申請——請直接跳到最後一步。</div><div class="callout warn">Google 會要求綁定信用卡做身分驗證，並提供每月免費用量；一般個人使用通常不會超過。實際收費方式請以 Google 官方說明為準。</div>'},
+      '<p>填入 <b>Google Maps 金鑰</b>後，搜尋地點就會和 Google 地圖一樣準確，加入收藏時還會<b>自動帶入地址、營業時間、電話</b>。</p><div class="callout">💡 如果你已經在<b>行跡導航</b>設定過 Google 金鑰，直接把同一把金鑰貼過來就可以了，不用重新申請——請直接跳到最後一步。</div><div class="callout warn">Google 會要求綁定信用卡做身分驗證，並提供每月免費用量；一般個人使用通常不會超過。實際收費方式請以 Google 官方說明為準。</div>'},
     {t: '建立一個專案', url: 'https://console.cloud.google.com/projectcreate', btn: '開啟 Google Cloud Console', h: mock('console.cloud.google.com/projectcreate', '<b>新增專案</b><div class="lbl">專案名稱</div><div class="inp">MyFoodMap</div><div class="lbl">位置</div><div class="inp">無機構</div><span class="b hl">建立<span class="tap">👆</span></span><span class="b o">取消</span>') +
       '<p>按下方按鈕開啟 Google Cloud Console，用你的 Google 帳號登入。</p><ul><li>「專案名稱」隨意取，例如 <b>MyFoodMap</b></li><li>按「<b>建立</b>」，等右上角通知顯示完成</li></ul>'},
     {t: '設定帳單帳戶', url: 'https://console.cloud.google.com/billing', btn: '開啟「帳單」頁面', h: mock('console.cloud.google.com/billing', '<b>帳單</b><div class="card2">這個專案沒有帳單帳戶<br><span class="b hl">連結帳單帳戶<span class="tap">👆</span></span></div><div class="lbl">依畫面指示填寫國家、付款資料（信用卡）</div>') +
@@ -297,9 +297,9 @@ async function saveFile(name, blob) {
   const u = URL.createObjectURL(blob), a = document.createElement('a'); a.href = u; a.download = name; document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 5000); return name;
 }
 /* 整個日日帳本打包成一個 JSON（含所有圖片）：本機匯出、雲端備份共用 */
-/* 備份內容：收藏店家、菜單、點餐、分帳、發票、記帳（常用紀錄、帳戶、對帳、商家）、資產、購物清單、食譜、所有分類與設定、所有圖片；
+/* 備份內容：收藏地點、菜單、點餐、分帳、發票、記帳（常用紀錄、帳戶、對帳、商家）、資產、購物清單、食譜、所有分類與設定、所有圖片；
    自己輸入的 Google Maps／AI 金鑰也一起備份（傳給別人時可以不帶）。只有雲端登入狀態和記帳密碼不備份（綁在這支手機）。 */
-const BACKUP_WHAT = '收藏店家與菜單、點餐、分帳、發票、記帳（常用紀錄、帳戶、對帳、商家）、資產、購物清單、食譜、分類、所有設定、API 金鑰和所有圖片';
+const BACKUP_WHAT = '收藏地點與菜單、點餐、分帳、發票、記帳（常用紀錄、帳戶、對帳、商家）、資產、購物清單、食譜、分類、所有設定、API 金鑰和所有圖片';
 async function makeBackupBlob(opt = {}) {
   const Sx = Object.assign({}, S); delete Sx.gkey; delete Sx.aikey; delete Sx.pc; delete Sx.gd;
   const apik = opt.noKeys ? null : {gkey: S.gkey || '', aikey: S.aikey || ''}, cs = await IDB.get('kv', 'cats_shop').catch(() => null);

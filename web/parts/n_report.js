@@ -9,7 +9,8 @@ function accStatData(u, a) {
   const grp = L => { const by = {}; L.forEach(r => { const f = catFind('out', r.cat), k = f.p ? f.p.id : '_'; const g = by[k] = by[k] || {id: k, n: f.p ? f.p.n : '其他', i: f.p ? f.p.i : '📦', v: 0, cnt: 0, subs: {}}; const v = accMine(r); g.v += v; g.cnt++; const sk = f.s ? f.s.id : '_'; const sg = g.subs[sk] = g.subs[sk] || {n: f.s ? f.s.n : g.n, v: 0, cnt: 0}; sg.v += v; sg.cnt++; });
     return Object.values(by).filter(g => g.v > 0).sort((x, y) => y.v - x.v).map((g, i) => Object.assign(g, {c: PAL[i % PAL.length], subL: Object.values(g.subs).sort((x, y) => y.v - x.v)})); };
   const B = []; const bk = (lab, s, e, tip) => { const L = outs.filter(r => r.d >= s && r.d <= e), o = L.filter(isOpt).reduce((t, r) => t + accMine(r), 0), all = L.reduce((t, r) => t + accMine(r), 0); B.push({lab, tip, e: all - o, o, v: all, inc: ins.filter(r => r.d >= s && r.d <= e).reduce((t, r) => t + (+r.amt || 0), 0)}); };
-  if (u === 'w' || u === 'm') { const d0 = new Date(Rg.s + 'T00:00:00'); for (let k = 0; k < Rg.days; k++) { const d = new Date(d0); d.setDate(d0.getDate() + k); const x = ymd(d); bk(u === 'w' ? '一二三四五六日'[k] : String(k + 1), x, x, `${d.getMonth() + 1}/${d.getDate()}（${'日一二三四五六'[d.getDay()]}）`); } }
+  if (u === 'd') { /* 每日報告：依時段（每 2 小時）看花在什麼時候 */ for (let h = 0; h < 24; h += 2) { const L = outs.filter(r => { const hh = parseInt(String(r.t || '12').slice(0, 2), 10); return hh >= h && hh < h + 2; }), o = L.filter(isOpt).reduce((t, r) => t + accMine(r), 0), all = L.reduce((t, r) => t + accMine(r), 0); B.push({lab: String(h), tip: `${String(h).padStart(2, '0')}:00–${String(h + 2).padStart(2, '0')}:00`, e: all - o, o, v: all, inc: 0}); } }
+  else if (u === 'w' || u === 'm') { const d0 = new Date(Rg.s + 'T00:00:00'); for (let k = 0; k < Rg.days; k++) { const d = new Date(d0); d.setDate(d0.getDate() + k); const x = ymd(d); bk(u === 'w' ? '一二三四五六日'[k] : String(k + 1), x, x, `${d.getMonth() + 1}/${d.getDate()}（${'日一二三四五六'[d.getDay()]}）`); } }
   else if (u === 'h' || u === 'y') { const Y = +Rg.s.slice(0, 4), m0 = +Rg.s.slice(5, 7) - 1, n = u === 'h' ? 6 : 12; for (let k = 0; k < n; k++) { const m = m0 + k; bk(`${m + 1}月`, ymd(new Date(Y, m, 1)), ymd(new Date(Y, m + 1, 0)), `${Y}年${m + 1}月`); } }
   const WD = [0, 0, 0, 0, 0, 0, 0]; outs.forEach(r => { WD[(new Date(r.d + 'T00:00:00').getDay() + 6) % 7] += accMine(r); });
   const byPy = {}; outs.forEach(r => { const n = r.payee || accCat(r).n; const o = byPy[n] = byPy[n] || {v: 0, c: 0}; o.v += accMine(r); o.c++; });
@@ -56,12 +57,12 @@ function rptCharts(D) { return {bars: D.B.length ? rptBars(D.B) : null, all: rpt
 /* ---------- 選期間與格式 ---------- */
 function accReportAsk() {
   const st = Object.assign({u: 'm', a: ymd(new Date())}, Acc.sp || {}); buzz(10);
-  const sh = sheet({title: '📤 匯出分析報告', foot: '<div class="tplFoot new" style="grid-template-columns:1fr 1fr"><button class="btn" data-f="xlsx">📊 Excel</button><button class="btn pri" data-f="pdf">📄 PDF</button></div>'});
+  const sh = sheet({title: '📤 匯出分析報告', foot: '<div class="tplFoot new" style="grid-template-columns:1fr 1fr 1fr"><button class="btn" data-f="xlsx">📊 Excel</button><button class="btn" data-f="png">🖼️ 圖片</button><button class="btn pri" data-f="pdf">📄 PDF</button></div>'});
   const draw = () => { const R = spRange(st.u, st.a), D = accStatData(st.u, st.a);
     sh.body.innerHTML = `<div class="lbl">報告期間</div><div class="spSeg">${SPU.map(([k, n]) => `<button data-u="${k}" class="${st.u === k ? 'on' : ''}">${n}</button>`).join('')}</div>
       <div class="spNav"><button class="btn" data-a="p-">◀</button><button class="btn spLab" data-a="pick">${R.lab}</button><button class="btn" data-a="p+">▶</button></div>
       <div class="rptPrev card"><div><small>支出</small><b class="neg">${money(Math.round(D.tot))}</b></div><div><small>收入</small><b class="pos">${money(Math.round(D.inc))}</b></div><div><small>筆數</small><b>${D.outs.length}</b></div></div>
-      <div class="small muted" style="line-height:1.6">報告內容：重點摘要、各項指標、${D.B.length ? '每日／每月長條圖、' : ''}支出分類圓餅圖、必要與非必要消費分類佔比、${D.u !== 'd' && D.u !== 'w' ? '星期分布、' : ''}最大筆支出、最常消費的地方，以及這段期間的完整明細。<br>PDF 和 Excel 都會直接存成檔案（手機的「下載」資料夾）。</div>`; };
+      <div class="small muted" style="line-height:1.6">報告內容：重點摘要、各項指標、${D.B.length ? '每日／每月長條圖、' : ''}支出分類圓餅圖、必要與非必要消費分類佔比、${D.u !== 'd' && D.u !== 'w' ? '星期分布、' : ''}最大筆支出、最常消費的地方，以及這段期間的完整明細。${D.B.length ? '' : ''}<br>PDF、Excel 存到手機的「下載」資料夾；🖼️ 圖片是一整張長圖，存到相簿，適合傳 LINE（每日消費分析特別好用）。</div>`; };
   draw();
   sh.body.onclick = async e => { const t = e.target.closest('[data-u],[data-a]'); if (!t) return; buzz(8);
     if (t.dataset.u) st.u = t.dataset.u; else if (t.dataset.a === 'p-' || t.dataset.a === 'p+') st.a = spShift(st.u, st.a, t.dataset.a === 'p-' ? -1 : 1);
@@ -69,12 +70,12 @@ function accReportAsk() {
     draw(); };
   sh.foot.onclick = async e => { const b = e.target.closest('[data-f]'); if (!b) return; buzz(15); const D = accStatData(st.u, st.a);
     if (!D.outs.length && !D.ins.length && !await ask('這段期間沒有任何收支紀錄，還是要匯出嗎？', '匯出')) return;
-    busy('製作報告中…'); try { if (b.dataset.f === 'pdf') await accReportPdf(D); else await accReportXlsx(D); } catch (er) { toast('❌ ' + er.message); } busy(false); };
+    busy('製作報告中…'); try { if (b.dataset.f === 'pdf') await accReportPdf(D); else if (b.dataset.f === 'png') await accReportPng(D); else await accReportXlsx(D); } catch (er) { toast('❌ ' + er.message); } busy(false); };
 }
 const rptName = D => `消費分析_${D.Rg.lab.replace(/[（）\s]/g, '').replace(/[\/:]/g, '-')}`;
 
 /* ---------- PDF：排版成 A4 報告，交給系統列印（可另存為 PDF） ---------- */
-async function accReportPdf(D) {
+function accReportHtml(D) {
   const C = rptCharts(D), img = c => c ? `<img src="${c.toDataURL('image/png')}">` : '', pct = (v, t) => t ? (v / t * 100).toFixed(1) + '%' : '—', now = new Date();
   const catT = (L, T) => L.length ? `<table><thead><tr><th>分類</th><th>子分類</th><th class="r">筆數</th><th class="r">金額</th><th class="r">佔比</th></tr></thead><tbody>${L.map(g => g.subL.map((s, j) => `<tr class="${j ? '' : 'g'}">${j ? '<td></td>' : `<td rowspan="1"><i style="background:${g.c}"></i>${esc(g.n)}</td>`}<td>${esc(s.n)}</td><td class="r">${s.cnt}</td><td class="r">${money(Math.round(s.v))}</td><td class="r">${pct(s.v, T)}</td></tr>`).join('') + `<tr class="sub"><td colspan="3">${esc(g.n)} 小計</td><td class="r">${money(Math.round(g.v))}</td><td class="r">${pct(g.v, T)}</td></tr>`).join('')}</tbody></table>` : '<p class="muted">沒有資料</p>';
   const html = `<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><title>${rptName(D)}</title><style>
@@ -94,7 +95,7 @@ async function accReportPdf(D) {
     <div class="hero"><div class="ic">${APP_ICON}</div><div><h1>消費分析報告</h1><p>${esc(D.Rg.lab)}・${D.Rg.s.replace(/-/g, '/')} – ${D.Rg.e.replace(/-/g, '/')}</p></div></div>
     <div class="kpi"><div><small>支出（我的）</small><b class="neg">${money(Math.round(D.tot))}</b><em>${D.last ? `${D.chg > 0 ? '▲' : '▼'} ${Math.abs(D.chg).toFixed(0)}% vs ${D.pN}` : `${D.pN}沒有資料`}</em></div><div><small>收入</small><b class="pos">${money(Math.round(D.inc))}</b><em>結餘 ${money(Math.round(D.inc - D.tot))}</em></div><div><small>平均每天</small><b>${money(Math.round(D.tot / D.Rg.days))}</b><em>${D.Rg.days} 天</em></div><div><small>支出筆數</small><b>${D.outs.length}</b><em>每筆平均 ${money(D.outs.length ? Math.round(D.tot / D.outs.length) : 0)}</em></div></div>
     ${D.tips.length ? `<section><h2>重點摘要</h2><ul class="tips">${D.tips.map(t => `<li>${esc(t)}</li>`).join('')}</ul></section>` : ''}
-    ${C.bars ? `<section><h2>${D.u === 'w' ? '這週每天' : D.u === 'm' ? '每天' : '每個月'}支出（必要／非必要）</h2><div class="chart">${img(C.bars)}</div></section>` : ''}
+    ${C.bars ? `<section><h2>${D.u === 'd' ? '這天各時段' : D.u === 'w' ? '這週每天' : D.u === 'm' ? '每天' : '每個月'}支出（必要／非必要）</h2><div class="chart">${img(C.bars)}</div></section>` : ''}
     ${D.u === 'h' || D.u === 'y' ? `<section><h2>每月收支</h2><table><thead><tr><th>月份</th><th class="r">必要</th><th class="r">非必要</th><th class="r">支出</th><th class="r">收入</th><th class="r">結餘</th></tr></thead><tbody>${D.B.map(x => `<tr><td>${x.tip}</td><td class="r">${money(Math.round(x.e))}</td><td class="r">${money(Math.round(x.o))}</td><td class="r neg">${money(Math.round(x.v))}</td><td class="r pos">${money(Math.round(x.inc))}</td><td class="r ${x.inc - x.v < 0 ? 'neg' : 'pos'}">${money(Math.round(x.inc - x.v))}</td></tr>`).join('')}</tbody></table></section>` : ''}
     <section><h2>支出分類</h2><div class="chart" style="max-width:62%">${img(C.all)}</div>${catT(D.G, D.tot)}</section>
     <section><h2>必要／非必要消費</h2><div class="bar"><i style="width:${D.tot ? (D.ess / D.tot * 100).toFixed(1) : 100}%"></i></div><p>必要 <b>${money(Math.round(D.ess))}</b>（${pct(D.ess, D.tot)}）　非必要 <b class="opt">${money(Math.round(D.opt))}</b>（${pct(D.opt, D.tot)}）</p>
@@ -104,7 +105,8 @@ async function accReportPdf(D) {
     ${D.PY.length ? `<section><h2>最常消費的地方</h2><table><thead><tr><th>商家</th><th class="r">次數</th><th class="r">金額</th><th class="r">佔比</th></tr></thead><tbody>${D.PY.map(([n, o]) => `<tr><td>${esc(n)}</td><td class="r">${o.c}</td><td class="r">${money(Math.round(o.v))}</td><td class="r">${pct(o.v, D.tot)}</td></tr>`).join('')}</tbody></table></section>` : ''}
     <h2 class="pb">收支明細</h2><table><thead><tr><th>日期</th><th>時間</th><th>類型</th><th>分類</th><th>商家／說明</th><th>帳戶</th><th class="r">金額</th></tr></thead><tbody>${D.outs.concat(D.ins).sort((x, y) => (x.d + (x.t || '')).localeCompare(y.d + (y.t || ''))).map(r => `<tr><td>${r.d.replace(/-/g, '/')}</td><td>${esc(r.t || '')}</td><td>${r.type === 'in' ? '收入' : D.isOpt(r) ? '<span class="opt">非必要</span>' : '支出'}</td><td>${esc(accCat(r).n)}</td><td>${esc(r.payee || String(r.note || '').split('\n')[0] || '')}</td><td>${esc(acctName(r.acct) || '')}</td><td class="r ${r.type === 'in' ? 'pos' : 'neg'}">${r.type === 'in' ? '+' : '-'}${money(Math.round(r.type === 'in' ? +r.amt : accMine(r)))}</td></tr>`).join('') || '<tr><td colspan="7" class="muted">沒有紀錄</td></tr>'}</tbody></table>
     <div class="foot">日日帳本・製作時間 ${now.getFullYear()}/${now.getMonth() + 1}/${now.getDate()} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}・金額為「我的」支出（已扣掉別人分攤的部分）</div></body></html>`;
-  const blob = await htmlToPdf(html); const p = await saveFile(rptName(D) + '.pdf', blob); buzz(30); toast('📄 已存成 PDF：' + (String(p).split('/').pop() || ''), 3500);
+  return html; }
+async function accReportPdf(D) { const blob = await htmlToPdf(accReportHtml(D)); const p = await saveFile(rptName(D) + '.pdf', blob); buzz(30); toast('📄 已存成 PDF：' + (String(p).split('/').pop() || ''), 3500);
 }
 
 /* ---------- Excel：多個工作表（總覽含圖表、分類、必要／非必要、趨勢、明細、商家），有樣式、欄寬、凍結窗格 ---------- */
@@ -116,7 +118,7 @@ async function accReportXlsx(D) {
   /* 總覽 */
   const ov = [[{v: '消費分析報告', s: 1}], [{v: `${D.Rg.lab}　${D.Rg.s.replace(/-/g, '/')} – ${D.Rg.e.replace(/-/g, '/')}`, s: 2}], [],
     [{v: '支出（我的）', s: 11}, {v: '收入', s: 11}, {v: '結餘', s: 11}, {v: '平均每天', s: 11}, {v: '支出筆數', s: 11}, {v: `比${D.pN}`, s: 11}],
-    [{v: R0(D.tot), s: 12}, {v: R0(D.inc), s: 12}, {v: R0(D.inc - D.tot), s: 12}, {v: R0(D.tot / D.Rg.days), s: 12}, {v: D.outs.length, s: 12}, {v: D.last ? D.chg / 100 : '—', s: D.last ? 5 : 0}], [],
+    [{v: R0(D.tot), s: 12}, {v: R0(D.inc), s: 12}, {v: R0(D.inc - D.tot), s: 12}, {v: R0(D.tot / D.Rg.days), s: 12}, {v: D.outs.length, s: 16}, {v: D.last ? D.chg / 100 : '—', s: D.last ? 17 : 16}], [],
     [{v: '重點摘要', s: 6}], ...D.tips.map(t => [{v: '・' + t, s: 15, m: 6}]), []];
   const chartRow = ov.length; ov.push([{v: '圖表', s: 6}]);
   /* 圖表一張一張往下排（每列約 24px），不會超出列印範圍 */
@@ -126,18 +128,18 @@ async function accReportXlsx(D) {
   const catRows = (L, T, title) => [[{v: title, s: 6}], ['分類', '子分類', '筆數', '金額', '佔比'].map(v => ({v, s: 3})), ...L.flatMap(g => [...g.subL.map((s, j) => [j ? '' : {v: g.n, s: 6}, s.n, s.cnt, {v: R0(s.v), s: 4}, {v: pc(s.v, T), s: 5}]), [{v: g.n + ' 小計', s: 7}, {v: '', s: 7}, {v: g.cnt, s: 7}, {v: R0(g.v), s: 8}, {v: pc(g.v, T), s: 14}]]), [{v: '合計', s: 7}, {v: '', s: 7}, {v: L.reduce((t, g) => t + g.cnt, 0), s: 7}, {v: R0(T), s: 8}, {v: T ? 1 : 0, s: 14}], []];
   S('支出分類', [16, 18, 8, 14, 10], [[{v: '支出分類', s: 1}], [{v: D.Rg.lab, s: 2}], [], ...catRows(D.G, D.tot, '全部支出')], {bar: [4]});
   S('必要與非必要', [16, 18, 8, 14, 10], [[{v: '必要／非必要消費', s: 1}], [{v: `必要 ${money(R0(D.ess))}（${(pc(D.ess, D.tot) * 100).toFixed(1)}%）　非必要 ${money(R0(D.opt))}（${(pc(D.opt, D.tot) * 100).toFixed(1)}%）`, s: 2}], [], ...catRows(D.GE, D.ess, '✅ 必要消費'), ...catRows(D.GO, D.opt, '🎈 非必要消費')]);
-  if (D.B.length) S('趨勢', [14, 12, 12, 12, 12, 12], [[{v: D.u === 'h' || D.u === 'y' ? '每月收支' : '每天支出', s: 1}], [], ['期間', '必要', '非必要', '支出', '收入', '結餘'].map(v => ({v, s: 3})), ...D.B.map(x => [x.tip, {v: R0(x.e), s: 4}, {v: R0(x.o), s: 4}, {v: R0(x.v), s: 9}, {v: R0(x.inc), s: 10}, {v: R0(x.inc - x.v), s: x.inc - x.v < 0 ? 9 : 10}]),
+  if (D.B.length) S('趨勢', [14, 12, 12, 12, 12, 12], [[{v: D.u === 'h' || D.u === 'y' ? '每月收支' : D.u === 'd' ? '各時段支出' : '每天支出', s: 1}], [], ['期間', '必要', '非必要', '支出', '收入', '結餘'].map(v => ({v, s: 3})), ...D.B.map(x => [x.tip, {v: R0(x.e), s: 4}, {v: R0(x.o), s: 4}, {v: R0(x.v), s: 9}, {v: R0(x.inc), s: 10}, {v: R0(x.inc - x.v), s: x.inc - x.v < 0 ? 9 : 10}]),
     [{v: '合計', s: 7}, {v: R0(D.ess), s: 8}, {v: R0(D.opt), s: 8}, {v: R0(D.tot), s: 8}, {v: R0(D.inc), s: 8}, {v: R0(D.inc - D.tot), s: 8}]], {bar: [3]});
   const all = D.outs.concat(D.ins).sort((x, y) => (x.d + (x.t || '')).localeCompare(y.d + (y.t || '')));
   S('明細', [12, 7, 9, 12, 12, 24, 16, 12, 40], [[{v: '收支明細', s: 1}], [], ['日期', '時間', '類型', '母分類', '子分類', '商家／說明', '帳戶', '金額', '備註'].map(v => ({v, s: 3})),
-    ...all.map(x => { const f = catFind(x.type, x.cat); return [x.d, x.t || '', x.type === 'in' ? '收入' : D.isOpt(x) ? '非必要' : '必要', f.p ? f.p.n : '', f.s ? f.s.n : '', x.payee || '', acctName(x.acct) || '', {v: R0(x.type === 'in' ? +x.amt : -accMine(x)), s: x.type === 'in' ? 10 : 9}, String(x.note || '').replace(/\n/g, '　').slice(0, 200)]; })], {freeze: 3, filter: true});
+    ...all.map(x => { const f = catFind(x.type, x.cat); return [x.d, x.t || '', x.type === 'in' ? '收入' : D.isOpt(x) ? '非必要' : '必要', f.p ? f.p.n : '', f.s ? f.s.n : '', x.payee || '', (accAcct(x.acct) || {}).n || '', {v: R0(x.type === 'in' ? +x.amt : -accMine(x)), s: x.type === 'in' ? 10 : 9}, {v: String(x.note || '').replace(/\n+/g, '　').trim().slice(0, 300), s: 15, w: 1}]; })], {freeze: 3, filter: true});
   if (D.PY.length) S('商家排行', [24, 8, 14, 10], [[{v: '最常消費的地方', s: 1}], [], ['商家', '次數', '金額', '佔比'].map(v => ({v, s: 3})), ...D.PY.map(([n, o]) => [n, o.c, {v: R0(o.v), s: 4}, {v: pc(o.v, D.tot), s: 5}])], {bar: [2]});
   const X = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   const col = i => (i >= 26 ? String.fromCharCode(64 + Math.floor(i / 26)) : '') + String.fromCharCode(65 + i % 26);
   /* 欄寬最適化：依每一欄最長的內容（中文算 2 格）決定寬度，標題列、合併列不算 */
   const dispLen = o => { const v = o && typeof o === 'object' ? o.v : o; if (v == null || v === '') return 0; let t = typeof v === 'number' ? (o.s === 5 || o.s === 14 ? (v * 100).toFixed(1) + '%' : [4, 8, 9, 10, 12].includes(o.s) ? '$' + Math.round(v).toLocaleString('en-US') : String(v)) : String(v);
     let n = 0; for (const ch of t) n += /[\u2E80-\uFFEF]/.test(ch) ? 2.1 : 1.15; return n; };
-  const autofit = sh => sh.cols.map((w0, ci) => { let m = 6; sh.rows.forEach(r => { const o = r[ci]; if (!o || (typeof o === 'object' && (o.s === 1 || o.s === 2 || o.m))) return; m = Math.max(m, dispLen(o)); }); return Math.min(60, Math.max(w0 * .6, Math.ceil(m + 2.5))); });
+  const autofit = sh => sh.cols.map((w0, ci) => { let m = 6; sh.rows.forEach(r => { const o = r[ci]; if (!o || (typeof o === 'object' && (o.s === 1 || o.s === 2 || o.m))) return; m = Math.max(m, typeof o === 'object' && o.w ? Math.min(46, dispLen(o)) : dispLen(o)); }); return Math.min(60, Math.max(w0 * .6, Math.ceil(m + 2.5))); });
   const sheetXml = (sh, si) => { const rows = sh.rows, last = rows.length, maxC = Math.max(1, ...rows.map(r => r.length)); sh.cols = autofit(sh); const merges = []; rows.forEach((r, ri) => r.forEach((c, ci) => { if (c && typeof c === 'object' && c.m) merges.push(`${col(ci)}${ri + 1}:${col(ci + c.m - 1)}${ri + 1}`); }));
     return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheetViews><sheetView workbookViewId="0" showGridLines="0"${si === 0 ? ' tabSelected="1"' : ''}>${sh.opt.freeze ? `<pane ySplit="${sh.opt.freeze}" topLeftCell="A${sh.opt.freeze + 1}" activePane="bottomLeft" state="frozen"/>` : ''}</sheetView></sheetViews><sheetFormatPr defaultRowHeight="18"/>
       <cols>${sh.cols.map((w, i) => `<col min="${i + 1}" max="${i + 1}" width="${w}" customWidth="1"/>`).join('')}</cols><sheetData>${rows.map((r, ri) => `<row r="${ri + 1}"${ri === 0 ? ' ht="30" customHeight="1"' : (() => { const c = r.find(c => c && typeof c === 'object' && c.m); if (!c) return ''; const wsum = sh.cols.slice(0, c.m).reduce((t, w) => t + w, 0), lines = Math.max(1, Math.ceil(dispLen(c) / (wsum * .95))); return ` ht="${lines * 17 + 3}" customHeight="1"`; })()}>${r.map((c, ci) => { const o = c && typeof c === 'object' ? c : {v: c}, ref = col(ci) + (ri + 1), st = o.s ? ` s="${o.s}"` : '';
@@ -149,12 +151,12 @@ async function accReportXlsx(D) {
   const styles = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><numFmts count="2"><numFmt numFmtId="164" formatCode="&quot;$&quot;#,##0;[Red]-&quot;$&quot;#,##0"/><numFmt numFmtId="165" formatCode="0.0%"/></numFmts>
     <fonts count="8"><font><sz val="11"/><color rgb="FF3B2B1D"/><name val="Microsoft JhengHei"/></font><font><b/><sz val="18"/><color rgb="FF6F5A3F"/><name val="Microsoft JhengHei"/></font><font><sz val="11"/><color rgb="FF7A6550"/><name val="Microsoft JhengHei"/></font><font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Microsoft JhengHei"/></font><font><b/><sz val="11"/><color rgb="FF3B2B1D"/><name val="Microsoft JhengHei"/></font><font><b/><sz val="11"/><color rgb="FFA8472F"/><name val="Microsoft JhengHei"/></font><font><b/><sz val="11"/><color rgb="FF4F6E34"/><name val="Microsoft JhengHei"/></font><font><b/><sz val="15"/><color rgb="FF3B2B1D"/><name val="Microsoft JhengHei"/></font></fonts>
     <fills count="5"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FFB5653A"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFF6EFE2"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFFAF5EC"/></patternFill></fill></fills>
-    <borders count="2"><border/><border><bottom style="thin"><color rgb="FFEADFCB"/></bottom></border></borders><cellStyleXfs count="1"><xf/></cellStyleXfs><cellXfs count="16">
+    <borders count="2"><border/><border><bottom style="thin"><color rgb="FFEADFCB"/></bottom></border></borders><cellStyleXfs count="1"><xf/></cellStyleXfs><cellXfs count="18">
     <xf fontId="0" borderId="0"/><xf fontId="1" applyFont="1"/><xf fontId="2" applyFont="1"/><xf fontId="3" fillId="2" borderId="0" applyFont="1" applyFill="1"><alignment horizontal="center" vertical="center"/></xf>
     <xf fontId="0" numFmtId="164" borderId="1" applyNumberFormat="1" applyBorder="1"/><xf fontId="0" numFmtId="165" borderId="1" applyNumberFormat="1" applyBorder="1"/><xf fontId="4" applyFont="1"/>
     <xf fontId="4" fillId="4" borderId="1" applyFont="1" applyFill="1" applyBorder="1"/><xf fontId="4" fillId="4" numFmtId="164" borderId="1" applyFont="1" applyFill="1" applyNumberFormat="1" applyBorder="1"/>
     <xf fontId="5" numFmtId="164" borderId="1" applyFont="1" applyNumberFormat="1" applyBorder="1"/><xf fontId="6" numFmtId="164" borderId="1" applyFont="1" applyNumberFormat="1" applyBorder="1"/>
-    <xf fontId="2" fillId="3" applyFont="1" applyFill="1"><alignment horizontal="center"/></xf><xf fontId="7" fillId="3" numFmtId="164" applyFont="1" applyFill="1" applyNumberFormat="1"><alignment horizontal="center"/></xf><xf fontId="2" applyFont="1"/><xf fontId="4" fillId="4" numFmtId="165" borderId="1" applyFont="1" applyFill="1" applyNumberFormat="1" applyBorder="1"/><xf fontId="0" applyAlignment="1"><alignment wrapText="1" vertical="top"/></xf></cellXfs></styleSheet>`;
+    <xf fontId="2" fillId="3" applyFont="1" applyFill="1"><alignment horizontal="center"/></xf><xf fontId="7" fillId="3" numFmtId="164" applyFont="1" applyFill="1" applyNumberFormat="1"><alignment horizontal="center"/></xf><xf fontId="2" applyFont="1"/><xf fontId="4" fillId="4" numFmtId="165" borderId="1" applyFont="1" applyFill="1" applyNumberFormat="1" applyBorder="1"/><xf fontId="0" applyAlignment="1"><alignment wrapText="1" vertical="top"/></xf><xf fontId="7" fillId="3" applyFont="1" applyFill="1"><alignment horizontal="center"/></xf><xf fontId="7" fillId="3" numFmtId="165" applyFont="1" applyFill="1" applyNumberFormat="1"><alignment horizontal="center"/></xf></cellXfs></styleSheet>`;
   const files = [
     {name: '[Content_Types].xml', data: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Default Extension="png" ContentType="image/png"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>${sheets.map((_, i) => `<Override PartName="/xl/worksheets/sheet${i + 1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join('')}${pngs.length ? '<Override PartName="/xl/drawings/drawing1.xml" ContentType="application/vnd.openxmlformats-officedocument.drawing+xml"/>' : ''}</Types>`},
     {name: '_rels/.rels', data: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>'},
@@ -170,38 +172,49 @@ async function accReportXlsx(D) {
 
 /* ---------- HTML → PDF（不用列印）：在隱藏的框架排版、算好分頁（表格列、標題、圖表不會被切半），
    每一頁畫成高解析度圖片，再自己組成 A4 PDF 檔 ---------- */
-async function htmlToPdf(html) {
-  const W = 794, PH = 1123, MT = 46, MB = 46, CH = PH - MT - MB, SC = 2;
+async function htmlToPdf(html) { const pages = await renderPages(html, true); return pdfFromJpegs(pages.map(c => { const b64 = c.toDataURL('image/jpeg', .9).split(',')[1]; return Uint8Array.from(atob(b64), x => x.charCodeAt(0)); }), pages[0].width, pages[0].height); }
+/* 把報告 HTML 排版後畫成一頁一頁的畫布（A4）；paged=false 時畫成一整張長圖（PNG 用）。
+   1) 在隱藏框架排版、先依區塊插空白讓表格列／圖表不跨頁；2) 實際畫出來後再用像素檢查：
+   每頁只在「一整排都是空白」的地方切開，所以不會切到字；並以實際畫出的高度為準，最後一列一定完整。 */
+async function renderPages(html, paged) {
+  const W = 794, PH = 1123, MT = paged ? 46 : 30, MB = paged ? 46 : 30, CH = PH - MT - MB, SC = 2;
   const f = document.createElement('iframe'); f.style.cssText = `position:fixed;left:-10000px;top:0;width:${W}px;height:${PH}px;border:0;visibility:hidden`; document.body.append(f);
   try {
     const d = f.contentDocument; d.open(); d.write(html); d.close();
     await new Promise(r => setTimeout(r, 80)); await Promise.all([...d.images].map(im => im.decode ? im.decode().catch(() => {}) : null)); if (d.fonts && d.fonts.ready) await d.fonts.ready;
-    /* 分頁：遇到會跨頁的區塊，就在它前面塞空白把它推到下一頁 */
     const top = e => e.getBoundingClientRect().top + (f.contentWindow.scrollY || 0);
-    const units = () => [...d.body.querySelectorAll('.hero,.kpi,h2,.tips li,.chart,.two img,.bar,section>p,tr,.foot')];
-    for (let guard = 0; guard < 400; guard++) { let moved = false;
-      for (const e of units()) { if (e.closest('thead') || e.classList.contains('pgsp')) continue; const t = top(e), h = e.getBoundingClientRect().height, pg = Math.floor(t / CH), end = (pg + 1) * CH;
-        const keep = e.tagName === 'H2' ? 180 : 0; /* 標題至少要跟著下面一點內容 */
-        if (h < CH && t + h + keep > end && t < end) { const gap = end - t + 2;
-          if (e.tagName === 'TR') { const sp = d.createElement('tr'); sp.className = 'pgsp'; sp.innerHTML = `<td colspan="20" style="height:${gap}px;padding:0;border:0;background:#fff"></td>`; e.before(sp); const th = e.closest('table').querySelector('thead tr'); if (th) { const c = th.cloneNode(true); c.classList.add('pgsp'); e.before(c); } }
-          else { const sp = d.createElement('div'); sp.className = 'pgsp'; sp.style.height = gap + 'px'; e.before(sp); }
-          moved = true; break; } }
-      if (!moved) break; }
-    const total = Math.max(d.documentElement.scrollHeight, d.body.scrollHeight), pages = Math.max(1, Math.ceil(total / CH));
-    d.documentElement.style.height = total + 'px';
+    if (paged) { const units = () => [...d.body.querySelectorAll('.hero,.kpi,h2,.tips li,.chart,.two img,.bar,section>p,tr,.foot')];
+      for (let guard = 0; guard < 400; guard++) { let moved = false;
+        for (const e of units()) { if (e.closest('thead') || e.classList.contains('pgsp')) continue; const t = top(e), h = e.getBoundingClientRect().height, end = (Math.floor(t / CH) + 1) * CH, keep = e.tagName === 'H2' ? 180 : 0;
+          if (h < CH && t + h + keep > end && t < end) { const gap = end - t + 2;
+            if (e.tagName === 'TR') { const sp = d.createElement('tr'); sp.className = 'pgsp'; sp.innerHTML = `<td colspan="20" style="height:${gap}px;padding:0;border:0;background:#fff"></td>`; e.before(sp); const th = e.closest('table').querySelector('thead tr'); if (th) { const c = th.cloneNode(true); c.classList.add('pgsp'); e.before(c); } }
+            else { const sp = d.createElement('div'); sp.className = 'pgsp'; sp.style.height = gap + 'px'; e.before(sp); }
+            moved = true; break; } }
+        if (!moved) break; } }
+    const total = Math.max(d.documentElement.scrollHeight, d.body.scrollHeight), FH = Math.ceil(total * 1.5) + 600;
     const xml = new XMLSerializer().serializeToString(d.documentElement);
-    const jpgs = [];
-    for (let k = 0; k < pages; k++) {
-      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${CH}" viewBox="0 0 ${W} ${CH}"><foreignObject x="0" y="${-k * CH}" width="${W}" height="${total}">${xml}</foreignObject></svg>`;
-      const im = new Image(); im.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg); await im.decode();
-      const c = document.createElement('canvas'); c.width = W * SC; c.height = PH * SC; const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.scale(SC, SC);
-      g.drawImage(im, 0, MT, W, CH);
-      g.fillStyle = '#9a8a76'; g.font = `500 10px ${RPT_F}`; g.textAlign = 'center'; g.fillText(`${k + 1} / ${pages}`, W / 2, PH - 20);
-      const b64 = c.toDataURL('image/jpeg', .9).split(',')[1]; jpgs.push(Uint8Array.from(atob(b64), x => x.charCodeAt(0)));
-    }
-    return pdfFromJpegs(jpgs, W * SC, PH * SC);
+    /* 畫出 [y, y+h) 這一段（版面座標） */
+    const draw = async (y, h, sc) => { const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${h}" viewBox="0 0 ${W} ${h}"><foreignObject x="0" y="${-y}" width="${W}" height="${FH}">${xml}</foreignObject></svg>`;
+      const im = new Image(); im.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg); await im.decode(); const c = document.createElement('canvas'); c.width = Math.round(W * sc); c.height = Math.round(h * sc); const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.drawImage(im, 0, 0, c.width, c.height); return c; };
+    /* 一排像素是不是空白（同一個顏色、最多幾個點不同，例如外框） */
+    const blankRows = c => { const g = c.getContext('2d'), w = c.width, D = g.getImageData(0, 0, w, c.height).data, out = new Uint8Array(c.height);
+      for (let y = 0; y < c.height; y++) { const o = y * w * 4, r0 = D[o], g0 = D[o + 1], b0 = D[o + 2]; let n = 0; for (let x = 0; x < w; x += 2) { const k = o + x * 4; if (Math.abs(D[k] - r0) + Math.abs(D[k + 1] - g0) + Math.abs(D[k + 2] - b0) > 36 && ++n > 6) break; } out[y] = n <= 6 ? 1 : 0; } return out; };
+    /* 實際內容到哪裡結束（用低解析度從排版底部往下找最後一排有東西的位置） */
+    let end = total; { const y0 = Math.max(0, total - 300), probe = await draw(y0, FH - y0, .5), B = blankRows(probe); let last = -1; for (let y = B.length - 1; y >= 0; y--) if (!B[y]) { last = y; break; } if (last >= 0) end = Math.max(Math.min(total, y0 + 1), y0 + Math.ceil((last + 1) / .5) + 8); }
+    if (!paged) { const cap = 30000, sc = Math.min(SC, cap / (end + MT + MB)); const body = await draw(0, end, sc), c = document.createElement('canvas'); c.width = body.width; c.height = Math.round((end + MT + MB) * sc); const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.drawImage(body, 0, Math.round(MT * sc)); return [c]; }
+    const out = []; let y = 0;
+    while (y < end - 2 && out.length < 80) { let h = Math.min(CH, end - y); const pc = await draw(y, h, SC);
+      if (y + h < end - 2) { /* 不是最後一頁：從底部往上找一整排空白的地方切 */ const B = blankRows(pc); let cut = -1; for (let k = pc.height - 1; k >= pc.height - 260 * SC && k > 40 * SC; k--) if (B[k]) { cut = k; break; } if (cut > 0) h = Math.floor(cut / SC); }
+      const c = document.createElement('canvas'); c.width = W * SC; c.height = PH * SC; const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.drawImage(pc, 0, 0, pc.width, h * SC, 0, MT * SC, pc.width, h * SC);
+      out.push(c); y += h; }
+    out.forEach((c, k) => { const g = c.getContext('2d'); g.fillStyle = '#9a8a76'; g.font = `500 ${10 * SC}px ${RPT_F}`; g.textAlign = 'center'; g.fillText(`${k + 1} / ${out.length}`, c.width / 2, c.height - 20 * SC); });
+    return out;
   } finally { f.remove(); }
 }
+/* PNG：整份報告畫成一張長圖，存到相簿（手機）或下載 */
+async function accReportPng(D) { const html = accReportHtml(D), [c] = await renderPages(html, false), name = rptName(D) + '.png', b64 = c.toDataURL('image/png').split(',')[1];
+  if (IS_APP && NB.shareImg) { const ok = NB.shareImg(b64, name, '', false); toast(ok ? '🖼️ 已存到相簿（圖片／日日帳本）' : '存檔失敗', 3500); return; }
+  const blob = await (await fetch(c.toDataURL('image/png'))).blob(); const p = await saveFile(name, blob); toast('🖼️ 已存成圖片：' + (String(p).split('/').pop() || ''), 3500); }
 /* 最簡 PDF：每頁一張 JPEG，滿版 A4（595×842 pt） */
 function pdfFromJpegs(jpgs, iw, ih) {
   const enc = new TextEncoder(), parts = [], offs = []; let len = 0; const push = x => { const b = typeof x === 'string' ? enc.encode(x) : x; parts.push(b); len += b.length; };

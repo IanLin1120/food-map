@@ -1519,3 +1519,5 @@ table.ckT td.s{text-align:center}table.ckT th.s{text-align:center}
 .rptPrev{display:grid;grid-template-columns:repeat(3,1fr);gap:.4rem;padding:.7rem;margin:.2rem 0 .7rem}.rptPrev>div{display:flex;flex-direction:column;align-items:center;gap:.1rem}.rptPrev small{color:var(--muted);font-size:.74rem;font-weight:700}.rptPrev b{font-size:1.05rem}
 .einvSw{display:flex;margin-top:.7rem}.einvSw .btn{flex:1;justify-content:center}
 .einvTxt{white-space:pre-wrap;font-family:inherit;font-size:.82rem;color:#333;background:#f7f7f7;border-radius:6px;padding:.5rem .7rem;margin:.3rem 0 0}
+.catPick.also button{border-style:dashed}.catPick.also button.on{border-style:solid}
+.alsoI{font-style:normal;font-size:.75rem;margin-left:.35rem;opacity:.85}

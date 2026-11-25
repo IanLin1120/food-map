@@ -370,13 +370,13 @@ const payGroups = () => { const A = DB.acc; A.pcats = A.pcats || []; A.gord = A.
   const ix = id => { const i = A.gord.indexOf(id); return i < 0 ? 1e4 + L.findIndex(x => x.id === id) : i; }; return L.sort((x, y) => ix(x.id) - ix(y.id)); };
 const isShopG = g => DB.cats.some(c => c.id === g);
 const autoCat = (gname, type = 'out') => { let id = ''; (DB.acc.cats[type] || []).forEach(P => (P.subs || []).forEach(sc => { if (!id && sc.n === gname) id = sc.id; })); return id; };
-/* 舊的商家名稱（沒有分類）：同名的收藏店家就跟著它，其他依記帳母分類建一個「只用在記帳」的分類 */
+/* 舊的商家名稱（沒有分類）：同名的收藏地點就跟著它，其他依記帳母分類建一個「只用在記帳」的分類 */
 function payMigrate() { const A = DB.acc; A.pcats = A.pcats || []; A.iord = A.iord || {}; let ch = 0;
   A.payees.forEach(py => { if (py.g !== undefined) return; const P = (DB.places || []).find(x => x.name === py.n); if (P) { py.g = P.cat || ''; py.dupe = 1; ch++; return; }
     const f = catFind('out', py.cat).p ? catFind('out', py.cat) : catFind('in', py.cat), sameC = f.s && DB.cats.find(c => c.name === f.s.n); if (sameC) { py.g = sameC.id; ch++; return; } const nm = f.p ? f.p.n + (f.p.n === '生活' ? '繳費' : '') : '其他';
     let g = A.pcats.find(x => x.name === nm); if (!g) { g = {id: 'g' + uid(), name: nm, icon: f.p ? f.p.i : '🏷️', color: '#8a6a4a'}; A.pcats.push(g); } py.g = g.id; ch++; });
   const n0 = A.payees.length; A.payees = A.payees.filter(py => !py.dupe); if (ch || A.payees.length !== n0) saveAcc(); }
-/* 某個分類裡的所有項目（收藏店家＋自訂名稱），依自訂順序 */
+/* 某個分類裡的所有項目（收藏地點＋自訂名稱），依自訂順序 */
 function payItems(g, hit) { const A = DB.acc, ord = (A.iord || {})[g || '_'] || [];
   const pl = (DB.places || []).filter(p => (g ? p.cat === g : !DB.cats.some(c => c.id === p.cat)) && (!hit || hit(p.name))).map(p => ({k: 'p:' + p.id, n: p.name, pl: p}));
   const py = A.payees.filter(x => (x.g || '') === (g || '') && (!hit || hit(x.n)) && !pl.some(z => z.n === x.n)).map(x => ({k: 'y:' + x.id, n: x.n, py: x}));
@@ -417,7 +417,7 @@ function pickPayee(type, cur) {
 }
 /* 新分類：可以選要不要也放進收藏分類（購物分帳的店家會用到） */
 async function newPayGroup() {
-  const v = await nameIcon('新增分類', {n: '', i: '🏷️'}, {ph: '例如：早午餐、生活繳費', extra: `<button class="ckRow on" data-a="shopck" id="pyShopCk"><span class="acCk"></span>也當成收藏店家的分類（購物分帳選店家時看得到）</button><div class="small muted">像台電、台水這種只在記帳用的，就把勾勾拿掉。</div>`, read: b => ({shop: $('#pyShopCk', b).classList.contains('on')})});
+  const v = await nameIcon('新增分類', {n: '', i: '🏷️'}, {ph: '例如：早午餐、生活繳費', extra: `<button class="ckRow on" data-a="shopck" id="pyShopCk"><span class="acCk"></span>也當成收藏地點的分類（購物分帳選店家時看得到）</button><div class="small muted">像台電、台水這種只在記帳用的，就把勾勾拿掉。</div>`, read: b => ({shop: $('#pyShopCk', b).classList.contains('on')})});
   if (!v) return null;
   if (v.shop) { const c = {id: 'c' + uid(), name: v.n, icon: v.i, color: CAT_COLORS.find(x => !DB.cats.some(y => y.color.toLowerCase() === x.toLowerCase())) || CAT_COLORS[DB.cats.length % CAT_COLORS.length]}; DB.cats.push(c); saveCats(); return c.id; }
   const g = {id: 'g' + uid(), name: v.n, icon: v.i, color: '#8a6a4a'}; (DB.acc.pcats = DB.acc.pcats || []).push(g); saveAcc(); return g.id;
@@ -438,7 +438,7 @@ function editPayee(type, p0) {
       sh.body.innerHTML = `<div class="field"><label>名稱</label><input id="pyN" value="${esc(p.n)}" placeholder="例如：台灣電力公司、好鄰居超市"></div>
         <div class="pyLocR card"><span class="grow">${lc ? `📍 <b>已連結地圖</b><small>${esc(lc.addr || '')}${lc.fav ? '・日日帳本地圖收藏' : ''}</small>` : '📌 <b>還沒有地圖位置</b><small>釘選後會出現在記帳的「地圖」分頁</small>'}</span>${lc && lc.fav ? '' : `<button class="btn sm" data-a="pin">📍 ${lc ? '更改' : '釘選'}</button>`}</div>
         <div class="lbl">放在哪個分類</div><div class="pgPick">${G.map(g => `<button data-g="${g.id}" class="${g.id === p.g ? 'on' : ''}" style="--c:${g.color}">${esc(g.icon)} ${esc(g.name)}${g.shop ? '' : '<small>記帳</small>'}</button>`).join('')}<button data-a="newG" class="add">＋ 新分類</button></div>
-        <div class="small muted" style="margin:-.2rem 0 .8rem">${gs ? '🛒 這個分類是收藏店家的分類，購物分帳「選擇店家」時也看得到這個名稱。' : '📒 只用在記帳，不會出現在購物分帳。'}</div>
+        <div class="small muted" style="margin:-.2rem 0 .8rem">${gs ? '🛒 這個分類是收藏地點的分類，購物分帳「選擇店家」時也看得到這個名稱。' : '📒 只用在記帳，不會出現在購物分帳。'}</div>
         <div class="lbl">記帳時自動帶入的類別</div><div class="acType"><button data-ty="out" class="${ty === 'out' ? 'on' : ''}">支出</button><button data-ty="in" class="${ty === 'in' ? 'on' : ''}">收入</button></div>${catPickerHtml(ty, p.cat, openP)}`; };
     draw();
     sh.body.addEventListener('click', async e => { const t = e.target.closest('button'); if (!t) return; buzz(8); p.n = $('#pyN', sh.body).value.trim();
@@ -476,7 +476,7 @@ function accEdit(r0, preset, opt = {}) { accMigVia();
         ${tr && r.settle ? (() => { const inn = !r.acct, k = inn ? 'to' : 'acct'; return `<div class="lbl">${inn ? '從哪裡轉進來' : '轉給對方'}</div><div class="acExt">🌐 外部（對方的帳戶／支付）</div><div class="lbl">付款方式</div><div class="acAccts">${SETTLE_VIA.map(v => `<button data-via="${v}" class="${v === r.via ? 'on' : ''}">${v}</button>`).join('')}</div><div class="lbl">${inn ? '收進我的哪個帳戶' : '從我的哪個帳戶付'}</div><div class="acAccts">${DB.acc.accts.filter(x => x.kind === 'bank' || x.kind === 'cash').map(x => `<button data-sacct="${k}:${x.id}" class="${x.id === r[k] ? 'on' : ''}">${aIco(x)}<span class="acN ${[...x.n].length > 7 ? 'lg' : ''}">${esc(x.n)}</span></button>`).join('')}</div>`; })() : tr ? `<div class="lbl">從哪個帳戶轉出</div>${acctPickerHtml(r.acct, 'acct', r.fund)}<div class="lbl">轉入哪個帳戶</div>${acctPickerHtml(r.to, 'to', r.fund2)}<div class="field" style="margin-top:.6rem"><label>手續費（沒有就留空）</label><input id="acFee" value="${+r.fee ? r.fee : ''}" inputmode="decimal" placeholder="0"></div>`
         : r.type === 'loss' ? `<div class="lbl">從哪裡遺失的（現金、銀行、卡片…）</div>${acctPickerHtml(r.acct, 'acct', r.fund)}<div class="small muted" style="margin:.2rem 0 .4rem">💸 金額遺失會從這個帳戶扣掉，另外統計，不算在支出裡。</div>`
         : `<div class="lbl">類別</div>${catPickerHtml(r.type, r.cat, openP)}
-        <div class="lbl">商家／對象</div><button class="acPayee" data-a="payee">${r.payee ? `<b>${esc(r.payee)}</b>` : '<span class="muted">選擇店名，或自訂名稱（例如：台灣電力公司）</span>'}<i>›</i></button>${r.payee && !isPcatPayee(r.payee) && r.type !== 'tr' ? (storeLoc(r.payee) ? `<div class="pyLocT on">📍 已連結地圖${storeLoc(r.payee).addr ? '・' + esc(storeLoc(r.payee).addr) : ''}</div>` : '<button class="pyLocT" data-a="pinP">📌 這間店還沒有地圖位置，點這裡釘選</button>') : ''}
+        <div class="lbl">商家／對象</div><button class="acPayee" data-a="payee">${r.payee ? `<b>${esc(r.payee)}</b>` : '<span class="muted">選擇店名，或自訂名稱（例如：台灣電力公司）</span>'}<i>›</i></button>${r.payee && !isPcatPayee(r.payee) && r.type !== 'tr' ? (storeLoc(r.payee) ? `<div class="pyLocT on">📍 已連結地圖${storeLoc(r.payee).addr ? '・' + esc(storeLoc(r.payee).addr) : ''}</div>` : '<button class="pyLocT" data-a="pinP">📌 這個地點還沒有地圖位置，點這裡釘選</button>') : ''}
         <div class="lbl">${r.type === 'in' ? '收進哪個帳戶' : '付款帳戶'}</div>${acctPickerHtml(r.acct, 'acct', r.fund)}`}
         ${r0 && Object.keys(r.settled || {}).length ? `<div class="acSetl">${Object.keys(r.settled).map(p => `<div class="row" style="gap:.5rem"><span class="grow">✓ 已和 ${esc(aWho(p).name)} 結清</span><button class="btn sm" data-unst="${p}">改回未結清</button></div>`).join('')}</div>` : ''}
         <div class="field" style="margin-top:.7rem"><label class="row" style="gap:.4rem"><span class="grow">備註／消費明細</span></label>${tr ? '' : `<div class="acRow2" style="margin-bottom:.5rem"><button class="btn" data-a="billEd">🧾 ${r.bill ? '編輯明細（' + (r.bill.items || []).length + ' 項）' : '用分帳方式輸入'}</button><button class="btn" data-a="fromBill">📥 從分帳帶入</button></div>`}<textarea id="acNote" rows="${Math.min(10, Math.max(3, String(r.note || '').split('\n').length + 1))}" placeholder="例如：\n鮮奶 ×2  $95\n雞蛋  $60">${esc(r.note || '')}</textarea></div>
@@ -870,7 +870,7 @@ function gwManual() { const sh = sheet({title: '🖥️ 電腦版雲端硬碟'})
   <button class="card setR" data-m="up" style="width:100%;text-align:left;margin-bottom:.5rem"><span class="gRi">⬆️</span><div class="t"><b>上傳備份</b><small>按左上角「＋ 新增 → 檔案上傳」，備份檔會自動選好</small></div><span class="chev">›</span></button>
   <button class="card setR" data-m="down" style="width:100%;text-align:left"><span class="gRi">⬇️</span><div class="t"><b>下載備份還原</b><small>找到備份檔，按「⋮ → 下載」就會自動還原</small></div><span class="chev">›</span></button>`;
   sh.body.onclick = e => { const t = e.target.closest('[data-m]'); if (!t) return; buzz(8); sh.close(); gDriveWeb(t.dataset.m, true); }; }
-/* ---------- 記帳區的店家地圖：只顯示店名、地址、位置和消費紀錄；跟日日帳本的地圖分開，只共用店名 ----------
+/* ---------- 記帳區的地點地圖：只顯示店名、地址、位置和消費紀錄；跟日日帳本的地圖分開，只共用店名 ----------
    位置來源：日日帳本地圖上的收藏（同名就算連結）＞ 在記帳這邊自己釘選的位置 DB.acc.locs[店名] */
 const AM = {map: null, marks: [], q: '', f: 'all', area: null, sel: '', tw: new Map(), me: null, res: [], rMarks: [], gseq: 0};
 /* 收合狀態記在 S.amFold（沒記過的分類預設收合） */
@@ -881,28 +881,28 @@ function storeLoc(n) { n = String(n || '').trim(); if (!n) return null; const p 
 function accStoreStats() { const m = {}; DB.acc.recs.forEach(r => { const n = (r.payee || '').trim(); if (!n || r.type === 'tr') return; const o = m[n] = m[n] || {cnt: 0, sum: 0, last: ''}; o.cnt++; o.sum += r.type === 'out' || r.type === 'loss' ? accMine(r) : 0; if (r.d > o.last) o.last = r.d; }); return m; }
 /* 地圖上的店：日日帳本所有收藏 ＋ 記帳裡出現過、但不在收藏裡的店（台電這類只用在記帳的不算） */
 function accStores() { const A = DB.acc, st = accStoreStats(), out = [], seen = new Set();
-  (DB.places || []).forEach(p => { if (seen.has(p.name)) return; seen.add(p.name); out.push({n: p.name, place: p, cat: p.cat || '', loc: p.lat != null ? {lat: p.lat, lon: p.lon, addr: p.addr || '', fav: true} : null, st: st[p.name]}); });
+  (DB.places || []).forEach(p => { if (seen.has(p.name)) return; seen.add(p.name); out.push({n: p.name, place: p, cat: pCats(p)[0], cats: pCats(p), loc: p.lat != null ? {lat: p.lat, lon: p.lon, addr: p.addr || '', fav: true} : null, st: st[p.name]}); });
   const add = n => { n = (n || '').trim(); if (!n || seen.has(n) || isPcatPayee(n)) return; seen.add(n); const l = (A.locs || {})[n]; out.push({n, cat: '_acc', loc: l ? Object.assign({own: true}, l) : null, st: st[n]}); };
   A.recs.forEach(r => { if (r.type !== 'tr') add(r.payee); }); A.payees.forEach(y => { if (isShopG(y.g)) add(y.n); });
   return out; }
 function amTown(o) { if (!o.loc || !TW.ready) return null; const k = o.loc.lat + ',' + o.loc.lon; let t = AM.tw.get(k); if (t === undefined) { const tw = TW.townAt(o.loc.lon, o.loc.lat); t = tw ? {c: tw.county, t: tw.name} : null; AM.tw.set(k, t); } return t; }
 const amInArea = o => { const a = AM.area; if (!a) return true; const t = amTown(o); return !!t && t.c === a.c && (!a.t || t.t === a.t); };
-const amCat = id => id === '_acc' ? {id, name: '記帳店家', icon: '📒', color: '#8a6d4b'} : catOf(id);
+const amCat = id => id === '_acc' ? {id, name: '記帳商家', icon: '📒', color: '#8a6d4b'} : catOf(id);
 async function renderAccMap() {
   TW.init(); const all = accStores(), q = AM.q.toLowerCase();
   const inQ = o => !q || o.n.toLowerCase().includes(q) || (o.loc && (o.loc.addr || '').toLowerCase().includes(q));
-  const base = all.filter(o => amInArea(o) && inQ(o)), cnt = k => base.filter(o => k === 'all' || o.cat === k).length;
+  const base = all.filter(o => amInArea(o) && inQ(o)), cnt = k => base.filter(o => k === 'all' || (o.cats || [o.cat]).includes(k)).length;
   if (AM.f !== 'all' && !cnt(AM.f)) AM.f = 'all';
-  const V = base.filter(o => AM.f === 'all' || o.cat === AM.f), pinned = all.filter(o => o.loc).length;
-  $('#accMSub').textContent = `${all.length} 間店・${pinned} 間在地圖上`;
+  const V = base.filter(o => AM.f === 'all' || (o.cats || [o.cat]).includes(AM.f)), pinned = all.filter(o => o.loc).length;
+  $('#accMSub').textContent = `${all.length} 個地點・${pinned} 間在地圖上`;
   const co = DB.acc.amCord || [], cats0 = DB.cats.map(c => c.id).concat(['', '_acc']), cats = cats0.map((k, i) => [k, co.indexOf(k) < 0 ? 1e4 + i : co.indexOf(k)]).sort((a, b) => a[1] - b[1]).map(x => x[0]).filter(k => cnt(k));
   const ordOf = k => ((DB.acc.amOrd || {})[k]) || [], anyOpen = AM.f === 'all' && cats.some(k => !amFolded(k));
   const towns = AM.area && TW.counties[AM.area.c] ? TW.counties[AM.area.c].towns : [];
   $('#accMList').innerHTML = `<div class="amChips">${[['all', '🗺️ 全部', '']].concat(cats.map(k => { const c = amCat(k); return [k, `${c.icon} ${c.name}`, c.color]; })).map(([k, t, c]) => `<button class="chip ${AM.f === k ? 'on' : ''}" data-f="${k}" ${c ? `style="--c:${c}"` : ''}>${esc(t)} <span class="n">${cnt(k)}</span></button>`).join('')}</div>
     ${TW.ready ? `<div class="amArea"><select id="amC" aria-label="選擇縣市"><option value="">全部縣市</option>${TW.names.map(n => `<option ${AM.area && AM.area.c === n ? 'selected' : ''}>${n}</option>`).join('')}</select><select id="amT" aria-label="選擇鄉鎮市區" ${AM.area ? '' : 'disabled'}><option value="">全部鄉鎮市區</option>${towns.map(t => `<option ${AM.area && AM.area.t === t.name ? 'selected' : ''}>${t.name}</option>`).join('')}</select>${AM.area ? '<button class="ic" data-a="arX" aria-label="取消區域">✕</button>' : ''}</div>` : ''}
-    <div class="amBar"><div class="searchBox amQ"><input id="amQ" type="search" placeholder="搜尋店名或地址" value="${esc(AM.q)}"></div>${AM.f === 'all' && cats.length > 1 ? `<button class="btn sm amFoldAll" data-a="foldAll">${anyOpen ? '⊟ 全部收合' : '⊞ 全部展開'}</button>` : ''}</div>
-    <div class="small muted amTip">按住分類標題可以上下移動；展開後按住店家可以排序</div><div id="amSecs">
-    ${(AM.f === 'all' ? cats : [AM.f]).map(k => { const c = amCat(k), od = ordOf(k), oi = o => { const i = od.indexOf(o.n); return i < 0 ? 1e6 : i; }, L = V.filter(o => o.cat === k).sort((a, b) => oi(a) - oi(b) || ((b.st || {}).last || '').localeCompare((a.st || {}).last || '') || a.n.localeCompare(b.n, 'zh-Hant')); if (!L.length) return '';
+    <div class="amBar"><div class="searchBox amQ"><input id="amQ" type="search" placeholder="搜尋名稱或地址" value="${esc(AM.q)}"></div>${AM.f === 'all' && cats.length > 1 ? `<button class="btn sm amFoldAll" data-a="foldAll">${anyOpen ? '⊟ 全部收合' : '⊞ 全部展開'}</button>` : ''}</div>
+    <div class="small muted amTip">按住分類標題可以上下移動；展開後按住地點可以排序</div><div id="amSecs">
+    ${(AM.f === 'all' ? cats : [AM.f]).map(k => { const c = amCat(k), od = ordOf(k), oi = o => { const i = od.indexOf(o.n); return i < 0 ? 1e6 : i; }, L = V.filter(o => (o.cats || [o.cat]).includes(k)).sort((a, b) => oi(a) - oi(b) || ((b.st || {}).last || '').localeCompare((a.st || {}).last || '') || a.n.localeCompare(b.n, 'zh-Hant')); if (!L.length) return '';
       const fd = AM.f === 'all' && amFolded(k) && !AM.q;
       return `<div class="amSec ${fd ? 'fold' : ''}" data-k="${k}"><button class="amSecH" data-fold="${k}" style="--c:${c.color}"><span class="grip"></span><span>${esc(c.icon)}</span><b>${esc(c.name)}</b><em>${L.length}</em>${AM.f === 'all' ? `<i>${fd ? '▸' : '▾'}</i>` : ''}</button>
         ${fd ? '' : L.map(o => `<button class="amR card ${AM.sel === o.n ? 'sel' : ''}" data-st="${esc(o.n)}"><span class="amPinI ${o.loc ? 'on' : ''}">${o.loc ? '📍' : '📌'}</span><span class="grow"><b>${esc(o.n)}</b><small>${o.loc ? esc(o.loc.addr || '已釘選位置') : '還沒有位置'}</small><small>${o.st ? `記帳 ${o.st.cnt} 筆・${money(o.st.sum)}・最近 ${o.st.last.slice(5).replace('-', '/')}` : '還沒有記帳紀錄'}</small></span>${o.loc ? '<span class="chev">›</span>' : `<span class="btn sm" data-pin="${esc(o.n)}">📍 釘選</span>`}</button>`).join('')}</div>`; }).join('') || '<div class="empty">沒有符合的店家</div>'}</div>`;
@@ -1001,7 +1001,7 @@ function accStoreCard(n) {
   const draw = () => { const lc = storeLoc(n), R = DB.acc.recs.filter(r => (r.payee || '').trim() === n && r.type !== 'tr').sort((a, b) => (b.d + (b.t || '')).localeCompare(a.d + (a.t || ''))), sum = R.reduce((t, r) => t + (r.type === 'out' || r.type === 'loss' ? accMine(r) : 0), 0);
     const P = (DB.places || []).find(x => x.name === n), tw = lc ? amTown({loc: lc}) : null;
     sh.el.querySelector('.shH b, .shT, h2') && (sh.el.querySelector('.shH b, .shT, h2').textContent = '🏪 ' + n);
-    sh.body.innerHTML = `<div class="amInfo card"><div><b>📍 地址</b><span>${lc ? esc(lc.addr || '（沒有地址）') : '還沒有位置'}</span></div>${tw ? `<div><b>🏙️ 地區</b><span>${esc(tw.c + ' ' + tw.t)}</span></div>` : ''}<div><b>🗂️ 分類</b><span>${P ? esc(catOf(P.cat).icon + ' ' + catOf(P.cat).name) + '（日日帳本收藏）' : lc ? '記帳店家（在記帳這邊釘選）' : '記帳店家'}</span></div><div><b>🧾 記帳</b><span>${R.length} 筆・我的支出 ${money(sum)}</span></div>${lc && lc.own ? '<div><b></b><span><button class="lnk" data-a="unpin">取消釘選</button></span></div>' : ''}</div>
+    sh.body.innerHTML = `<div class="amInfo card"><div><b>📍 地址</b><span>${lc ? esc(lc.addr || '（沒有地址）') : '還沒有位置'}</span></div>${tw ? `<div><b>🏙️ 地區</b><span>${esc(tw.c + ' ' + tw.t)}</span></div>` : ''}<div><b>🗂️ 分類</b><span>${P ? esc(catOf(P.cat).icon + ' ' + catOf(P.cat).name) + '（日日帳本收藏）' : lc ? '記帳商家（在記帳這邊釘選）' : '記帳店家'}</span></div><div><b>🧾 記帳</b><span>${R.length} 筆・我的支出 ${money(sum)}</span></div>${lc && lc.own ? '<div><b></b><span><button class="lnk" data-a="unpin">取消釘選</button></span></div>' : ''}</div>
       <div class="lbl">記帳明細</div>${R.map(accCard).join('') || '<div class="empty">還沒有記帳紀錄</div>'}`; };
   draw();
   sh.body.onclick = async e => { const t = e.target.closest('[data-a],[data-r]'); if (!t) return; buzz(8);
@@ -1149,7 +1149,7 @@ function editCatTree(ty) {
 function managePayees() {
   payMigrate();
   return new Promise(res => { const sh = sheet({title: '🏪 商家／對象名稱', full: true, foot: '<button class="btn" data-a="newG">＋ 新分類</button><button class="btn pri" data-a="add">＋ 新增名稱</button>', onClose() { res(); }});
-    const draw = () => { const r = payListHtml('', '', true); sh.body.innerHTML = `<div class="small muted" style="margin:-.2rem 0 .6rem">收藏的店家和自訂名稱在同一份清單；點自訂名稱可以編輯，點分類名稱可以收合。收藏店家要在地圖或收藏頁編輯。</div><div class="pyW">${r.html}</div>`; payBindSort($('.pyW', sh.body), sh.body, draw); };
+    const draw = () => { const r = payListHtml('', '', true); sh.body.innerHTML = `<div class="small muted" style="margin:-.2rem 0 .6rem">收藏的店家和自訂名稱在同一份清單；點自訂名稱可以編輯，點分類名稱可以收合。收藏地點要在地圖或收藏頁編輯。</div><div class="pyW">${r.html}</div>`; payBindSort($('.pyW', sh.body), sh.body, draw); };
     draw(); sh.body.onclick = async e => { const ge = e.target.closest('[data-gedit]'); if (ge) { e.stopPropagation(); buzz(8); await editPayGroup(ge.dataset.gedit); draw(); return; }
       const t = e.target.closest('button'); if (!t) return; buzz(8); if (payFold(t, sh.body, draw)) return;
       if (t.dataset.k && t.dataset.k[0] === 'y') { const p = DB.acc.payees.find(x => x.id === t.dataset.k.slice(2)); await editPayee(catFind('in', p.cat).p && !catFind('out', p.cat).p ? 'in' : 'out', p); draw(); }
