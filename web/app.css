@@ -1517,3 +1517,5 @@ table.ckT td.s{text-align:center}table.ckT th.s{text-align:center}
 /* 帳戶長名稱：一行顯示，字自動縮小到放得下 */
 .acAccts .acN.lg{display:block;white-space:nowrap;-webkit-line-clamp:unset;text-align:center;word-break:normal;overflow:hidden;text-overflow:clip}
 .rptPrev{display:grid;grid-template-columns:repeat(3,1fr);gap:.4rem;padding:.7rem;margin:.2rem 0 .7rem}.rptPrev>div{display:flex;flex-direction:column;align-items:center;gap:.1rem}.rptPrev small{color:var(--muted);font-size:.74rem;font-weight:700}.rptPrev b{font-size:1.05rem}
+.einvSw{display:flex;margin-top:.7rem}.einvSw .btn{flex:1;justify-content:center}
+.einvTxt{white-space:pre-wrap;font-family:inherit;font-size:.82rem;color:#333;background:#f7f7f7;border-radius:6px;padding:.5rem .7rem;margin:.3rem 0 0}

@@ -61,7 +61,7 @@ function accReportAsk() {
     sh.body.innerHTML = `<div class="lbl">報告期間</div><div class="spSeg">${SPU.map(([k, n]) => `<button data-u="${k}" class="${st.u === k ? 'on' : ''}">${n}</button>`).join('')}</div>
       <div class="spNav"><button class="btn" data-a="p-">◀</button><button class="btn spLab" data-a="pick">${R.lab}</button><button class="btn" data-a="p+">▶</button></div>
       <div class="rptPrev card"><div><small>支出</small><b class="neg">${money(Math.round(D.tot))}</b></div><div><small>收入</small><b class="pos">${money(Math.round(D.inc))}</b></div><div><small>筆數</small><b>${D.outs.length}</b></div></div>
-      <div class="small muted" style="line-height:1.6">報告內容：重點摘要、各項指標、${D.B.length ? '每日／每月長條圖、' : ''}支出分類圓餅圖、必要與非必要消費分類佔比、${D.u !== 'd' && D.u !== 'w' ? '星期分布、' : ''}最大筆支出、最常消費的地方，以及這段期間的完整明細。<br>PDF 會打開列印畫面，選「另存為 PDF」即可存檔。</div>`; };
+      <div class="small muted" style="line-height:1.6">報告內容：重點摘要、各項指標、${D.B.length ? '每日／每月長條圖、' : ''}支出分類圓餅圖、必要與非必要消費分類佔比、${D.u !== 'd' && D.u !== 'w' ? '星期分布、' : ''}最大筆支出、最常消費的地方，以及這段期間的完整明細。<br>PDF 和 Excel 都會直接存成檔案（手機的「下載」資料夾）。</div>`; };
   draw();
   sh.body.onclick = async e => { const t = e.target.closest('[data-u],[data-a]'); if (!t) return; buzz(8);
     if (t.dataset.u) st.u = t.dataset.u; else if (t.dataset.a === 'p-' || t.dataset.a === 'p+') st.a = spShift(st.u, st.a, t.dataset.a === 'p-' ? -1 : 1);
@@ -78,14 +78,14 @@ async function accReportPdf(D) {
   const C = rptCharts(D), img = c => c ? `<img src="${c.toDataURL('image/png')}">` : '', pct = (v, t) => t ? (v / t * 100).toFixed(1) + '%' : '—', now = new Date();
   const catT = (L, T) => L.length ? `<table><thead><tr><th>分類</th><th>子分類</th><th class="r">筆數</th><th class="r">金額</th><th class="r">佔比</th></tr></thead><tbody>${L.map(g => g.subL.map((s, j) => `<tr class="${j ? '' : 'g'}">${j ? '<td></td>' : `<td rowspan="1"><i style="background:${g.c}"></i>${esc(g.n)}</td>`}<td>${esc(s.n)}</td><td class="r">${s.cnt}</td><td class="r">${money(Math.round(s.v))}</td><td class="r">${pct(s.v, T)}</td></tr>`).join('') + `<tr class="sub"><td colspan="3">${esc(g.n)} 小計</td><td class="r">${money(Math.round(g.v))}</td><td class="r">${pct(g.v, T)}</td></tr>`).join('')}</tbody></table>` : '<p class="muted">沒有資料</p>';
   const html = `<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><title>${rptName(D)}</title><style>
-    @page{size:A4;margin:14mm 12mm}*{box-sizing:border-box}body{font-family:${RPT_F};color:#3b2b1d;margin:0;font-size:11.5px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    @page{size:A4;margin:14mm 12mm}*{box-sizing:border-box}html,body{background:#fff}body{font-family:${RPT_F};color:#3b2b1d;margin:0;width:794px;padding:0 40px;font-size:11.5px;word-break:break-word;-webkit-print-color-adjust:exact;print-color-adjust:exact}
     .hero{background:linear-gradient(135deg,#6f5a3f,#b5653a);color:#fff;border-radius:12px;padding:20px 24px;display:flex;align-items:center;gap:16px}
     .hero .ic{width:58px;height:58px;border-radius:14px;overflow:hidden;background:#fff;flex:none}.hero .ic svg{width:100%;height:100%}
     .hero h1{margin:0;font-size:24px;letter-spacing:.06em}.hero p{margin:4px 0 0;opacity:.9;font-size:13px}
     .kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:14px 0}.kpi div{background:#f6efe2;border-radius:10px;padding:10px 12px}.kpi small{display:block;color:#7a6550;font-weight:700;font-size:10.5px}.kpi b{font-size:17px}.kpi em{display:block;font-style:normal;font-size:10px;color:#7a6550;margin-top:2px}
     .neg{color:#a8472f}.pos{color:#4f6e34}h2{font-size:15px;margin:18px 0 8px;padding-left:9px;border-left:4px solid #b5653a}
     .tips{background:#fbf6ec;border:1px solid #eadfcb;border-radius:10px;padding:10px 14px 10px 28px;margin:0}.tips li{margin:3px 0;line-height:1.55}
-    .chart img{width:100%;border:1px solid #eee3d1;border-radius:10px}.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}.two img{width:100%;border:1px solid #eee3d1;border-radius:10px}
+    .chart img{width:100%;border:1px solid #eee3d1;border-radius:10px}.two{display:block}.two>div{margin-bottom:8px}.two img{width:62%;border:1px solid #eee3d1;border-radius:10px}
     table{width:100%;border-collapse:collapse;margin:4px 0 6px;font-size:10.5px}th{background:#efe4d1;color:#5a4a3a;text-align:left;padding:5px 7px;font-weight:800}td{padding:4px 7px;border-bottom:1px solid #f0e8da}.r{text-align:right}
     tr.sub td{background:#faf5ec;font-weight:800}td i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:5px}
     .opt{color:#c27a5a;font-weight:700}.pb{break-before:page}.muted{color:#9a8a76}.foot{margin-top:16px;text-align:center;color:#9a8a76;font-size:9.5px}
@@ -104,9 +104,7 @@ async function accReportPdf(D) {
     ${D.PY.length ? `<section><h2>最常消費的地方</h2><table><thead><tr><th>商家</th><th class="r">次數</th><th class="r">金額</th><th class="r">佔比</th></tr></thead><tbody>${D.PY.map(([n, o]) => `<tr><td>${esc(n)}</td><td class="r">${o.c}</td><td class="r">${money(Math.round(o.v))}</td><td class="r">${pct(o.v, D.tot)}</td></tr>`).join('')}</tbody></table></section>` : ''}
     <h2 class="pb">收支明細</h2><table><thead><tr><th>日期</th><th>時間</th><th>類型</th><th>分類</th><th>商家／說明</th><th>帳戶</th><th class="r">金額</th></tr></thead><tbody>${D.outs.concat(D.ins).sort((x, y) => (x.d + (x.t || '')).localeCompare(y.d + (y.t || ''))).map(r => `<tr><td>${r.d.replace(/-/g, '/')}</td><td>${esc(r.t || '')}</td><td>${r.type === 'in' ? '收入' : D.isOpt(r) ? '<span class="opt">非必要</span>' : '支出'}</td><td>${esc(accCat(r).n)}</td><td>${esc(r.payee || String(r.note || '').split('\n')[0] || '')}</td><td>${esc(acctName(r.acct) || '')}</td><td class="r ${r.type === 'in' ? 'pos' : 'neg'}">${r.type === 'in' ? '+' : '-'}${money(Math.round(r.type === 'in' ? +r.amt : accMine(r)))}</td></tr>`).join('') || '<tr><td colspan="7" class="muted">沒有紀錄</td></tr>'}</tbody></table>
     <div class="foot">日日帳本・製作時間 ${now.getFullYear()}/${now.getMonth() + 1}/${now.getDate()} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}・金額為「我的」支出（已扣掉別人分攤的部分）</div></body></html>`;
-  if (IS_APP && NB.printHtml) { NB.printHtml(html, rptName(D)); return; }
-  const f = document.createElement('iframe'); f.style.cssText = 'position:fixed;width:0;height:0;border:0;right:0;bottom:0'; document.body.append(f); f.contentDocument.open(); f.contentDocument.write(html); f.contentDocument.close();
-  setTimeout(() => { f.contentWindow.focus(); f.contentWindow.print(); setTimeout(() => f.remove(), 60000); }, 500);
+  const blob = await htmlToPdf(html); const p = await saveFile(rptName(D) + '.pdf', blob); buzz(30); toast('📄 已存成 PDF：' + (String(p).split('/').pop() || ''), 3500);
 }
 
 /* ---------- Excel：多個工作表（總覽含圖表、分類、必要／非必要、趨勢、明細、商家），有樣式、欄寬、凍結窗格 ---------- */
@@ -119,7 +117,7 @@ async function accReportXlsx(D) {
   const ov = [[{v: '消費分析報告', s: 1}], [{v: `${D.Rg.lab}　${D.Rg.s.replace(/-/g, '/')} – ${D.Rg.e.replace(/-/g, '/')}`, s: 2}], [],
     [{v: '支出（我的）', s: 11}, {v: '收入', s: 11}, {v: '結餘', s: 11}, {v: '平均每天', s: 11}, {v: '支出筆數', s: 11}, {v: `比${D.pN}`, s: 11}],
     [{v: R0(D.tot), s: 12}, {v: R0(D.inc), s: 12}, {v: R0(D.inc - D.tot), s: 12}, {v: R0(D.tot / D.Rg.days), s: 12}, {v: D.outs.length, s: 12}, {v: D.last ? D.chg / 100 : '—', s: D.last ? 5 : 0}], [],
-    [{v: '重點摘要', s: 6}], ...D.tips.map(t => [{v: '・' + t}]), []];
+    [{v: '重點摘要', s: 6}], ...D.tips.map(t => [{v: '・' + t, s: 15, m: 6}]), []];
   const chartRow = ov.length; ov.push([{v: '圖表', s: 6}]);
   /* 圖表一張一張往下排（每列約 24px），不會超出列印範圍 */
   let r = chartRow + 1; const put = (c, w, h) => { if (!c) return; add(c, 0, r, w, h); r += Math.ceil(h / 24) + 1; };
@@ -136,23 +134,27 @@ async function accReportXlsx(D) {
   if (D.PY.length) S('商家排行', [24, 8, 14, 10], [[{v: '最常消費的地方', s: 1}], [], ['商家', '次數', '金額', '佔比'].map(v => ({v, s: 3})), ...D.PY.map(([n, o]) => [n, o.c, {v: R0(o.v), s: 4}, {v: pc(o.v, D.tot), s: 5}])], {bar: [2]});
   const X = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   const col = i => (i >= 26 ? String.fromCharCode(64 + Math.floor(i / 26)) : '') + String.fromCharCode(65 + i % 26);
-  const sheetXml = (sh, si) => { const rows = sh.rows, last = rows.length, maxC = Math.max(1, ...rows.map(r => r.length));
+  /* 欄寬最適化：依每一欄最長的內容（中文算 2 格）決定寬度，標題列、合併列不算 */
+  const dispLen = o => { const v = o && typeof o === 'object' ? o.v : o; if (v == null || v === '') return 0; let t = typeof v === 'number' ? (o.s === 5 || o.s === 14 ? (v * 100).toFixed(1) + '%' : [4, 8, 9, 10, 12].includes(o.s) ? '$' + Math.round(v).toLocaleString('en-US') : String(v)) : String(v);
+    let n = 0; for (const ch of t) n += /[\u2E80-\uFFEF]/.test(ch) ? 2.1 : 1.15; return n; };
+  const autofit = sh => sh.cols.map((w0, ci) => { let m = 6; sh.rows.forEach(r => { const o = r[ci]; if (!o || (typeof o === 'object' && (o.s === 1 || o.s === 2 || o.m))) return; m = Math.max(m, dispLen(o)); }); return Math.min(60, Math.max(w0 * .6, Math.ceil(m + 2.5))); });
+  const sheetXml = (sh, si) => { const rows = sh.rows, last = rows.length, maxC = Math.max(1, ...rows.map(r => r.length)); sh.cols = autofit(sh); const merges = []; rows.forEach((r, ri) => r.forEach((c, ci) => { if (c && typeof c === 'object' && c.m) merges.push(`${col(ci)}${ri + 1}:${col(ci + c.m - 1)}${ri + 1}`); }));
     return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheetViews><sheetView workbookViewId="0" showGridLines="0"${si === 0 ? ' tabSelected="1"' : ''}>${sh.opt.freeze ? `<pane ySplit="${sh.opt.freeze}" topLeftCell="A${sh.opt.freeze + 1}" activePane="bottomLeft" state="frozen"/>` : ''}</sheetView></sheetViews><sheetFormatPr defaultRowHeight="18"/>
-      <cols>${sh.cols.map((w, i) => `<col min="${i + 1}" max="${i + 1}" width="${w}" customWidth="1"/>`).join('')}</cols><sheetData>${rows.map((r, ri) => `<row r="${ri + 1}"${ri === 0 ? ' ht="30" customHeight="1"' : ''}>${r.map((c, ci) => { const o = c && typeof c === 'object' ? c : {v: c}, ref = col(ci) + (ri + 1), st = o.s ? ` s="${o.s}"` : '';
+      <cols>${sh.cols.map((w, i) => `<col min="${i + 1}" max="${i + 1}" width="${w}" customWidth="1"/>`).join('')}</cols><sheetData>${rows.map((r, ri) => `<row r="${ri + 1}"${ri === 0 ? ' ht="30" customHeight="1"' : (() => { const c = r.find(c => c && typeof c === 'object' && c.m); if (!c) return ''; const wsum = sh.cols.slice(0, c.m).reduce((t, w) => t + w, 0), lines = Math.max(1, Math.ceil(dispLen(c) / (wsum * .95))); return ` ht="${lines * 17 + 3}" customHeight="1"`; })()}>${r.map((c, ci) => { const o = c && typeof c === 'object' ? c : {v: c}, ref = col(ci) + (ri + 1), st = o.s ? ` s="${o.s}"` : '';
         return o.v === '' || o.v == null ? (o.s ? `<c r="${ref}"${st}/>` : '') : typeof o.v === 'number' ? `<c r="${ref}"${st}><v>${o.v}</v></c>` : `<c r="${ref}" t="inlineStr"${st}><is><t xml:space="preserve">${X(o.v)}</t></is></c>`; }).join('')}</row>`).join('')}</sheetData>
-      ${sh.opt.filter ? `<autoFilter ref="A${sh.opt.freeze}:${col(maxC - 1)}${last}"/>` : ''}
+      ${''}${sh.opt.filter ? `<autoFilter ref="A${sh.opt.freeze}:${col(maxC - 1)}${last}"/>` : ''}${merges.length ? `<mergeCells count="${merges.length}">${merges.map(m => `<mergeCell ref="${m}"/>`).join('')}</mergeCells>` : ''}
       ${(sh.opt.bar || []).map(ci => `<conditionalFormatting sqref="${col(ci)}4:${col(ci)}${last}"><cfRule type="dataBar" priority="1"><dataBar><cfvo type="min"/><cfvo type="max"/><color rgb="FFD9B48F"/></dataBar></cfRule></conditionalFormatting>`).join('')}
       <pageMargins left="0.5" right="0.5" top="0.6" bottom="0.6" header="0.3" footer="0.3"/><pageSetup paperSize="9" orientation="portrait" fitToWidth="1" fitToHeight="0"/>${si === 0 && pngs.length ? '<drawing r:id="rId1"/>' : ''}</worksheet>`; };
   const EMU = 9525, drawing = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">${pngs.map((p, i) => `<xdr:oneCellAnchor><xdr:from><xdr:col>${p.col}</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>${p.row}</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from><xdr:ext cx="${p.w * EMU}" cy="${p.h * EMU}"/><xdr:pic><xdr:nvPicPr><xdr:cNvPr id="${i + 2}" name="圖表 ${i + 1}"/><xdr:cNvPicPr><a:picLocks noChangeAspect="1"/></xdr:cNvPicPr></xdr:nvPicPr><xdr:blipFill><a:blip r:embed="rId${i + 1}"/><a:stretch><a:fillRect/></a:stretch></xdr:blipFill><xdr:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${p.w * EMU}" cy="${p.h * EMU}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></xdr:spPr></xdr:pic><xdr:clientData/></xdr:oneCellAnchor>`).join('')}</xdr:wsDr>`;
   const styles = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><numFmts count="2"><numFmt numFmtId="164" formatCode="&quot;$&quot;#,##0;[Red]-&quot;$&quot;#,##0"/><numFmt numFmtId="165" formatCode="0.0%"/></numFmts>
     <fonts count="8"><font><sz val="11"/><color rgb="FF3B2B1D"/><name val="Microsoft JhengHei"/></font><font><b/><sz val="18"/><color rgb="FF6F5A3F"/><name val="Microsoft JhengHei"/></font><font><sz val="11"/><color rgb="FF7A6550"/><name val="Microsoft JhengHei"/></font><font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Microsoft JhengHei"/></font><font><b/><sz val="11"/><color rgb="FF3B2B1D"/><name val="Microsoft JhengHei"/></font><font><b/><sz val="11"/><color rgb="FFA8472F"/><name val="Microsoft JhengHei"/></font><font><b/><sz val="11"/><color rgb="FF4F6E34"/><name val="Microsoft JhengHei"/></font><font><b/><sz val="15"/><color rgb="FF3B2B1D"/><name val="Microsoft JhengHei"/></font></fonts>
     <fills count="5"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FFB5653A"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFF6EFE2"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFFAF5EC"/></patternFill></fill></fills>
-    <borders count="2"><border/><border><bottom style="thin"><color rgb="FFEADFCB"/></bottom></border></borders><cellStyleXfs count="1"><xf/></cellStyleXfs><cellXfs count="15">
+    <borders count="2"><border/><border><bottom style="thin"><color rgb="FFEADFCB"/></bottom></border></borders><cellStyleXfs count="1"><xf/></cellStyleXfs><cellXfs count="16">
     <xf fontId="0" borderId="0"/><xf fontId="1" applyFont="1"/><xf fontId="2" applyFont="1"/><xf fontId="3" fillId="2" borderId="0" applyFont="1" applyFill="1"><alignment horizontal="center" vertical="center"/></xf>
     <xf fontId="0" numFmtId="164" borderId="1" applyNumberFormat="1" applyBorder="1"/><xf fontId="0" numFmtId="165" borderId="1" applyNumberFormat="1" applyBorder="1"/><xf fontId="4" applyFont="1"/>
     <xf fontId="4" fillId="4" borderId="1" applyFont="1" applyFill="1" applyBorder="1"/><xf fontId="4" fillId="4" numFmtId="164" borderId="1" applyFont="1" applyFill="1" applyNumberFormat="1" applyBorder="1"/>
     <xf fontId="5" numFmtId="164" borderId="1" applyFont="1" applyNumberFormat="1" applyBorder="1"/><xf fontId="6" numFmtId="164" borderId="1" applyFont="1" applyNumberFormat="1" applyBorder="1"/>
-    <xf fontId="2" fillId="3" applyFont="1" applyFill="1"><alignment horizontal="center"/></xf><xf fontId="7" fillId="3" numFmtId="164" applyFont="1" applyFill="1" applyNumberFormat="1"><alignment horizontal="center"/></xf><xf fontId="2" applyFont="1"/><xf fontId="4" fillId="4" numFmtId="165" borderId="1" applyFont="1" applyFill="1" applyNumberFormat="1" applyBorder="1"/></cellXfs></styleSheet>`;
+    <xf fontId="2" fillId="3" applyFont="1" applyFill="1"><alignment horizontal="center"/></xf><xf fontId="7" fillId="3" numFmtId="164" applyFont="1" applyFill="1" applyNumberFormat="1"><alignment horizontal="center"/></xf><xf fontId="2" applyFont="1"/><xf fontId="4" fillId="4" numFmtId="165" borderId="1" applyFont="1" applyFill="1" applyNumberFormat="1" applyBorder="1"/><xf fontId="0" applyAlignment="1"><alignment wrapText="1" vertical="top"/></xf></cellXfs></styleSheet>`;
   const files = [
     {name: '[Content_Types].xml', data: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Default Extension="png" ContentType="image/png"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>${sheets.map((_, i) => `<Override PartName="/xl/worksheets/sheet${i + 1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join('')}${pngs.length ? '<Override PartName="/xl/drawings/drawing1.xml" ContentType="application/vnd.openxmlformats-officedocument.drawing+xml"/>' : ''}</Types>`},
     {name: '_rels/.rels', data: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>'},
@@ -164,4 +166,53 @@ async function accReportXlsx(D) {
     {name: 'xl/drawings/drawing1.xml', data: drawing}, {name: 'xl/drawings/_rels/drawing1.xml.rels', data: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${pngs.map((p, i) => `<Relationship Id="rId${i + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/chart${i + 1}.png"/>`).join('')}</Relationships>`},
     ...pngs.map((p, i) => ({name: `xl/media/chart${i + 1}.png`, data: p.bin})));
   const p = await saveFile(rptName(D) + '.xlsx', zipStore(files)); toast('📊 已存成 Excel：' + (String(p).split('/').pop() || ''), 3500);
+}
+
+/* ---------- HTML → PDF（不用列印）：在隱藏的框架排版、算好分頁（表格列、標題、圖表不會被切半），
+   每一頁畫成高解析度圖片，再自己組成 A4 PDF 檔 ---------- */
+async function htmlToPdf(html) {
+  const W = 794, PH = 1123, MT = 46, MB = 46, CH = PH - MT - MB, SC = 2;
+  const f = document.createElement('iframe'); f.style.cssText = `position:fixed;left:-10000px;top:0;width:${W}px;height:${PH}px;border:0;visibility:hidden`; document.body.append(f);
+  try {
+    const d = f.contentDocument; d.open(); d.write(html); d.close();
+    await new Promise(r => setTimeout(r, 80)); await Promise.all([...d.images].map(im => im.decode ? im.decode().catch(() => {}) : null)); if (d.fonts && d.fonts.ready) await d.fonts.ready;
+    /* 分頁：遇到會跨頁的區塊，就在它前面塞空白把它推到下一頁 */
+    const top = e => e.getBoundingClientRect().top + (f.contentWindow.scrollY || 0);
+    const units = () => [...d.body.querySelectorAll('.hero,.kpi,h2,.tips li,.chart,.two img,.bar,section>p,tr,.foot')];
+    for (let guard = 0; guard < 400; guard++) { let moved = false;
+      for (const e of units()) { if (e.closest('thead') || e.classList.contains('pgsp')) continue; const t = top(e), h = e.getBoundingClientRect().height, pg = Math.floor(t / CH), end = (pg + 1) * CH;
+        const keep = e.tagName === 'H2' ? 180 : 0; /* 標題至少要跟著下面一點內容 */
+        if (h < CH && t + h + keep > end && t < end) { const gap = end - t + 2;
+          if (e.tagName === 'TR') { const sp = d.createElement('tr'); sp.className = 'pgsp'; sp.innerHTML = `<td colspan="20" style="height:${gap}px;padding:0;border:0;background:#fff"></td>`; e.before(sp); const th = e.closest('table').querySelector('thead tr'); if (th) { const c = th.cloneNode(true); c.classList.add('pgsp'); e.before(c); } }
+          else { const sp = d.createElement('div'); sp.className = 'pgsp'; sp.style.height = gap + 'px'; e.before(sp); }
+          moved = true; break; } }
+      if (!moved) break; }
+    const total = Math.max(d.documentElement.scrollHeight, d.body.scrollHeight), pages = Math.max(1, Math.ceil(total / CH));
+    d.documentElement.style.height = total + 'px';
+    const xml = new XMLSerializer().serializeToString(d.documentElement);
+    const jpgs = [];
+    for (let k = 0; k < pages; k++) {
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${CH}" viewBox="0 0 ${W} ${CH}"><foreignObject x="0" y="${-k * CH}" width="${W}" height="${total}">${xml}</foreignObject></svg>`;
+      const im = new Image(); im.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg); await im.decode();
+      const c = document.createElement('canvas'); c.width = W * SC; c.height = PH * SC; const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.scale(SC, SC);
+      g.drawImage(im, 0, MT, W, CH);
+      g.fillStyle = '#9a8a76'; g.font = `500 10px ${RPT_F}`; g.textAlign = 'center'; g.fillText(`${k + 1} / ${pages}`, W / 2, PH - 20);
+      const b64 = c.toDataURL('image/jpeg', .9).split(',')[1]; jpgs.push(Uint8Array.from(atob(b64), x => x.charCodeAt(0)));
+    }
+    return pdfFromJpegs(jpgs, W * SC, PH * SC);
+  } finally { f.remove(); }
+}
+/* 最簡 PDF：每頁一張 JPEG，滿版 A4（595×842 pt） */
+function pdfFromJpegs(jpgs, iw, ih) {
+  const enc = new TextEncoder(), parts = [], offs = []; let len = 0; const push = x => { const b = typeof x === 'string' ? enc.encode(x) : x; parts.push(b); len += b.length; };
+  const obj = (n, body, stream) => { offs[n] = len; push(`${n} 0 obj\n${body}\n`); if (stream) { push('stream\n'); push(stream); push('\nendstream\n'); } push('endobj\n'); };
+  push('%PDF-1.4\n%\xE2\xE3\xCF\xD3\n'); const N = jpgs.length, kids = jpgs.map((_, i) => `${3 + i * 3} 0 R`).join(' ');
+  obj(1, '<< /Type /Catalog /Pages 2 0 R >>'); obj(2, `<< /Type /Pages /Kids [${kids}] /Count ${N} >>`);
+  jpgs.forEach((j, i) => { const p = 3 + i * 3, im = p + 1, ct = p + 2, cs = enc.encode('q 595.28 0 0 841.89 0 0 cm /Im0 Do Q');
+    obj(p, `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595.28 841.89] /Resources << /XObject << /Im0 ${im} 0 R >> >> /Contents ${ct} 0 R >>`);
+    obj(im, `<< /Type /XObject /Subtype /Image /Width ${iw} /Height ${ih} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${j.length} >>`, j);
+    obj(ct, `<< /Length ${cs.length} >>`, cs); });
+  const n = 3 + N * 3, xref = len; let x = `xref\n0 ${n}\n0000000000 65535 f \n`; for (let i = 1; i < n; i++) x += String(offs[i]).padStart(10, '0') + ' 00000 n \n';
+  push(x + `trailer\n<< /Size ${n} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`);
+  return new Blob(parts, {type: 'application/pdf'});
 }

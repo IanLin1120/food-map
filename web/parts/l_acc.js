@@ -1260,7 +1260,13 @@ function accInvQr(r) { const Q = invQrStrings(r), v = (DB.invs || {})[r.inv] || 
     <div class="einvD"><span>隨機碼：${esc(v.rnd || '----')}</span><span>總計：${Math.round(numP(v.total) || +r.amt || 0)}</span></div>
     <div class="einvD"><span>賣方：${esc(v.sellerId || '—')}</span><span>${esc(v.seller ? invSeller(v) : r.payee || '')}</span></div>
     <div class="einvQ">${qrSvgStr(Q.L)}${qrSvgStr(Q.R)}</div><div class="einvF">左：發票資訊＋前段品項　右：其餘品項（共 ${Q.n} 項）</div></div>
-    <div class="blWarn" style="margin-top:.7rem">這是依發票格式產生的資料碼，用日日帳本或發票 App 掃描可以讀到號碼和品項；因為沒有店家的加密驗證，不能拿去兌獎或載具歸戶。</div>`; }
+    <div class="einvSw"><button class="btn" data-q="plain">📷 一般相機版（掃了直接看到明細文字）</button></div><div id="einvPlain"></div>
+    <div class="blWarn" style="margin-top:.7rem">這是依發票格式產生的資料碼，用日日帳本或發票 App 掃描可以讀到號碼和品項；因為沒有店家的加密驗證，不能拿去兌獎或載具歸戶。</div>`;
+  /* 一般手機相機掃 QR 只會顯示原始文字：另外做一個「易讀版」，掃了直接看到發票號碼、店家、品項和金額 */
+  sh.body.addEventListener('click', e => { const b = e.target.closest('[data-q="plain"]'); if (!b) return; buzz(10); const box = $('#einvPlain', sh.body); if (box.innerHTML) { box.innerHTML = ''; return; }
+    const its = (v.items || []).filter(x => +x.amt > 0), L = its.length ? its.map(x => `${x.n} ×${x.q || 1}  $${Math.round(+x.amt)}`) : ((r.bill && r.bill.items) || r.items || []).map(x => `${x.n} ×${x.q || 1}  $${Math.round(+x.amt || 0)}`);
+    const t = [`電子發票 ${r.inv.slice(0, 2)}-${r.inv.slice(2)}`, `${v.date || r.d}${v.time || r.t ? ' ' + (v.time || r.t) : ''}`, (v.seller ? invSeller(v) : r.payee) || '', ...L, `總計 $${Math.round(numP(v.total) || +r.amt || 0)}`].filter(Boolean).join('\n');
+    box.innerHTML = `<div class="einv" style="margin-top:.7rem"><div class="einvT" style="font-size:1rem">一般相機版</div><div style="max-width:15rem;margin:.5rem auto">${qrSvgStr(t, 300)}</div><pre class="einvTxt">${esc(t)}</pre></div>`; }); }
 
 /* ===== 對帳還款歷史：未完成（還沒結清的每一筆）／已完成（每一次結清還款），可以依人或依時間分類、篩選某個人 ===== */
 function accSettleHist() {
