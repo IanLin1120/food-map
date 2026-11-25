@@ -172,7 +172,7 @@ function pickStore(cur) {
 function menuChoices(p, rg) {
   const all = p.menu || [], regs = [...new Set(all.map(r => r.g).filter(Boolean))]; const cur = regs.includes(rg) ? rg : regs.includes(p.rgSel) ? p.rgSel : regs[0] || '';
   const inR = r => !cur || r.g === cur || (!r.g && !all.some(y => y.g === cur && (y.t || 'item') === (r.t || 'item') && baseName(y.n) === baseName(r.n)));
-  const R = all.filter(inR), ogs = optGroups(R.filter(r => r.t === 'opt')), isCol = colLabels(R.filter(r => (r.t || 'item') !== 'opt' && r.t !== 'note'));
+  const R = all.filter(inR), ogs = optGroups(R.filter(r => r.t === 'opt'), R), isCol = colLabels(R.filter(r => (r.t || 'item') !== 'opt' && r.t !== 'note'));
   const out = [], idx = {}, owned = new Set();
   R.forEach(r => { const t = r.t || 'item'; if (t === 'opt' || t === 'note') return;
     const T = labelOf(r.n), z = T.z, b = T.n, k = t + '|' + r.c + '|' + b;
@@ -199,9 +199,9 @@ function menuChoices(p, rg) {
   const ct = {}; out.forEach(o => o.temps.forEach(t => (ct[o.rc] = ct[o.rc] || new Set()).add(t)));
   /* 飲料：每一杯都可以選溫度（去冰、溫、熱）和甜度（正常糖、微糖、無糖）；不選就是店家預設 */
   const DRINK_C = /飲|茶|咖啡|拿鐵|果汁|奶昔|冰沙|可可|鮮奶|豆漿|汽水|氣泡|調飲|特調/, DRINK_N = /茶|咖啡|拿鐵|美式|果汁|奶昔|冰沙|可可|鮮奶|豆漿|歐蕾|多多|養樂多|汽水|可樂|氣泡|檸檬|冬瓜|烏龍|紅茶|綠茶|青茶|奶茶|牛奶|豆奶|梅|蜜|飲/, NOT_D = /吐司|麵包|蛋糕|餅|麵|飯|鍋|湯|堡|捲|派|酥|布丁|凍|雞|豬|牛排|魚|蝦|丸|粥|塔|鬆|蛋$/;
-  out.forEach(o => { if (o.t !== 'item') return; const isD = DRINK_C.test(o.rc || '') ? !/湯|麵|飯|鍋/.test(o.n) : (DRINK_N.test(o.n) && !NOT_D.test(o.n)); if (!isD) return;
+  out.forEach(o => { if (o.t !== 'item') return; const isD = DRINK_C.test(o.rc || '') ? !/湯|麵|飯|鍋/.test(o.n) : (DRINK_N.test(o.n) && !NOT_D.test(o.n)); if (!isD) return; const bottled = /可樂|雪碧|汽水|沙士|蘋果西打|罐裝|瓶裝|鋁罐|寶特瓶|\d+\s*ml/i.test(o.n) && !/調|特調/.test(o.n); if (bottled) return;   /* 罐裝、瓶裝飲料不能調冰塊甜度 */
     if (!o.og.some(g => /溫度|冰|熱/.test(g.label))) o.og = o.og.concat([{label: '溫度', tag: '選一', L: ['去冰', '溫', '熱'].map(n => ({n, p: ''})), drink: 1}]);
-    if (!o.og.some(g => /糖|甜/.test(g.label))) o.og = o.og.concat([{label: '甜度', tag: '選一', L: ['正常糖', '微糖', '無糖'].map(n => ({n, p: ''})), drink: 1}]); });
+    if (!/無糖/.test(o.n) && !o.og.some(g => /糖|甜/.test(g.label))) o.og = o.og.concat([{label: '甜度', tag: '選一', L: ['正常糖', '微糖', '無糖'].map(n => ({n, p: ''})), drink: 1}]); });
   const fin = []; out.forEach(o => { const tp = ct[o.rc]; if (tp && tp.size > 1 && o.t === 'item' && !o.og.some(g => /溫度/.test(g.label))) o.og = o.og.concat([{label: '溫度', tag: '選一', L: [...tp].map(n => ({n, p: ''}))}]);
     const keep = o.v.filter(v => !v.s || v.s === '一般' || isCol(o.rc, v.s));
     if (keep.length) fin.push(Object.assign({}, o, {v: keep.sort((a, b) => szRank(a.s) - szRank(b.s))}));
@@ -217,7 +217,7 @@ function pickOpts(o, v) {
       const c = calc(); $('#poT', sh.foot).innerHTML = `單價 <b>${money(numP(v.p) + c.add)}</b>${c.names.length ? ' · ' + esc(c.names.join('，')) : ''}`; };
     draw();
     sh.body.onclick = e => { const b = e.target.closest('[data-g]'); if (!b) return; const gi = +b.dataset.g, i = +b.dataset.i, g = o.og[gi]; buzz(8);
-      if (g.multi) { const k = ch[gi].indexOf(i); if (k < 0) ch[gi].push(i); else ch[gi].splice(k, 1); } else ch[gi] = [i]; draw(); };
+      if (g.multi) { const k = ch[gi].indexOf(i); if (k >= 0) ch[gi].splice(k, 1); else if (g.max && ch[gi].length >= g.max) { buzz([20, 40, 20]); toast(`${g.label}最多選 ${g.max} 種，先取消一個再選`); return; } else ch[gi].push(i); } else ch[gi] = [i]; draw(); };
     sh.foot.onclick = e => { if (!e.target.closest('[data-a="ok"]')) return; const c = calc(); done = true; sh.close(); res({o: c.names.join('，'), add: c.add}); }; });
 }
 const xTags = x => `${x.s ? ` <span class="szT">${esc(x.s)}</span>` : ''}${x.o ? ` <span class="opT">${esc(x.o)}</span>` : ''}`;
@@ -247,7 +247,7 @@ function openOrder(m, opt = {}) {
       ${all.length ? `<div class="searchBox" style="margin:.2rem 0 .5rem"><input id="oQ" type="search" placeholder="搜尋品項…" value="${esc(q)}"></div>${cats.length > 1 ? `<div class="chipRow ordCats"><button class="chip ${cat ? '' : 'on'}" data-cat="">全部</button>${cats.map(c => `<button class="chip ${c === cat ? 'on' : ''}" data-cat="${esc(c)}">${esc(c)}</button>`).join('')}</div>` : ''}` : ''}
       <div class="ordList">${L.length ? (() => { let lc = ''; return L.map(o => { const h = o.c !== lc ? `<div class="olC">${esc(o.c)}</div>` : ''; lc = o.c;
           const oi = L.indexOf(o); return h + `<div class="olR"><div class="grow olN">${esc(o.n)}${o.og && o.og.length ? `<small class="olO">可選：${esc(o.og.map(g => g.label).join('、'))}</small>` : ''}</div><div class="olV">${o.v.map((v, vi) => { const k = cnt(o.full || o.n, v.s); return `<button data-oi="${oi}" data-vi="${vi}" class="${k ? 'on' : ''}">${v.s ? `<small>${esc(v.s)}</small>` : ''}${o.t === 'add' ? '+' : ''}${numP(v.p) || v.p === '0' ? money(v.p) : esc(v.p || '價格?')}${k ? `<i>${k}</i>` : ''}</button>`; }).join('')}</div></div>`; }).join(''); })()
-        : `<div class="empty" style="padding:1.2rem">${!P ? (m.pname ? '這家店不在收藏裡，可以用下面的「自訂品項」輸入' : '還沒有選店家，可以用下面的「自訂品項」輸入') : !(P.menu || []).length ? '這家店還沒有菜單表格<br><span class="small">到收藏打開店家，用「AI 辨識成表格」建立菜單；或用下面的「自訂品項」</span>' : '找不到符合的品項'}</div>`}</div>
+        : `<div class="empty" style="padding:1.2rem">${!P ? (m.pname ? '這家店不在收藏裡，可以用下面的「自訂品項」輸入' : '還沒有選店家，可以用下面的「自訂品項」輸入') : !(P.menu || []).length ? '這家店還沒有菜單表格<br><span class="small">到收藏打開店家，用「✨ Gemini 辨識」或「🤖 Claude 辨識」建立菜單；或用下面的「自訂品項」</span>' : '找不到符合的品項'}</div>`}</div>
       <div class="ordCus"><div class="lbl">自訂品項（菜單沒有的，會記住下次可以直接點）</div><div class="row" style="gap:.4rem"><input id="cN" placeholder="品名" maxlength="30" class="grow"><input id="cP" placeholder="單價" inputmode="decimal" style="width:5.5rem"><button class="btn sm pri" data-a="cusAdd">加入</button></div></div>`;
     $('#oTot', sh.foot).innerHTML = `這餐 ${m.items.reduce((s, x) => s + x.q, 0)} 份 · <b>${money(tot)}</b>`;
     const qi = $('#oQ', sh.body); if (qi) qi.oninput = debounce(e => { q = e.target.value.trim().toLowerCase(); const pos = qi.selectionStart; draw(); const n = $('#oQ', sh.body); n.focus(); try { n.setSelectionRange(pos, pos); } catch (er) {} }, 250); };

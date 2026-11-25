@@ -161,7 +161,7 @@ B. 組合式（自選）菜單：顧客依步驟挑選，例如「1 主食（選
 2. 價格只寫阿拉伯數字（不要 $ 或「元」）；看不清楚就留空，但品項仍要列出。
 3. 同一個品項有好幾個價格欄（例如 M/L/瓶、中/大、小碗/大碗、薄片/厚片、一般量/加大），每個價格各寫一行，品名後面用括號註明欄名，例如：品項|飲料|紅茶 (L)|25 與 品項|飲料|紅茶 (XL)|30。價格欄是「-」「—」「/」、斜線或空白，代表沒有這個尺寸，那一格不要寫。
 4. 表格是「口味 × 種類」的對照表時（例如每一列是 起司、火腿，每一欄是 吐司、漢堡），每一格各寫一行：分類寫欄名，品名寫「列名＋欄名」，例如：品項|吐司|起司吐司|30。
-5. 套餐把內容寫在品名，例如：品項|套餐|1 原味蛋餅＋蘿蔔糕(2片)|55。
+5. 套餐沒有自己的名稱、只有編號和內容時，把內容寫在品名，例如：品項|套餐|1 原味蛋餅＋蘿蔔糕(2片)|55。套餐有自己的名稱時（例如「1 臻寶炸雞獨享餐」下面一行小字寫「台式椒鹽臻寶腿丁(小)+黃金脆薯+紅茶」），品名只寫編號和名稱，內容另外寫一行說明，例如：品項|經典組合餐系列|1 臻寶炸雞獨享餐|129 與 說明|經典組合餐系列|1 臻寶炸雞獨享餐：台式椒鹽臻寶腿丁(小)+黃金脆薯+紅茶。套餐裡可以自己挑的（例如「灑粉4選3：胡椒粉／香辣粉／海苔粉／梅粉」）照第 14 條寫成選項，分類用「套餐名稱・選項名稱（4選3）」。
 6. 菜單分成左右好幾欄時，先把同一欄（同一個區塊）由上到下全部列完，再換下一個區塊，不要左右交錯。
 7. 不要列出：店名、電話、地址、營業時間、公休日、外帶/內用、桌號、數量欄、勾選框、合計欄、QR code。
 8. 不可遺漏，也不可以自己編造。文字照抄菜單原文（繁體中文）。
@@ -180,7 +180,10 @@ B. 組合式（自選）菜單：顧客依步驟挑選，例如「1 主食（選
   ・只有一個品項有這組勾選框 → 分類寫「品名・選項名稱（選一）」，例如 選項|特製涼麵・口味（選一）|原味|、選項|特製涼麵・口味（選一）|辣味|。
   ・同一區好幾個品項都有 → 分類寫「區塊名稱・選項名稱（選一）」，加價寫在價格欄，例如 選項|主食區・份量（選一）|一般量|、選項|主食區・份量（選一）|麵量加大|10。
   ・同一區裡沒有這組勾選框、或註明不能選的品項（例如「滷肉飯無加大」、上面另外分欄的特製涼麵），寫在括號裡用「除外」，例如 選項|主食區・份量（選一，特製涼麵、滷肉飯除外）|麵量加大|10。
-  ・勾選框欄上面的價格欄（例如 一般量 55／特大量 65）才是尺寸，照第 3 條寫。`;
+  ・勾選框欄上面的價格欄（例如 一般量 55／特大量 65）才是尺寸，照第 3 條寫。
+21. 推薦星號★、NEW、新品、辣椒圖示、HOT 這類標記不要寫進品名，品名只寫文字本身。
+22. 區塊標題旁邊或品項旁邊的小字提醒（例如「飲料換購可補差價」「可加價升級尺寸&口味」「嚴選去骨腿丁」），寫成說明行：說明|經典組合餐系列|飲料換購可補差價。整張菜單最下面的注意事項（咖啡因標示、圖片僅供參考、偶發性碎骨）、品牌宣傳（本店使用○○肉品）、線上點餐 QR code 都不要輸出。
+23. 同一個系列有好幾種口味、共用同一排尺寸價格時（例如「臻寶腿丁（醬料系列）台式椒鹽／川味麻辣／泰式糖醋，小79 中119 大229」），每個口味各自寫出每個尺寸，例如：品項|臻寶腿丁（醬料系列）|台式椒鹽 (小)|79、品項|臻寶腿丁（醬料系列）|台式椒鹽 (中)|119……；口味後面括號裡的配料說明（內含：蔥花、蒜片、辣椒）寫成說明行。如果口味是讓顧客挑的灑粉、醬料、只有一個品名（例如「臻寶腿丁（灑粉系列）胡椒粉／香辣粉／海苔粉／梅粉，小75 中115 大225」），品名寫系列名稱並寫出每個尺寸，口味寫成選項：品項|臻寶腿丁（灑粉系列）|臻寶腿丁 (小)|75、選項|臻寶腿丁（灑粉系列）・灑粉（選一）|胡椒粉|。`;
 const SZ = /\s*[（(]([^()（）]{1,8})[)）]\s*$/;
 /* 尺寸由小到大：S → M → L → XL → 瓶 */
 const SZ_ORDER = ['XS', 'S', '小', '小杯', '小碗', '小份', '薄', '薄片', '單', 'M', '中', '中杯', '中碗', '一般', '一般量', '正常', 'L', '大', '大杯', '大碗', '大份', '厚', '厚片', '雙', 'XL', '特大', '特大杯', '加大', '超大', 'XXL', '瓶', '瓶裝', '罐', '桶'];
@@ -191,13 +194,19 @@ const szOf = n => { const m = String(n || '').match(SZ); if (!m) return ''; cons
 /* 真正的「尺寸」才分欄：S/M/L、大中小、杯／瓶／碗／份…；乾／湯、高麗菜／韭菜這種是不同品項，留在品名裡各自一行 */
 const isSizeWord = (z, multi) => !!z && (SZ_ORDER.includes(z.toUpperCase()) || /杯|瓶|罐|碗|份|盒|吋|寸|oz|ml|cc|公克|克|斤|兩|^(一般|特大|大|小|中|加大|超大)量$/i.test(z) || (multi && /^\d+\s*(片|隻|顆|個|入|塊|串|粒|條|支|尾|人)$/.test(z)));
 /* 選項群組：「經典系列・麵包（選一）」→ 屬於「經典系列」、名稱「麵包」、標籤「選一」 */
-function optGroups(rows) { const gs = []; rows.forEach(r => { let g = gs.find(x => x.c === r.c); if (!g) gs.push(g = {c: r.c, L: []}); g.L.push(r); });
+/* 品名比對時忽略編號和尺寸：「5 雙人臻寶炸雞餐」「1號餐-清爽鳳梨 (套餐)」→「雙人臻寶炸雞餐」「清爽鳳梨」 */
+const itemKey = n => String(n || '').replace(SZ, '').replace(/^\s*(?:[A-Za-z]?\d+|[A-Z])\s*(?:號餐|號|[.、．\-－])?\s*[-－]?\s*/, '').replace(/\s+/g, '').trim();
+const ownerIs = (name, owner) => !!owner && (owner === name || String(name).replace(SZ, '').trim() === owner || (itemKey(owner).length >= 2 && itemKey(name) === itemKey(owner)));
+function optGroups(rows, all) { const gs = []; rows.forEach(r => { let g = gs.find(x => x.c === r.c); if (!g) gs.push(g = {c: r.c, L: []}); g.L.push(r); });
   gs.forEach(g => { const m = String(g.c || '').match(/^(.*?)[（(]([^()（）]+)[)）]$/), nm = (m ? m[1] : g.c || '').trim(), parts = nm.split(/\s*[・·‧．\-－:：]\s*/).filter(Boolean);
-    g.tag = m ? m[2] : ''; g.owner = parts.length > 1 ? parts[0] : ''; g.label = parts.length > 1 ? parts.slice(1).join('・') : nm; g.multi = /多選|可複選|複選|任選\s*[2-9二三四五]/.test(g.tag);
+    g.tag = m ? m[2] : ''; g.owner = parts.length > 1 ? parts[0] : ''; g.label = parts.length > 1 ? parts.slice(1).join('・') : nm; g.multi = /多選|可複選|複選|任選\s*[2-9二三四五]|選\s*[2-9二三四五六七八九十兩]/.test(g.tag); { const mm = g.tag.match(/選\s*([2-9]|[二兩三四五六七八九十])/); g.max = mm ? (+mm[1] || '_一二三四五六七八九十'.indexOf(mm[1]) || (mm[1] === '兩' ? 2 : 0)) : 0; }
     /* 「（選一，滷肉飯除外）」：這些品項不能選這組 */
     g.excl = []; g.tag = g.tag.replace(/[，,、\s]*([^，,（）()]+?)(除外|不適用|無加大|不可選)$/, (x, a) => { g.excl = a.split(/[、\/／和及]/).map(t => t.trim()).filter(Boolean); return ''; }).trim(); });
+  /* 群組名稱開頭就是某個品項（例如「雙人臻寶炸雞餐・灑粉（4選3）」）：只屬於那個品項所在的分類，不要因為名稱裡有「炸雞」就跑到炸雞系列 */
+  const items = (all || rows).filter(r => (r.t || 'item') === 'item');
+  gs.forEach(g => { if (!g.owner || items.some(r => normCat(r.c) === normCat(g.owner))) return; const it = items.find(r => ownerIs(r.n, g.owner)); if (it) g.ownerCat = normCat(it.c); });
   return gs; }
-const ownsGroup = (c, g) => !!g.owner && (g.owner === c || String(c).includes(g.owner) || g.owner.includes(String(c).replace(/(系列|類|區)$/, '')));
+const ownsGroup = (c, g) => !!g.owner && (g.ownerCat ? normCat(c) === g.ownerCat : g.owner === c || String(c).includes(g.owner) || g.owner.includes(String(c).replace(/(系列|類|區)$/, '')));
 /* 選項群組是不是專屬某一個品項：標題裡有品名（「拿鐵咖啡溫度」「厚厚好食口味」）就只屬於那個品項 */
 const lcsStr = (a, b) => { let best = ''; for (let i = 0; i < a.length; i++) for (let j = i + best.length + 1; j <= a.length; j++) { const t = a.slice(i, j); if (b.includes(t)) best = t; else break; } return best; };
 function groupItem(g, names) { let best = ''; names.forEach(n => { n = String(n || ''); if (n.length >= 2 && g.label.includes(n) && n.length > best.length) best = n; }); if (best) return best;
@@ -208,9 +217,10 @@ const shortLabel = (g, item) => (item ? g.label.replace(item, '').replace(/^[・
 /* 某個品項可以選的群組：系列共用的＋專屬這個品項的（別的品項專屬的不算） */
 const colLike = g => !g.multi && g.L.length <= 3 && !/溫度|冰|熱|甜|糖/.test(g.label);
 /* 品項自己有一組勾選選項（例如涼麵的 原味／辣味）時，整區共用的勾選選項（麵量加大）就不套用到它，和菜單表格一致 */
-function groupsFor(c, name, names, ogs) { const L = groupsFor0(c, name, names, ogs), own = L.filter(g => colLike(g) && g.owner && (g.owner === name || String(name).replace(SZ, '').trim() === g.owner));
-  return own.length ? L.filter(g => own.includes(g) || !(colLike(g) && ownsGroup(c, g) && g.owner !== name && String(name).replace(SZ, '').trim() !== g.owner)) : L; }
-function groupsFor0(c, name, names, ogs) { return ogs.filter(g => { if ((g.excl || []).some(x => name === x || name.includes(x) || x.includes(name))) return false; if (g.owner && (g.owner === name || String(name).replace(SZ, '').trim() === g.owner)) return true; const gi = groupItem(g, names); return ownsGroup(c, g) ? !gi || gi === name : !g.owner && !!gi && gi === name; })
+function groupsFor(c, name, names, ogs) { const L = groupsFor0(c, name, names, ogs), own = L.filter(g => colLike(g) && g.owner && ownerIs(name, g.owner));
+  return own.length ? L.filter(g => own.includes(g) || !(colLike(g) && ownsGroup(c, g) && !ownerIs(name, g.owner))) : L; }
+function groupsFor0(c, name, names, ogs) { return ogs.filter(g => { if ((g.excl || []).some(x => name === x || name.includes(x) || x.includes(name))) return false; if (g.ownerCat) return normCat(c) === g.ownerCat && ownerIs(name, g.owner);   /* 專屬某個品項（例如 5 雙人臻寶炸雞餐 的灑粉 4選3）：只給那個品項 */
+    if (g.owner && ownerIs(name, g.owner)) return true; const gi = groupItem(g, names); return ownsGroup(c, g) ? !gi || gi === name : !g.owner && !!gi && gi === name; })
   .map(g => Object.assign({}, g, {label: shortLabel(g, groupItem(g, names))})); }
 /* 冰／熱：「拿鐵咖啡 (熱)」、尺寸「12oz冰」→ 同一品項，溫度另外列成選項 */
 const TEMP_RE = /^(熱|冰|溫|常溫|去冰|少冰|熱飲|冰飲)$/;
@@ -265,7 +275,8 @@ function fixRegions(menu) {
 const MT = {品項: 'item', 選項: 'opt', 加購: 'add', 說明: 'note', 備註: 'note', item: 'item', opt: 'opt', add: 'add', note: 'note'};
 const normCat = c => String(c || '').replace(/\s+/g, '').replace(/[:：]+$/, '').replace(/\(/g, '（').replace(/\)/g, '）') || '其他';
 function parseMenu(t) {
-  const out = []; String(t || '').split(/\r?\n/).forEach(l => { l = l.replace(/^[\s>*\-•`]+/, '').trim(); if (!l || /^```/.test(l)) return;
+  const out = []; String(t || '').split(/\r?\n/).forEach(l => { l = l.replace(/^[\s>*\-•`]+/, '').trim(); if (!l || /^```/.test(l) || /^[\s|｜:：\-—]+$/.test(l)) return;
+    l = l.replace(/^[|｜]\s*/, '').replace(/\s*[|｜]$/, '');   /* Claude 有時會寫成 markdown 表格：| 品項 | 分類 | … | */
     let f = l.split(/\s*[|｜]\s*/); if (f.length < 2) return; let ty = 'item';
     if (MT[f[0]]) { ty = MT[f[0]]; f = f.slice(1); } else if (/^(類型|type)$/i.test(f[0])) return;
     let rg = ''; if (f.length >= 4 && /^[\d$＄.,\-—–/／\s]*$/.test(f[f.length - 2]) && !/^[\d$＄.,\-—–/／\s]*$/.test(f[f.length - 1]) && f[f.length - 1].length <= 12) { rg = f[f.length - 1].trim(); f = f.slice(0, -1); }
@@ -390,6 +401,58 @@ async function aiMenu(p, prefer, albums, opt) { opt = opt || {};
   p.menuSrc = {kind: 'ai', t: Date.now(), ver: albums.map(a => a.name).join('、'), model: [...models].join('、'), partial, appv: APP_VERSION};
   await savePlace(p);
   menuDone(p, `✅「${p.name}」辨識完成：${rows.length} 個品項${hasReg ? '（' + regTxt + '）' : ''}，用時 ${Math.round((Date.now() - t0) / 1000)} 秒${fail ? '（有圖片失敗：' + fail + '）' : partial ? '（結果可能不完整，請核對）' : ''}${dropped.size ? `\n同一張圖裡的「${[...dropped].join('、')}」版本沒有放進表格` : ''}`);
+}
+
+/* ---------- 用 Claude 月租方案辨識 ----------
+   Claude 的月租（Pro／Max）只能在 Claude 官方 App／網頁裡使用，不能讓別的 App 直接呼叫（那要另外申請按用量計費的 API 金鑰）。
+   所以這裡改成「半自動」：把菜單照片和辨識指令一起傳給 Claude App → 在 Claude 按送出 → 複製回覆 → 回到這裡貼上，套用同一套表格規則。 */
+const CLAUDE_PKG = 'com.anthropic.claude';
+const claudePrompt = g => MENU_PROMPT + (g ? `\n\n補充：這是「${g}」的菜單。如果圖片裡並排了好幾份不同地區或分店的菜單，只辨識角落標示「${g}」（或屬於${g}的縣市）的那一份，其他份完全不要輸出。` : '')
+  + '\n\n如果有好幾張圖片，它們是同一份菜單的不同部分：全部合併成一份輸出，重疊的品項只寫一次。\n請把全部結果放在「同一個」程式碼區塊（```）裡，區塊外面不要寫任何其他文字，方便我整段複製。';
+async function claudeMenu(p) {
+  if (AIJ.jobs[p.id]) { toast('這間店的 AI 工作還在進行中'); return; }
+  const L = albumsOf(p).filter(a => a.imgs.length); if (!L.length) { toast('請先在「管理圖檔」加入菜單圖片'); return; }
+  let al = L[0], sent = false;
+  const sh = sheet({title: '🤖 用 Claude 辨識菜單', full: true, foot: '<button class="btn pri" data-a="put">帶入表格</button>', onClose() { document.removeEventListener('visibilitychange', onVis); }});
+  const render = () => { const v = ($('#clT', sh.body) || {}).value || '';
+    sh.body.innerHTML = `<div class="small muted" style="margin-bottom:.8rem">使用你的 <b>Claude 月租方案</b>（Pro／Max）辨識，不會用到 API 用量額度。Claude 月租只能在 Claude 官方 App 裡使用，所以分兩步：</div>
+      ${L.length > 1 ? `<div class="h3">要辨識哪個版本？</div><div class="clAl">${L.map(a => `<button class="chip ${a === al ? 'on' : ''}" data-al="${a.id}">${a.rg ? '【' + esc(a.rg) + '】' : ''}${esc(a.name)}（${a.imgs.length} 張）</button>`).join('')}</div>` : ''}
+      <div class="clStep"><b>①</b><div class="grow"><b>傳給 Claude</b><small>會把 ${al.imgs.length} 張菜單照片和辨識指令一起傳到 Claude App（指令也會複製好；如果輸入框是空的，長按貼上），在 Claude 按送出。</small>
+        <button class="btn olive block" data-a="send">${sent ? '↻ 再傳一次' : '📤 傳到 Claude App'}</button><button class="btn sm block" data-a="cp" style="margin-top:.4rem">📋 只複製辨識指令</button></div></div>
+      <div class="clStep"><b>②</b><div class="grow"><b>貼回結果</b><small>等 Claude 回覆完，按程式碼區塊右上角的「複製」，回到這裡。回到 App 時會自動貼上，也可以按下面的按鈕。</small>
+        <textarea id="clT" rows="7" placeholder="品項|分類|品名|價格…">${esc(v)}</textarea><button class="btn sm block" data-a="paste" style="margin-top:.4rem">📋 貼上</button><div id="clN" class="small muted" style="margin-top:.4rem"></div></div></div>`;
+    count(); };
+  const count = () => { const t = $('#clT', sh.body).value, n = t.trim() ? parseMenu(t).length : 0, el2 = $('#clN', sh.body); el2.textContent = t.trim() ? (n ? `讀到 ${n} 個品項` : '看不出品項格式，請確認複製的是 Claude 回覆的程式碼區塊') : ''; $('[data-a="put"]', sh.foot).disabled = !n; };
+  const readClip = async () => { try { return String((IS_APP && NB.paste ? NB.paste() : await navigator.clipboard.readText()) || ''); } catch (e) { return ''; } };
+  const onVis = async () => { if (document.hidden || !sent || !document.body.contains(sh.body)) return; const ta = $('#clT', sh.body); if (!ta || ta.value.trim()) return;
+    const t = await readClip(); if (parseMenu(t).length >= 2 && t.trim() !== claudePrompt(al.rg || '').trim()) { ta.value = t; count(); buzz(30); toast('已自動貼上 Claude 的結果，確認後按「帶入表格」'); } };
+  document.addEventListener('visibilitychange', onVis);
+  render();
+  sh.body.addEventListener('input', e => { if (e.target.id === 'clT') count(); });
+  sh.body.addEventListener('click', async e => { const c = e.target.closest('[data-al]'); if (c) { buzz(10); al = L.find(a => a.id === c.dataset.al) || al; render(); return; }
+    const b = e.target.closest('[data-a]'); if (!b) return; buzz(15); const a = b.dataset.a, prompt = claudePrompt(al.rg || '');
+    if (a === 'cp') copyText(prompt);
+    else if (a === 'paste') { const t = await readClip(); $('#clT', sh.body).value = t; count(); }
+    else if (a === 'send') { b.disabled = true; b.textContent = '準備圖片…';
+      try { const blobs = (await Promise.all(al.imgs.map(id => imgBlob(id)))).filter(Boolean); if (!blobs.length) throw new Error('讀不到菜單圖片');
+        if (IS_APP && NB.copy) NB.copy(prompt); else try { await navigator.clipboard.writeText(prompt); } catch (e2) {}
+        if (IS_APP && NB.shareFiles) { const list = await Promise.all(blobs.map(async x => ({mime: x.type || 'image/jpeg', b64: await blobB64(x)})));
+          const r = NB.shareFiles(JSON.stringify(list), prompt, CLAUDE_PKG); if (r === 'fail') throw new Error('無法開啟分享'); if (r === 'chooser') toast('找不到 Claude App，請在清單裡選 Claude（或先到 Play 商店安裝）', 4000); }
+        else if (navigator.canShare && navigator.canShare({files: blobs.map((x, k) => new File([x], 'menu' + (k + 1) + '.jpg', {type: x.type || 'image/jpeg'}))})) {
+          await navigator.share({files: blobs.map((x, k) => new File([x], 'menu' + (k + 1) + '.jpg', {type: x.type || 'image/jpeg'})), text: prompt}); }
+        else { toast(IS_APP ? '這個功能需要更新 APK，已複製指令，請在 Claude 自己加入菜單照片後貼上' : '已複製辨識指令：請在 claude.ai 上傳菜單照片後貼上指令', 5000); openUrl('https://claude.ai/new'); }
+        sent = true; } catch (e2) { toast('❌ ' + e2.message, 3500); }
+      render(); } });
+  sh.foot.onclick = async () => { const t = $('#clT', sh.body).value, rows0 = parseMenu(t); if (!rows0.length) return;
+    const g = al.rg || '', pk = pickRegionRows(rows0, g), rows = pk.rows, regs = new Set([g]); const got = new Set(rows.map(r => r.g || '')); if (got.size && !got.has('')) regs.delete(''); got.forEach(x => regs.add(x));
+    const old = (p.menu || []).filter(r => regs.has(r.g || '')); let replace = true;
+    if (old.length) replace = await ask(`目前表格${g ? '「' + g + '」' : ''}已有 ${old.length} 個品項。\n按「刪掉舊的、換成新的」＝換成這次 Claude 的辨識結果。\n按「取消」＝保留舊表格，把新結果加在後面。`, '刪掉舊的、換成新的');
+    if (!DB.places.includes(p)) return;
+    p.menu = groupMenu(replace ? (p.menu || []).filter(r => !regs.has(r.g || '')).concat(rows) : (p.menu || []).concat(rows));
+    const rs = [...regs].filter(Boolean); if (rs.length && !rs.includes(p.rgSel)) p.rgSel = rs[0];
+    p.menuSrc = {kind: 'ai', t: Date.now(), ver: al.name, model: 'Claude（月租）', partial: false, appv: APP_VERSION};
+    AILOG.add({kind: '菜單辨識', place: p.name, model: 'Claude（月租・手動貼上）', ms: 0, ok: true, n: rows.length, note: g});
+    await savePlace(p); sh.close(); menuDone(p, `✅「${p.name}」已帶入 Claude 的辨識結果：${rows.length} 個品項`); };
 }
 
 /* ---------- 上網找菜單 ----------
@@ -707,9 +770,9 @@ function openPlace(id, toMenu) {
         const o = out[idx[k]]; if (col) o.multi = true;
         if (!o.v.some(x => x.s === sz && x.p === r.p) && !(T.t && !sz && o.v.some(x => x.p === r.p))) o.v.push({s: sz, p: r.p}); });
       return out; };
-    const temps = {}, ogs = optGroups(opts), used = new Set(), notes = all.filter(r => TY(r) === 'note' && inReg(r)), choice = {};
+    const temps = {}, ogs = optGroups(opts, all), used = new Set(), notes = all.filter(r => TY(r) === 'note' && inReg(r)), choice = {};
     /* 卡片上方：這個系列可以選的東西（麵包、口味、醬料、冰／熱） */
-    const gRow = g => `<div class="mcOR"><b>${esc(g.label)}</b>${g.tag ? `<span class="tag">${esc(g.tag)}</span>` : ''}<span class="mcOL">${g.L.map(r => `<span>${esc(r.n)}${r.p ? `<em>+$${esc(r.p)}</em>` : ''}</span>`).join('')}</span></div>`;
+    const gRow = g => `<div class="mcOR"><b>${g.ownerCat ? esc(itemKey(g.owner)) + '・' : ''}${esc(g.label)}</b>${g.tag ? `<span class="tag">${esc(g.tag)}</span>` : ''}<span class="mcOL">${g.L.map(r => `<span>${esc(r.n)}${r.p ? `<em>+$${esc(r.p)}</em>` : ''}</span>`).join('')}</span></div>`;
     const gSig = g => g.label + '|' + g.L.map(r => r.n + r.p).join(',');
     /* 卡片上方：整個系列共用的選擇；每個品項都有一模一樣的專屬選項（例如每杯咖啡都能選冰／熱）也合併到上方，其餘的放在各品項下面 */
     /* 所有選項都統一放在卡片上方：共用的寫選項名稱；專屬某個品項的寫出是哪個品項（例如「厚厚好食口味」「厚片抹醬」）；每個品項都一模一樣的（例如每杯都能選冰／熱）合併成一行 */
@@ -757,7 +820,7 @@ function openPlace(id, toMenu) {
     return html || '<div class="empty" style="padding:1rem">找不到符合的品項</div>';
   }
   function tableHtml() {
-    const rows = p.menu || []; if (!rows.length && !editT) return `<div class="empty" style="padding:1.2rem"><span class="muted">還沒有菜單表格。<br>可以用菜單照片「✨ AI 辨識」、「🌐 上網找菜單」，或手動建立。</span><div style="margin-top:.7rem"><button class="btn sm" data-a="tEdit">✎ 手動建立表格</button></div></div>`;
+    const rows = p.menu || []; if (!rows.length && !editT) return `<div class="empty" style="padding:1.2rem"><span class="muted">還沒有菜單表格。<br>可以用菜單照片「✨ Gemini 辨識」、「🤖 Claude 辨識」、「🌐 上網找菜單」，或手動建立。</span><div style="margin-top:.7rem"><button class="btn sm" data-a="tEdit">✎ 手動建立表格</button></div></div>`;
     if (editT) return `${curReg() ? `<div class="callout small" style="margin:0 0 .5rem">正在編輯「${esc(curReg())}」的菜單（不分區的品項也會顯示）。</div>` : ''}<div class="small muted" style="margin-bottom:.4rem">類型：品項＝有價格的餐點；選項＝組合式菜單可挑選的東西（分類寫「步驟（選幾種）」，例如：主食（選一））；加購＝加購區、加價。</div>
       <table class="mtable edit"><thead><tr><th style="width:4.6rem">類型</th><th style="width:26%">分類</th><th>品名</th><th style="width:18%" class="p">價格</th><th></th></tr></thead><tbody>${rows.map((r, i) => !inReg(r) ? '' : `<tr><td><select data-i="${i}" data-k="t">${[['item', '品項'], ['opt', '選項'], ['add', '加購'], ['note', '說明']].map(([v, l]) => `<option value="${v}" ${TY(r) === v ? 'selected' : ''}>${l}</option>`).join('')}</select></td><td><input data-i="${i}" data-k="c" value="${esc(r.c)}"></td><td><input data-i="${i}" data-k="n" value="${esc(r.n)}"></td><td><input data-i="${i}" data-k="p" value="${esc(r.p)}" inputmode="decimal" style="text-align:right"></td><td class="x"><button class="ic" data-a="tDel" data-i="${i}" style="color:var(--danger);width:2rem;height:2rem">✕</button></td></tr>`).join('')}</tbody></table>
       <div class="row wrap" style="margin-top:.6rem"><button class="btn sm" data-a="tAdd">＋ 新增一列</button><button class="btn sm danger" data-a="tClear">清空表格</button><span class="grow"></span><button class="btn sm pri" data-a="tEdit">完成</button></div>`;
@@ -786,7 +849,7 @@ function openPlace(id, toMenu) {
       ${ptab === 'recs' ? shopPlaceHtml(p) : `      <div class="h3 pTabH"><span class="grow">📋 菜單 <span class="muted small" style="font-weight:600">${(p.menu || []).length ? p.menu.length + ' 個品項' : ''}</span></span></div>
       ${job ? `<div class="jobBar"><span class="spin"></span><span class="grow">${esc(job.msg || 'AI 處理中…')}<small>在背景執行中，完成後會自動帶入，可以先離開這個畫面</small></span></div>` : ''}
       <div class="mBtns"><button class="btn pri" data-a="imgs" ${ni ? '' : 'disabled'}>🖼️ 打開菜單圖檔${ni ? `（${nv > 1 ? nv + ' 個版本・' : ''}${ni} 張）` : ''}</button><button class="btn" data-a="albums">🗂️ ${ni ? '管理圖檔' : '加入菜單圖片'}</button>
-        <button class="btn olive" data-a="ai" ${job ? 'disabled' : ''}>✨ AI 辨識成表格</button><button class="btn olive" data-a="webm" ${job ? 'disabled' : ''}>🌐 上網找菜單</button></div>${S.aikey && aiLeftText() ? `<div class="small muted" style="margin:-.3rem 0 .7rem">${esc(aiLeftText())}（每天 ${AIQ.resetAt()} 重置）</div>` : ''}
+        <button class="btn olive" data-a="ai" ${job ? 'disabled' : ''}>✨ Gemini 辨識</button><button class="btn olive" data-a="claude" ${job ? 'disabled' : ''}>🤖 Claude 辨識</button><button class="btn olive mWide" data-a="webm" ${job ? 'disabled' : ''}>🌐 上網找菜單</button></div>${S.aikey && aiLeftText() ? `<div class="small muted" style="margin:-.3rem 0 .7rem">${esc(aiLeftText())}（每天 ${AIQ.resetAt()} 重置）</div>` : ''}
       <div id="mtWrap">${tableHtml()}</div>`}`;
     sh.body.scrollTop = top;
   }
@@ -802,7 +865,7 @@ function openPlace(id, toMenu) {
     else if (a === 'lnk') { e.preventDefault(); const l = (p.menuSrc.links || [])[i]; if (l) openUrl(l.uri); }
     else if (a === 'gfill') { busy('向 Google 更新資訊…'); try { await gFill(p); await savePlace(p); refreshAll(); toast('已更新營業時間等資訊'); } catch (er) { toast('❌ ' + er.message, 4000); } busy(false); render(); }
     else if (a === 'imgs') openMenuImgs(p); else if (a === 'albums') openAlbums(p, () => { render(); refreshAll(); });
-    else if (a === 'ai') aiMenu(p); else if (a === 'aiF') aiMenu(p, 'flash'); else if (a === 'urlRe') urlMenu(p, p.menuUrl || p.menuSrc.url); else if (a === 'urlOpen') openUrl(p.menuUrl || p.menuSrc.url); else if (a === 'webm') webMenu(p);
+    else if (a === 'ai') aiMenu(p); else if (a === 'claude') claudeMenu(p); else if (a === 'aiF') aiMenu(p, 'flash'); else if (a === 'urlRe') urlMenu(p, p.menuUrl || p.menuSrc.url); else if (a === 'urlOpen') openUrl(p.menuUrl || p.menuSrc.url); else if (a === 'webm') webMenu(p);
     else if (a === 'mc') { mc = b.dataset.c; $('#mtWrap', sh.body).innerHTML = tableHtml(); }
     else if (a === 'mr') { p.rgSel = b.dataset.r; mc = ''; savePlace(p); $('#mtWrap', sh.body).innerHTML = tableHtml(); }
     else if (a === 'tEdit') { editT = !editT; p.menu = (p.menu || []).filter(r => (r.c + r.n + r.p).trim()); if (!editT) p.menu = groupMenu(p.menu); if (editT && !p.menu.length) p.menu.push({c: '', n: '', p: ''}); await savePlace(p); render(); refreshAll(); }

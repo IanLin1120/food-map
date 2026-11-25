@@ -71,6 +71,7 @@
         <receiver android:name="com.ian.foodmap.BootReceiver" android:exported="false">
             <intent-filter><action android:name="android.intent.action.BOOT_COMPLETED" /><action android:name="android.intent.action.MY_PACKAGE_REPLACED" /></intent-filter>
         </receiver>
+        <provider android:name="com.ian.foodmap.ShareFiles" android:authorities="${applicationId}.share" android:exported="false" android:grantUriPermissions="true" />
         <receiver android:name="com.ian.foodmap.Guard" android:exported="true" android:label="日日帳本 防誤刪"
             android:permission="android.permission.BIND_DEVICE_ADMIN">
             <meta-data android:name="android.app.device_admin" android:resource="@xml/device_admin" />

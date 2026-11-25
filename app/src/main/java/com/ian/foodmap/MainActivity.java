@@ -1299,6 +1299,33 @@ public class MainActivity extends Activity {
             } catch (Throwable t) { return false; }
         }
 
+        /* 把好幾張圖片（base64 JSON 陣列）連同文字分享給指定 App（例如 Claude）；沒裝那個 App 就跳出系統分享選單 */
+        @JavascriptInterface
+        public String shareFiles(final String b64Json, final String text, final String pkg) {
+            try {
+                org.json.JSONArray a = new org.json.JSONArray(b64Json); java.io.File d = ShareFiles.dir(MainActivity.this);
+                java.io.File[] old = d.listFiles(); if (old != null) for (java.io.File f : old) f.delete();
+                final java.util.ArrayList<android.net.Uri> us = new java.util.ArrayList<>();
+                for (int k = 0; k < a.length(); k++) { org.json.JSONObject o = a.getJSONObject(k); String ext = o.optString("mime", "image/jpeg").contains("png") ? ".png" : ".jpg";
+                    java.io.File f = new java.io.File(d, "menu_" + System.currentTimeMillis() + "_" + k + ext); java.io.FileOutputStream os = new java.io.FileOutputStream(f);
+                    os.write(android.util.Base64.decode(o.getString("b64"), android.util.Base64.DEFAULT)); os.close(); us.add(ShareFiles.uri(MainActivity.this, f)); }
+                final String[] res = {"chooser"};
+                final java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+                runOnUiThread(() -> {
+                    Intent i = new Intent(us.size() > 1 ? Intent.ACTION_SEND_MULTIPLE : Intent.ACTION_SEND); i.setType("image/*");
+                    if (us.size() > 1) i.putParcelableArrayListExtra(Intent.EXTRA_STREAM, us); else if (us.size() == 1) i.putExtra(Intent.EXTRA_STREAM, us.get(0));
+                    if (text != null && !text.isEmpty()) i.putExtra(Intent.EXTRA_TEXT, text);
+                    i.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                    if (us.size() > 0) { android.content.ClipData cd = android.content.ClipData.newRawUri("menu", us.get(0)); for (int k = 1; k < us.size(); k++) cd.addItem(new android.content.ClipData.Item(us.get(k))); i.setClipData(cd); }
+                    boolean ok = false;
+                    if (pkg != null && !pkg.isEmpty()) { try { Intent j = new Intent(i); j.setPackage(pkg); startActivity(j); ok = true; res[0] = "app"; } catch (Throwable t) { } }
+                    if (!ok) { try { startActivity(Intent.createChooser(i, "傳到哪個 App？")); } catch (Throwable t) { res[0] = "fail"; } }
+                    done.countDown();
+                });
+                done.await(3, java.util.concurrent.TimeUnit.SECONDS); return res[0];
+            } catch (Throwable t) { return "fail"; }
+        }
+
         @JavascriptInterface
         public void copy(String t) {
             ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
