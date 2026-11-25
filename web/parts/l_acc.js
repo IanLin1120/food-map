@@ -114,7 +114,7 @@ async function loadAcc() {
     A.recs.forEach(r => { if (r.tags && r.tags.length && !r.payee) r.payee = r.tags[0]; }); A.v = 2; saveAcc(); }
 }
 const accPeople = () => DB.acc.people || (DB.acc.people = []);
-/* 同一個人在不同地方用不同綽號：例如日常點餐叫「便當哥」、記帳叫「因因」。same 存「別名 id → 記帳裡的那個人 id」 */
+/* 同一個人在不同地方用不同綽號：例如日常點餐叫「阿明」、記帳叫「明哥」。same 存「別名 id → 記帳裡的那個人 id」 */
 const accSame = () => DB.acc.same || (DB.acc.same = {});
 function accPid(id) { const M = accSame(); let n = 0; while (id && M[id] && M[id] !== id && n++ < 6) id = M[id]; return id; }
 const mealWho = id => ((DB.mcfg && DB.mcfg.people) || []).find(u => u.id === id);
@@ -299,10 +299,10 @@ function accCard(r) {
   if (r.type === 'loss') return `<button class="acR card" data-r="${r.id}"><span class="acI loss">💸</span><span class="acM"><b>金額遺失${r.note ? `<em>${esc(String(r.note).split('\n')[0])}</em>` : ''}</b><small>${esc([r.t, acctName(r.acct)].filter(Boolean).join('・'))}</small></span><span class="acV neg">-${money(r.amt)}</span></button>`;
   if (r.type === 'tr') { const nl = String(r.note || '').split('\n'), ext = '外部' + (r.via ? `（${r.via}）` : '');
     return `<button class="acR card" data-r="${r.id}"><span class="acI tr ${c.k || ''}">${r.settle ? '🤝' : c.svg || '🔄'}</span><span class="acM"><b>${esc(nl[0] || c.n)}</b><small>${esc([r.t, (r.acct ? acctName(r.acct) : ext) + ' → ' + (acctName(r.to) || ext), +r.fee ? '手續費 ' + money(r.fee) : ''].filter(Boolean).join('・'))}</small>${nl.length > 1 ? `<span class="acNoteL">${esc(nl.slice(1).join('\n'))}</span>` : ''}</span><span class="acV ${r.settle && r.to ? 'pos' : ''}">${money(r.amt)}</span></button>`; }
-  const chips = sp.length ? (payer === me ? sp.map(s => { const st = (r.settled || {})[s.p]; return `<span class="acChip ${st ? 'ok' : ''}">${esc(aWho(s.p).name)} 欠 ${money(s.amt)}${st ? ' ✓' : ''}</span>`; }).join('')
-    : `<span class="acChip ${(r.settled || {})[payer] ? 'ok' : 'neg'}">${esc(aWho(payer).name)} 付・我欠 ${money(-accOwe(r, payer))}${(r.settled || {})[payer] ? ' ✓' : ''}</span>`) : '';
+  const chips = sp.length ? (payer === me ? sp.map(s => { const st = (r.settled || {})[s.p]; return `<span class="acChip ${st ? 'ok' : 'wait'}">${esc(aWho(s.p).name)} 欠 ${money(s.amt)}${st ? '・已收 ✓' : '・未收'}</span>`; }).join('')
+    : `<span class="acChip ${(r.settled || {})[payer] ? 'ok' : 'neg'}">${esc(aWho(payer).name)} 付・我欠 ${money(-accOwe(r, payer))}${(r.settled || {})[payer] ? '・已還 ✓' : '・未還'}</span>`) : '';
   const first = String(r.note || '').split('\n')[0];
-  return `<button class="acR card" data-r="${r.id}"><span class="acI">${esc(c.i)}</span><span class="acM"><b>${esc(r.payee || c.n)}${r.payee ? `<em>${esc(c.n)}</em>` : ''}</b><small>${[r.t, acctName(r.acct), first, (r.imgs || []).length ? '🖼️' + r.imgs.length : ''].filter(Boolean).map(esc).join('・')}</small>${chips ? `<span class="acChips">${chips}</span>` : ''}</span>
+  return `<button class="acR card" data-r="${r.id}"><span class="acI">${esc(c.i)}</span><span class="acM"><b>${esc(r.payee || c.n)}${r.payee ? `<em>${esc(c.n)}</em>` : ''}</b><small>${[r.t, sp.length && payer !== me ? aWho(payer).name + ' 付' : acctName(r.acct), first, (r.imgs || []).length ? '🖼️' + r.imgs.length : ''].filter(Boolean).map(esc).join('・')}</small>${chips ? `<span class="acChips">${chips}</span>` : ''}</span>
     <span class="acV ${r.type === 'in' ? 'pos' : 'neg'}">${r.type === 'in' ? '+' : '-'}${money(r.amt)}${sp.length && r.type === 'out' ? `<small>我 ${money(accMine(r))}</small>` : ''}</span></button>`;
 }
 /* 點常用紀錄：一律先打開「記一筆」讓你確認內容（金額有設就帶入），按儲存才記下 */
@@ -477,7 +477,7 @@ function accEdit(r0, preset, opt = {}) { accMigVia();
         : r.type === 'loss' ? `<div class="lbl">從哪裡遺失的（現金、銀行、卡片…）</div>${acctPickerHtml(r.acct, 'acct', r.fund)}<div class="small muted" style="margin:.2rem 0 .4rem">💸 金額遺失會從這個帳戶扣掉，另外統計，不算在支出裡。</div>`
         : `<div class="lbl">類別</div>${catPickerHtml(r.type, r.cat, openP)}
         <div class="lbl">商家／對象</div><button class="acPayee" data-a="payee">${r.payee ? `<b>${esc(r.payee)}</b>` : '<span class="muted">選擇店名，或自訂名稱（例如：台灣電力公司）</span>'}<i>›</i></button>${r.payee && !isPcatPayee(r.payee) && r.type !== 'tr' ? (storeLoc(r.payee) ? `<div class="pyLocT on">📍 已連結地圖${storeLoc(r.payee).addr ? '・' + esc(storeLoc(r.payee).addr) : ''}</div>` : '<button class="pyLocT" data-a="pinP">📌 這個地點還沒有地圖位置，點這裡釘選</button>') : ''}
-        <div class="lbl">${r.type === 'in' ? '收進哪個帳戶' : '付款帳戶'}</div>${acctPickerHtml(r.acct, 'acct', r.fund)}`}
+        <div class="lbl">${r.type === 'in' ? '收進哪個帳戶' : '付款帳戶'}</div>${r.type === 'out' && payer !== me && sp.length ? `<div class="acOther">👤 這筆是 <b>${esc(aWho(payer).name)}</b> 先付的，<b>不會從你的帳戶扣錢</b>，也不用選付款帳戶。<small>之後要還錢時按「🤝 對帳」，再選從哪個帳戶、用什麼方式付（例如行動支付轉帳）。</small></div>` : acctPickerHtml(r.acct, 'acct', r.fund)}`}
         ${r0 && Object.keys(r.settled || {}).length ? `<div class="acSetl">${Object.keys(r.settled).map(p => `<div class="row" style="gap:.5rem"><span class="grow">✓ 已和 ${esc(aWho(p).name)} 結清</span><button class="btn sm" data-unst="${p}">改回未結清</button></div>`).join('')}</div>` : ''}
         <div class="field" style="margin-top:.7rem"><label class="row" style="gap:.4rem"><span class="grow">備註／消費明細</span></label>${tr ? '' : `<div class="acRow2" style="margin-bottom:.5rem"><button class="btn" data-a="billEd">🧾 ${r.bill ? '編輯明細（' + (r.bill.items || []).length + ' 項）' : '用分帳方式輸入'}</button><button class="btn" data-a="fromBill">📥 從分帳帶入</button></div>`}<textarea id="acNote" rows="${Math.min(10, Math.max(3, String(r.note || '').split('\n').length + 1))}" placeholder="例如：\n鮮奶 ×2  $95\n雞蛋  $60">${esc(r.note || '')}</textarea></div>
         ${tr ? '' : accInvHtml(r)}
@@ -1094,7 +1094,7 @@ function renderAccCfg() {
       <div class="setR" style="cursor:default"><span class="gRi">📱</span><div class="t"><b>桌面小工具、控制中心按鈕</b><small>桌面：長按空白處 →「小工具」→ 日日帳本。控制中心：下拉兩次 → 編輯（鉛筆）→ 把「記一筆」「常用記帳」拖進去。</small></div></div></div></div>` : ''}
     <div class="setG"><h3>說明</h3><div class="setC"><button class="setR" data-a="guide" style="width:100%;text-align:left"><span class="gRi">📖</span><div class="t"><b>記帳 圖解說明</b><small>記一筆、常用、欠款對帳、資產、分析、備份換機</small></div><span class="chev">›</span></button></div></div>
     <div class="setG"><h3>分帳的人</h3><div class="setC"><div class="setR col"><div class="t"><b>我是誰</b><small>分帳、對帳時「我」是哪一個人（記帳自己的名單，和日常點餐分開）</small></div><div class="whoRow pplGrid">${accPeople().map(u => `<button data-me="${u.id}" class="${accMe() === u.id ? 'on' : ''}">${esc(u.icon)} ${esc(u.name)}</button>`).join('')}</div></div>
-      <div class="setR col"><div class="t"><b>🔗 同一個人，不同綽號</b><small>例如日常點餐叫「便當哥」、記帳叫「因因」：設定後分帳匯入記帳會自動對到同一個人，欠款、對帳也算在一起</small></div>
+      <div class="setR col"><div class="t"><b>🔗 同一個人，不同綽號</b><small>例如日常點餐叫「阿明」、記帳叫「明哥」：設定後分帳匯入記帳會自動對到同一個人，欠款、對帳也算在一起</small></div>
         ${Object.keys(accSame()).length ? `<div class="sameL">${Object.keys(accSame()).map(k => { const a = accSameName(k), m = aWho(k); return `<div class="sameR"><span>${esc((a && a.icon) || '👤')} ${esc(a ? a.name : (DB.acc.sameN || {})[k] || k)}${mealWho(k) ? '<small>日常</small>' : ''}</span><b>＝</b><span>${esc(m.icon)} ${esc(m.name)}<small>記帳</small></span><button class="ic" data-unlink="${esc(k)}" aria-label="取消">✕</button></div>`; }).join('')}</div>` : ''}
         <button class="btn block" data-a="link">🔗 設定同一個人</button></div>
       <button class="setR" data-a="people" style="width:100%;text-align:left"><span class="gRi">👥</span><div class="t"><b>管理名單</b><small>新增、改名、換圖示、刪除、拖曳排序</small></div><span class="chev">›</span></button></div></div>
@@ -1309,7 +1309,7 @@ function accOutBreak() { const [Y, Mo] = Acc.ym, pre = `${Y}-${String(Mo + 1).pa
   const L = DB.acc.recs.filter(r => r.d && r.d.startsWith(pre) && r.type === 'out' && accMine(r)).sort((a, b) => (a.d + (a.t || '')).localeCompare(b.d + (b.t || '')));
   const tot = L.reduce((s, r) => s + accMine(r), 0), days = [];
   L.forEach(r => { let g = days.find(x => x.d === r.d); if (!g) days.push(g = {d: r.d, L: []}); g.L.push(r); });
-  sheet({title: `支出（我的）${Mo + 1} 月 ${money(tot)}`, full: true, html: `<div class="small muted" style="margin-bottom:.7rem">有分帳的紀錄只算<b>你自己那一份</b>：別人先付、你欠他的，也只算你那份（例如總額 $968 兩人平分＝你的支出 $484）。欠款另外在「還沒結清的欠款」計算，不會重複算進支出。</div>`
+  sheet({title: `支出（我的）${Mo + 1} 月 ${money(tot)}`, full: true, html: `<div class="small muted" style="margin-bottom:.7rem">有分帳的紀錄只算<b>你自己那一份</b>：別人先付、你欠他的，也只算你那份（例如總額 $600 兩人平分＝你的支出 $300）。欠款另外在「還沒結清的欠款」計算，不會重複算進支出。</div>`
     + days.map(g => `<div class="obD"><span>${esc(g.d.slice(5).replace('-', '/'))}</span><b>${money(g.L.reduce((s, r) => s + accMine(r), 0))}</b></div>` + g.L.map(r => { const sp = (r.split || []).length, payer = r.payer || me;
-      return `<div class="obR"><span class="grow"><b>${esc(r.payee || accCat(r).n)}</b><small>${sp ? `總額 ${money(r.amt)}・${payer === me ? '我付' : esc(aWho(payer).name) + ' 付'}・${sp} 人分` : '自己的'}</small></span><b>${money(accMine(r))}</b></div>`; }).join('')).join('')
+      return `<div class="obR"><span class="grow"><b>${esc(r.payee || accCat(r).n)}</b><small>${sp ? `總額 ${money(r.amt)}・${payer === me ? '我付' : esc(aWho(payer).name) + ' 付'}・${sp} 人分` : '自己的'}</small>${sp ? (payer === me ? (r.split || []).filter(x => x.p !== me).map(x => { const ok = (r.settled || {})[x.p]; return `<span class="acChip ${ok ? 'ok' : 'wait'}">${esc(aWho(x.p).name)} 欠我 ${money(x.amt)}・${ok ? '已收 ✓' : '未收'}</span>`; }).join('') : (() => { const ok = (r.settled || {})[payer]; return `<span class="acChip ${ok ? 'ok' : 'neg'}">我欠 ${esc(aWho(payer).name)} ${money(-accOwe(r, payer))}・${ok ? '已還 ✓' : '未還'}</span>`; })()) : ''}</span><b>${money(accMine(r))}</b></div>`; }).join('')).join('')
     + `<div class="obD tot"><span>合計</span><b>${money(tot)}</b></div>`}); }

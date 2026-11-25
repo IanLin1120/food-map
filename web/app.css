@@ -1556,3 +1556,6 @@ table.ckT td.s{text-align:center}table.ckT th.s{text-align:center}
 .gWidB{display:grid;grid-template-columns:repeat(3,1fr);gap:.35rem;margin-top:.5rem}.gWidB span{text-align:center;padding:.4rem 0;border-radius:6px;border:1px solid var(--border);font-size:.8rem;font-weight:700;white-space:nowrap}
 .gWidB span.pri{background:var(--accent);color:#fff;border-color:transparent;animation:hlP 1.6s ease-in-out infinite}
 @media (prefers-reduced-motion:reduce){.gFg,.gRp{display:none}.gScr{transition:none}}
+.acOther{background:var(--surface-3);border:1px dashed var(--border);border-radius:6px;padding:.65rem .75rem;font-size:.88rem;line-height:1.55;margin-bottom:.4rem}
+.acOther small{display:block;color:var(--muted);font-size:.78rem;margin-top:.25rem}
+.obR .acChip{display:inline-block;margin-top:.2rem}
