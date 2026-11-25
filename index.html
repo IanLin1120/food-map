@@ -4,7 +4,7 @@
 <script>/* 線上更新開機程式：手機上若已下載比 APK 內建更新的介面版本，就改用新版（存在 IndexedDB）。
    新版連續兩次沒有正常開啟 → 自動退回 APK 內建版本。網址加上 #builtin 也會強制使用內建版本。 */
 (function () {
-  var B = '3.32.0'; if (!window.__OTA) window.APP_BUILTIN = B;
+  var B = '3.32.1'; if (!window.__OTA) window.APP_BUILTIN = B;
   if (window.__OTA || location.hash.indexOf('builtin') >= 0) return;
   var v = null; try { v = JSON.parse(localStorage.getItem('fm.ota') || 'null'); } catch (e) {}
   function gt(a, b) { a = String(a).split('.').map(Number); b = String(b).split('.').map(Number); for (var i = 0; i < Math.max(a.length, b.length); i++) { var p = a[i] || 0, q = b[i] || 0; if (p !== q) return p > q; } return false; }
@@ -1505,10 +1505,16 @@ table.ckT td.s{text-align:center}table.ckT th.s{text-align:center}
 .spk button.on{background:var(--accent);border-color:var(--accent);color:#fff}.spk button i{font-style:normal;font-size:.8rem}
 .spk button:disabled{opacity:.45}
 .spkG{font-size:.78rem;font-weight:800;color:var(--muted);margin:.4rem 0 .35rem}
-select:not([multiple]){-webkit-appearance:none;appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);background-position:calc(100% - 1.05rem) 50%,calc(100% - .7rem) 50%;background-size:.35rem .35rem;background-repeat:no-repeat;padding-right:1.8rem!important;text-overflow:ellipsis;white-space:nowrap;overflow:hidden}
 .dkSeg.acKind{grid-template-columns:repeat(5,minmax(0,1fr))!important}
 .dkSeg.acKind button b{font-size:.7rem;letter-spacing:-.02em}
 .mock .bd .row>.card2{min-width:6.5rem}
+/* 地圖：＋／－、2D／3D 移到左邊，和右邊的按鈕同一高度對齊 */
+.mapFabs.left{right:auto;left:.7rem}
+@media (min-width:760px){.mapFabs.left{left:1rem}}
+.mapFabs.tight .zm{display:flex}.mapFabs.left.tight{display:none}
+/* 常用紀錄收合後，分類之間的距離縮小 */
+.tpG.fold{margin-bottom:0}.tpG.fold .tpGH{margin:.35rem 0}.tpG.fold+.tpG .tpGH{margin-top:.35rem}
+.tpG.fold:first-child .tpGH{margin-top:.2rem}
 </style>
 </head>
 <body>
@@ -1525,10 +1531,12 @@ select:not([multiple]){-webkit-appearance:none;appearance:none;background-image:
       <div id="chips" class="noSel"></div>
       <div id="areaBar"><select id="arC" class="glass" aria-label="選擇縣市"></select><select id="arT" class="glass" aria-label="選擇鄉鎮市區"></select><button class="ic glass" id="arMe" aria-label="我所在的鄉鎮市區">📍</button><button class="ic glass hide" id="arX" aria-label="取消區域">✕</button></div>
     </div>
-    <div class="mapFabs" id="mapFabs">
+    <div class="mapFabs left" id="mapFabsL">
       <button class="fab glass zm" id="fbZin" aria-label="放大"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
       <button class="fab glass zm" id="fbZout" aria-label="縮小"><svg viewBox="0 0 24 24"><path d="M5 12h14"/></svg></button>
       <button class="fab glass" id="fb3d" aria-label="切換 2D／3D">3D</button>
+    </div>
+    <div class="mapFabs" id="mapFabs">
       <button class="fab glass" id="fbN" aria-label="轉回北方朝上"><svg viewBox="0 0 24 24"><path d="M12 3l4 9H8z" fill="currentColor"/><path d="M12 21l-4-9h8z"/></svg></button>
       <button class="fab glass" id="fbMe" aria-label="我的位置"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg></button>
       <button class="fab glass big" id="fbAdd" aria-label="新增收藏地點">＋</button>
@@ -3982,7 +3990,7 @@ var qrcode = function() {
 /* ============================================================
    日日帳本 — 核心：工具、資料儲存、主題、面板、拖曳排序、圖片
    ============================================================ */
-const APP_VERSION = '3.32.0';
+const APP_VERSION = '3.32.1';
 const APP_VER = APP_VERSION;
 /* 線上更新來源（GitHub Pages）：IanLin1120/food-map */
 const GH = {repo: 'https://github.com/IanLin1120/food-map', pages: 'https://ianlin1120.github.io/food-map/'};
@@ -4435,10 +4443,10 @@ function openState(p) {
 function stateHtml(p) { const s = openState(p); if (!s) return ''; return `<span class="dot ${s.open === true ? 'ok' : s.open === false ? 'no' : ''}"></span>${s.open === true ? '營業中 · ' : s.open === false && s.txt !== '今日休息' ? '休息中 · ' : ''}${esc(s.txt)}`; }
 
 /* ---------- 地圖下方資訊卡 ---------- */
-function showCard(html) { const c = $('#mCard'); c.innerHTML = html; c.classList.add('on'); requestAnimationFrame(() => { const f = $('#mapFabs'); f.style.bottom = c.offsetHeight + 22 + 'px'; fabFit(); }); }
+function showCard(html) { const c = $('#mCard'); c.innerHTML = html; c.classList.add('on'); requestAnimationFrame(() => { $$('.mapFabs').forEach(f => { f.style.bottom = c.offsetHeight + 22 + 'px'; }); fabFit(); }); }
 /* 下方清冊打開、空間不夠時，先把 ＋／－ 收起來，避免按鈕疊到上面的區域選單 */
-function fabFit() { const f = $('#mapFabs'), bar = $('#areaBar'); if (!f) return; f.classList.remove('tight'); if (!bar) return; const top = bar.getBoundingClientRect().bottom; if (f.getBoundingClientRect().top < top + 8) f.classList.add('tight'); }
-function hideCard() { $('#mCard').classList.remove('on'); $('#mapFabs').style.bottom = ''; $('#mapFabs').classList.remove('tight'); }
+function fabFit() { const bar = $('#areaBar'); $$('.mapFabs').forEach(f => { f.classList.remove('tight'); if (bar && f.getBoundingClientRect().top < bar.getBoundingClientRect().bottom + 8) f.classList.add('tight'); }); }
+function hideCard() { $('#mCard').classList.remove('on'); $$('.mapFabs').forEach(f => { f.style.bottom = ''; f.classList.remove('tight'); }); }
 function clearSel() { M.sel = null; M.draft = null; if (M.temp) { M.temp.remove(); M.temp = null; } hideCard(); syncMarkers(); if (S.area && !Area.hideList) Area.card(); }
 function mapBack() { if (curTab !== 'Map') return false; if (!$('#mResults').classList.contains('hide')) { hideResults(); return true; } if (M.sel || M.draft) { clearSel(); return true; } if (S.area) { Area.set(null); return true; } return false; }
 function selectPlace(id, fly) {
@@ -9173,7 +9181,7 @@ function tplList() {
     return G.map((g, i) => [g, i]).sort((a, b) => at(a[0].k) - at(b[0].k) || a[1] - b[1]).map(x => x[0]); };
   const draw = () => { const G = groups(), n = k => DB.acc.tpls.filter(t => (t.type || 'out') === k).length;
     sh.body.innerHTML = `<div class="acType three"><button data-ty="out" class="${ty === 'out' ? 'on' : ''}">支出 ${n('out') || ''}</button><button data-ty="in" class="${ty === 'in' ? 'on' : ''}">收入 ${n('in') || ''}</button><button data-ty="tr" class="${ty === 'tr' ? 'on' : ''}">轉帳 ${n('tr') || ''}</button></div>
-      <div class="tpTop"><span class="small muted">點一下打開記一筆確認；點分類名稱收合，按住可以整組上下移動；按住紀錄拖曳排序；按 ✎ 編輯。</span>${G.length > 1 ? `<button class="btn sm" data-fa="1">${G.every(g => tpFolded(g.k)) ? '⊞ 全部展開' : '⊟ 全部收合'}</button>` : ''}</div>
+      <div class="tpTop"><span class="small muted">點一下打開記一筆確認；點分類名稱收合，按住可以整組上下移動；按住紀錄拖曳排序；按 ✎ 編輯。</span>${G.length ? `<button class="btn sm" data-fa="1">${G.every(g => tpFolded(g.k)) ? '⊞ 全部展開' : '⊟ 全部收合'}</button>` : ''}</div>
       <div id="tpL">${G.map(g => `<div class="tpG ${tpFolded(g.k) ? 'fold' : ''}" data-g="${g.k}"><div class="tpGH" data-fg="${g.k}">${G.length > 1 ? '<span class="grip"></span>' : ''}<span class="lbl">${esc(g.n)}</span><em>${g.L.length}</em><i class="tpArr">${tpFolded(g.k) ? '▸' : '▾'}</i></div>${(tpFolded(g.k) ? [] : g.L).map(t => `<div class="tpR card" data-t="${t.id}"><span class="grip"></span><button class="tpUse" data-use="${t.id}"><b>${esc(t.name)}</b><small>${esc([t.payee, t.type === 'tr' ? acctName(t.acct) + ' → ' + acctName(t.to) : acctName(t.acct), (t.split || []).length ? '分帳 ' + t.split.length + ' 人' : ''].filter(Boolean).join('・'))}</small><span class="tpV ${!+t.amt ? '' : t.type === 'in' ? 'pos' : t.type === 'out' ? 'neg' : ''}">${+t.amt ? money(t.amt) : '💬 每次輸入金額'}</span></button><button class="ic" data-ed="${t.id}" aria-label="編輯">✎</button></div>`).join('')}</div>`).join('') || '<div class="empty">這一類還沒有常用紀錄<br><span class="small">按下面「＋ 新增常用紀錄」，或在記一筆時按「⭐ 存成常用」</span></div>'}</div>`;
     sortable($('#tpL', sh.body), {item: '.tpR', scope: '.tpG', scroller: sh.body, onSort(f, t, scope) { const ids = $$('.tpR', scope).map(e => e.dataset.t), mv = ids.splice(f, 1)[0]; ids.splice(t, 0, mv);
       const pos = DB.acc.tpls.map((x, i) => ids.includes(x.id) ? i : -1).filter(i => i >= 0), objs = ids.map(id => DB.acc.tpls.find(x => x.id === id)); pos.forEach((p, i) => { DB.acc.tpls[p] = objs[i]; }); saveAcc(); draw(); renderAcc(); }});
