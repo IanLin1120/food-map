@@ -4,7 +4,7 @@
 <script>/* 線上更新開機程式：手機上若已下載比 APK 內建更新的介面版本，就改用新版（存在 IndexedDB）。
    新版連續兩次沒有正常開啟 → 自動退回 APK 內建版本。網址加上 #builtin 也會強制使用內建版本。 */
 (function () {
-  var B = '3.36.0'; if (!window.__OTA) window.APP_BUILTIN = B;
+  var B = '3.37.0'; if (!window.__OTA) window.APP_BUILTIN = B;
   if (window.__OTA || location.hash.indexOf('builtin') >= 0) return;
   var v = null; try { v = JSON.parse(localStorage.getItem('fm.ota') || 'null'); } catch (e) {}
   function gt(a, b) { a = String(a).split('.').map(Number); b = String(b).split('.').map(Number); for (var i = 0; i < Math.max(a.length, b.length); i++) { var p = a[i] || 0, q = b[i] || 0; if (p !== q) return p > q; } return false; }
@@ -349,8 +349,8 @@ h1,h2,h3{margin:0;line-height:1.25;text-wrap:balance}
 .mock .inp{border:1px solid #dadce0;border-radius:6px;padding:.35rem .55rem;margin:.2rem 0;color:#202124;background:#fff}
 .mock .b{display:inline-block;padding:.35rem .8rem;border-radius:6px;background:#1a73e8;color:#fff;font-weight:700;margin:.3rem .3rem 0 0}
 .mock .b.o{background:#fff;color:#1a73e8;border:1px solid #dadce0}
-.mock .hl{position:relative;outline:3px solid #f29900;outline-offset:3px;animation:hl 1.4s ease-in-out infinite}
-@keyframes hl{50%{outline-color:rgba(242,153,0,.25)}}
+.mock .hl{position:relative;animation:hlP 1.6s ease-in-out infinite}
+@keyframes hlP{0%,60%,100%{transform:none;filter:none}72%{transform:scale(.95);filter:brightness(.93)}}
 .mock .tap{position:absolute;font-size:1.5rem;animation:tap 1.4s ease-in-out infinite;right:-.4rem;bottom:-1.3rem;z-index:2}
 @keyframes tap{50%{transform:translate(-4px,-4px) scale(.9)}}
 .mock .chk{display:flex;align-items:center;gap:.45rem;margin:.3rem 0}
@@ -771,7 +771,7 @@ table.piv .s.pr.one{text-align:center;padding-right:.5rem}
 .pTag.warn{background:none;color:var(--danger);border:1px dashed var(--danger)}
 .pQuick{font-size:.6rem;color:var(--text-2);display:flex;gap:.2rem;align-items:center;flex-wrap:wrap}.pQuick i{font-style:normal;border:1px solid var(--border);border-radius:6px;padding:.1rem .3rem;background:var(--surface)}
 .pOk{font-size:.64rem;font-weight:800;color:var(--success);margin-top:.2rem}
-.phIn .hl{outline:2.5px solid #f29900;outline-offset:2px;animation:hl 1.4s ease-in-out infinite}
+.phIn .hl{animation:hlP 1.6s ease-in-out infinite}
 .phTap{position:absolute;right:.2rem;bottom:-.2rem;font-size:1.15rem;animation:tap 1.4s ease-in-out infinite;z-index:3;pointer-events:none}
 .pc>.phTap{right:.5rem;bottom:.1rem}
 /* 頁首：標題一行、工具列三顆等寬 */
@@ -1570,6 +1570,34 @@ table.ckT td.s{text-align:center}table.ckT th.s{text-align:center}
 .clStep>b{flex:0 0 1.8rem;height:1.8rem;border-radius:50%;background:#7a6a3a;color:#fff;display:grid;place-items:center;font-size:.95rem}
 .clStep small{display:block;color:var(--muted,#8a7d6a);margin:.2rem 0 .6rem;line-height:1.5}
 .clStep textarea{width:100%;box-sizing:border-box;font:13px/1.45 ui-monospace,monospace;border-radius:6px}
+.acT.out{cursor:pointer}
+.obD{display:flex;justify-content:space-between;font-weight:800;font-size:.85rem;color:var(--accent);margin:.8rem 0 .3rem;padding-bottom:.2rem;border-bottom:1px solid var(--border-soft)}
+.obD.tot{color:var(--text);font-size:1rem;border-top:2px solid var(--border);border-bottom:0;padding-top:.5rem}
+.obR{display:flex;align-items:center;gap:.6rem;padding:.35rem 0}.obR small{display:block;color:var(--muted);font-size:.76rem}.obR>b{flex:none}
+
+/* ---------- 使用說明：真實畫面截圖＋手指動畫 ---------- */
+.gPh{position:relative;width:min(14rem,64vw);aspect-ratio:1/2;margin:.2rem auto 1rem;border:7px solid #3a2c22;border-radius:28px;background:var(--bg);box-shadow:0 12px 30px var(--sh);overflow:hidden;flex-shrink:0}
+.gScr{position:absolute;inset:0;transition:transform .5s cubic-bezier(.2,.8,.2,1)}
+.gScr.zm{transform:scale(1.06)}
+.gScr img,.gScr .gMiss{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .45s ease}
+.gScr img.on{opacity:1}
+.gLoad{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;padding:1rem;color:var(--muted);font-size:.85rem}
+.gFg{position:absolute;width:2.1rem;height:2.6rem;margin:-.2rem 0 0 -.98rem;opacity:0;transition:left .8s cubic-bezier(.3,.7,.2,1),top .8s cubic-bezier(.3,.7,.2,1),opacity .3s,transform .18s;z-index:3;pointer-events:none;filter:drop-shadow(0 3px 4px rgba(0,0,0,.35))}
+.gFg svg{width:100%;height:100%;display:block}
+.gFg.on{opacity:1}.gFg.dn{transform:scale(.82)}
+.gRp{position:absolute;width:2.6rem;height:2.6rem;margin:-1.3rem 0 0 -1.3rem;border-radius:50%;background:color-mix(in srgb,var(--accent) 45%,transparent);opacity:0;transform:scale(.2);pointer-events:none;z-index:2}
+.gRp.go{animation:gRp .7s ease-out}
+@keyframes gRp{0%{opacity:.9;transform:scale(.2)}100%{opacity:0;transform:scale(1.6)}}
+.gCap{list-style:none;padding:0!important;margin:.2rem 0 .4rem!important;display:flex;flex-direction:column;gap:.45rem}
+.gCap li{position:relative;padding:.55rem .75rem .55rem 2.1rem;background:var(--surface-3);border:1px solid var(--border-soft);border-radius:6px;line-height:1.5;font-size:.95rem}
+.gCap li::before{content:counter(gc);counter-increment:gc;position:absolute;left:.6rem;top:.55rem;width:1.1rem;height:1.1rem;border-radius:50%;background:var(--accent);color:#fff;font-size:.7rem;font-weight:800;display:flex;align-items:center;justify-content:center}
+.gCap{counter-reset:gc}
+.gWid{display:flex;flex-direction:column;gap:.6rem;margin:.3rem 0 1rem;padding:1rem;border-radius:14px;background:linear-gradient(160deg,#6b5a48,#3f342a)}
+.gWidC{background:rgba(255,250,240,.95);border-radius:16px;padding:.7rem .8rem}.gWidC b{display:block;font-size:.9rem}.gWidC small{color:var(--text-2);font-size:.78rem}
+.gWidC.n{border-radius:10px}
+.gWidB{display:grid;grid-template-columns:repeat(3,1fr);gap:.35rem;margin-top:.5rem}.gWidB span{text-align:center;padding:.4rem 0;border-radius:6px;border:1px solid var(--border);font-size:.8rem;font-weight:700;white-space:nowrap}
+.gWidB span.pri{background:var(--accent);color:#fff;border-color:transparent;animation:hlP 1.6s ease-in-out infinite}
+@media (prefers-reduced-motion:reduce){.gFg,.gRp{display:none}.gScr{transition:none}}
 </style>
 </head>
 <body>
@@ -4045,7 +4073,7 @@ var qrcode = function() {
 /* ============================================================
    日日帳本 — 核心：工具、資料儲存、主題、面板、拖曳排序、圖片
    ============================================================ */
-const APP_VERSION = '3.36.0';
+const APP_VERSION = '3.37.0';
 const APP_VER = APP_VERSION;
 /* 線上更新來源（GitHub Pages）：IanLin1120/food-map */
 const GH = {repo: 'https://github.com/IanLin1120/food-map', pages: 'https://ianlin1120.github.io/food-map/'};
@@ -7302,121 +7330,93 @@ function openShopSettings() {
 }
 
 /* ============================================================
-   使用說明：給第一次用的人看的圖解（手機畫面示意圖＋白話說明）
+   使用說明：真實畫面截圖（虛構資料）＋操作動畫
    ============================================================ */
 const APP_ICON = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="54 54 324 324"><defs> <linearGradient id="gicv" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#E0844B"/><stop offset=".55" stop-color="#C2633A"/><stop offset="1" stop-color="#9A4226"/></linearGradient> <linearGradient id="gisp" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#7E321C"/><stop offset="1" stop-color="#9C4527"/></linearGradient> <linearGradient id="gipl" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFF9EC"/><stop offset="1" stop-color="#F2E2C2"/></linearGradient> <linearGradient id="gicn" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F7D27A"/><stop offset="1" stop-color="#DB9A33"/></linearGradient> <radialGradient id="gigl" cx=".35" cy=".25" r=".8"><stop offset="0" stop-color="#fff" stop-opacity=".22"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient> <filter id="gish" x="-30%" y="-30%" width="160%" height="170%"><feDropShadow dx="0" dy="8" stdDeviation="9" flood-color="#5A2410" flood-opacity=".35"/></filter></defs><rect width="432" height="432" fill="url(#gicv)"/> <g opacity=".10" stroke="#FFF3DC" stroke-width="10" fill="none"><path d="M-10 120 L442 70"/><path d="M-10 350 L442 380"/><path d="M330 -10 L360 442"/></g> <rect x="0" y="0" width="112" height="432" fill="url(#gisp)"/><rect x="112" y="0" width="7" height="432" fill="#6E2A16" opacity=".45"/> <g stroke="#F4D9B6" stroke-width="5" stroke-linecap="round" stroke-dasharray="14 14" opacity=".75"><path d="M96 -6 V440"/></g> <path d="M286 0 h44 v150 l-22 -20 l-22 20z" fill="#7C8B4E"/><path d="M286 0 h44 v8 h-44z" fill="#5F6C39"/> <rect width="432" height="432" fill="url(#gigl)"/><g filter="url(#gish)"><circle cx="222" cy="210" r="102" fill="url(#gipl)"/><circle cx="222" cy="210" r="84" fill="none" stroke="#E4CDA4" stroke-width="4"/> <g fill="#A3482A"><path d="M178 150 h9 v46 h7 v-46 h9 v46 h7 v-46 h9 v55 a21 21 0 0 1 -16 20 v66 a8 8 0 0 1 -16 0 v-66 a21 21 0 0 1 -16 -20z"/> <ellipse cx="262" cy="182" rx="21" ry="31"/><rect x="254" y="206" width="16" height="85" rx="8"/></g></g> <g filter="url(#gish)"><circle cx="296" cy="290" r="40" fill="url(#gicn)" stroke="#FFF1CF" stroke-width="6"/><circle cx="296" cy="290" r="28" fill="none" stroke="#B5741C" stroke-width="3" opacity=".55"/> <text x="296" y="305" text-anchor="middle" font-family="DejaVu Sans, Arial" font-weight="700" font-size="40" fill="#8A5310">$</text></g></svg>';
-const PHT0 = [['🗺️', '地圖'], ['📒', '日常'], ['🧾', '分帳'], ['🎫', '發票'], ['⚙️', '設定']], PHT = {food: PHT0, shop: PHT0, inv: PHT0, acc: [['🗺️', '地圖'], ['📒', '記帳'], ['🏛️', '資產'], ['📊', '分析'], ['⚙️', '設定']]};
-/* 一支小手機：title 標題、body 內容、tab 亮起哪一個分頁、area 美食或購物 */
-const phone = (title, body, tab, area) => `<div class="ph"><div class="phIn"><div class="phNotch"></div><div class="phTop">${title}</div><div class="phBd">${body}</div>
-  <div class="phTab">${PHT[area || 'food'].map(([i, t]) => `<span class="${t === tab ? 'on' : ''}"><i>${i}</i>${t}</span>`).join('')}</div></div></div>`;
-const tap = '<span class="phTap">👆</span>';
-const pc = (h, cls) => `<div class="pc ${cls || ''}">${h}</div>`, pb = (t, cls) => `<span class="pb ${cls || ''}">${t}</span>`;
-const pRow = (a, b, cls) => `<div class="pRw ${cls || ''}"><span>${a}</span><b>${b}</b></div>`;
-const tip = t => `<div class="gTip">💡 ${t}</div>`;
+/* ---------- 示意圖：真實畫面截圖（虛構資料）＋手指點擊動畫 ----------
+   截圖放在 guide.json（APK 內建一份，GitHub 上也有一份），第一次打開說明時讀進來並存在手機裡 */
+const GUIDE_V = '62979484f7', GUIDE_META = {"f_home":[{"i":"f_home_0","t":[90.4,78]}],"f_search":[{"i":"f_search_0","t":[37.7,4.7]},{"i":"f_search_1","t":[50,13.3]},{"i":"f_search_2","t":null}],"f_card":[{"i":"f_card_0","t":[20.5,84.3]},{"i":"f_card_1","t":null}],"f_cat":[{"i":"f_cat_0","t":[62.1,62.3]}],"f_menu":[{"i":"f_menu_0","t":[26.9,31.9]},{"i":"f_menu_1","t":[73.1,31.9]}],"f_claude":[{"i":"f_claude_0","t":[55.6,49.5]},{"i":"f_claude_1","t":[50,95.2]}],"f_meal":[{"i":"f_meal_0","t":[26.7,10.4]},{"i":"f_meal_1","t":[50,56.8]},{"i":"f_meal_2","t":[50,46.9]}],"f_order":[{"i":"f_order_0","t":[87.8,53.2]}],"f_export":[{"i":"f_export_0","t":[69.8,87.4]},{"i":"f_export_1","t":null}],"f_list":[{"i":"f_list_0","t":[11.5,92.3]},{"i":"f_list_1","t":null}],"f_rec":[{"i":"f_rec_0","t":[50,69.2]},{"i":"f_rec_1","t":null}],"f_set":[{"i":"f_set_0","t":null},{"i":"f_set_1","t":[28.8,24.5]}],"f_keys":[{"i":"f_keys_0","t":null}],"s_home":[{"i":"s_home_0","t":[26.7,10.4]}],"s_bill":[{"i":"s_bill_0","t":[85.6,88.3]},{"i":"s_bill_1","t":[24.4,53.3]},{"i":"s_bill_2","t":null}],"s_who":[{"i":"s_who_0","t":null}],"s_disc":[{"i":"s_disc_0","t":null}],"s_exp":[{"i":"s_exp_0","t":null}],"i_home":[{"i":"i_home_0","t":[50,30.6]},{"i":"i_home_1","t":null}],"i_scan":[{"i":"i_scan_0","t":[19,10.2]},{"i":"i_scan_1","t":null}],"i_shot":[{"i":"i_shot_0","t":[50,10.2]}],"i_acc":[{"i":"i_acc_0","t":[81,10.2]}],"i_cal":[{"i":"i_cal_0","t":null}],"i_edit":[{"i":"i_edit_0","t":null}],"i_bill":[{"i":"i_bill_0","t":[60.1,95.2]}],"a_home":[{"i":"a_home_0","t":[26.7,10.4]}],"a_new":[{"i":"a_new_0","t":[61.5,56.8]},{"i":"a_new_1","t":[15.5,31.1]}],"a_split":[{"i":"a_split_0","t":null}],"a_tpl":[{"i":"a_tpl_0","t":[84.8,26.2]},{"i":"a_tpl_1","t":null}],"a_owe":[{"i":"a_owe_0","t":[50,63.1]},{"i":"a_owe_1","t":null}],"a_asset":[{"i":"a_asset_0","t":null}],"a_stat":[{"i":"a_stat_0","t":null},{"i":"a_stat_1","t":[82,6.9]},{"i":"a_stat_2","t":null}],"a_map":[{"i":"a_map_0","t":[34.6,60.7]}],"a_store":[{"i":"a_store_0","t":null}],"a_ppl":[{"i":"a_ppl_0","t":null}],"a_cfg":[{"i":"a_cfg_0","t":null}],"a_cfg2":[{"i":"a_cfg2_0","t":null}]};
+const GImg = {d: null, p: null,
+  async load() { if (this.d) return this.d; if (this.p) return this.p;
+    this.p = (async () => { let old = null; try { old = await IDB.get('kv', 'guideImg'); } catch (e) {} if (old && old.v === GUIDE_V) return (this.d = old.img);
+      for (const u of ['guide.json?v=' + GUIDE_V, GH.pages + 'guide.json?v=' + GUIDE_V]) { try { const r = await fetch(u, {cache: 'no-store'}); if (!r.ok) continue; const j = await r.json(); if (j && j.img) { if (j.v === GUIDE_V || !old) { try { await IDB.put('kv', 'guideImg', j); } catch (e) {} } if (j.v === GUIDE_V) return (this.d = j.img); old = old || j; } } catch (e) {} }
+      if (old) return (this.d = old.img); this.p = null; return null; })();
+    return this.p; }};
+/* 一組畫面：[[圖片id, 點擊位置 x%, y%], …]；有點擊位置的那張會播放「手指移過去 → 按下 → 換下一張」 */
+const gShot = (...F) => `<div class="gPh" data-f='${JSON.stringify(F)}'><div class="gScr"><div class="gLoad">示意圖載入中…</div></div><span class="gFg"><svg viewBox="0 0 32 40"><path d="M12 3.5a3 3 0 0 1 6 0V17l7.2 1.6a3.6 3.6 0 0 1 2.8 4.1l-1.6 10A6 6 0 0 1 20.5 38h-6.3a6 6 0 0 1-4.9-2.6L3.6 27a2.8 2.8 0 0 1 4.3-3.5l4.1 3.6z" fill="#fff" stroke="#3a2c22" stroke-width="2" stroke-linejoin="round"/></svg></span><span class="gRp"></span></div>`;
+const gCap = (...L) => `<ul class="gCap">${L.map(t => `<li>${t}</li>`).join('')}</ul>`;
+/* 從 guide.json 的點擊位置組成畫面序列 */
+const GS = (...ids) => gShot(...ids.flatMap(id => { const L = (GUIDE_META[id] || []); return L.map(f => [f.i, f.t ? f.t[0] : null, f.t ? f.t[1] : null]); }));
+function guideAnim(root) { const T = []; const stop = () => T.forEach(clearTimeout);
+  $$('.gPh', root).forEach(ph => { const F = JSON.parse(ph.dataset.f || '[]'), scr = $('.gScr', ph), fg = $('.gFg', ph), rp = $('.gRp', ph); if (!F.length) return;
+    GImg.load().then(D => { if (!D || !document.body.contains(ph)) { $('.gLoad', ph).textContent = '示意圖要連上網路下載一次，之後離線也能看'; return; }
+      scr.innerHTML = F.map(f => D[f[0]] ? `<img src="${D[f[0]]}" alt="">` : '<i class="gMiss"></i>').join(''); const im = $$('img, .gMiss', scr);
+      let k = 0; const show = n => im.forEach((e, j) => e.classList.toggle('on', j === n));
+      const step = () => { if (!document.body.contains(ph)) return; const f = F[k]; show(k); scr.style.transformOrigin = '50% 50%'; scr.classList.remove('zm');
+        if (f[1] != null) { fg.style.transition = 'none'; fg.style.left = Math.min(92, f[1] + 18) + '%'; fg.style.top = Math.min(96, f[2] + 16) + '%'; fg.classList.remove('dn', 'on'); fg.offsetWidth;
+          T.push(setTimeout(() => { fg.style.transition = ''; fg.classList.add('on'); fg.style.left = f[1] + '%'; fg.style.top = f[2] + '%'; }, 450));
+          T.push(setTimeout(() => { fg.classList.add('dn'); rp.style.left = f[1] + '%'; rp.style.top = f[2] + '%'; rp.classList.remove('go'); rp.offsetWidth; rp.classList.add('go'); scr.style.transformOrigin = f[1] + '% ' + f[2] + '%'; scr.classList.add('zm'); }, 1350));
+          T.push(setTimeout(() => { fg.classList.remove('dn'); }, 1650));
+          T.push(setTimeout(() => { k = (k + 1) % F.length; if (k === 0) fg.classList.remove('on'); step(); }, k === F.length - 1 ? 3000 : 2100)); }
+        else { fg.classList.remove('on'); T.push(setTimeout(() => { k = (k + 1) % F.length; step(); }, F.length > 1 ? 2600 : 99999)); } };
+      step(); }); });
+  return stop; }
+const GKEYS = `<div class="gKeys"><div><i>🔑</i><b>AI 辨識金鑰（建議）</b><small>菜單照片、消費明細變成表格都靠它。免費申請，不用信用卡。</small><button class="btn sm pri" data-tut="ai">📘 看教學</button></div>
+  <div><i>🗺️</i><b>Google 搜尋金鑰（選用）</b><small>搜尋店家、停車場、加油站最齊全，自動帶入地址電話。</small><button class="btn sm" data-tut="maps">📘 看教學</button></div></div>`;
+const gHeroH = (t, L) => `<div class="gHero"><div class="gIcon">${APP_ICON}</div><b>${t}</b></div><div class="gGrid">${L.map(([i, b, s]) => `<div><i>${i}</i><b>${b}</b>${s}</div>`).join('')}</div>`;
 const GUIDE = {
   food: {title: '🍽️ 地圖・日常・食譜 使用說明', steps: [
-    {t: '歡迎使用日日帳本', h: `<div class="gHero"><div class="gIcon">${APP_ICON}</div><b>收藏愛店・菜單・點餐・分帳・記帳</b></div>
-      <div class="gGrid"><div><i>🗺️</i><b>地圖</b>自動定位、找店、收藏</div><div><i>🔖</i><b>收藏</b>店家、菜單、消費紀錄</div><div><i>📒</i><b>日常</b>記一餐、點餐、購物清單</div><div><i>🧾</i><b>分帳</b>消費明細誰付多少</div><div><i>🎫</i><b>發票</b>手機條碼、掃描、匯入</div><div><i>📖</i><b>食譜</b>在設定頁裡</div><div><i>💰</i><b>記帳</b>設定頁進入，收支、資產、對帳</div><div><i>🛡️</i><b>備份</b>手機、雲端、QR 換機</div></div>
-      <p>跟著這份說明走一遍，大約 3 分鐘。看完可以隨時到 <b>設定 → 使用說明</b> 再打開。分帳、發票、記帳另外有自己的說明。</p>`},
-    {t: '① 打開就定位，自動選好鄉鎮', h: phone('地圖', `<div class="pSrch">🔍 搜尋地點、店名、地址…</div><div class="pWho"><i class="on">全部 12</i><i>🍳 早餐 3</i><i>🍱 午餐 4</i><i>🍲 晚餐 5</i></div><div class="pBtns">${pb('星河市 ▾')}${pb('幸福區 ▾')}${pb('📍', 'hl') + tap}</div><div class="pMap"><span class="flag">🍳</span><span class="flag f2">🍱</span></div>${pc('<b>星河市 幸福區・12 間收藏</b><small>🍳 早餐　晨曦早午餐、陽光蛋餅…</small>')}`, '地圖') +
-      `<ul><li>一打開 App（或離開超過 3 分鐘再回來），地圖會<b>自動飛到你的位置、轉回朝北</b>，並<b>選好你現在所在的縣市、鄉鎮</b></li><li>下面列出這一區的收藏，<b>依分類排</b>（跟上方分類按鈕同順序），同一類裡離你近的在前面</li><li>按 <b>📍</b> 重新抓目前的鄉鎮，地圖停在你附近，不會縮到整個鄉鎮那麼小；按 <b>✕</b> 取消區域，看全部</li><li>右邊的按鈕由上到下：<b>＋／－</b> 放大縮小、<b>2D／3D</b>、<b>指北針</b>（轉回北方）、<b>◎</b> 我的位置、<b>＋</b> 新增收藏</li></ul>${tip('地圖不畫縣市、鄉鎮的邊界線，畫面比較乾淨；選區域時只顯示那一區的收藏。')}`},
-    {t: '② 搜尋地點，一鍵收藏', h: phone('🔍 停車場', `<div class="pSrch">🔍 停車場</div><div class="pMap"><span class="flag">📍</span><span class="flag f2">📍</span></div>${pc(`<b>星河立體停車場</b><small>停車場・星河市幸福區光明路 8 號</small><div class="pBtns">${pb('🧭 導航')}${pb('⭐ 收藏', 'pri hl') + tap}</div>`)}`, '地圖') +
-      `<ul><li>上方搜尋框可以打<b>店名</b>，也可以打<b>停車場、加油站、咖啡廳</b>這類關鍵字</li><li>所有結果都會用紅色標籤<b>標在地圖上</b>，地圖自動縮放到剛好看得到全部；點標籤就能收藏，選一個分類；之後在「編輯地點」可以再勾<b>「也放在這些分類」</b>（例如午餐、晚餐都會去），每個分類都找得到，但「全部」只算一次</li><li>下面有選縣市、鄉鎮時，<b>只找那一區</b>（Google 最多 60 筆）</li><li>也可以<b>長按地圖</b>任何地方直接插旗</li></ul>${tip('有填 Google 金鑰的話搜尋最齊全，地址、電話、營業時間會自動帶入；沒有金鑰會改用 OpenStreetMap。')}`},
-    {t: '③ 菜單：吃喝的店才有', h: phone('晨曦早午餐 幸福店', `<div class="pBtns">${pb('🧭 導航')}${pb('🗺️ Google 地圖')}${pb('📍 在地圖上看')}${pb('🔄 更新資訊')}</div><div class="pSeg"><i class="on">📋 菜單</i><i>🧾 消費紀錄</i></div>${pc('<b>📋 菜單</b><div class="pImgs"><i>🖼️</i><i>🖼️</i></div>' + pb('✨ Gemini 辨識', 'pri hl') + tap + pb('🤖 Claude 辨識'))}<div class="pTable"><div><b>品名</b><b>原味</b><b>辣味</b></div><div><span>特製涼麵</span><span>55</span><span>55</span></div><div><span>麵量加大</span><span>+10</span><span>+10</span></div></div>`, '地圖') +
-      `<ul><li>點店家 → <b>詳細資料</b>，有「📋 菜單」和「🧾 消費紀錄」兩個分頁</li><li>加入菜單照片後按 <b>✨ Gemini 辨識</b>（免費金鑰，App 自動完成），大小杯、口味、份量、加購都會照紙本菜單分欄</li><li>有 <b>Claude 月租（Pro／Max）</b>的話可以按 <b>🤖 Claude 辨識</b>：照片和指令會一起傳到 Claude App，送出後按程式碼區塊的「複製」，回到日日帳本會自動貼上，按「帶入表格」；不會用到 API 用量</li><li><b>停車場、加油站、超市</b>這類店家不會顯示菜單，只有消費紀錄</li><li>哪些分類有菜單可以自己改：設定 → 分類 → 編輯 →「這類店家有菜單」</li></ul>${tip('菜單照片也可以在 Google 地圖截圖後，用「分享」傳給日日帳本。')}`},
-    {t: '④ 日常：記一餐、選店家', h: phone('選擇店家', `<div class="pWho"><i class="on">全部</i><i>🍳 早餐</i><i>🍱 午餐</i><i>🍲 晚餐</i></div><div class="pBtns">${pb('⊟ 全部收合')}</div>${pc('<b>🍱 午餐 ▾</b><small>森林小廚房・月光拉麵・幸福便當</small>' + tap)}${pc('<b>🍳 早餐 ▸</b><small>3 間</small>')}`, '日常') +
-      `<ul><li>下面分頁按 <b>📒 日常</b>，點月曆上的日期（<b>紅點</b>＝有餐點、<b>綠點</b>＝有購物清單）</li><li>按 <b>🍱 記一餐</b>，選餐別和店家：上方分類按鈕切換，每一類可以單獨收合，或「全部收合／展開」</li><li>沒收藏的店也可以自己輸入店名</li></ul>`},
-    {t: '⑤ 點餐：誰吃了什麼？', h: phone('午餐・月光拉麵', `<div class="pWho"><i class="on">🙂 小美</i><i>👦 阿明</i><i>👥 一起吃</i></div>${pc(pRow('烏龍奶茶(去冰，微糖)', '$35') + pRow('特製涼麵(辣味)', '$55') + `<div class="pBtns">${pb('$55 一般量', 'hl') + tap}${pb('$65 特大量')}</div>`)}`, '日常') +
-      `<ul><li>先點上面的人名，再點品項右邊的價格，價格會自動帶入</li><li>有選項的品項會先讓你選：<b>口味、份量、飲料的溫度（去冰／溫／熱）和甜度（正常糖／微糖／無糖）</b>，不選就是店家預設</li><li>選好的會顯示成「烏龍奶茶(去冰，微糖)」；份量一律以品項本身為準</li><li>菜單上沒有的，可以自己輸入品名和價格，下次會記住</li><li>好幾個人<b>一起吃</b>的，選 👥 一起吃，金額平均分</li></ul>`},
-    {t: '⑥ 匯出，貼到 LINE', h: phone('📤 匯出', `<div class="pSeg"><i>模板一</i><i class="on">模板二</i><i>模板三</i></div><div class="pText">2026/11/19(四)<br>午餐：月光拉麵<br>小美：<br>特製涼麵(辣味)[NT$ 55]×1<br>小計：NT$ 55</div><div class="pBtns">${pb('📊 Excel')}${pb('📋 複製文字', 'pri hl') + tap}</div>`, '日常') +
-      `<ul><li>按 <b>📤 匯出</b>，選一種格式</li><li>按 <b>📋 複製文字</b>，到 LINE 長按貼上就好；也可以存成 Excel</li><li>一餐的 <b>⋯ → 🧾 轉到分帳</b>：每個人的品項和金額直接變成一筆分帳明細，再按一次會更新同一筆，不會重複</li></ul>`},
-    {t: '⑦ 搜尋、設定、同一個人', h: phone('⚙️ 日常設定', `${pc('<b>人名</b><small>🙂 小美　👦 阿明　👵 阿嬤（按住 ☰ 拖曳排序）</small>')}${pc('<b>🔗 同一個人，不同綽號</b><div class="sameR" style="margin-top:.3rem"><span>👦 阿明<small>日常</small></span><b>＝</b><span>🧑 明哥<small>記帳</small></span></div>' + pb('🔗 設定同一個人', 'hl') + tap)}`, '日常') +
-      `<ul><li><b>🔍 搜尋</b>：輸入店名，看哪幾天吃過、吃什麼、花多少</li><li><b>⚙️ 設定</b>：新增人名、餐別和圖示，拖曳排序；點餐時自己輸入的品項也在這裡管理</li><li><b>🔗 同一個人，不同綽號</b>：例如這裡叫「阿明」、記帳叫「明哥」，設定後從分帳匯入記帳會自動對到同一個人</li></ul>`},
-    {t: '⑧ 購物清單', h: phone('今天的安排', `<div class="pBtns">${pb('🍱 記一餐')}${pb('🛒 購物清單', 'pri hl') + tap}</div><div class="pc"><b>🛒 量販店</b><small>還要買 3 項・已買 2</small><div class="pList"><span><i></i>雞蛋 <em>×2</em></span><span><i></i>雞胸肉</span><span class="ck"><i></i>蒲瓜</span></div><small>＋ 新增品項</small></div>`, '日常') +
-      `<ul><li>按 <b>🛒 購物清單</b>，選店家（可以不選），清單會記在月曆那一天</li><li>輸入要買的東西按 Enter；可以一次貼好幾行，「雞蛋 ×2」會記數量；按「⭐ 常買」從以前買過的一次勾好幾個</li><li>打錯的<b>往左滑</b>刪除，幾秒內可以按「復原」；<b>勾選＝買到了</b>，按住 ☰ 拖曳排序</li><li>⋯ 可以換店家、改日期、複製清單文字、複製成今天的新清單</li></ul>${tip('🔍 搜尋可以切換「餐點」「購物清單」，找哪天買過什麼。')}`},
-    {t: '⑨ 食譜（在設定頁）', h: phone('設定', `<div class="pWho"><i class="on">全部</i><i>🍳 煎</i><i>🥘 炒</i><i>🍚 電鍋</i></div>${pc('<b>電鍋蒸飯</b><small>米 1 杯：水 1 杯・外鍋 1 杯水</small>')}${pc('<b>番茄炒蛋</b><small>2 人份・5 個步驟</small>')}${pb('＋ 新增食譜', 'pri wide hl') + tap}`, '設定') +
-      `<ul><li>到 <b>設定</b> 頁的「食譜」按 <b>進入食譜 ›</b>，左上角 ‹ 回設定</li><li>記錄拿手菜：食材表格＋自己的步驟；也有「比例表」模板（幾杯米配幾杯水）</li><li>自訂資料夾（煎、炒、電鍋、湯…），按住拖曳排序或移到其他資料夾</li><li>很像的食譜不用重打：打開食譜按 <b>📄 另存</b>，或編輯時按 <b>📄 另存新檔</b>，取個新名字就多一份，再改食材就好（原本那份不會變）</li></ul>`},
-    {t: '⑩ 備份、外觀、防誤刪', h: phone('設定', `${pc('<b>外觀</b><small>主題・重點顏色・介面大小・震動強度</small>')}${pc('<b>資料</b><div class="pBtns">' + pb('📤 匯出備份', 'pri hl') + pb('📥 匯入備份') + '</div>' + tap)}${pc('<b>🧷 防止誤刪 App</b><small>要刪除得先停用保護、輸入手機密碼</small>')}`, '設定') +
-      `<ul><li><b>備份會包含全部</b>：收藏地點和菜單、點餐、分帳、發票、記帳（常用紀錄、帳戶、對帳、商家）、資產、購物清單、食譜、分類、所有設定、API 金鑰和所有圖片</li><li>手機（匯出備份檔）、雲端（Google 雲端、pCloud）、<b>📲 QR Code 快速換機</b>內容都一樣；雲端和 QR 在 <b>記帳 → 設定 → 備份與換機</b></li><li>用 QR 傳給別人時可以選<b>不帶金鑰</b></li><li><b>🧷 防止誤刪 App</b>（記帳 → 設定 → 上鎖）：開啟後不能直接解除安裝</li><li>有新版本時 App 會提醒，按一下就能更新；<b>分享這個 App</b> 可以選傳連結，或顯示 QR Code 讓朋友掃描、存成圖片分享</li></ul>`},
-    {t: '⑪ 先設定金鑰（只要一次）', h: `<div class="gKeys"><div><i>🔑</i><b>AI 辨識金鑰（建議）</b><small>菜單照片、消費明細變成表格都靠它。免費申請，不用信用卡。</small><button class="btn sm pri" data-tut="ai">📘 看教學</button></div>
-        <div><i>🗺️</i><b>Google 搜尋金鑰（選用）</b><small>搜尋店家、停車場、加油站最齊全，自動帶入地址電話。</small><button class="btn sm" data-tut="maps">📘 看教學</button></div></div>
-      <p>不設定也能先用，之後到 <b>設定</b> 頁再補上就可以。金鑰會一起備份，換手機不用重新申請。</p>`}]},
+    {t: '歡迎使用日日帳本', h: () => gHeroH('收藏地點・菜單・點餐・分帳・記帳', [['🗺️', '地圖', '定位、找地點、收藏'], ['📋', '菜單', '照片 AI 變表格'], ['📒', '日常', '記一餐、點餐'], ['🧾', '分帳', '誰付多少'], ['🎫', '發票', '條碼、掃描'], ['💰', '記帳', '收支、資產、對帳']])},
+    {t: '① 打開就定位', h: () => GS('f_home') + gCap('一打開就飛到<b>你的位置</b>、轉回朝北', '按 <b>◎</b> 重新定位，自動選好所在的鄉鎮', '下面列出這一區的收藏，依分類排好')},
+    {t: '② 搜尋地點', h: () => GS('f_search') + gCap('打<b>名稱</b>，或打「停車場、加油站」這類關鍵字', '結果都標在地圖上，點一下就看得到')},
+    {t: '③ 地點卡片', h: () => GS('f_card') + gCap('點地圖上的旗子 → 下方出現卡片', '<b>詳細資料</b>：營業時間、電話、導航、菜單')},
+    {t: '④ 一個地點放多個分類', h: () => GS('f_cat') + gCap('<b>主要分類</b>決定旗子的顏色', '<b>也放在這些分類</b>可以複選（午餐、晚餐都會去）', '每個分類都找得到它，「全部」只算一次')},
+    {t: '⑤ 菜單變成表格', h: () => GS('f_menu') + gCap('先「加入菜單圖片」', '<b>✨ Gemini 辨識</b>：免費金鑰，App 自動完成', '<b>🤖 Claude 辨識</b>：用 Claude 月租方案')},
+    {t: '⑥ 用 Claude 月租辨識', h: () => GS('f_claude') + gCap('照片和指令一起<b>傳到 Claude App</b>，按送出', '複製 Claude 的回覆，回來會<b>自動貼上</b>', '按「帶入表格」')},
+    {t: '⑦ 記一餐', h: () => GS('f_meal') + gCap('<b>日常 → 🍱 記一餐</b>', '選餐別 → 選店家（依分類收合）')},
+    {t: '⑧ 點餐：誰吃了什麼？', h: () => GS('f_order') + gCap('上方先選<b>誰</b>，再點品項', '大小、口味直接按價格按鈕', '下方即時算出每個人的金額')},
+    {t: '⑨ 匯出，貼到 LINE', h: () => GS('f_export') + gCap('選整天或單一餐、選格式', '<b>複製文字</b>貼 LINE，或存成 <b>Excel</b>')},
+    {t: '⑩ 購物清單', h: () => GS('f_list') + gCap('<b>🛒 購物清單</b>：選店家、寫要買的東西', '勾一下＝買到了，移到「已買」')},
+    {t: '⑪ 食譜', h: () => GS('f_rec') + gCap('在<b>設定 → 我的食譜</b>', '照片匯入可以用 AI 讀出食材和步驟', '可以「另存新檔」改成新食譜')},
+    {t: '⑫ 備份與更新', h: () => GS('f_set') + gCap('<b>匯出備份</b>：全部資料、圖片、金鑰一起', '雲端、QR 換機在 <b>記帳 → 設定</b>', '有新版本會自動提醒')},
+    {t: '⑬ 先設定金鑰（只要一次）', h: () => GS('f_keys') + GKEYS}]},
   shop: {title: '🧾 分帳 使用說明', steps: [
-    {t: '分帳是什麼？', h: `<div class="gHero"><div class="gIcon">${APP_ICON}</div><b>一張明細，自動算出每個人要付多少</b></div>
-      <div class="gFlow"><span>🧾<small>拍明細</small></span><em>➜</em><span>🤖<small>AI 讀出品項</small></span><em>➜</em><span>👥<small>選誰付</small></span><em>➜</em><span>💰<small>每人金額</small></span></div>
-      <p>適合全聯、量販店、超商一起買東西，或 Foodpanda 一起訂外送的時候。</p>`},
-    {t: '① 打開分帳', h: phone('分帳', `${pc('<b>購物分帳</b><small>11月22日（日）・1 筆</small>' + pb('📷 上傳明細', 'pri wide hl') + tap)}${pc('<b>好鄰居超市 中央店</b><small>11 項・$652</small>')}`, '分帳') +
-      `<ul><li>下面的分頁按 <b>🧾 分帳</b>（順序是地圖、日常、分帳、發票、設定）</li><li>收藏在地圖右上角的 <b>🔖</b>；點地圖上的店家，吃喝的店可以在 <b>📋 菜單</b> 和 <b>🧾 消費紀錄</b> 兩個分頁之間切換，超市、加油站這類只有消費紀錄</li></ul>${tip('美食和購物<b>共用同一份收藏</b>，分類也是同一份（早餐、午餐、晚餐、量販店、超市、超商…）。')}`},
-    {t: '② 收藏常去的店', h: phone('🔍 搜尋', `<div class="pSrch">🔍 好鄰居超市</div><div class="pMap"><span class="flag">🛒</span><span class="flag f2">🍱</span></div>${pc(`<b>好鄰居超市 中央店</b><small>量販店</small><div class="pBtns">${pb('🧾 消費紀錄')}${pb('⭐ 收藏', 'pri hl') + tap}</div>`)}`, '地圖', 'shop') +
-      `<ul><li>在地圖搜尋全聯、全家、常叫外送的餐廳…按收藏，選一個分類</li><li>外送的餐廳就照早餐、午餐、晚餐分類；是不是外送，改在每一筆明細選「購物方式」</li><li>店家卡片上的 <b>🧾 消費紀錄</b> 可以看這家店所有的明細</li><li>沒收藏的店也可以「✏️ 自己輸入店名」；記帳裡建立在收藏分類的名稱也會出現在這裡</li></ul>`},
-    {t: '③ 上傳明細，AI 幫你讀', h: phone('購物分帳', `<div class="pBtns">${pb('📷 上傳明細', 'pri hl') + tap}${pb('✏️ 手動輸入')}</div><div class="pc" style="border-color:var(--accent)"><b>🤖 AI 辨識中・11/08</b><small>Flash-Lite 已讀到 5 項…（12 秒）</small></div><div class="pCal">${Array.from({length: 7}, (_, i) => `<i class="${i === 3 ? 'on' : ''}">${i + 5}${i === 3 ? '<em></em>' : ''}</i>`).join('')}</div>`, '分帳', 'shop') +
-      `<ul><li>按最上面的 <b>📷 上傳明細</b>，選全聯 App 明細截圖、發票照片或 Foodpanda 訂單截圖（可以一次選好幾張）</li><li>辨識進度會<b>固定顯示在頁首</b>，不管看哪一天都看得到，點一下直接打開那筆</li><li>AI 會讀出店名、日期、時間、品項、折扣、平台費，自動放到明細上的日期</li></ul>${tip('也可以在 Foodpanda 或相簿按「分享」→ 日日帳本。')}`},
-    {t: '④ 日期、時間、購物方式', h: phone('🧾 森林小廚房', `${pc('<b>店家</b><small>森林小廚房</small>')}${pc(`<b>購物方式</b><div class="pWho" style="margin-top:.2rem"><i>🏬 實體店購物</i><i class="on hl">🐼 Foodpanda</i><i>🛵 Uber Eats</i><i>🛵 店家外送</i><i>＋ 自訂</i></div>` + tap)}${pc('<b>日期</b><small>2026/10/04(日)　到月曆 ›　更改 ▾</small>')}${pc('<b>時間</b><small>🕒 11:15</small>')}`, '分帳', 'shop') +
-      `<ul><li><b>購物方式</b>：實體店購物、Foodpanda、Uber Eats、店家外送，也可以按「＋ 自訂」新增；明細卡片和匯出文字都會標示</li><li><b>日期</b>：點日期跳到月曆那一天；按「更改 ▾」用月曆面板改日期</li><li><b>時間</b>：用時間選擇器先選「時」再選「分」</li></ul>`},
-    {t: '⑤ 每一項是誰的？', h: phone('🧾 好鄰居超市 中央店', `<div class="pQuick">還沒選人的全部給：<i>🙂 我</i><i>👩 媽媽</i></div>${pc(pRow('礦泉水1500 ×2', '$50') + '<div class="pTag">🙂 我</div>')}${pc(pRow('衛生紙', '$199') + '<div class="pTag hl">🙂 我　👩 媽媽　👦 弟弟</div>' + tap)}${pc(pRow('餅乾禮盒', '$120') + '<div class="pTag warn">選誰付</div>', 'warn')}`, '分帳', 'shop') +
-      `<ul><li>點每一項右邊的人名，選<b>誰付</b></li><li>選 <b>1 個人</b> = 這個人自己付；選 <b>好幾個人</b> = 平均分攤</li><li>紅框代表還沒選人；可以用「還沒選人的全部給」一次選好</li><li>點品名可以改「單價｜數量｜總額」，會互相自動計算</li></ul>`},
-    {t: '⑥ 折扣、福利扣點、費用', h: phone('🏷️ 折扣與費用', `${pc('<b>洗衣精 任買2組229元</b><small class="g">-$138</small><div class="pTag">洗衣精補充包</div>')}${pc('<b>餅乾禮盒 第2件</b><small class="g">-$20</small><div class="pTag warn hl">勾選品項</div>' + tap, 'warn')}${pc('<b>🎟️ 福利扣點</b><small class="g">-$3 → 選誰均攤</small>')}${pc(pRow('🛵 平台費', '$5') + '<div class="pTag">🙂 我　👩 媽媽</div>')}`, '分帳', 'shop') +
-      `<ul><li>品項折扣：AI 會依品牌、品名猜套用哪一項，<b>請確認</b>；猜不到的點「勾選品項」，勾好幾項會平均分</li><li><b>福利扣點</b>會自動放進整單折扣，實付金額直接帶入扣完的金額；常用名稱可以按「＋ 自訂名稱」新增、長按刪除</li><li>手動輸入時，品項折扣和整單折扣都可以選 <b>折扣金額／組合價／打折</b></li><li>平台費、外送費、包材費放在「費用」，每一筆自己選誰分攤</li></ul>${tip('全聯的「紅利抵現」會自動忽略。')}`},
-    {t: '⑦ 看結果，對一下金額', h: phone('🧾 好鄰居超市 中央店', `${pc(pRow('品項合計', '$736') + pRow('品項折扣', '-$158') + pRow('應付合計', '$578', 'tot') + '<div class="pOk">✅ 和明細上的實付金額一致</div>')}${pc(pRow('🙂 我', '$345.33') + pRow('👩 媽媽', '$166.33') + pRow('👦 弟弟', '$66.33'))}`, '分帳', 'shop') +
-      `<ul><li>最下面會算出<b>每個人要付多少</b></li><li>看到 <b>✅</b> 代表和明細上的金額一樣；<b>⚠️</b> 代表有差，檢查一下有沒有漏掉的品項或折扣</li></ul>`},
-    {t: '⑧ 匯出、搜尋、設定', h: phone('📤 匯出購物分帳', `<div class="pText">2026/11/08(日)<br>好鄰居超市 中央店 15:42<br>我：<br>礦泉水1500[NT$ 25]×2<br>洗衣精[NT$ 107]×2<br>衛生紙[NT$ 199]×0.33<br>小計：NT$ 494.33</div><div class="pBtns">${pb('📊 Excel')}${pb('📋 複製文字', 'pri hl') + tap}</div>`, '分帳', 'shop') +
-      `<ul><li><b>📤 匯出</b>：整天或單一筆，複製文字貼 LINE，或存成 Excel；單價是<b>扣完折扣後</b>的價格（例如 2 件 $298 折 $84 → [NT$ 107]×2）</li><li><b>🔍 搜尋</b>：店名或商品，例如「衛生紙」</li><li><b>⚙️ 設定</b>：人名（和點餐共用）、購物方式、費用名稱、整單折扣名稱</li><li>匯入記帳時，在「同一個人，不同綽號」連起來的人會自動換成記帳裡的名字</li><li>每筆明細的 <b>⋯</b>：<b>📒 匯入記帳</b>（每個人的金額、品項、圖片帶進記帳，不會重複匯入）、<b>🧾 套用到發票</b>（用這筆明細取代發票的品項和折扣，保留號碼、統編、日期）</li></ul>${tip('發票（紙本 QR、發票大師）也可以直接拿去分帳，請看「🎫 發票」的說明。')}`}]},
+    {t: '分帳是什麼？', h: () => GS('s_disc') + gCap('一張明細，每一項是誰的', '折扣、福利扣點、運費自動平均分', '最後算出<b>每個人要付多少</b>')},
+    {t: '① 上傳明細', h: () => GS('s_home') + gCap('<b>📷 上傳明細</b>：拍收據或外送截圖，AI 讀出品項', '<b>✏️ 手動輸入</b>：自己一項一項加')},
+    {t: '② 修改品項', h: () => GS('s_bill') + gCap('點品項可以改名稱、單價、數量', '下面選<b>誰付</b>，選好幾個人＝平分')},
+    {t: '③ 每一項是誰的？', h: () => GS('s_who') + gCap('每一列右邊點人名', '「大家一起分」一次選全部的人')},
+    {t: '④ 折扣、費用、結果', h: () => GS('s_disc') + gCap('品項折扣、整單折扣、平台費都能加', '<b>✅ 和明細實付金額一致</b>就代表沒算錯')},
+    {t: '⑤ 匯出', h: () => GS('s_exp') + gCap('複製文字貼 LINE，或存成 Excel', '每個人買了什麼、要付多少都列出來')},
+    {t: '⑥ 先設定 AI 金鑰', h: () => GKEYS}]},
   inv: {title: '🎫 發票 使用說明', steps: [
-    {t: '發票區可以做什麼？', h: `<div class="gHero"><div class="gIcon">${APP_ICON}</div><b>把發票收進來，一鍵拿去分帳</b></div>
-      <div class="gFlow"><span>📷<small>掃 QR</small></span><em>＋</em><span>🖼️<small>截圖</small></span><em>＋</em><span>🤖<small>協助工具</small></span><em>➜</em><span>🧾<small>拿去分帳</small></span></div>
-      <p>下面的分頁按 <b>🎫 發票</b>。可以掃紙本電子發票的 QR Code、匯入發票大師的截圖，或用協助工具直接讀發票大師的畫面。</p>${tip('用手機條碼直接同步載具需要財政部核發的 API 帳號（只給營業人或組織），所以改用這些方式。')}`},
-    {t: '① 我的手機條碼', h: phone('發票', `<div class="pc" style="background:#fff"><b>📱 我的手機條碼</b><div class="pBar"></div><small style="text-align:center;letter-spacing:.3em">/ABC+123</small></div>${pc('<b>2026/11/20(五)</b><small>月光拉麵・XY-20481357</small>')}`, '發票', 'shop') +
-      `<ul><li>第一次按「📱 設定我的手機條碼」輸入載具號碼（斜線開頭共 8 碼）</li><li>之後發票區最上面會顯示條碼，<b>點一下放大</b>給店員掃，發票就會存進你的載具</li></ul>`},
-    {t: '② 掃描紙本發票 QR Code', h: phone('📷 掃描發票', `<div class="pScan"><i></i><i></i></div><div class="pWho"><i class="on">左邊 QR ✓</i><i class="on">右邊 QR ✓</i></div>${pc('<b>✅ 已存入 QT-36925814</b><small>2026/11/18・5 項　$108</small>')}`, '發票', 'shop') +
-      `<ul><li>按 <b>📷 掃描</b>，把發票左右兩個 QR Code 一起放進框裡；太小或太遠可以按 <b>＋／－</b>、拉桿或雙指縮放調整倍率，有好幾顆鏡頭時可以按「🔄 換鏡頭」，會記住你的選擇</li><li>掃到後下面會直接列出每個品項和金額</li><li>不用網路就能讀出發票號碼、日期、統編、金額和每個品項；可以連續掃好幾張</li><li>店名會用統編自動查；查不到可以自己改</li></ul>`},
-    {t: '③ 匯入發票大師截圖', h: phone('發票', `<div class="pBtns">${pb('📷 掃描')}${pb('🖼️ 截圖', 'pri hl') + tap}${pb('🤖 協助工具')}</div><div class="pc" style="border-color:var(--accent)"><b>🤖 AI 讀取發票截圖 2/5</b><small>第 3 張・Flash-Lite 已讀到 6 行…</small></div><div class="pImgs"><i>📱</i><i>📱</i><i>📱</i></div>`, '發票', 'shop') +
-      `<ul><li>在發票大師、發票存摺、發票載具把「發票明細」或「發票列表」截圖</li><li>按 <b>🖼️ 截圖</b> 一次選好多張，AI 讀出號碼、日期、店家、金額、品項</li><li>同一張發票重複匯入會自動合併（同號碼，或同一天、同時間、同金額）；列表截圖之後再補明細截圖，品項會補上</li></ul>`},
-    {t: '④ 協助工具：直接讀發票 App', h: phone('發票大師', `${pc('<b>發票明細</b><small>XY-20481357　$435</small>')}${pc('<b>品名　數量　小計</b><small>豚骨拉麵　1　$245</small>')}<div class="pFab hl">🧾</div>${tap}`, '', 'shop') +
-      `<ul><li>第一次：發票區按 <b>🤖 協助工具</b> →「⚙️ 協助工具設定」→ 開啟「日日帳本 發票讀取」</li><li>之後按 🤖 協助工具會<b>自動打開發票 App</b>（優先發票載具，也支援發票大師、發票存摺），畫面上有一顆圓形按鈕 🧾（可以拖曳）</li><li><b>按一下</b>：明細頁會上下捲到底讀完這一張；列表頁自動捲到底讀全部，讀完可以選「🔁 也讀取每張明細」</li><li>發票存摺這種左右滑換發票的：讀完一張會問「➡️ 往右滑，讀下一張」，也可以選之後全部自動讀</li><li><b>長按</b>：取消偵測並關閉按鈕；讀完按「✓ 返回日日帳本」就會存進發票區</li></ul>${tip('只有按 🧾 時才會讀取畫面上的文字，讀到的內容只存在這支手機裡。')}`},
-    {t: '⑤ 月曆和搜尋', h: phone('發票', `<div class="pCal">${Array.from({length: 14}, (_, i) => `<i class="${i === 10 ? 'on' : ''}">${i + 10}${[7, 8, 10].includes(i) ? '<em></em>' : ''}</i>`).join('')}</div><div class="pc" style="border-color:var(--accent)"><b>2026/11/20(五) 的發票（1 張）</b><small>顯示整個月</small></div>${pc('<b>月光拉麵 星河店</b><small>🐼 Foodpanda・XY-20481357　$435</small>')}`, '發票', 'shop') +
-      `<ul><li>月曆上有紅點和張數的日子代表有發票，<b>點日期只看那天</b>；再點一次或按「顯示整個月」恢復</li><li><b>🔍 搜尋</b>：店家、品項或發票號碼</li><li><b>📥 匯入</b>：財政部「載具消費明細」CSV、App 內讀取財政部網站（實驗性）</li></ul>`},
-    {t: '⑥ 修改發票明細', h: phone('🧾 發票明細', `${pc('<b>XY-20481357 ✎</b><small>2026/11/20(五) ✎　19:40 ✎</small>')}${pc('<b>消費店家</b><small class="hl">🔍 星河 → 便利商店 星河二店</small>' + tap)}${pc(`<b>購物方式</b><div class="pWho"><i>🏬 實體店</i><i class="on">🐼 Foodpanda</i></div>`)}${pc(pRow('豚骨拉麵', '$245') + pRow('味噌拉麵', '$190'))}`, '發票', 'shop') +
-      `<ul><li>點<b>發票號碼、日期、時間、店家、統編、金額</b>都可以改</li><li>改店家時輸入關鍵字（不用是開頭）就會列出以前用過的店名讓你點</li><li>可以選<b>購物方式</b>；品項點一下改品名、單價、數量、小計，或按「＋ 品項」新增</li></ul>`},
-    {t: '⑦ 折扣：金額、組合價、打折', h: phone('新增折扣', `<div class="pSeg"><i>折扣金額</i><i class="on hl">組合價</i><i>打折</i></div>${pc('<b>組合優惠</b><small>組合價 $49</small>')}${pc('<b>☑ 罐裝拿鐵 $35</b><b>☑ 罐裝拿鐵 $35</b><small class="g">原價 $70 → 組合價 折扣 -$21</small>')}`, '發票', 'shop') +
-      `<ul><li><b>折扣金額</b>：例如鮮食促 -21，直接填折掉多少</li><li><b>組合價</b>：例如任選 2 件 $49，勾 2 件填 49，自動算出折了多少</li><li><b>打折</b>：例如 8 折、6.5 折，勾選的品項乘上折數</li><li>勾好幾項會平均分；發票會自動驗算扣完折扣是否等於消費金額</li></ul>`},
-    {t: '⑧ 拿去分帳', h: phone('🧾 發票明細', `${pc(pRow('消費金額', '$435', 'tot') + '<div class="pOk">✅ 品項扣掉折扣後合計和消費金額一致</div>')}<div class="pBtns">${pb('刪除')}${pb('🧾 拿去分帳', 'pri wide hl') + tap}</div>${pc('<b>✓ 已拿去分帳</b><small>2026/11/20(五) 月光拉麵　打開 ›</small>')}`, '發票', 'shop') +
-      `<ul><li>按 <b>🧾 拿去分帳</b>，會在發票日期建立一筆分帳，品項、折扣（含勾選的品項）、購物方式都會帶過去</li><li>接著選每一項是誰付的就完成了</li><li>已分帳的發票會標示「✓ 已分帳」，點一下直接打開那筆分帳</li><li>反過來：發票明細最下面「📥 用消費明細的內容取代」，可以把分帳裡比較完整的品項、折扣、整單折扣、費用套用到這張發票</li></ul>`}]},
+    {t: '發票區可以做什麼？', h: () => GS('i_cal') + gCap('手機條碼、掃描紙本發票、截圖匯入', '月曆看每天有幾張發票', '一鍵拿去分帳或記帳')},
+    {t: '① 我的手機條碼', h: () => GS('i_home') + gCap('點條碼放大給店員掃', '螢幕亮度會自動調到最亮')},
+    {t: '② 掃描紙本發票', h: () => GS('i_scan') + gCap('<b>📷 掃描</b>左邊的 QR Code', '品項、金額、店家自動帶入')},
+    {t: '③ 截圖匯入', h: () => GS('i_shot') + gCap('<b>🖼️ 截圖</b>：發票 App 的明細截圖', 'AI 讀出發票號碼和品項')},
+    {t: '④ 協助工具', h: () => GS('i_acc') + gCap('<b>🤖 協助工具</b>：直接讀取發票 App 畫面', '第一次要到手機設定開啟權限')},
+    {t: '⑤ 修改發票明細', h: () => GS('i_edit') + gCap('點任何欄位或品項就能修改', '可以設定購物方式、加折扣')},
+    {t: '⑥ 拿去分帳', h: () => GS('i_bill') + gCap('<b>拿去分帳</b>：品項直接變成分帳明細', '再選每一項是誰的就好')}]},
   acc: {title: '💰 記帳 使用說明', steps: [
-    {t: '記帳區可以做什麼？', h: `<div class="gHero"><div class="gIcon">${APP_ICON}</div><b>收支・資產・分帳欠款・對帳</b></div>
-      <div class="gGrid"><div><i>🗺️</i><b>地圖</b>地點地圖、搜尋收藏</div><div><i>📒</i><b>記帳</b>月曆、記一筆、常用</div><div><i>🏛️</i><b>資產</b>每個帳戶剩多少</div><div><i>📊</i><b>分析</b>圓餅圖、非必要消費</div><div><i>⚙️</i><b>設定</b>分類、上鎖、備份換機</div></div>
-      <p>從 <b>設定 → 記帳・對帳</b> 進入（有設密碼要先解鎖），底部會換成記帳專用的五個分頁；在記帳的 <b>設定 → 回到日日帳本</b> 切回來。重開 App 會回到上次的區域。</p>`},
-    {t: '① 記一筆', h: phone('📒 記一筆', `<div class="pSeg"><i class="on">支出</i><i>收入</i><i>轉帳</i><i>遺失</i></div>${pc('<b>NT$ 12×3+4 = 40</b>')}<div class="pWho"><i class="on">🍽️ 吃喝</i><i>🛍️ 購物</i><i>🏠 生活</i></div><div class="pWho"><i class="on">🍳 早餐</i><i>🍱 午餐</i><i>🍲 晚餐</i></div>`, '記帳', 'acc') +
-      `<ul><li>計算機可以 + − × ÷，按 = 算出結果；記帳頁的 <b>📅 今天</b> 跳回今天</li><li>類別是 <b>母分類 → 子分類</b>（吃喝 → 早餐），都可以自訂名稱和圖示</li><li><b>商家／對象</b>：和收藏的店家同一份清單，也可以建立台電、台水這種只在記帳用的名稱；有 📍 的是已經連結地圖的店家</li><li><b>🧾 發票</b>：發票比較晚收到也沒關係，之後打開這筆按「選擇發票」或手動輸入號碼，日期時間會換成發票上的，並可選品項名稱以你的或發票的為主；按「發票 QR Code」會產生像紙本一樣的左右兩個碼，別的手機掃描就能看到號碼和品項</li><li><b>付款帳戶</b>：先選現金、銀行、信用卡、儲值、行動支付，再選是哪一個</li></ul>`},
-    {t: '② 備註、圖片、分帳', h: phone('📒 記一筆', `<div class="pBtns">${pb('🧾 用分帳方式輸入', 'pri hl') + tap}${pb('📥 從分帳帶入')}</div>${pc('<b>備註／消費明細</b><small>小美：泡菜鍋[NT$ 200]×1　小計 $343</small>')}<div class="pImgs"><i>🖼️</i><i>＋</i></div>`, '記帳', 'acc') +
-      `<ul><li><b>🧾 用分帳方式輸入</b>：跟分帳一樣輸入品項、誰付、折扣、平台費，完成後寫進備註</li><li><b>📥 從分帳帶入</b>（或記帳頁的「從分帳匯入」）：品項、每人金額和圖片一起帶入，不會重複匯入</li><li>可以加截圖；下面的 🤝 分帳選誰付的錢、誰要分（平均或自己填）</li></ul>`},
-    {t: '③ 常用紀錄', h: phone('⭐ 常用紀錄', `<div class="pSeg"><i class="on">支出</i><i>收入</i><i>轉帳</i></div>${pc('<b>春日公寓-3F-房租</b><small>$10,000</small>')}${pc('<b>電費</b><small>💬 每次輸入金額</small>')}<div class="pBtns">${pb('🗑 刪除')}${pb('＋ 另存常用', 'hl') + tap}${pb('✓ 儲存', 'pri')}</div>`, '記帳', 'acc') +
-      `<ul><li>記一筆填好後按 <b>⭐ 存成常用</b>（金額可以不填，每次使用時再輸入）；記帳頁的「⭐ 常用紀錄」顯示有幾個常用，按「打開」</li><li>點一個常用紀錄會打開 <b>記一筆</b>，內容都帶好，<b>確認後再儲存</b>；沒有輸入金額就按儲存會跳出提醒</li><li>編輯時按 <b>＋ 另存常用</b> 可以複製成一個新的（例如另一間房租）</li><li>點分類名稱可以收合，右上角「全部收合／全部展開」一鍵切換；按住拖曳排序，分類也可以按住整組上下移動</li></ul>`},
-    {t: '④ 欠款和對帳', h: phone('🤝 和小美對帳', `${pc('<b>小美 欠我</b><small>$587</small>')}${pc('<b>☑ 11/21 晨曦早午餐　$285</b><small>☑ 11/22 好鄰居超市　$302</small>')}<div class="pBtns">${pb('✅ 結清', 'pri wide hl') + tap}</div>`, '記帳', 'acc') +
-      `<ul><li>有分帳的紀錄會自動算出誰欠誰</li><li>按 <b>🤝 對帳</b>，選日期範圍，勾選這次要結清的幾筆</li><li>選錢收進哪個帳戶（銀行或現金）和對方怎麼付的（LINE Pay、台灣 Pay、轉帳…），結清後會記一筆還款並更新資產</li><li><b>📚 對帳還款歷史</b>（欠款卡片的「歷史」或對帳選人畫面）：切換⏳ 未完成／✅ 已完成，可以依人或依時間分類、只看某個人，每一筆都看得到</li><li><b>對帳紀錄</b>：可以整批復原，或單獨把某一筆改回未結清；已經從記帳刪掉的紀錄不會再出現；確認沒問題的按「確認此批沒有問題」就會收起來</li></ul>`},
-    {t: '⑤ 資產', h: phone('資產', `<div class="pBtns" style="justify-content:flex-end">${pb('👁 顯示金額', 'hl') + tap}</div>${pc('<b>淨資產</b><small>$ ••••</small>')}${pc('<b>🏦 銀行</b><small>我的銀行　$ ••••</small>')}`, '資產', 'acc') +
-      `<ul><li>金額預設隱藏，按右上角 👁 顯示</li><li>每個帳戶的餘額會隨支出、收入、轉帳、遺失自動計算；點帳戶可以設定目前餘額、換圖示</li><li>帳戶裡的<b>收支明細依月份分組</b>，點月份收合，或按「全部展開／全部收合」；點一筆可以直接修改</li><li>信用卡設定每月還款日和扣款銀行，到了會自動記一筆還款</li><li>按住拖曳排序</li></ul>`},
-    {t: '⑥ 消費分析', h: phone('消費分析', `${`<div class="pSeg"><i>日</i><i>週</i><i class="on">月</i><i>半年</i><i>年</i></div>` + pc('<b>11 月支出 $12,480</b><small>比上個月 ▼ 8%・非必要 23%</small>')}<div class="pTable"><div><span>🍽️ 吃喝</span><span>42%</span></div><div><span>🏠 生活</span><span>30%</span></div></div>`, '分析', 'acc') +
-      `<ul><li>上方切換 <b>日／週／月／半年／年</b>，◀ ▶ 換上一期、下一期，點中間可以直接選日期或月份</li><li>支出、收入、平均每天三個數字，和上一期比較；<b>💡 分析重點</b>自動整理花最多的分類、增減、非必要比例、儲蓄率</li><li>長條圖分成必要（綠）和非必要（橘），點長條看那天／那個月的金額；半年和年還有每月收支表</li><li>圓餅圖看各分類佔比，點分類看子分類；<b>必要</b>和<b>非必要</b>各有自己的分類佔比圓餅圖（在「設定哪些是非必要」選）</li><li>星期幾花最多、最大筆的支出、最常花錢的地方、金額遺失統計</li><li>右上角 <b>📤 匯出報告</b>：選日／週／月／半年／年和期間，匯出圖表加數據的 <b>PDF</b>（直接存成檔案）、<b>🖼️ 圖片</b>（一張長圖 PNG，存到相簿，日報表有每 2 小時的時段長條圖）或 <b>Excel</b>（總覽含圖表、分類、必要與非必要、趨勢、明細、商家排行）</li></ul>`},
-    {t: '⑦ 地點地圖：定位、搜尋、收藏', h: phone('地點地圖', `<div class="pSrch">🔍 加油站</div><div class="pMap"><span class="flag">📍</span><span class="flag f2">🍳</span></div><div class="pBtns">${pb('星河市 ▾')}${pb('幸福區 ▾')}${pb('✕')}</div>${pc('<b>🍳 早餐 ▾</b><small>晨曦早午餐・消費 3 次・$420</small>' + tap)}`, '地圖', 'acc') +
-      `<ul><li>一進來就<b>定位到你的位置</b>，並<b>自動選好目前的鄉鎮</b>，下面列出那一區的收藏地點</li><li>地圖上方的搜尋列可以搜店名，或搜<b>停車場、加油站</b>這類關鍵字：結果全部標在地圖上，點標籤或「＋ 收藏」就能加入收藏；有選鄉鎮時只找那一區</li><li>左下 ＋／－ 放大縮小，右下 ➤ 固定朝北、◎ 移到目前位置（會重新選好鄉鎮）</li><li>清冊依分類排，「全部展開／全部收合」一鍵切換；按住分類標題上下移動，展開後按住店家排序</li></ul>`},
-    {t: '⑧ 店家資料、改名、釘選', h: phone('地點地圖', `${pc('<b>📍 晨曦早午餐</b><small>星河路1號・消費 3 次・$420</small><div class="pBtns">' + pb('✎ 改店名') + pb('🧭 導航') + '</div>')}${pc('<b>📌 好鄰居超市 中央店</b><small>還沒有位置</small><div class="pBtns">' + pb('📍 釘選', 'pri hl') + '</div>' + tap)}`, '地圖', 'acc') +
-      `<ul><li>點店家會在地圖上標出來，下面顯示地址、分類和每一筆記帳明細</li><li>只在記帳出現、還沒有位置的店家按 <b>📍 釘選</b>，用 Google 地圖搜尋找到位置</li><li>在發票、地圖、記帳任何一區<b>改店名</b>，會問要不要一起改其他區；台灣電力公司這類「只用在記帳」的名稱不會跟著改</li><li>在記帳設定的「商家／對象名稱」點收藏地點，會直接跳到這張地圖</li></ul>`},
-    {t: '⑨ 分帳的人、同一個人', h: phone('記帳設定', `${pc('<b>我是誰</b><div class="pWho"><i class="on">🙂 小美</i><i>🧑 明哥</i><i>👵 阿嬤</i></div>')}${pc('<b>🔗 同一個人，不同綽號</b><div class="sameR" style="margin-top:.3rem"><span>👦 阿明<small>日常</small></span><b>＝</b><span>🧑 明哥<small>記帳</small></span></div>' + pb('🔗 設定同一個人', 'hl') + tap)}`, '設定', 'acc') +
-      `<ul><li><b>我是誰</b>：分帳、對帳時「我」是哪一個人</li><li><b>管理名單</b>：新增、改名、換圖示、刪除、拖曳排序；名單只用在記帳，和日常點餐分開</li><li><b>🔗 同一個人，不同綽號</b>：例如日常點餐叫「阿明」、記帳叫「明哥」。設定後，從分帳匯入記帳會自動變成「明哥」，欠款、對帳算在一起</li><li>如果記帳名單裡兩個名字其實是同一人，連起來後紀錄會併在一起，只留一個名字</li></ul>`},
-    {t: '⑩ 上鎖、防止誤刪', h: phone('記帳設定', `${pc('<b>🔒 記帳密碼</b><small>6 位數・可用指紋解鎖</small><div class="pBtns">' + pb('🔓 立刻上鎖', 'hl') + pb('變更密碼') + '</div>' + tap)}${pc('<b>🧷 防止誤刪 App</b><small>不能直接解除安裝</small>')}`, '設定', 'acc') +
-      `<ul><li><b>上鎖</b>：設定 6 位數密碼，可以用指紋解鎖；螢幕關閉或把 App 滑掉就會自動上鎖，在 App 裡切換分頁不用重新解鎖</li><li>設定頁的鎖頭按鈕可以立刻上鎖／解鎖；變更或移除密碼要先解鎖；從分帳匯入記帳也要先解鎖</li><li>有密碼時，桌面小工具和通知會把金額藏起來</li><li><b>🧷 防止誤刪 App</b>：開啟後手機不能直接解除安裝日日帳本，要先到手機設定停用保護，停用時要輸入手機的解鎖密碼；在 App 裡關閉要先輸入記帳密碼</li></ul>${tip('防誤刪是多一道確認，不是絕對擋得住；最可靠的還是定期備份。')}`},
-    {t: '⑪ 匯出、備份、換機', h: phone('記帳設定', `${pc('<b>📤 匯出 CSV</b><small>消費明細・資產明細</small>')}${pc('<b>☁️ Google 雲端・pCloud</b><small>上傳／還原・選資料夾</small>')}${pc('<b>📲 快速換機</b><small>舊手機顯示 QR，新手機掃描</small>' + tap)}`, '設定', 'acc') +
-      `<ul><li><b>匯出 CSV</b>：選日期區間，消費明細（含品項、分帳）或資產明細</li><li><b>備份內容是整個日日帳本</b>：收藏地點和菜單、點餐、分帳、發票、記帳（常用紀錄、帳戶、對帳、商家）、資產、購物清單、食譜、分類、所有設定、API 金鑰和所有圖片；只有雲端登入和記帳密碼不備份</li><li><b>Google 雲端、pCloud</b>：上傳或還原，可以選資料夾；也可以在 App 裡用網頁版雲端硬碟登入</li><li><b>手機內建儲存</b>：存成一個備份檔放在「下載」資料夾</li><li><b>📲 快速換機 QR Code</b>：同一個 Wi-Fi 直接傳到新手機（新手機只要掃一個 QR，可以放大縮小）；傳給別人時選「不要」就不會帶你的金鑰</li></ul>`},
-    {t: '⑫ 小工具、通知欄、控制中心', h: phone('桌面', `${pc('<b>📒 日日帳本　11月</b><small>本月支出 $8,420・收入 $36,000・今天 $185</small><div class="pBtns">' + pb('＋ 支出', 'pri hl') + pb('＋ 收入') + pb('⭐ 常用') + '</div>' + tap)}${pc('<b>🔔 日日帳本・快速記帳</b><small>11月 支出 $8,420・今天 $185</small>')}`, '設定', 'acc') +
-      `<ul><li><b>桌面小工具</b>：長按桌面空白處 →「小工具」→ 日日帳本，按「＋ 支出」直接打開記一筆</li><li><b>通知欄</b>：記帳 → 設定 → 快速記帳，打開「通知欄快速記帳」，通知上有「＋ 支出／＋ 收入／⭐ 常用」三顆按鈕</li><li><b>控制中心</b>：下拉兩次 → 編輯（鉛筆）→ 把「記一筆」和「常用記帳」拖進去</li><li>不想讓別人看到金額：關掉「小工具和通知顯示金額」</li></ul>`}]}
+    {t: '記帳區可以做什麼？', h: () => gHeroH('收支・資產・分帳欠款・對帳', [['📒', '記帳', '月曆、記一筆、常用'], ['🏛️', '資產', '每個帳戶剩多少'], ['📊', '分析', '圖表、匯出報告'], ['🗺️', '地圖', '在哪裡花的錢'], ['🤝', '對帳', '誰欠誰、結清'], ['⚙️', '設定', '上鎖、備份']]) + gCap('從 <b>設定 → 記帳・對帳</b> 進入', '記帳的 <b>設定 → 回到日日帳本</b> 切回來')},
+    {t: '① 記一筆', h: () => GS('a_home', 'a_new') + gCap('按 <b>＋ 記一筆</b>', '計算機輸入金額，可以 + − × ÷', '選類別、付款帳戶就能儲存')},
+    {t: '② 分帳：誰付的、誰要分', h: () => GS('a_split') + gCap('<b>誰付的錢</b>選一個人', '<b>誰要分</b>點選，平均分或自己填金額', '自動算出誰欠誰')},
+    {t: '③ 常用紀錄', h: () => GS('a_tpl') + gCap('每月房租、停車費存成常用', '點一下就帶好內容，確認後儲存', '金額可以不填，用的時候再輸入')},
+    {t: '④ 欠款和對帳', h: () => GS('a_owe') + gCap('首頁列出<b>還沒結清的欠款</b>', '按<b>對帳</b> → 勾選要結清的幾筆 → 結清', '「歷史」看已完成的對帳')},
+    {t: '⑤ 資產', h: () => GS('a_asset') + gCap('每個帳戶的餘額自動計算', '右上角可以隱藏金額', '按住拖曳可以排序')},
+    {t: '⑥ 消費分析與報告', h: () => GS('a_stat') + gCap('日／週／月／半年／年切換', '必要、非必要分類佔比圓餅圖', '<b>📤 匯出報告</b>：PDF、圖片、Excel')},
+    {t: '⑦ 地點地圖', h: () => GS('a_map') + gCap('在哪裡花的錢都標在地圖上', '上方搜尋停車場、加油站，一鍵收藏', '下方依分類列出，可以篩選鄉鎮')},
+    {t: '⑧ 商家資料', h: () => GS('a_store') + gCap('點商家看地址和每一筆記帳', '可以改名稱、更改位置')},
+    {t: '⑨ 分帳的人', h: () => GS('a_ppl') + gCap('新增、改名、換圖示、拖曳排序', '設定頁可以把兩個綽號設成<b>同一個人</b>')},
+    {t: '⑩ 上鎖、防止誤刪', h: () => GS('a_cfg') + gCap('<b>設定密碼</b>：可以用指紋解鎖', '<b>防止誤刪 App</b>：不能直接解除安裝', '最可靠的還是定期備份')},
+    {t: '⑪ 小工具、通知欄', h: () => `<div class="gWid"><div class="gWidC"><b>📒 日日帳本　11月</b><small>本月支出 $8,420・收入 $36,000</small><div class="gWidB"><span class="pri">＋ 支出</span><span>＋ 收入</span><span>⭐ 常用</span></div></div><div class="gWidC n"><b>🔔 日日帳本・快速記帳</b><small>今天 $185</small></div></div>` + gCap('<b>桌面小工具</b>：長按桌面 → 小工具 → 日日帳本', '<b>通知欄</b>：記帳 → 設定 → 快速記帳', '<b>控制中心</b>：把「記一筆」拖進快速設定')}]}
 };
 function openGuide(kind) {
-  const G = GUIDE[kind]; let i = 0, dir = 1; buzz(10);
-  const sh = sheet({title: G.title, full: true, foot: '<button class="btn" data-a="prev">‹ 上一步</button><button class="btn pri" data-a="next">下一步 ›</button>'});
-  const render = () => { const s = G.steps[i], last = i === G.steps.length - 1;
-    sh.body.innerHTML = `<div class="tut gd ${dir < 0 ? 'back' : 'fwd'}"><div class="tutDots">${G.steps.map((_, k) => `<i class="${k === i ? 'on' : ''}" data-k="${k}"></i>`).join('')}</div><div class="tutStep">${i + 1} / ${G.steps.length}</div><h2>${s.t}</h2>${s.h}</div>`;
-    sh.body.scrollTop = 0; $('[data-a="prev"]', sh.foot).disabled = i === 0; $('[data-a="next"]', sh.foot).textContent = last ? '完成 ✓' : '下一步 ›'; };
-  render();
+  const G = GUIDE[kind]; let i = 0, dir = 1, stop = () => {}; buzz(10);
+  const sh = sheet({title: G.title, full: true, foot: '<button class="btn" data-a="prev">‹ 上一步</button><button class="btn pri" data-a="next">下一步 ›</button>', onClose() { stop(); }});
+  const render = () => { stop(); const s = G.steps[i], last = i === G.steps.length - 1;
+    sh.body.innerHTML = `<div class="tut gd ${dir < 0 ? 'back' : 'fwd'}"><div class="tutDots">${G.steps.map((_, k) => `<i class="${k === i ? 'on' : ''}" data-k="${k}"></i>`).join('')}</div><div class="tutStep">${i + 1} / ${G.steps.length}</div><h2>${s.t}</h2>${typeof s.h === 'function' ? s.h() : s.h}</div>`;
+    stop = guideAnim(sh.body); sh.body.scrollTop = 0; $('[data-a="prev"]', sh.foot).disabled = i === 0; $('[data-a="next"]', sh.foot).textContent = last ? '完成 ✓' : '下一步 ›'; };
+  render(); GImg.load();
   sh.foot.addEventListener('click', e => { const b = e.target.closest('[data-a]'); if (!b) return; buzz(8); if (b.dataset.a === 'prev') { if (i > 0) i--; dir = -1; render(); } else if (i < G.steps.length - 1) { i++; dir = 1; render(); } else sh.close(); });
   sh.body.addEventListener('click', e => { const t = e.target.closest('[data-tut],[data-k]'); if (!t) return; if (t.dataset.tut) openTutorial(t.dataset.tut); else { const k = +t.dataset.k; dir = k < i ? -1 : 1; i = k; buzz(8); render(); } });
   let x0 = null; sh.body.addEventListener('touchstart', e => { x0 = e.touches[0].clientX; }, {passive: true});
@@ -8448,7 +8448,7 @@ function renderAcc() {
   const days = []; L.forEach(r => { let g = days.find(x => x.d === r.d); if (!g) days.push(g = {d: r.d, L: []}); g.L.push(r); });
   $('#accSub').textContent = `${Mo + 1}月・${mon.length} 筆`;
   box.innerHTML = `<button class="acTplBtn card" data-a="tpls"><span class="acTplI">⭐</span><span class="grow"><b>常用紀錄</b><small>${DB.acc.tpls.length ? `${DB.acc.tpls.length} 個常用紀錄` : '每月房租、手機費…點一下就記好'}</small></span><span class="acDGo">打開 ›</span></button>
-    <div class="acSum card"><div class="acT out"><small>支出（我的）</small><b>${money(out)}</b></div><div class="acT in"><small>收入</small><b>${money(inc)}</b></div><div class="acT bal"><small>結餘</small><b>${money(inc - out - lossM)}</b></div></div>${lossM ? `<div class="acLoss card">💸 這個月遺失 <b>${money(lossM)}</b><small>（另外統計，已算進結餘）</small></div>` : ''}
+    <div class="acSum card"><div class="acT out" data-a="outBk"><small>支出（我的）ⓘ</small><b>${money(out)}</b></div><div class="acT in"><small>收入</small><b>${money(inc)}</b></div><div class="acT bal"><small>結餘</small><b>${money(inc - out - lossM)}</b></div></div>${lossM ? `<div class="acLoss card">💸 這個月遺失 <b>${money(lossM)}</b><small>（另外統計，已算進結餘）</small></div>` : ''}
     ${dIds.length ? `<div class="acDebt card"><div class="acDH"><b>🤝 還沒結清的欠款</b><span class="row" style="gap:.35rem"><button class="btn sm" data-a="settleHist">📚 歷史</button><button class="btn sm" data-a="settleLog">對帳紀錄</button></span></div>${dIds.map(p => { const u = aWho(p), v = debts[p]; return `<button class="acDR" data-settle="${p}"><span class="acDI">${esc(u.icon)}</span><span class="grow"><b>${esc(u.name)}</b><small>${v > 0 ? '欠我' : '我欠他'}</small></span><span class="acDV ${v > 0 ? 'pos' : 'neg'}">${money(Math.abs(v))}</span><span class="acDGo">對帳 ›</span></button>`; }).join('')}</div>` : ''}
     <div class="cal card">${calHead(Y, Mo)}<div class="calWd">${MWD.map((w, i) => `<span class="${i === 0 || i === 6 ? 'we' : ''}">${w}</span>`).join('')}</div><div class="calG acCal">${cells}</div></div>
     ${Acc.day ? `<div class="invDayBar"><span class="grow">📅 只看 ${dayLabel(Acc.day)}</span><button class="btn sm" data-a="allDays">看整個月</button></div>` : ''}
@@ -8489,7 +8489,7 @@ function initAcc() {
     if (a === 'pm' || a === 'nm') { const d = new Date(Y, Mo + (a === 'pm' ? -1 : 1), 1); Acc.ym = [d.getFullYear(), d.getMonth()]; Acc.day = null; renderAcc(); }
     else if (a === 'ymY' || a === 'ymM') { const r = await ymPick(Y, Mo, a === 'ymY' ? 'y' : 'm'); if (r) { Acc.ym = r; Acc.day = null; renderAcc(); } }
     else if (a === 'allDays') { Acc.day = null; renderAcc(); }
-    else if (a === 'settleLog') accSettleLog(); else if (a === 'settleHist') accSettleHist(); else if (a === 'tpls') tplList(); });
+    else if (a === 'settleLog') accSettleLog(); else if (a === 'settleHist') accSettleHist(); else if (a === 'tpls') tplList(); else if (a === 'outBk') accOutBreak(); });
   $('#accABody').addEventListener('click', accAssetClick); $('#accEye').onclick = () => { buzz(15); Acc.showAmt = !Acc.showAmt; renderAccAsset(); };
   $('#accSBody').addEventListener('click', accStatClick);
   $('#accCBody').addEventListener('click', accCfgClick);
@@ -9464,6 +9464,16 @@ function accSettleHist() {
     if (d.settle) { sh.close(); accSettle(d.settle); return; }
     if (d.r) { const r = DB.acc.recs.find(x => x.id === d.r); if (r) { await accEdit(r); draw(); } } };
 }
+
+/* 「支出（我的）」怎麼算的：分帳的紀錄只算我自己那一份，別人先付、我欠的也只算我那份 */
+function accOutBreak() { const [Y, Mo] = Acc.ym, pre = `${Y}-${String(Mo + 1).padStart(2, '0')}`, me = accMe();
+  const L = DB.acc.recs.filter(r => r.d && r.d.startsWith(pre) && r.type === 'out' && accMine(r)).sort((a, b) => (a.d + (a.t || '')).localeCompare(b.d + (b.t || '')));
+  const tot = L.reduce((s, r) => s + accMine(r), 0), days = [];
+  L.forEach(r => { let g = days.find(x => x.d === r.d); if (!g) days.push(g = {d: r.d, L: []}); g.L.push(r); });
+  sheet({title: `支出（我的）${Mo + 1} 月 ${money(tot)}`, full: true, html: `<div class="small muted" style="margin-bottom:.7rem">有分帳的紀錄只算<b>你自己那一份</b>：別人先付、你欠他的，也只算你那份（例如總額 $968 兩人平分＝你的支出 $484）。欠款另外在「還沒結清的欠款」計算，不會重複算進支出。</div>`
+    + days.map(g => `<div class="obD"><span>${esc(g.d.slice(5).replace('-', '/'))}</span><b>${money(g.L.reduce((s, r) => s + accMine(r), 0))}</b></div>` + g.L.map(r => { const sp = (r.split || []).length, payer = r.payer || me;
+      return `<div class="obR"><span class="grow"><b>${esc(r.payee || accCat(r).n)}</b><small>${sp ? `總額 ${money(r.amt)}・${payer === me ? '我付' : esc(aWho(payer).name) + ' 付'}・${sp} 人分` : '自己的'}</small></span><b>${money(accMine(r))}</b></div>`; }).join('')).join('')
+    + `<div class="obD tot"><span>合計</span><b>${money(tot)}</b></div>`}); }
 
 /* ===== 消費分析報告：選期間（日／週／月／半年／年），匯出精美的 PDF 或 Excel（圖表＋數據） ===== */
 /* 算出一段期間的所有分析數據（和分析頁同一套算法） */
