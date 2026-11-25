@@ -4,7 +4,7 @@
 <script>/* 線上更新開機程式：手機上若已下載比 APK 內建更新的介面版本，就改用新版（存在 IndexedDB）。
    新版連續兩次沒有正常開啟 → 自動退回 APK 內建版本。網址加上 #builtin 也會強制使用內建版本。 */
 (function () {
-  var B = '3.33.0'; if (!window.__OTA) window.APP_BUILTIN = B;
+  var B = '3.33.1'; if (!window.__OTA) window.APP_BUILTIN = B;
   if (window.__OTA || location.hash.indexOf('builtin') >= 0) return;
   var v = null; try { v = JSON.parse(localStorage.getItem('fm.ota') || 'null'); } catch (e) {}
   function gt(a, b) { a = String(a).split('.').map(Number); b = String(b).split('.').map(Number); for (var i = 0; i < Math.max(a.length, b.length); i++) { var p = a[i] || 0, q = b[i] || 0; if (p !== q) return p > q; } return false; }
@@ -4023,7 +4023,7 @@ var qrcode = function() {
 /* ============================================================
    日日帳本 — 核心：工具、資料儲存、主題、面板、拖曳排序、圖片
    ============================================================ */
-const APP_VERSION = '3.33.0';
+const APP_VERSION = '3.33.1';
 const APP_VER = APP_VERSION;
 /* 線上更新來源（GitHub Pages）：IanLin1120/food-map */
 const GH = {repo: 'https://github.com/IanLin1120/food-map', pages: 'https://ianlin1120.github.io/food-map/'};
@@ -5653,7 +5653,7 @@ function newRecipe() {
 }
 const recSel = {};
 function viewRecipe(id) {
-  const r = DB.recipes.find(x => x.id === id); if (!r) return; const sh = sheet({title: '食譜', full: true}); sh.tools.innerHTML = '<button class="btn sm" data-a="copy">複製文字</button><button class="btn sm" data-a="edit">✎ 編輯</button>';
+  const r = DB.recipes.find(x => x.id === id); if (!r) return; const sh = sheet({title: '食譜', full: true}); sh.tools.innerHTML = '<button class="btn sm" data-a="copy">📋 複製</button><button class="btn sm" data-a="dup">📄 另存</button><button class="btn sm" data-a="edit">✎ 編輯</button>';
   const render = async () => { const cov = await imgURL(r.cover), c = rcatOf(rcatKey(r)), P = r.portions || []; let tbl;
     if (r.type === 'ratio') { let sel = recSel[r.id]; if (sel == null || sel >= P.length) sel = -1;
       tbl = `<div class="mcats noSel">${P.length > 1 ? `<button class="chip ${sel < 0 ? 'on' : ''}" data-p="-1">全部對照</button>` : ''}${P.map((pn, j) => `<button class="chip ${sel === j || P.length === 1 ? 'on' : ''}" data-p="${j}">${esc(pn || '份量 ' + (j + 1))}</button>`).join('')}</div>` +
@@ -5667,14 +5667,21 @@ function viewRecipe(id) {
   sh.body.addEventListener('click', e => { const b = e.target.closest('[data-p]'); if (!b) return; recSel[r.id] = +b.dataset.p; render(); });
   sh.tools.addEventListener('click', e => { const b = e.target.closest('[data-a]'); if (!b) return;
     if (b.dataset.a === 'copy') { const P = r.portions || []; copyText(`${r.title}\n${r.type === 'ratio' ? '' : '份數：' + (r.serv || '') + '\n'}\n【食材】\n${r.type === 'ratio' ? '食材｜' + P.join('｜') + '\n' + (r.ing || []).map(i => i.n + '｜' + P.map((_, j) => (i.q || [])[j] || '—').join('｜')).join('\n') : (r.ing || []).map(i => `${i.n}　${i.q}`).join('\n')}${(r.steps || []).length ? '\n\n【步驟】\n' + r.steps.map((s, i) => `${i + 1}. ${s}`).join('\n') : ''}${r.note ? '\n\n【備註】\n' + r.note : ''}`); }
+    else if (b.dataset.a === 'dup') { buzz(10); dupRecipe(r).then(n => { if (!n) return; sh.close(); viewRecipe(n.id); editRecipe(n, false, () => {}); }); }
     else editRecipe(r, false, del => { if (del) sh.close(); else render(); }); });
 }
+/* 另存新檔：複製一份食譜（封面圖片也複製一份，兩份互不影響），改個名字，放在原本那份後面 */
+async function dupRecipe(r, data) { const nm = ((await askText('新食譜的名稱', (data || r).title + '（複製）')) || '').trim(); if (!nm) return null;
+  const n = JSON.parse(JSON.stringify(data || r)); n.id = 'r' + uid(); n.t = Date.now(); n.title = nm;
+  if (n.cover) n.cover = (await copyImgs([n.cover]))[0] || '';
+  const at = DB.recipes.indexOf(r); DB.recipes.splice(at >= 0 ? at + 1 : 0, 0, n); DB.recipes.forEach((x, i) => { x.ord = i; saveRecipe(x); });
+  renderRec(); updCounts(); buzz(20); toast('📄 已另存成「' + nm + '」'); return n; }
 function editRecipe(src, isNew, done) {
   const d = JSON.parse(JSON.stringify(src)); d.type = d.type === 'ratio' ? 'ratio' : 'std'; d.portions = (d.portions || []).slice(); d.steps = d.steps && d.steps.length ? d.steps : ['']; d.cat = isNew ? (d.cat || '') : rcatKey(d);
   /* 編輯時兩種模板的資料都留著（q＝一般、qs＝各份量），切換模板不會遺失已輸入的內容 */
   d.ing = (d.ing && d.ing.length ? d.ing : [{n: '', q: ''}]).map(x => Array.isArray(x.q) ? {n: x.n, q: x.q[0] || '', qs: x.q.slice()} : {n: x.n, q: x.q || '', qs: [x.q || '']});
   let newCover = null;
-  const sh = sheet({title: isNew ? '新增食譜' : '編輯食譜', full: true, foot: `${isNew ? '' : '<button class="btn danger" data-a="del" style="flex:0 0 auto">刪除</button>'}<button class="btn pri" data-a="ok">儲存</button>`});
+  const sh = sheet({title: isNew ? '新增食譜' : '編輯食譜', full: true, foot: `<div class="tplFoot ${isNew ? 'new' : ''}">${isNew ? '' : '<button class="btn danger" data-a="del">🗑 刪除</button><button class="btn" data-a="saveAs">📄 另存新檔</button>'}<button class="btn pri" data-a="ok">✓ 儲存</button></div>`});
   sh.body.innerHTML = `<div class="field"><label>模板</label><div class="seg" id="rType"><button data-v="std">📝 一般食譜</button><button data-v="ratio">⚖️ 份量比例表</button></div></div>
     <div class="field"><label>食譜名稱</label><input id="rT" value="${esc(d.title)}" placeholder="例如：電鍋蒸飯、高麗菜大阪燒"></div>
     <div class="field"><label>分類（資料夾）</label><div class="catPick" id="rC"></div></div>
@@ -5720,9 +5727,12 @@ function editRecipe(src, isNew, done) {
   sh.foot.addEventListener('click', async e => { const b = e.target.closest('[data-a]'); if (!b) return;
     if (b.dataset.a === 'del') { if (!await ask(`確定要刪除食譜「${src.title}」嗎？`, '刪除', true)) return; await imgDel(src.cover); DB.recipes.splice(DB.recipes.indexOf(src), 1); await IDB.del('recipes', src.id).catch(() => {}); sh.close(); renderRec(); updCounts(); toast('已刪除'); done && done(true); return; }
     readTop(); if (!d.title) { toast('請輸入食譜名稱'); $('#rT', sh.body).focus(); return; }
-    const R = d.type === 'ratio', out = {id: d.id, type: d.type, title: d.title, note: d.note, cover: d.cover, cat: d.cat, ord: d.ord, t: d.t, steps: d.steps.map(s => s.trim()).filter(Boolean)};
+    const saveAs = b.dataset.a === 'saveAs'; const R = d.type === 'ratio', out = {id: d.id, type: d.type, title: d.title, note: d.note, cover: d.cover, cat: d.cat, ord: d.ord, t: d.t, steps: d.steps.map(s => s.trim()).filter(Boolean)};
     if (R) { out.portions = d.portions.map((p, j) => p.trim() || '份量 ' + (j + 1)); out.serv = ''; out.ing = d.ing.filter(x => (x.n + x.qs.join('')).trim()).map(x => ({n: x.n.trim(), q: out.portions.map((_, j) => (x.qs[j] || '').trim())})); }
     else { out.serv = d.serv; out.ing = d.ing.filter(x => (x.n + x.q).trim()).map(x => ({n: x.n.trim(), q: x.q.trim()})); }
+    /* 另存新檔：用目前改好的內容存成一份新的，原本那份不動 */
+    if (saveAs) { try { if (newCover) { out.cover = await imgStore(newCover.file, 1600); URL.revokeObjectURL(newCover.url); newCover = null; const n = await dupRecipe(src, Object.assign({}, out, {cover: ''})); if (n) { n.cover = out.cover; await saveRecipe(n); } else await imgDel(out.cover); if (n) { sh.close(); done && done(false); } }
+        else { const n = await dupRecipe(src, out); if (n) { sh.close(); done && done(false); } } } catch (er) { toast('❌ ' + er.message); } return; }
     busy('儲存中…'); try { if (newCover) { out.cover = await imgStore(newCover.file, 1600); URL.revokeObjectURL(newCover.url); } if (!isNew && src.cover && src.cover !== out.cover) await imgDel(src.cover);
       if (isNew) { out.id = 'r' + uid(); out.t = Date.now(); DB.recipes.unshift(out); DB.recipes.forEach((r, i) => { r.ord = i; saveRecipe(r); }); } else { Object.keys(src).forEach(k => delete src[k]); Object.assign(src, out); await saveRecipe(src); } } catch (er) { busy(false); toast('❌ ' + er.message); return; }
     busy(false); sh.close(); renderRec(); updCounts(); toast('已儲存'); done && done(false); });
@@ -7235,7 +7245,7 @@ const GUIDE = {
     {t: '⑧ 購物清單', h: phone('今天的安排', `<div class="pBtns">${pb('🍱 記一餐')}${pb('🛒 購物清單', 'pri hl') + tap}</div><div class="pc"><b>🛒 量販店</b><small>還要買 3 項・已買 2</small><div class="pList"><span><i></i>雞蛋 <em>×2</em></span><span><i></i>雞胸肉</span><span class="ck"><i></i>蒲瓜</span></div><small>＋ 新增品項</small></div>`, '日常') +
       `<ul><li>按 <b>🛒 購物清單</b>，選店家（可以不選），清單會記在月曆那一天</li><li>輸入要買的東西按 Enter；可以一次貼好幾行，「雞蛋 ×2」會記數量；按「⭐ 常買」從以前買過的一次勾好幾個</li><li>打錯的<b>往左滑</b>刪除，幾秒內可以按「復原」；<b>勾選＝買到了</b>，按住 ☰ 拖曳排序</li><li>⋯ 可以換店家、改日期、複製清單文字、複製成今天的新清單</li></ul>${tip('🔍 搜尋可以切換「餐點」「購物清單」，找哪天買過什麼。')}`},
     {t: '⑨ 食譜（在設定頁）', h: phone('設定', `<div class="pWho"><i class="on">全部</i><i>🍳 煎</i><i>🥘 炒</i><i>🍚 電鍋</i></div>${pc('<b>電鍋蒸飯</b><small>米 1 杯：水 1 杯・外鍋 1 杯水</small>')}${pc('<b>番茄炒蛋</b><small>2 人份・5 個步驟</small>')}${pb('＋ 新增食譜', 'pri wide hl') + tap}`, '設定') +
-      `<ul><li>到 <b>設定</b> 頁的「食譜」按 <b>進入食譜 ›</b>，左上角 ‹ 回設定</li><li>記錄拿手菜：食材表格＋自己的步驟；也有「比例表」模板（幾杯米配幾杯水）</li><li>自訂資料夾（煎、炒、電鍋、湯…），按住拖曳排序或移到其他資料夾</li></ul>`},
+      `<ul><li>到 <b>設定</b> 頁的「食譜」按 <b>進入食譜 ›</b>，左上角 ‹ 回設定</li><li>記錄拿手菜：食材表格＋自己的步驟；也有「比例表」模板（幾杯米配幾杯水）</li><li>自訂資料夾（煎、炒、電鍋、湯…），按住拖曳排序或移到其他資料夾</li><li>很像的食譜不用重打：打開食譜按 <b>📄 另存</b>，或編輯時按 <b>📄 另存新檔</b>，取個新名字就多一份，再改食材就好（原本那份不會變）</li></ul>`},
     {t: '⑩ 備份、外觀、防誤刪', h: phone('設定', `${pc('<b>外觀</b><small>主題・重點顏色・介面大小・震動強度</small>')}${pc('<b>資料</b><div class="pBtns">' + pb('📤 匯出備份', 'pri hl') + pb('📥 匯入備份') + '</div>' + tap)}${pc('<b>🧷 防止誤刪 App</b><small>要刪除得先停用保護、輸入手機密碼</small>')}`, '設定') +
       `<ul><li><b>備份會包含全部</b>：收藏店家和菜單、點餐、分帳、發票、記帳（常用紀錄、帳戶、對帳、商家）、資產、購物清單、食譜、分類、所有設定、API 金鑰和所有圖片</li><li>手機（匯出備份檔）、雲端（Google 雲端、pCloud）、<b>📲 QR Code 快速換機</b>內容都一樣；雲端和 QR 在 <b>記帳 → 設定 → 備份與換機</b></li><li>用 QR 傳給別人時可以選<b>不帶金鑰</b></li><li><b>🧷 防止誤刪 App</b>（記帳 → 設定 → 上鎖）：開啟後不能直接解除安裝</li><li>有新版本時 App 會提醒，按一下就能更新；<b>分享這個 App</b> 可以選傳連結，或顯示 QR Code 讓朋友掃描、存成圖片分享</li></ul>`},
     {t: '⑪ 先設定金鑰（只要一次）', h: `<div class="gKeys"><div><i>🔑</i><b>AI 辨識金鑰（建議）</b><small>菜單照片、消費明細變成表格都靠它。免費申請，不用信用卡。</small><button class="btn sm pri" data-tut="ai">📘 看教學</button></div>
