@@ -299,11 +299,15 @@ function accCard(r) {
   if (r.type === 'loss') return `<button class="acR card" data-r="${r.id}"><span class="acI loss">💸</span><span class="acM"><b>金額遺失${r.note ? `<em>${esc(String(r.note).split('\n')[0])}</em>` : ''}</b><small>${esc([r.t, acctName(r.acct)].filter(Boolean).join('・'))}</small></span><span class="acV neg">-${money(r.amt)}</span></button>`;
   if (r.type === 'tr') { const nl = String(r.note || '').split('\n'), ext = '外部' + (r.via ? `（${r.via}）` : '');
     return `<button class="acR card" data-r="${r.id}"><span class="acI tr ${c.k || ''}">${r.settle ? '🤝' : c.svg || '🔄'}</span><span class="acM"><b>${esc(nl[0] || c.n)}</b><small>${esc([r.t, (r.acct ? acctName(r.acct) : ext) + ' → ' + (acctName(r.to) || ext), +r.fee ? '手續費 ' + money(r.fee) : ''].filter(Boolean).join('・'))}</small>${nl.length > 1 ? `<span class="acNoteL">${esc(nl.slice(1).join('\n'))}</span>` : ''}</span><span class="acV ${r.settle && r.to ? 'pos' : ''}">${money(r.amt)}</span></button>`; }
-  const chips = sp.length ? (payer === me ? sp.map(s => { const st = (r.settled || {})[s.p]; return `<span class="acChip ${st ? 'ok' : 'wait'}">${esc(aWho(s.p).name)} 欠 ${money(s.amt)}${st ? '・已收 ✓' : '・未收'}</span>`; }).join('')
-    : `<span class="acChip ${(r.settled || {})[payer] ? 'ok' : 'neg'}">${esc(aWho(payer).name)} 付・我欠 ${money(-accOwe(r, payer))}${(r.settled || {})[payer] ? '・已還 ✓' : '・未還'}</span>`) : '';
+  /* 分帳的紀錄：右邊顯示「我的那份」，下面標狀態（未還＝紅、未收＝橘、結清＝綠）；總額和誰付的放在下方標籤 */
+  const ST = r.settled || {}, owe = sp.length && payer !== me, mine = accMine(r);
+  const chips = !sp.length ? '' : owe ? `<span class="acChip ${ST[payer] ? 'ok' : 'neg'}">${esc(aWho(payer).name)}付 ${money(r.amt)}・我欠 ${money(-accOwe(r, payer))}</span>`
+    : `<span class="acChip ${sp.every(x => ST[x.p]) ? 'ok' : 'wait'}">${esc(aWho(me).name)}付 ${money(r.amt)}</span>` + sp.map(x => `<span class="acChip ${ST[x.p] ? 'ok' : 'wait'}">${esc(aWho(x.p).name)} 欠我 ${money(x.amt)}</span>`).join('');
+  const stat = !sp.length || r.type !== 'out' ? '' : owe ? (ST[payer] ? '<small class="ok">已還款</small>' : '<small class="neg">未還</small>')
+    : (sp.every(x => ST[x.p]) ? '<small class="ok">已收款</small>' : `<small class="wait">未收${sp.length > 1 && sp.some(x => ST[x.p]) ? ` ${sp.filter(x => !ST[x.p]).length} 人` : ''}</small>`);
   const first = String(r.note || '').split('\n')[0];
-  return `<button class="acR card" data-r="${r.id}"><span class="acI">${esc(c.i)}</span><span class="acM"><b>${esc(r.payee || c.n)}${r.payee ? `<em>${esc(c.n)}</em>` : ''}</b><small>${[r.t, sp.length && payer !== me ? aWho(payer).name + ' 付' : acctName(r.acct), first, (r.imgs || []).length ? '🖼️' + r.imgs.length : ''].filter(Boolean).map(esc).join('・')}</small>${chips ? `<span class="acChips">${chips}</span>` : ''}</span>
-    <span class="acV ${r.type === 'in' ? 'pos' : 'neg'}">${r.type === 'in' ? '+' : '-'}${money(r.amt)}${sp.length && r.type === 'out' ? `<small>我 ${money(accMine(r))}</small>` : ''}</span></button>`;
+  return `<button class="acR card" data-r="${r.id}"><span class="acI">${esc(c.i)}</span><span class="acM"><b>${esc(r.payee || c.n)}${r.payee ? `<em>${esc(c.n)}</em>` : ''}</b><small>${[r.t, owe ? '' : acctName(r.acct), first, (r.imgs || []).length ? '🖼️' + r.imgs.length : ''].filter(Boolean).map(esc).join('・')}</small>${chips ? `<span class="acChips">${chips}</span>` : ''}</span>
+    <span class="acV ${r.type === 'in' ? 'pos' : 'neg'}">${r.type === 'in' ? '+' : '-'}${money(sp.length && r.type === 'out' ? mine : r.amt)}${stat}</span></button>`;
 }
 /* 點常用紀錄：一律先打開「記一筆」讓你確認內容（金額有設就帶入），按儲存才記下 */
 async function useTpl(t) {
@@ -606,7 +610,7 @@ function accSettle(p) {
       <div class="acRow2"><button class="btn" data-a="from">從 ${from.replace(/-/g, '/')}</button><button class="btn" data-a="to">到 ${to.replace(/-/g, '/')}</button></div>
       <div class="row" style="gap:.4rem;margin:-.3rem 0 .5rem"><button class="btn sm" data-a="all">全選</button><button class="btn sm" data-a="none">全不選</button><span class="small muted grow" style="text-align:right">勾選這次要結清的</span></div>
       <div class="acStL card">${L.map(r => { const c = accCat(r), o = accOwe(r, p), on = !off.has(r.id), its = (r.items || []).filter(x => (x.ppl || []).includes(p) || (r.payer === p && (x.ppl || []).includes(accMe()))); return `<div class="acStR ${on ? '' : 'dim'}"><button class="acCk2 ${on ? 'on' : ''}" data-ck="${r.id}" aria-label="勾選"></button><span class="acStD">${r.d.slice(5).replace('-', '/')}</span><span class="grow" data-o="${r.id}"><b>${esc(c.i)} ${esc(r.payee || c.n)}</b><small>總額 ${money(r.amt)}・${r.payer === p ? esc(u.name) + ' 付' : '我付'}${its.length ? '・' + its.length + ' 個品項 ' + (open.has(r.id) ? '▴' : '▾') : ''}</small>
-        ${open.has(r.id) && its.length ? `<span class="acStIt">${its.map(x => `<span>${esc(x.n)}<em>${money(x.amt / ((x.ppl || []).length || 1))}</em></span>`).join('')}</span>` : ''}</span><b class="${o >= 0 ? 'pos' : 'neg'}">${o >= 0 ? '' : '-'}${money(Math.abs(o))}</b></div>`; }).join('') || '<div class="empty">這段期間沒有紀錄</div>'}</div>
+        ${open.has(r.id) && its.length ? `<span class="acStIt">${its.map(x => `<span>${esc(x.n)}<em>${money(x.amt / ((x.ppl || []).length || 1))}</em></span>`).join('')}</span>` : ''}</span><span class="acStV"><b class="${o >= 0 ? 'pos' : 'neg'}">${o >= 0 ? '' : '-'}${money(Math.abs(o))}</b><button class="stDet" data-det="${r.id}">明細 ›</button></span></div>`; }).join('') || '<div class="empty">這段期間沒有紀錄</div>'}</div>
       <div class="lbl" style="margin-top:.8rem">勾選的這 ${P.length} 筆：${TP >= 0 ? '錢收進哪個帳戶' : '從哪個帳戶付給他'}<span class="req">必選</span></div>
       <div class="acAccts">${DB.acc.accts.filter(x => x.kind === 'bank' || x.kind === 'cash').map(x => `<button data-acct="${x.id}" class="${x.id === into ? 'on' : ''}">${aIco(x)}<span class="acN ${[...x.n].length > 7 ? 'lg' : ''}">${esc(x.n)}</span></button>`).join('')}<button data-a="addAcct" data-kind="bank" class="add">＋ 新增銀行</button></div>
       <div class="lbl">${TP >= 0 ? '對方怎麼付給我的' : '我怎麼付給他的'}（選填）</div><div class="acAccts">${SETTLE_VIA.map(v => `<button data-via="${v}" class="${v === via ? 'on' : ''}">${v}</button>`).join('')}</div>
@@ -614,7 +618,8 @@ function accSettle(p) {
     sh.body.scrollTop = top; };
   const text = () => { const L = picked(), T = sum(L); return [`🤝 ${u.name} 對帳（${from.replace(/-/g, '/')}～${to.replace(/-/g, '/')}）`, ''].concat(L.map(r => { const c = accCat(r), o = accOwe(r, p), its = (r.items || []).filter(x => (x.ppl || []).includes(p)); return `${r.d.slice(5).replace('-', '/')} ${r.payee || c.n}　${o >= 0 ? '' : '-'}${money(Math.abs(o))}` + (its.length ? '\n' + its.map(x => `　・${x.n} ${money(x.amt / ((x.ppl || []).length || 1))}`).join('\n') : ''); })).concat(['', T >= 0 ? `合計：${u.name} 欠我 ${money(T)}` : `合計：我欠 ${u.name} ${money(-T)}`]).join('\n'); };
   draw();
-  sh.body.addEventListener('click', async e => { const t = e.target.closest('[data-a],[data-o],[data-ck],[data-acct],[data-kind],[data-fund],[data-via]'); if (!t) return; buzz(8); const d = t.dataset;
+  sh.body.addEventListener('click', async e => { const t = e.target.closest('[data-det],[data-a],[data-o],[data-ck],[data-acct],[data-kind],[data-fund],[data-via]'); if (!t) return; buzz(8); const d = t.dataset;
+    if (d.det) { const r = DB.acc.recs.find(x => x.id === d.det); if (r) { await accEdit(r); if (document.body.contains(sh.body)) draw(); } return; }   /* 看明細：關掉後回到對帳 */
     if (d.a === 'undoLast') { sh.foot.onclick({target: t}); return; }
     if (d.via) { via = via === d.via ? '' : d.via; draw(); return; }
     if (d.ck) { if (off.has(d.ck)) off.delete(d.ck); else off.add(d.ck); draw(); return; }
