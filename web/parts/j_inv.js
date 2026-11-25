@@ -24,7 +24,7 @@ function invPut(v) {
     if (dup) { const keep = v.src === 'shot' ? dup.no : v.no; if (keep !== dup.no) { const old = dup.no; delete DB.invs[old]; dup.no = keep; DB.invs[keep] = dup; Object.values(DB.bills || {}).forEach(L => L.forEach(b => { if (b.inv === old) b.inv = keep; })); saveBills(); }
       const src = v.src === 'shot' ? dup.src : v.src; v = Object.assign({}, v, {no: keep}); invPut(v); DB.invs[keep].src = src; return 'dup'; }
     DB.invs[v.no] = Object.assign({items: [], add: Date.now()}, v); return 'new'; }
-  ['date', 'time', 'sellerId', 'seller', 'total'].forEach(k => { if ((o[k] == null || o[k] === '') && v[k] != null && v[k] !== '') o[k] = v[k]; });
+  ['date', 'time', 'sellerId', 'seller', 'total', 'rnd'].forEach(k => { if ((o[k] == null || o[k] === '') && v[k] != null && v[k] !== '') o[k] = v[k]; });
   if (v.items && v.items.length && (!o.items || !o.items.length || v.src === 'qr' && o.src !== 'qr' && v.items.length >= o.items.length || v.src !== 'shot' && o.src === 'shot')) o.items = v.items;
   if (v.seller && (!o.seller || v.seller.length > o.seller.length && v.seller.startsWith(o.seller.replace(/…$/, '')))) o.seller = v.seller; return 'upd';
 }
@@ -120,7 +120,7 @@ function parseInvQR(left, right) {
     if (!n && isNaN(q)) continue; if (enc === '2') { try { n = new TextDecoder('utf-8').decode(Uint8Array.from(atob(n), c => c.charCodeAt(0))); } catch (e) {} }
     if (!n || isNaN(q) || isNaN(p)) continue; items.push({n, q: q || 1, p, amt: Math.round(q * p * 100) / 100});
   }
-  return {no, way: '實體店購物', date: `${y}-${m}-${d}`, sellerId: /^\d{8}$/.test(sellerId) ? sellerId : '', total: isNaN(total) ? 0 : total, items, src: 'qr', need: +(f[3] || 0)};
+  return {no, rnd: /^\d{4}$/.test(L.slice(17, 21)) ? L.slice(17, 21) : '', way: '實體店購物', date: `${y}-${m}-${d}`, sellerId: /^\d{8}$/.test(sellerId) ? sellerId : '', total: isNaN(total) ? 0 : total, items, src: 'qr', need: +(f[3] || 0)};
 }
 /* 辨識放到背景執行緒（Web Worker）：畫面、相機預覽不會被卡住，120Hz 也順。
    worker 收到 RGBA 影像，找出最多 n 個 QR（找到一個就塗白再找下一個），回傳解好的文字 */

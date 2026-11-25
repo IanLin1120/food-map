@@ -285,7 +285,7 @@ function renderAcc() {
   $('#accSub').textContent = `${Mo + 1}月・${mon.length} 筆`;
   box.innerHTML = `<button class="acTplBtn card" data-a="tpls"><span class="acTplI">⭐</span><span class="grow"><b>常用紀錄</b><small>${DB.acc.tpls.length ? `${DB.acc.tpls.length} 個常用紀錄` : '每月房租、手機費…點一下就記好'}</small></span><span class="acDGo">打開 ›</span></button>
     <div class="acSum card"><div class="acT out"><small>支出（我的）</small><b>${money(out)}</b></div><div class="acT in"><small>收入</small><b>${money(inc)}</b></div><div class="acT bal"><small>結餘</small><b>${money(inc - out - lossM)}</b></div></div>${lossM ? `<div class="acLoss card">💸 這個月遺失 <b>${money(lossM)}</b><small>（另外統計，已算進結餘）</small></div>` : ''}
-    ${dIds.length ? `<div class="acDebt card"><div class="acDH"><b>🤝 還沒結清的欠款</b><button class="btn sm" data-a="settleLog">對帳紀錄</button></div>${dIds.map(p => { const u = aWho(p), v = debts[p]; return `<button class="acDR" data-settle="${p}"><span class="acDI">${esc(u.icon)}</span><span class="grow"><b>${esc(u.name)}</b><small>${v > 0 ? '欠我' : '我欠他'}</small></span><span class="acDV ${v > 0 ? 'pos' : 'neg'}">${money(Math.abs(v))}</span><span class="acDGo">對帳 ›</span></button>`; }).join('')}</div>` : ''}
+    ${dIds.length ? `<div class="acDebt card"><div class="acDH"><b>🤝 還沒結清的欠款</b><span class="row" style="gap:.35rem"><button class="btn sm" data-a="settleHist">📚 歷史</button><button class="btn sm" data-a="settleLog">對帳紀錄</button></span></div>${dIds.map(p => { const u = aWho(p), v = debts[p]; return `<button class="acDR" data-settle="${p}"><span class="acDI">${esc(u.icon)}</span><span class="grow"><b>${esc(u.name)}</b><small>${v > 0 ? '欠我' : '我欠他'}</small></span><span class="acDV ${v > 0 ? 'pos' : 'neg'}">${money(Math.abs(v))}</span><span class="acDGo">對帳 ›</span></button>`; }).join('')}</div>` : ''}
     <div class="cal card">${calHead(Y, Mo)}<div class="calWd">${MWD.map((w, i) => `<span class="${i === 0 || i === 6 ? 'we' : ''}">${w}</span>`).join('')}</div><div class="calG acCal">${cells}</div></div>
     ${Acc.day ? `<div class="invDayBar"><span class="grow">📅 只看 ${dayLabel(Acc.day)}</span><button class="btn sm" data-a="allDays">看整個月</button></div>` : ''}
     ${days.map(g => { const s = g.L.reduce((t, r) => t + accSign(r) * accMine(r), 0); return `<div class="acDay"><span>${dayLabel(g.d)}</span>${s ? `<b class="${s > 0 ? 'pos' : 'neg'}">${s > 0 ? '+' : ''}${money(s)}</b>` : ''}</div>${g.L.map(accCard).join('')}`; }).join('')
@@ -325,7 +325,7 @@ function initAcc() {
     if (a === 'pm' || a === 'nm') { const d = new Date(Y, Mo + (a === 'pm' ? -1 : 1), 1); Acc.ym = [d.getFullYear(), d.getMonth()]; Acc.day = null; renderAcc(); }
     else if (a === 'ymY' || a === 'ymM') { const r = await ymPick(Y, Mo, a === 'ymY' ? 'y' : 'm'); if (r) { Acc.ym = r; Acc.day = null; renderAcc(); } }
     else if (a === 'allDays') { Acc.day = null; renderAcc(); }
-    else if (a === 'settleLog') accSettleLog(); else if (a === 'tpls') tplList(); });
+    else if (a === 'settleLog') accSettleLog(); else if (a === 'settleHist') accSettleHist(); else if (a === 'tpls') tplList(); });
   $('#accABody').addEventListener('click', accAssetClick); $('#accEye').onclick = () => { buzz(15); Acc.showAmt = !Acc.showAmt; renderAccAsset(); };
   $('#accSBody').addEventListener('click', accStatClick);
   $('#accCBody').addEventListener('click', accCfgClick);
@@ -451,7 +451,7 @@ function editPayee(type, p0) {
       res(p); }; });
 }
 /* ---------- 記一筆／編輯 ---------- */
-function accEdit(r0, preset, opt = {}) {
+function accEdit(r0, preset, opt = {}) { accMigVia();
   return new Promise(res => {
     const isNew = !r0, me = accMe(), now = new Date(), TPL = !!opt.tpl;
     const r = JSON.parse(JSON.stringify(r0 || Object.assign({id: 'r' + uid(), d: Acc.day || ymd(now), t: String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0'), type: 'out', amt: 0, cat: '', acct: (DB.acc.accts[0] || {}).id || '', to: '', fee: 0, note: '', payee: '', payer: me, split: [], items: [], imgs: []}, preset || {})));
@@ -477,6 +477,7 @@ function accEdit(r0, preset, opt = {}) {
         <div class="lbl">${r.type === 'in' ? '收進哪個帳戶' : '付款帳戶'}</div>${acctPickerHtml(r.acct, 'acct', r.fund)}`}
         ${r0 && Object.keys(r.settled || {}).length ? `<div class="acSetl">${Object.keys(r.settled).map(p => `<div class="row" style="gap:.5rem"><span class="grow">✓ 已和 ${esc(aWho(p).name)} 結清</span><button class="btn sm" data-unst="${p}">改回未結清</button></div>`).join('')}</div>` : ''}
         <div class="field" style="margin-top:.7rem"><label class="row" style="gap:.4rem"><span class="grow">備註／消費明細</span></label>${tr ? '' : `<div class="acRow2" style="margin-bottom:.5rem"><button class="btn" data-a="billEd">🧾 ${r.bill ? '編輯明細（' + (r.bill.items || []).length + ' 項）' : '用分帳方式輸入'}</button><button class="btn" data-a="fromBill">📥 從分帳帶入</button></div>`}<textarea id="acNote" rows="${Math.min(10, Math.max(3, String(r.note || '').split('\n').length + 1))}" placeholder="例如：\n鮮奶 ×2  $95\n雞蛋  $60">${esc(r.note || '')}</textarea></div>
+        ${tr ? '' : accInvHtml(r)}
         <div class="lbl">圖片</div><div class="acImgs">${r.imgs.map((id, i) => `<span class="acImg"><img data-img="${id}" data-i="${i}" alt=""><button data-rmimg="${i}" aria-label="移除">✕</button></span>`).join('')}<button class="acImgAdd" data-a="addImg">＋<small>加入圖片</small></button></div>
         ${r.type === 'out' ? `<div class="acSplit card"><div class="acSH"><b>🤝 分帳</b><small>${who.length ? '選了 ' + who.length + ' 人分' : '不分帳就不用選'}</small></div>
           <div class="lbl">誰付的錢</div><div class="whoRow pplGrid">${accPeople().map(u => `<button data-payer="${u.id}" class="${payer === u.id ? 'on' : ''}">${esc(u.icon)} ${esc(u.name)}</button>`).join('')}</div>
@@ -523,7 +524,22 @@ function accEdit(r0, preset, opt = {}) {
         editBill(b, {detached: true, onDone(bb) { if (!(bb.items || []).length && !(bb.fees || []).length) { delete r.bill; draw(); return; } const x = billToAccRec(bb, r.d); r.bill = bb; r.note = x.note; r.items = x.items; r.payee = billStore(bb) || r.payee; if (!r.cat || r.cat === firstCat(r.type)) r.cat = x.cat;
           if (x.split.length) { r.split = x.split; who = x.split.map(s2 => s2.p); custom = {}; x.split.forEach(s2 => { custom[s2.p] = s2.amt; }); mode = x.split.some((s2, i, A2) => Math.abs(s2.amt - A2[0].amt) > 0.011) ? 'custom' : 'even'; }
           expr = String(x.amt || ''); draw(); toast('已用模板二寫入備註'); }}); }
-      else if (a === 'fromBill') { const pick = await pickBillForAcc(); if (!pick) return; const x = billToAccRec(pick.b, pick.k); x.imgs = await copyImgs(pick.b.imgs);
+      else if (a === 'invPick') { const v = await pickInvForAcc(r); if (!v) return; accLinkInv(r, v.no);
+        const iv = (v.items || []).filter(x => +x.amt > 0), had = (r.items || []).length || (r.bill && (r.bill.items || []).length);
+        if (iv.length && had) { const ch = await accChoose('品項名稱要以哪個為主？', [['mine', '用我輸入的名稱', '發票只拿來對號碼、時間'], ['inv', '用發票上的名稱', '依順序把品項名稱換成發票上的'], ['edit', '我自己編輯', '先帶入發票資訊，再打開明細讓你改']]);
+          if (ch === 'inv') accInvNames(r, iv); else if (ch === 'edit') { draw(); sh.body.querySelector('[data-a="billEd"]').click(); return; } }
+        else if (iv.length && !String(r.note || '').trim()) { r.note = `${invSeller(v)}${v.time ? ' ' + v.time : ''}\n` + iv.map(x => `${x.n}${x.q > 1 ? ' ×' + x.q : ''}　${money(x.amt)}`).join('\n'); }
+        if (!(+r.amt > 0) && +v.total > 0) expr = String(v.total); draw(); toast('🧾 已帶入發票 ' + v.no); return; }
+      else if (a === 'invNo') { const v = ((await askText('發票號碼（例如 AB12345678）', r.inv || '')) || '').toUpperCase().replace(/[^A-Z0-9]/g, ''); if (!v) return; if (!/^[A-Z]{2}\d{8}$/.test(v)) { await alertBox('發票號碼是 2 個英文字母加 8 個數字，例如 AB12345678。'); return; } accLinkInv(r, v); draw(); return; }
+      else if (a === 'invRm') { if (!await ask('拿掉這筆記帳的發票號碼？（發票本身不會刪除）', '拿掉', true)) return; const v = (DB.invs || {})[r.inv]; if (v && v.acc === r.id) { delete v.acc; saveInvs(); } r.inv = ''; draw(); return; }
+      else if (a === 'invQr') { accInvQr(r); return; }
+      else if (a === 'invOpen') { const v = (DB.invs || {})[r.inv]; if (v) openInvDetail(v.no); return; }
+      else if (a === 'fromBill') { const pick = await pickBillForAcc(); if (!pick) return; const x = billToAccRec(pick.b, pick.k);
+        /* 原本已經自己輸入了明細：讓你選要保留自己的品項名稱，還是改用分帳（發票）的 */
+        const had = (r.items || []).length || (r.bill && (r.bill.items || []).length) || String(r.note || '').trim();
+        if (had) { const ch = await accChoose('這筆已經有你自己輸入的明細', [['keep', '保留我的明細', '只帶入發票號碼、日期時間' + (x.inv ? '' : '（這筆分帳沒有發票）')], ['bill', '改用分帳的明細', '品項名稱、金額、分帳都換成分帳那筆的']]); if (!ch) return;
+          if (ch === 'keep') { if (x.inv) accLinkInv(r, x.inv); else { r.d = x.d; if (x.t) r.t = x.t; } r.src = Object.assign({}, r.src || {}, {bill: pick.b.id}); pick.b.acc = r.id; saveBills(); draw(); toast(x.inv ? '已帶入發票資訊，明細保留你原本的' : '已帶入日期時間'); return; } }
+        x.imgs = await copyImgs(pick.b.imgs); if (x.inv) accLinkInv(r, x.inv);
         Object.assign(r, {d: x.d, t: x.t || r.t, type: 'out', cat: x.cat, payee: x.payee, note: x.note, items: x.items, split: x.split, payer: me, src: x.src}); r.imgs = r.imgs.concat(x.imgs); expr = String(x.amt);
         who = x.split.map(s => s.p); custom = {}; x.split.forEach(s => { custom[s.p] = s.amt; }); mode = x.split.length && x.split.some((s, i, A2) => Math.abs(s.amt - A2[0].amt) > 0.011) ? 'custom' : 'even'; pick.b.acc = r.id; saveBills(); draw(); toast('已帶入分帳明細'); } });
     const build = () => { const A = calc(); r.amt = A; if (r.type === 'out') { r.split = shares(); if (r.split.length === 1 && r.split[0].p === (r.payer || me)) r.split = []; } else { r.split = []; r.payer = me; } if (r.type === 'tr' || r.type === 'loss') { r.cat = ''; r.payee = ''; } return A; };
@@ -553,11 +569,11 @@ async function copyImgs(ids) { const out = []; for (const id of ids || []) { con
 /* ---------- 對帳 ---------- */
 function accPickSettle() {
   const d = accDebts(), ids = pOrder(Object.keys(d)); const others = accPeople().filter(u => u.id !== accMe() && !ids.includes(u.id));
-  const sh = sheet({title: '🤝 要跟誰對帳？', html: `<div class="actList">${ids.map(p => `<button data-p="${p}">${esc(aWho(p).icon)} ${esc(aWho(p).name)}　<b class="${d[p] > 0 ? 'pos' : 'neg'}">${d[p] > 0 ? '欠我' : '我欠'} ${money(Math.abs(d[p]))}</b></button>`).join('')}${others.map(u => `<button data-p="${u.id}">${esc(u.icon)} ${esc(u.name)}　<span class="muted">沒有未結清</span></button>`).join('')}</div>`});
-  sh.body.onclick = e => { const t = e.target.closest('[data-p]'); if (!t) return; buzz(10); sh.close(); accSettle(t.dataset.p); };
+  const sh = sheet({title: '🤝 要跟誰對帳？', html: `<button class="btn block" data-hist="1" style="margin-bottom:.6rem">📚 對帳還款歷史（已完成／未完成）</button><div class="actList">${ids.map(p => `<button data-p="${p}">${esc(aWho(p).icon)} ${esc(aWho(p).name)}　<b class="${d[p] > 0 ? 'pos' : 'neg'}">${d[p] > 0 ? '欠我' : '我欠'} ${money(Math.abs(d[p]))}</b></button>`).join('')}${others.map(u => `<button data-p="${u.id}">${esc(u.icon)} ${esc(u.name)}　<span class="muted">沒有未結清</span></button>`).join('')}</div>`});
+  sh.body.onclick = e => { if (e.target.closest('[data-hist]')) { buzz(10); sh.close(); accSettleHist(); return; } const t = e.target.closest('[data-p]'); if (!t) return; buzz(10); sh.close(); accSettle(t.dataset.p); };
 }
 /* 對帳：每一筆可以勾選要不要這次結清（有的先還、有的之後還），勾選的這幾筆可以選錢進出哪個帳戶；結清後畫面留著，剩下的可以再選別的帳戶結清 */
-const SETTLE_VIA = ['LINE Pay', '台灣 Pay', '街口支付', '銀行轉帳', '現金面交', '其他'];
+const SETTLE_VIA = ['LINE Pay', '台灣 Pay', '街口支付', '銀行轉帳', '現金支付', '其他'];
 function alertBox(msg) { setTimeout(() => buzz(40), 60); return new Promise(res => { let done = false; const w = el(`<div class="shWrap center"><div class="shBg"></div><div class="dlg warn"><b class="dlgT">⚠️ 提醒</b><p></p><div class="row"><button class="btn pri" style="flex:1">知道了</button></div></div></div>`);
   $('p', w).textContent = msg; const me = {el: w, closed: false, close() { if (done) return; done = true; me.closed = true; const i = sheets.indexOf(me); if (i >= 0) sheets.splice(i, 1); w.classList.remove('on'); setTimeout(() => w.remove(), 220); res(); }};
   $('.shBg', w).onclick = () => me.close(); $('button', w).onclick = () => me.close(); document.body.append(w); w.offsetHeight; w.classList.add('on'); sheets.push(me); }); }
@@ -662,7 +678,7 @@ function billToAccRec(b, k) {
   if (split.length === 1 && split[0].p === me) split = [];
   const items = (b.items || []).map(x => ({n: x.n, amt: r2(numP(x.amt) - (c.itemDisc[x.id] || 0)), ppl: [...new Set((x.ppl || []).map(accPid))], q: x.q || 1}));
   const note = accNoteFromBill(b);
-  return {id: 'r' + uid(), d: k, t: b.time || '', type: 'out', amt: tot, cat: accGuessCat(b), acct: (DB.acc.accts[0] || {}).id || '', note, payee: billStore(b) || '', payer: me, split, items, imgs: [], src: {bill: b.id}};
+  return {id: 'r' + uid(), d: k, t: b.time || '', type: 'out', amt: tot, cat: accGuessCat(b), acct: (DB.acc.accts[0] || {}).id || '', note, payee: billStore(b) || '', payer: me, split, items, imgs: [], src: {bill: b.id}, inv: b.inv || ''};
 }
 function pickBillForAcc() {
   const all = []; Object.keys(DB.bills || {}).sort().reverse().forEach(k => DB.bills[k].forEach(b => all.push({k, b})));
@@ -1195,3 +1211,86 @@ function accCsv() {
 /* 防止誤刪：原生回報「裝置管理員」開關結果 */
 var Guard = {asked: 0, onNative(j) { let o = {}; try { o = JSON.parse(j); } catch (e) {} const a = this.asked; this.asked = 0;
   if (o.on && a) { buzz(20); toast('🧷 已開啟防止誤刪，要刪除得先到手機設定停用保護', 3500); } else if (a && !o.on) toast(o.err ? '這支手機不支援防止誤刪' : '防止誤刪沒有開啟', 3000); if (typeof renderAccCfg === 'function') renderAccCfg(); }};
+
+/* ===== 記帳裡的發票：號碼、日期時間、賣方，並可產生像紙本發票一樣的左右兩個 QR Code ===== */
+function accChoose(title, opts) { return new Promise(res => { let done = false; const sh = sheet({title, onClose() { if (!done) res(null); }});
+  sh.body.innerHTML = `<div class="chooseL">${opts.map(([k, t, d]) => `<button class="card" data-k="${k}"><b>${esc(t)}</b>${d ? `<small>${esc(d)}</small>` : ''}</button>`).join('')}</div>`;
+  sh.body.onclick = e => { const b = e.target.closest('[data-k]'); if (!b) return; buzz(10); done = true; sh.close(); res(b.dataset.k); }; }); }
+/* 連結發票：寫入號碼，日期、時間改成發票上的（發票比較準） */
+function accMigVia() { if (accMigVia.done) return; accMigVia.done = 1; try { (DB.acc.recs || []).forEach(r => { if (r.via === '現金面交') r.via = '現金支付'; (r.note && r.note.includes('（現金面交）')) && (r.note = r.note.split('（現金面交）').join('（現金支付）')); }); } catch (e) {} }
+function accLinkInv(r, no) { r.inv = no; const v = (DB.invs || {})[no]; if (!v) return; if (v.date) r.d = v.date; if (v.time) r.t = String(v.time).slice(0, 5); v.acc = r.id; saveInvs(); }
+/* 用發票上的品項名稱：數量一樣就照順序換名字；記帳原本沒有品項就整份帶入。備註裡的舊名稱也一起換 */
+function accInvNames(r, iv) { const L = (r.bill && (r.bill.items || []).length ? r.bill.items : r.items) || [];
+  if (L.length === iv.length) L.forEach((x, i) => { const old = x.n; x.n = iv[i].n; if (old && r.note) r.note = r.note.split(old).join(iv[i].n); });
+  else { r.items = iv.map(x => ({n: x.n, amt: +x.amt || 0, q: x.q || 1, ppl: []})); }
+  if (r.bill && r.items && r.items.length === r.bill.items.length) r.items.forEach((x, i) => { x.n = r.bill.items[i].n; }); }
+function pickInvForAcc(r) { const L = Object.values(DB.invs || {}).filter(v => !v.acc || v.acc === r.id), A = +r.amt || 0;
+  const sc = v => (v.date === r.d ? 6 : Math.abs(new Date(v.date) - new Date(r.d)) < 3 * 864e5 ? 3 : 0) + (A && Math.abs(numP(v.total) - A) < .5 ? 5 : 0) + (r.payee && sameSeller(invSeller(v), r.payee) ? 3 : 0);
+  L.sort((x, y) => sc(y) - sc(x) || String(y.date).localeCompare(String(x.date)));
+  return new Promise(res => { let done = false; const sh = sheet({title: '🧾 選一張發票', full: true, onClose() { if (!done) res(null); }});
+    sh.body.innerHTML = L.length ? `<div class="small muted" style="margin-bottom:.5rem">日期、金額、店家相近的排在前面</div>` + L.slice(0, 150).map((v, i) => `<button class="acImp card" data-i="${i}"><span class="grow"><b>${esc(invSeller(v))}</b><small>${esc(v.no)}・${dayLabel(v.date)}${v.time ? ' ' + v.time : ''}・${(v.items || []).length} 項${sc(v) >= 8 ? '・⭐ 很可能是這張' : ''}</small></span><b>${money(numP(v.total))}</b></button>`).join('') : '<div class="empty">發票區還沒有發票，可以先掃描或匯入，或按「手動輸入號碼」</div>';
+    sh.body.onclick = e => { const t = e.target.closest('[data-i]'); if (!t) return; buzz(10); done = true; sh.close(); res(L[+t.dataset.i]); }; }); }
+function accInvHtml(r) { const v = r.inv ? (DB.invs || {})[r.inv] : null;
+  if (!r.inv) return `<div class="lbl">🧾 發票</div><div class="acInv card empty2"><span class="small muted">還沒有發票號碼；發票之後才收到也可以回來補上</span><div class="acRow2" style="margin:.5rem 0 0"><button class="btn" data-a="invPick">🎫 選擇發票</button><button class="btn" data-a="invNo">✎ 手動輸入號碼</button></div></div>`;
+  return `<div class="lbl">🧾 發票</div><div class="acInv card"><div class="acInvH"><b class="invNo">${esc(r.inv.slice(0, 2))}-${esc(r.inv.slice(2))}</b>${v ? `<span class="chip">${(v.items || []).length} 項</span>` : '<span class="chip">只有號碼</span>'}</div>
+    <div class="acInvG">${v ? `<span>日期</span><b>${dayLabel(v.date)}${v.time ? ' ' + esc(v.time) : ''}</b><span>賣方</span><b>${esc(invSeller(v))}</b>${v.rnd ? `<span>隨機碼</span><b>${esc(v.rnd)}</b>` : ''}<span>總計</span><b>${money(numP(v.total))}</b>` : `<span>日期</span><b>${dayLabel(r.d)}${r.t ? ' ' + esc(r.t) : ''}</b>`}</div>
+    <div class="acInvB"><button class="btn pri" data-a="invQr">🔳 發票 QR Code</button>${v ? '<button class="btn" data-a="invOpen">查看發票</button>' : ''}<button class="btn" data-a="invPick">換一張</button><button class="btn danger" data-a="invRm">拿掉</button></div></div>`; }
+/* 依財政部電子發票 QR Code 格式產生左右兩個碼：左邊放發票號碼、日期、隨機碼、金額、統編和前幾個品項，右邊放剩下的品項。
+   加密驗證欄位只有開立發票的店家能產生，這裡填 0，所以只給「日日帳本」或一般掃描讀取資料用，不能拿去對獎或歸戶。 */
+function invQrStrings(r) { const v = (DB.invs || {})[r.inv] || {}, no = r.inv, d = new Date((v.date || r.d) + 'T00:00:00');
+  const roc = String(d.getFullYear() - 1911).padStart(3, '0') + String(d.getMonth() + 1).padStart(2, '0') + String(d.getDate()).padStart(2, '0');
+  const tot = Math.round(numP(v.total) || +r.amt || 0), hx = n => n.toString(16).toUpperCase().padStart(8, '0');
+  let items = (v.items || []).filter(x => +x.amt > 0).map(x => ({n: x.n, q: x.q || 1, p: x.p != null ? x.p : r2((+x.amt || 0) / (x.q || 1))}));
+  if (!items.length) items = ((r.bill && r.bill.items) || r.items || []).map(x => ({n: x.n, q: x.q || 1, p: r2((+x.amt || 0) / (x.q || 1))}));
+  const clean = t => String(t).replace(/[:\n\r]/g, ' ').trim().slice(0, 30), seg = items.map(x => `${clean(x.n)}:${x.q}:${x.p}`);
+  const head = `${no}${roc}${(v.rnd || '0000').slice(0, 4).padStart(4, '0')}${hx(tot)}${hx(tot)}00000000${/^\d{8}$/.test(v.sellerId || '') ? v.sellerId : '00000000'}${'0'.repeat(24)}`;
+  const enc = new TextEncoder(); let left = [], used = enc.encode(head).length + 30; for (const g of seg) { const n = enc.encode(g).length + 1; if (left.length && used + n > 230) break; left.push(g); used += n; }
+  const right = seg.slice(left.length);
+  return {L: `${head}:**********:${left.length}:${items.length}:1:${left.join(':')}`, R: '**' + (right.length ? right.join(':') : ''), n: items.length}; }
+function qrSvgStr(t, sz = 240) { const q = qrcode(0, 'L'); q.addData(unescape(encodeURIComponent(t))); q.make(); const n = q.getModuleCount(), c = sz / (n + 4); let d = '';
+  for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) if (q.isDark(y, x)) d += `M${((x + 2) * c).toFixed(2)} ${((y + 2) * c).toFixed(2)}h${c.toFixed(2)}v${c.toFixed(2)}h-${c.toFixed(2)}z`;
+  return `<svg viewBox="0 0 ${sz} ${sz}" class="qrSvg"><rect width="${sz}" height="${sz}" fill="#fff"/><path d="${d}" fill="#000"/></svg>`; }
+function accInvQr(r) { const Q = invQrStrings(r), v = (DB.invs || {})[r.inv] || {};
+  const sh = sheet({title: '🔳 發票 QR Code', full: true});
+  sh.body.innerHTML = `<div class="einv"><div class="einvT">電子發票證明聯</div><div class="einvP">${(() => { const d = new Date((v.date || r.d) + 'T00:00:00'), y = d.getFullYear() - 1911, m = d.getMonth() + 1, a = m % 2 ? m : m - 1; return `${y}年${String(a).padStart(2, '0')}-${String(a + 1).padStart(2, '0')}月`; })()}</div>
+    <div class="einvNo">${esc(r.inv.slice(0, 2))}-${esc(r.inv.slice(2))}</div><div class="einvD"><span>${esc(v.date || r.d)}${v.time || r.t ? ' ' + esc(v.time || r.t) : ''}</span></div>
+    <div class="einvD"><span>隨機碼：${esc(v.rnd || '----')}</span><span>總計：${Math.round(numP(v.total) || +r.amt || 0)}</span></div>
+    <div class="einvD"><span>賣方：${esc(v.sellerId || '—')}</span><span>${esc(v.seller ? invSeller(v) : r.payee || '')}</span></div>
+    <div class="einvQ">${qrSvgStr(Q.L)}${qrSvgStr(Q.R)}</div><div class="einvF">左：發票資訊＋前段品項　右：其餘品項（共 ${Q.n} 項）</div></div>
+    <div class="blWarn" style="margin-top:.7rem">這是依發票格式產生的資料碼，用日日帳本或發票 App 掃描可以讀到號碼和品項；因為沒有店家的加密驗證，不能拿去兌獎或載具歸戶。</div>`; }
+
+/* ===== 對帳還款歷史：未完成（還沒結清的每一筆）／已完成（每一次結清還款），可以依人或依時間分類、篩選某個人 ===== */
+function accSettleHist() {
+  if (accPruneSettles()) saveAcc();
+  let st = 'done', by = 'p', who = '', open = new Set(), first = true; const sh = sheet({title: '📚 對帳還款歷史', full: true}), me = accMe();
+  const moL = k => `${+k.slice(0, 4)}年${+k.slice(5, 7)}月`;
+  /* 未完成：每一筆還沒結清的分帳（對每個人各算一筆） */
+  const pend = () => { const out = []; DB.acc.recs.forEach(r => { if (r.type !== 'out' || !(r.split || []).length) return; (r.split || []).map(x => x.p).concat(r.payer ? [r.payer] : []).forEach(p => { if (p === me || (r.settled || {})[p]) return; const o = accOwe(r, p); if (Math.abs(o) >= .01 && !out.some(x => x.r === r && x.p === p)) out.push({p, d: r.d, amt: o, r}); }); }); return out; };
+  const done = () => DB.acc.settles.map(x => ({p: x.p, d: x.d, amt: x.amt, st: x}));
+  const draw = () => { const all = st === 'done' ? done() : pend(), ppl = pOrder([...new Set(all.map(x => x.p))]), L = all.filter(x => !who || x.p === who).sort((a, b) => b.d.localeCompare(a.d));
+    const sum = L => L.reduce((t, x) => t + x.amt, 0), groups = [];
+    if (by === 'p') pOrder([...new Set(L.map(x => x.p))]).forEach(p => { const LL = L.filter(x => x.p === p), M = []; LL.forEach(x => { const k = x.d.slice(0, 7); let g = M.find(m => m.k === k); if (!g) M.push(g = {k, L: []}); g.L.push(x); }); groups.push({k: 'p:' + p, t: `${aWho(p).icon} ${aWho(p).name}`, L: LL, M}); });
+    else { const M = []; L.forEach(x => { const k = x.d.slice(0, 7); let g = M.find(m => m.k === k); if (!g) M.push(g = {k, L: []}); g.L.push(x); }); M.forEach(m => groups.push({k: 'm:' + m.k, t: moL(m.k), L: m.L, M: null})); }
+    if (first) { groups.slice(0, 1).forEach(g => { open.add(g.k); if (g.M && g.M[0]) open.add(g.k + '|' + g.M[0].k); }); first = false; }
+    const amtTxt = v => st === 'done' ? (v >= 0 ? `他還我 ${money(v)}` : `我還他 ${money(-v)}`) : (v >= 0 ? `欠我 ${money(v)}` : `我欠 ${money(-v)}`);
+    const row = x => { if (st === 'done') { const S = x.st, R = S.recs.map(id => DB.acc.recs.find(y => y.id === id)).filter(Boolean), tr = DB.acc.recs.find(y => y.settle === S.id), ok = open.has('s:' + S.id);
+        return `<div class="shR"><button class="shRT" data-o="s:${S.id}"><span class="grow"><b>${S.d.slice(5).replace('-', '/')} ${by === 'm' ? esc(aWho(S.p).icon + ' ' + aWho(S.p).name) + '・' : ''}${R.length} 筆</b><small>${tr && acctName(tr.to || tr.acct) ? esc(acctName(tr.to || tr.acct)) : ''}${tr && tr.via ? '・' + esc(tr.via) : ''}${S.ok ? '・✓ 已確認' : ''}</small></span><b class="${S.amt >= 0 ? 'pos' : 'neg'}">${money(Math.abs(S.amt))}</b><i>${ok ? '▴' : '▾'}</i></button>
+          ${ok ? `<div class="shRL">${R.map(r => `<button class="acIt" data-r="${r.id}"><span class="grow">${r.d.slice(5).replace('-', '/')} ${esc(r.payee || accCat(r).n)}</span><b>${money(Math.abs(accOwe(r, S.p)))}</b></button>`).join('') || '<div class="small muted">這批的紀錄已經刪除</div>'}</div>` : ''}</div>`; }
+      return `<button class="shR shP" data-r="${x.r.id}"><span class="grow"><b>${x.d.slice(5).replace('-', '/')} ${by === 'm' ? esc(aWho(x.p).icon + ' ' + aWho(x.p).name) + '・' : ''}${esc(x.r.payee || accCat(x.r).n)}</b><small>${esc(accCat(x.r).i)} ${esc(accCat(x.r).n)}・總額 ${money(x.r.amt)}</small></span><b class="${x.amt >= 0 ? 'pos' : 'neg'}">${money(Math.abs(x.amt))}</b></button>`; };
+    sh.body.innerHTML = `<div class="spSeg two"><button data-st="pend" class="${st === 'pend' ? 'on' : ''}">⏳ 未完成</button><button data-st="done" class="${st === 'done' ? 'on' : ''}">✅ 已完成</button></div>
+      <div class="dkSeg shBy"><button data-by="p" class="${by === 'p' ? 'on' : ''}">👥 依人分類</button><button data-by="m" class="${by === 'm' ? 'on' : ''}">📅 依時間分類</button></div>
+      ${ppl.length > 1 ? `<div class="whoRow pplGrid shWho"><button data-w="" class="${!who ? 'on' : ''}">全部</button>${ppl.map(p => `<button data-w="${p}" class="${who === p ? 'on' : ''}">${esc(aWho(p).icon)} ${esc(aWho(p).name)}</button>`).join('')}</div>` : ''}
+      <div class="shSum card"><span>${st === 'done' ? `${L.length} 次還款` : `${L.length} 筆還沒結清`}</span><b class="${sum(L) >= 0 ? 'pos' : 'neg'}">${L.length ? amtTxt(sum(L)) : '—'}</b>${groups.length > 1 ? `<button class="btn sm" data-fa="1">${groups.every(g => open.has(g.k)) ? '⊟ 全部收合' : '⊞ 全部展開'}</button>` : ''}</div>
+      ${groups.map(g => { const op = open.has(g.k); return `<div class="shG card ${op ? 'on' : ''}"><button class="shGH" data-o="${g.k}"><b>${op ? '▾' : '▸'} ${esc(g.t)}</b><small>${g.L.length} ${st === 'done' ? '次' : '筆'}</small><span class="grow"></span><em class="${sum(g.L) >= 0 ? 'pos' : 'neg'}">${amtTxt(sum(g.L))}</em></button>
+        ${op ? (g.M ? g.M.map(m => { const k2 = g.k + '|' + m.k, o2 = open.has(k2); return `<div class="shM"><button class="shMH" data-o="${k2}"><span>${o2 ? '▾' : '▸'} ${moL(m.k)}</span><small>${m.L.length} ${st === 'done' ? '次' : '筆'}・${amtTxt(sum(m.L))}</small></button>${o2 ? m.L.map(row).join('') : ''}</div>`; }).join('') : g.L.map(row).join(''))
+          + (st === 'pend' && by === 'p' ? `<button class="btn sm block" data-settle="${g.k.slice(2)}" style="margin:.4rem 0 .2rem">🤝 和${esc(aWho(g.k.slice(2)).name)}對帳</button>` : '') : ''}</div>`; }).join('') || `<div class="empty">${st === 'done' ? '還沒有對帳還款的紀錄' : '沒有還沒結清的欠款 👍'}</div>`}`; };
+  draw();
+  sh.body.onclick = async e => { const t = e.target.closest('[data-st],[data-by],[data-w],[data-o],[data-r],[data-fa],[data-settle]'); if (!t) return; buzz(8); const d = t.dataset;
+    if (d.st) { st = d.st; open = new Set(); first = true; draw(); return; }
+    if (d.by) { by = d.by; open = new Set(); first = true; draw(); return; }
+    if (d.w != null) { who = d.w; open = new Set(); first = true; draw(); return; }
+    if (d.fa) { const gs = [...sh.body.querySelectorAll('.shGH')].map(b => b.dataset.o), all = gs.every(k => open.has(k)); if (all) open = new Set(); else { gs.forEach(k => open.add(k)); draw(); sh.body.querySelectorAll('.shMH').forEach(b => open.add(b.dataset.o)); } draw(); return; }
+    if (d.o) { open.has(d.o) ? open.delete(d.o) : open.add(d.o); draw(); return; }
+    if (d.settle) { sh.close(); accSettle(d.settle); return; }
+    if (d.r) { const r = DB.acc.recs.find(x => x.id === d.r); if (r) { await accEdit(r); draw(); } } };
+}

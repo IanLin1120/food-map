@@ -1473,3 +1473,36 @@ table.ckT td.s{text-align:center}table.ckT th.s{text-align:center}
 /* 常用紀錄收合後，分類之間的距離縮小 */
 .tpG.fold{margin-bottom:0}.tpG.fold .tpGH{margin:.35rem 0}.tpG.fold+.tpG .tpGH{margin-top:.35rem}
 .tpG.fold:first-child .tpGH{margin-top:.2rem}
+/* 付款方式、帳戶選擇：一樣寬、整齊對齊，右邊不留空 */
+.acAccts{display:grid!important;grid-template-columns:repeat(auto-fill,minmax(6.4rem,1fr))}
+.acAccts button{display:flex;align-items:center;justify-content:center;gap:.3rem;min-width:0;overflow:hidden;text-overflow:ellipsis}
+/* 選擇（品項名稱以哪個為主…） */
+.chooseL{display:flex;flex-direction:column;gap:.55rem}.chooseL .card{display:flex;flex-direction:column;align-items:flex-start;gap:.2rem;padding:.85rem 1rem;border:1px solid var(--border);text-align:left;font:inherit;color:inherit}
+.chooseL b{font-size:1rem}.chooseL small{color:var(--muted);font-size:.8rem}
+/* 記帳裡的發票區 */
+.acInv{padding:.75rem .85rem;margin-bottom:.8rem}.acInv.empty2{display:flex;flex-direction:column}
+.acInvH{display:flex;align-items:center;justify-content:space-between;gap:.5rem;margin-bottom:.45rem}.acInvH .invNo{font-size:1.15rem;letter-spacing:.04em;font-variant-numeric:tabular-nums}
+.acInvG{display:grid;grid-template-columns:auto 1fr;gap:.25rem .8rem;font-size:.86rem;margin-bottom:.6rem}.acInvG span{color:var(--muted)}.acInvG b{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.acInvB{display:grid;grid-template-columns:1fr 1fr;gap:.4rem}.acInvB .btn{justify-content:center;min-width:0;white-space:nowrap}.acInvB .btn.pri{grid-column:1/-1}
+/* 仿紙本電子發票 */
+.einv{background:#fff;color:#111;border-radius:6px;padding:1.1rem 1rem 1rem;box-shadow:0 6px 20px rgba(60,40,20,.18);max-width:22rem;margin:0 auto;font-family:"Noto Sans TC",sans-serif}
+.einvT{text-align:center;font-size:1.25rem;font-weight:900;letter-spacing:.1em}.einvP{text-align:center;font-size:1.4rem;font-weight:900;margin:.15rem 0}
+.einvNo{text-align:center;font-size:1.65rem;font-weight:900;letter-spacing:.04em;margin-bottom:.35rem}
+.einvD{display:flex;justify-content:space-between;gap:.5rem;font-size:.85rem;margin:.12rem 0}
+.einvQ{display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin-top:.7rem}.einvQ .qrSvg{width:100%;height:auto;display:block}
+.einvF{text-align:center;font-size:.7rem;color:#666;margin-top:.4rem}
+/* 對帳還款歷史 */
+.spSeg.two{grid-template-columns:1fr 1fr}
+.shBy{display:grid;grid-template-columns:1fr 1fr;margin-bottom:.6rem}
+.shWho{margin-bottom:.6rem}
+.shSum{display:flex;align-items:center;gap:.6rem;padding:.65rem .8rem;margin-bottom:.6rem}.shSum span{flex:1;color:var(--muted);font-size:.86rem}.shSum b{font-size:1rem}
+.shG{padding:0!important;margin-bottom:.5rem;overflow:hidden}
+.shGH{display:flex;align-items:center;gap:.5rem;width:100%;padding:.7rem .85rem;background:none;border:0;font:inherit;color:inherit;text-align:left}.shGH b{font-size:.98rem}.shGH small{color:var(--muted)}.shGH em{font-style:normal;font-weight:800;font-size:.88rem}
+.shM{border-top:1px solid var(--border-soft)}
+.shMH{display:flex;align-items:center;justify-content:space-between;gap:.5rem;width:100%;padding:.5rem .85rem;background:var(--surface-2);border:0;font:inherit;color:inherit;font-weight:700;font-size:.86rem}.shMH small{color:var(--muted);font-weight:600}
+.shR{border-top:1px dashed var(--border-soft)}
+.shRT,.shP{display:flex;align-items:center;gap:.5rem;width:100%;padding:.55rem .85rem;background:none;border:0;font:inherit;color:inherit;text-align:left}
+.shP{border-top:1px dashed var(--border-soft)}
+.shRT .grow,.shP .grow{display:flex;flex-direction:column;min-width:0}.shRT small,.shP small{color:var(--muted);font-size:.74rem}.shRT i{font-style:normal;color:var(--muted);font-size:.8rem}
+.shRL{padding:0 .85rem .4rem 1.4rem}.shRL .acIt{width:100%;background:none;border:0;font:inherit;color:inherit;display:flex;gap:.5rem;padding:.35rem 0;font-size:.85rem;text-align:left}
+.acInvB{grid-template-columns:repeat(auto-fit,minmax(5.5rem,1fr))}
