@@ -1506,3 +1506,9 @@ table.ckT td.s{text-align:center}table.ckT th.s{text-align:center}
 .shRT .grow,.shP .grow{display:flex;flex-direction:column;min-width:0}.shRT small,.shP small{color:var(--muted);font-size:.74rem}.shRT i{font-style:normal;color:var(--muted);font-size:.8rem}
 .shRL{padding:0 .85rem .4rem 1.4rem}.shRL .acIt{width:100%;background:none;border:0;font:inherit;color:inherit;display:flex;gap:.5rem;padding:.35rem 0;font-size:.85rem;text-align:left}
 .acInvB{grid-template-columns:repeat(auto-fit,minmax(5.5rem,1fr))}
+/* 帳戶按鈕：全部一樣高；名稱太長（例如「彰化銀行-VISA悠遊御璽卡」）自動縮小字並分兩行，不再被裁掉 */
+.acAccts button:not(.add){min-height:3.2rem;padding:.35rem .5rem}
+.acAccts .acN{min-width:0;line-height:1.25;overflow:hidden}
+.acAccts .acN.lg{font-size:.78rem;white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;text-align:left;word-break:break-all}
+.acAccts button>img,.acAccts button>.aIco{flex:none}
+.acAccts button>.aLogo,.acAccts button>i,.acAccts button>svg{flex:none}
