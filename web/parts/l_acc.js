@@ -536,11 +536,12 @@ function accEdit(r0, preset, opt = {}) {
           const at = DB.acc.tpls.indexOf(orig); if (at >= 0) DB.acc.tpls.splice(at + 1, 0, t); else DB.acc.tpls.push(t); saveAcc(); saved = true; sh.close(); toast('⭐ 已另存成新的常用紀錄'); res(t); return; }
         const i = DB.acc.tpls.findIndex(x => x.id === t.id); if (i >= 0) DB.acc.tpls[i] = t; else DB.acc.tpls.push(t); saveAcc(); saved = true; sh.close(); toast('⭐ 已儲存常用紀錄'); res(t); return; }
       if (b.dataset.a === 'del') { if (!await ask('確定要刪除這筆記帳嗎？', '刪除', true)) return; DB.acc.recs = DB.acc.recs.filter(x => x.id !== r.id); for (const id of r.imgs || []) imgDel(id); saveAcc(); saved = true; sh.close(); renderAcc(); toast('已刪除'); res(null); return; }
-      const A = build(); if (!(A > 0)) { await alertBox('還沒有輸入金額，請先輸入這筆的金額再儲存。'); return; }
+      const A = build(); if (!(A > 0) && b.dataset.a !== 'tpl') { await alertBox('還沒有輸入金額，請先輸入這筆的金額再儲存。'); return; }
       if (r.type === 'tr' && !r.settle && (!r.to || r.to === r.acct)) { toast('請選擇不同的轉出、轉入帳戶'); return; }
       if (r.type === 'tr' && r.settle && !(r.to || r.acct)) { await alertBox('請選擇收進哪個帳戶（銀行或現金）'); return; }
       if (b.dataset.a === 'tpl') { const nm = ((await askText('常用紀錄的名稱（例如：房租、手機月租）', r.payee || accCat(r).n)) || '').trim(); if (!nm) return;
-        const t = JSON.parse(JSON.stringify(r)); ['id', 'd', 't', 'settled', 'imgs', 'src', 'items'].forEach(k => delete t[k]); t.id = 'T' + uid(); t.name = nm.slice(0, 20); DB.acc.tpls.push(t); saveAcc(); toast(`⭐ 已存成常用「${t.name}」，在記帳頁「常用紀錄」點一下就會記帳`); return; }
+        /* 常用紀錄可以不填金額：每次使用時再輸入（例如電費） */
+        const t = JSON.parse(JSON.stringify(r)); if (!(+t.amt > 0)) { t.amt = 0; t.split = (t.split || []).map(x => ({p: x.p, amt: 0})); } ['id', 'd', 't', 'settled', 'imgs', 'src', 'items'].forEach(k => delete t[k]); t.id = 'T' + uid(); t.name = nm.slice(0, 20); DB.acc.tpls.push(t); saveAcc(); toast(`⭐ 已存成常用「${t.name}」，在記帳頁「常用紀錄」點一下就會記帳`); return; }
       if (mode === 'custom' && r.split.length && Math.abs(r.split.reduce((s, x) => s + x.amt, 0) - A) > 0.01 && !await ask('分攤金額加起來和總金額不一樣，還是要儲存嗎？', '儲存')) return;
       const i = DB.acc.recs.findIndex(x => x.id === r.id); if (i >= 0) DB.acc.recs[i] = r; else DB.acc.recs.push(r);
       if (r0) (r0.imgs || []).filter(id => !r.imgs.includes(id)).forEach(id => imgDel(id));
@@ -759,49 +760,85 @@ function editAcct(a) {
 
 /* ---------- ③ 消費分析 ---------- */
 const PAL = ['#b5653a', '#6f7d3c', '#c08a3e', '#8a6a4a', '#5d7f86', '#a8472f', '#9a8a3a', '#7a5c8a', '#4f7a5a', '#b58a6a', '#6a6a6a', '#c27a5a'];
+/* 期間：日 d／週 w／月 m／半年 h／年 y。Acc.sp = {u, a: 錨點日期 'YYYY-MM-DD'} */
+const SPU = [['d', '日'], ['w', '週'], ['m', '月'], ['h', '半年'], ['y', '年']];
+function spRange(u, a) { const d = new Date(a + 'T00:00:00'), Y = d.getFullYear(), M = d.getMonth();
+  if (u === 'd') return {s: ymd(d), e: ymd(d), lab: `${M + 1}月${d.getDate()}日（${'日一二三四五六'[d.getDay()]}）`, days: 1};
+  if (u === 'w') { const s0 = new Date(d); s0.setDate(d.getDate() - (d.getDay() + 6) % 7); const e0 = new Date(s0); e0.setDate(s0.getDate() + 6); return {s: ymd(s0), e: ymd(e0), lab: `${s0.getMonth() + 1}/${s0.getDate()} – ${e0.getMonth() + 1}/${e0.getDate()}`, days: 7, s0}; }
+  if (u === 'm') { const n = new Date(Y, M + 1, 0).getDate(); return {s: ymd(new Date(Y, M, 1)), e: ymd(new Date(Y, M, n)), lab: `${Y}年${M + 1}月`, days: n}; }
+  if (u === 'h') { const h = M < 6 ? 0 : 6, s0 = new Date(Y, h, 1), e0 = new Date(Y, h + 6, 0); return {s: ymd(s0), e: ymd(e0), lab: `${Y}年${h ? '下' : '上'}半年（${h + 1}–${h + 6}月）`, days: Math.round((e0 - s0) / 864e5) + 1, h}; }
+  const e0 = new Date(Y, 12, 0); return {s: `${Y}-01-01`, e: `${Y}-12-31`, lab: `${Y}年`, days: Math.round((e0 - new Date(Y, 0, 1)) / 864e5) + 1}; }
+function spShift(u, a, k) { const d = new Date(a + 'T00:00:00'); if (u === 'd') d.setDate(d.getDate() + k); else if (u === 'w') d.setDate(d.getDate() + 7 * k); else if (u === 'm') { d.setDate(1); d.setMonth(d.getMonth() + k); } else if (u === 'h') { d.setDate(1); d.setMonth(d.getMonth() + 6 * k); } else { d.setDate(1); d.setFullYear(d.getFullYear() + k); } return ymd(d); }
+const kMoney = v => { v = Math.round(v); const a = Math.abs(v); return a >= 1e4 ? (v / 1e4).toFixed(a >= 1e5 ? 0 : 1) + '萬' : a >= 1000 ? (v / 1000).toFixed(1) + 'k' : String(v); };
+/* 甜甜圈圖：G = [{n, i, v, c}] */
+function donut(G, tot, title, sz = 180) { const R = sz * .39, r0 = sz * .25, c = sz / 2; let ang = -Math.PI / 2; const P = (an, rr) => [c + rr * Math.cos(an), c + rr * Math.sin(an)].map(n => n.toFixed(2)).join(' ');
+  const arcs = G.filter(g => g.v > 0).map(g => { const a = g.v / (tot || 1) * Math.PI * 2, a2 = ang + a, big = a > Math.PI ? 1 : 0;
+    const d = a > Math.PI * 2 - .001 ? `M ${c} ${c - R} A ${R} ${R} 0 1 1 ${c - .01} ${c - R} L ${c - .01} ${c - r0} A ${r0} ${r0} 0 1 0 ${c} ${c - r0} Z` : `M ${P(ang, R)} A ${R} ${R} 0 ${big} 1 ${P(a2, R)} L ${P(a2, r0)} A ${r0} ${r0} 0 ${big} 0 ${P(ang, r0)} Z`; ang = a2; return `<path d="${d}" fill="${g.c}" stroke="var(--surface)" stroke-width="1.5"/>`; }).join('');
+  return `<svg viewBox="0 0 ${sz} ${sz}" class="stSvg">${arcs || `<circle cx="${c}" cy="${c}" r="${(R + r0) / 2}" fill="none" stroke="var(--border-soft)" stroke-width="${R - r0}"/>`}<text x="${c}" y="${c - 4}" text-anchor="middle" class="stC1">${esc(title)}</text><text x="${c}" y="${c + 15}" text-anchor="middle" class="stC2">${money(tot)}</text></svg>`; }
 function renderAccStat() {
-  const box = $('#accSBody'); if (!box || !DB.acc) return; const now = new Date(); if (!Acc.sym) Acc.sym = [now.getFullYear(), now.getMonth()];
-  const [Y, Mo] = Acc.sym, pre = `${Y}-${String(Mo + 1).padStart(2, '0')}`, pv = new Date(Y, Mo - 1, 1), ppre = `${pv.getFullYear()}-${String(pv.getMonth() + 1).padStart(2, '0')}`;
-  const mon = DB.acc.recs.filter(r => r.d && r.d.startsWith(pre) && r.type === 'out'), tot = mon.reduce((s, r) => s + accMine(r), 0), last = DB.acc.recs.filter(r => r.d && r.d.startsWith(ppre) && r.type === 'out').reduce((s, r) => s + accMine(r), 0);
-  const byP = {}; mon.forEach(r => { const f = catFind('out', r.cat), k = f.p ? f.p.id : '_'; const g = byP[k] = byP[k] || {p: f.p || {n: '其他', i: '📦'}, v: 0, subs: {}}; const v = accMine(r); g.v += v; const sk = f.s ? f.s.id : '_'; const sg = g.subs[sk] = g.subs[sk] || {s: f.s || {n: g.p.n, i: g.p.i}, v: 0}; sg.v += v; });
-  const G = Object.values(byP).filter(g => g.v > 0).sort((a, b) => b.v - a.v);
-  /* 圓餅圖 */
-  let ang = -Math.PI / 2; const R = 70, r0 = 44, cx = 90, cy = 90; const arcs = G.map((g, i) => { const a = g.v / (tot || 1) * Math.PI * 2, a2 = ang + a, big = a > Math.PI ? 1 : 0, P = (an, rr) => [cx + rr * Math.cos(an), cy + rr * Math.sin(an)].map(n => n.toFixed(2)).join(' ');
-    const d = G.length === 1 ? `M ${cx} ${cy - R} A ${R} ${R} 0 1 1 ${cx - .01} ${cy - R} L ${cx - .01} ${cy - r0} A ${r0} ${r0} 0 1 0 ${cx} ${cy - r0} Z` : `M ${P(ang, R)} A ${R} ${R} 0 ${big} 1 ${P(a2, R)} L ${P(a2, r0)} A ${r0} ${r0} 0 ${big} 0 ${P(ang, r0)} Z`; ang = a2; return `<path d="${d}" fill="${PAL[i % PAL.length]}" stroke="var(--surface)" stroke-width="1.5"/>`; }).join('');
-  /* 近 6 個月 */
-  const M6 = []; for (let i = 5; i >= 0; i--) { const d = new Date(Y, Mo - i, 1), k = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`, L = DB.acc.recs.filter(r => r.d && r.d.startsWith(k)); M6.push({m: d.getMonth() + 1, o: L.reduce((s, r) => s + (r.type === 'out' ? accMine(r) : 0), 0), n: L.reduce((s, r) => s + (r.type === 'in' ? +r.amt || 0 : 0), 0)}); }
-  const mx = Math.max(1, ...M6.map(x => Math.max(x.o, x.n)));
-  /* 每日 */
-  const nd = new Date(Y, Mo + 1, 0).getDate(), D = []; for (let d = 1; d <= nd; d++) { const k = `${pre}-${String(d).padStart(2, '0')}`; D.push(mon.filter(r => r.d === k).reduce((s, r) => s + accMine(r), 0)); } const dmx = Math.max(1, ...D);
-  /* 非必要 */
-  const isOpt = r => { const f = catFind('out', r.cat); return f.s ? !!f.s.opt : f.p ? !!f.p.opt : false; }, optL = mon.filter(isOpt), opt = optL.reduce((s, r) => s + accMine(r), 0);
-  const topOpt = optL.slice().sort((a, b) => accMine(b) - accMine(a)).slice(0, 5);
-  const byPy = {}; mon.forEach(r => { if (r.payee) byPy[r.payee] = (byPy[r.payee] || 0) + accMine(r); }); const PY = Object.entries(byPy).sort((a, b) => b[1] - a[1]).slice(0, 6);
-  const chg = last ? (tot - last) / last * 100 : 0;
-  box.innerHTML = `<div class="stTop">${calHead(Y, Mo)}</div>
-    <div class="stHead card"><div><small>${Mo + 1} 月支出（只算我的部分）</small><strong>${money(tot)}</strong></div><span class="stChg ${chg > 0 ? 'neg' : 'pos'}">${last ? `比上個月 ${chg > 0 ? '▲' : '▼'} ${Math.abs(chg).toFixed(0)}%` : '上個月沒有資料'}</span></div>
-    ${G.length ? `<div class="stPie card"><svg viewBox="0 0 180 180" class="stSvg">${arcs}<text x="90" y="86" text-anchor="middle" class="stC1">支出</text><text x="90" y="104" text-anchor="middle" class="stC2">${money(tot)}</text></svg>
-      <div class="stLeg">${G.map((g, i) => `<button class="stL" data-sp="${g.p.id || '_'}"><i style="background:${PAL[i % PAL.length]}"></i><span class="grow">${esc(g.p.i)} ${esc(g.p.n)}</span><b>${money(g.v)}</b><em>${(g.v / tot * 100).toFixed(0)}%</em></button>
-        ${Acc.statOpen === (g.p.id || '_') ? `<div class="stSubs">${Object.values(g.subs).sort((a, b) => b.v - a.v).map(s => `<div><span class="grow">${esc(s.s.i || '')} ${esc(s.s.n)}</span><b>${money(s.v)}</b><span class="stBar"><i style="width:${(s.v / g.v * 100).toFixed(1)}%;background:${PAL[i % PAL.length]}"></i></span></div>`).join('')}</div>` : ''}`).join('')}</div></div>` : '<div class="empty mealEmpty"><span class="big">📊</span>這個月還沒有支出紀錄</div>'}
+  const box = $('#accSBody'); if (!box || !DB.acc) return; if (!Acc.sp) Acc.sp = {u: 'm', a: ymd(new Date())};
+  const {u, a} = Acc.sp, Rg = spRange(u, a), Pg = spRange(u, spShift(u, a, -1)), inR = (r, g) => r.d && r.d >= g.s && r.d <= g.e;
+  const isOpt = r => { const f = catFind('out', r.cat); return f.s ? !!f.s.opt : f.p ? !!f.p.opt : false; };
+  const outs = DB.acc.recs.filter(r => r.type === 'out' && inR(r, Rg)), ins = DB.acc.recs.filter(r => r.type === 'in' && inR(r, Rg));
+  const tot = outs.reduce((t, r) => t + accMine(r), 0), inc = ins.reduce((t, r) => t + (+r.amt || 0), 0), last = DB.acc.recs.filter(r => r.type === 'out' && inR(r, Pg)).reduce((t, r) => t + accMine(r), 0);
+  const optL = outs.filter(isOpt), essL = outs.filter(r => !isOpt(r)), opt = optL.reduce((t, r) => t + accMine(r), 0), ess = tot - opt;
+  /* 依母分類分組（含子分類） */
+  const grp = L => { const by = {}; L.forEach(r => { const f = catFind('out', r.cat), k = f.p ? f.p.id : '_'; const g = by[k] = by[k] || {id: k, n: f.p ? f.p.n : '其他', i: f.p ? f.p.i : '📦', v: 0, cnt: 0, subs: {}}; const v = accMine(r); g.v += v; g.cnt++; const sk = f.s ? f.s.id : '_'; const sg = g.subs[sk] = g.subs[sk] || {n: f.s ? f.s.n : g.n, i: f.s ? f.s.i || '' : g.i, v: 0}; sg.v += v; });
+    return Object.values(by).filter(g => g.v > 0).sort((x, y) => y.v - x.v).map((g, i) => Object.assign(g, {c: PAL[i % PAL.length]})); };
+  const G = grp(outs), GE = grp(essL), GO = grp(optL);
+  /* 趨勢：每一格分必要／非必要 */
+  const B = []; const bk = (lab, s, e, tip) => { const L = outs.filter(r => r.d >= s && r.d <= e), o = L.filter(isOpt).reduce((t, r) => t + accMine(r), 0), all = L.reduce((t, r) => t + accMine(r), 0); B.push({lab, tip, e: all - o, o, v: all, inc: ins.filter(r => r.d >= s && r.d <= e).reduce((t, r) => t + (+r.amt || 0), 0)}); };
+  if (u === 'w' || u === 'm') { const d0 = new Date(Rg.s + 'T00:00:00'); for (let k = 0; k < Rg.days; k++) { const d = new Date(d0); d.setDate(d0.getDate() + k); const x = ymd(d); bk(u === 'w' ? '一二三四五六日'[k] : (k === 0 || (k + 1) % 5 === 0 ? String(k + 1) : ''), x, x, `${d.getMonth() + 1}/${d.getDate()}（${'日一二三四五六'[d.getDay()]}）`); } }
+  else if (u === 'h' || u === 'y') { const Y = +Rg.s.slice(0, 4), m0 = +Rg.s.slice(5, 7) - 1, n = u === 'h' ? 6 : 12; for (let k = 0; k < n; k++) { const m = m0 + k, s0 = ymd(new Date(Y, m, 1)), e0 = ymd(new Date(Y, m + 1, 0)); bk(`${m + 1}月`, s0, e0, `${Y}年${m + 1}月`); } }
+  const bmx = Math.max(1, ...B.map(x => x.v));
+  /* 星期幾 */
+  const WD = [0, 0, 0, 0, 0, 0, 0]; outs.forEach(r => { WD[(new Date(r.d + 'T00:00:00').getDay() + 6) % 7] += accMine(r); }); const wmx = Math.max(1, ...WD);
+  const byPy = {}; outs.forEach(r => { const n = r.payee || accCat(r).n; const o = byPy[n] = byPy[n] || {v: 0, c: 0}; o.v += accMine(r); o.c++; }); const PY = Object.entries(byPy).sort((x, y) => y[1].v - x[1].v).slice(0, 8);
+  const big = outs.slice().sort((x, y) => accMine(y) - accMine(x)).slice(0, 5), chg = last ? (tot - last) / last * 100 : 0, uN = {d: '天', w: '週', m: '月', h: '半年', y: '年'}[u], pN = {d: '昨天', w: '上週', m: '上個月', h: '上個半年', y: '去年'}[u];
+  /* 自動分析重點 */
+  const tips = []; if (tot) { if (G[0]) tips.push(`花最多的是 <b>${esc(G[0].i)} ${esc(G[0].n)}</b>，${money(G[0].v)}，佔 ${(G[0].v / tot * 100).toFixed(0)}%`);
+    if (last) tips.push(`比${pN}${chg > 0 ? '多' : '少'}花 <b>${money(Math.abs(tot - last))}</b>（${chg > 0 ? '▲' : '▼'} ${Math.abs(chg).toFixed(0)}%）`);
+    tips.push(opt ? `非必要消費 ${money(opt)}，佔 ${(opt / tot * 100).toFixed(0)}%${GO[0] ? `，最多的是 ${esc(GO[0].i)} ${esc(GO[0].n)}` : ''}${opt / tot > .3 ? '；已經超過三成，可以先從這一類開始減少' : ''}` : '這段期間沒有非必要消費 👍');
+    if (u !== 'd' && Rg.days > 1) tips.push(`平均每天 ${money(Math.round(tot / Rg.days))}，每筆平均 ${money(Math.round(tot / outs.length))}`);
+    if (u !== 'd' && u !== 'w') { const w = WD.indexOf(Math.max(...WD)); tips.push(`星期${'一二三四五六日'[w]}花最多（${money(WD[w])}）`); }
+    if (inc) tips.push(`收入 ${money(inc)}，${inc >= tot ? `存下 <b class="pos">${money(inc - tot)}</b>（儲蓄率 ${((inc - tot) / inc * 100).toFixed(0)}%）` : `<b class="neg">超支 ${money(tot - inc)}</b>`}`); }
+  const legend = (L, T, key) => L.map(g => `<button class="stL" data-sp="${key}:${g.id}"><i style="background:${g.c}"></i><span class="grow">${esc(g.i)} ${esc(g.n)}<small class="muted"> ${g.cnt} 筆</small></span><b>${money(g.v)}</b><em>${(g.v / (T || 1) * 100).toFixed(0)}%</em></button>
+      ${Acc.statOpen === key + ':' + g.id ? `<div class="stSubs">${Object.values(g.subs).sort((x, y) => y.v - x.v).map(sb => `<div><span class="grow">${esc(sb.i)} ${esc(sb.n)}</span><b>${money(sb.v)}</b><em class="muted">${(sb.v / g.v * 100).toFixed(0)}%</em><span class="stBar"><i style="width:${(sb.v / g.v * 100).toFixed(1)}%;background:${g.c}"></i></span></div>`).join('')}</div>` : ''}`).join('');
+  const sel = Acc.bk != null && B[Acc.bk] ? B[Acc.bk] : null;
+  box.innerHTML = `<div class="spSeg">${SPU.map(([k, n]) => `<button data-u="${k}" class="${u === k ? 'on' : ''}">${n}</button>`).join('')}</div>
+    <div class="spNav"><button class="btn" data-a="sp-">◀</button><button class="btn spLab" data-a="spPick">${Rg.lab}</button><button class="btn" data-a="sp+">▶</button></div>
+    <div class="stKpi"><div class="card"><small>支出（我的）</small><b class="neg">${money(tot)}</b><em class="${chg > 0 ? 'neg' : 'pos'}">${last ? `${chg > 0 ? '▲' : '▼'} ${Math.abs(chg).toFixed(0)}% vs ${pN}` : `${pN}沒有資料`}</em></div>
+      <div class="card"><small>收入</small><b class="pos">${money(inc)}</b><em>${inc || tot ? `結餘 ${money(inc - tot)}` : '—'}</em></div>
+      <div class="card"><small>${u === 'd' ? '筆數' : '平均每天'}</small><b>${u === 'd' ? outs.length + ' 筆' : money(Math.round(tot / Rg.days))}</b><em>${outs.length} 筆支出</em></div></div>
+    ${tips.length ? `<div class="stCard card"><div class="stH"><b>💡 分析重點</b></div><ul class="stTips">${tips.map(t => `<li>${t}</li>`).join('')}</ul></div>` : ''}
+    ${B.length ? `<div class="stCard card"><div class="stH"><b>📊 ${u === 'w' ? '這週每天' : u === 'm' ? '每天' : '每個月'}支出</b><span class="stKey"><i class="ess"></i>必要 <i class="opt"></i>非必要</span></div>
+      <div class="stBars n${B.length > 12 ? 'm' : ''}">${B.map((x, k) => `<button class="stBk ${Acc.bk === k ? 'on' : ''}" data-bk="${k}">${B.length <= 12 && x.v ? `<small class="stV">${kMoney(x.v)}</small>` : ''}<span class="stCol"><span class="stStk" style="height:${(x.v / bmx * 100).toFixed(1)}%"><i class="opt" style="flex:${x.o}"></i><i class="ess" style="flex:${x.e}"></i></span></span><em>${x.lab}</em></button>`).join('')}</div>
+      <div class="stSel">${sel ? `<b>${sel.tip}</b>　支出 ${money(sel.v)}（必要 ${money(sel.e)}・非必要 ${money(sel.o)}）${u === 'h' || u === 'y' ? `・收入 ${money(sel.inc)}` : ''}` : '<span class="muted">點長條看當天／當月的金額</span>'}</div>
+      ${u === 'h' || u === 'y' ? `<div class="stTbl"><div class="th"><span>月份</span><span>支出</span><span>非必要</span><span>收入</span><span>結餘</span></div>${B.map(x => `<div><span>${x.lab}</span><span class="neg">${kMoney(x.v)}</span><span>${kMoney(x.o)}</span><span class="pos">${kMoney(x.inc)}</span><span class="${x.inc - x.v < 0 ? 'neg' : 'pos'}">${kMoney(x.inc - x.v)}</span></div>`).join('')}</div>` : ''}
+      <div class="small muted">最高 ${money(Math.max(0, ...B.map(x => x.v)))}・平均每${u === 'h' || u === 'y' ? '月' : '天'} ${money(Math.round(tot / B.length))}</div></div>` : ''}
+    ${G.length ? `<div class="stPie card"><div class="stH"><b>🍩 支出分類</b></div>${donut(G, tot, '支出')}<div class="stLeg">${legend(G, tot, 'a')}</div></div>` : `<div class="empty mealEmpty"><span class="big">📊</span>這段期間還沒有支出紀錄</div>`}
     <div class="stCard card"><div class="stH"><b>🧭 必要／非必要消費</b><button class="btn sm" data-a="optCfg">設定哪些是非必要</button></div>
-      <div class="stOpt"><div class="stOptBar"><i style="width:${tot ? (100 - opt / tot * 100).toFixed(1) : 100}%"></i></div><div class="stOptL"><span><i class="ess"></i>必要 <b>${money(tot - opt)}</b></span><span><i class="opt"></i>非必要 <b>${money(opt)}</b>（${tot ? (opt / tot * 100).toFixed(0) : 0}%）</span></div></div>
-      ${topOpt.length ? `<div class="lbl">最大筆的非必要消費</div>${topOpt.map(r => `<div class="acIt" data-r="${r.id}"><span class="grow">${r.d.slice(5).replace('-', '/')} ${esc(accCat(r).i)} ${esc(r.payee || accCat(r).n)}</span><b class="neg">${money(accMine(r))}</b></div>`).join('')}
-        <div class="stTip">💡 如果非必要消費少一半，這個月可以多存 <b>${money(opt / 2)}</b>${opt / (tot || 1) > .3 ? '；非必要已經超過三成，可以先從最大的幾筆開始減少。' : '。'}</div>` : '<div class="small muted">這個月沒有非必要消費 👍</div>'}</div>
-    ${(() => { const LL = DB.acc.recs.filter(r => r.type === 'loss'), lm = LL.filter(r => r.d.startsWith(pre)), ly = LL.filter(r => r.d.startsWith(String(Y))); if (!LL.length) return ''; const byA = {}; lm.forEach(r => { const k = acctName(r.acct) || '未指定'; byA[k] = (byA[k] || 0) + (+r.amt || 0); });
-      return `<div class="stCard card"><div class="stH"><b>💸 金額遺失</b></div><div class="stLossG"><span><small>${Mo + 1} 月</small><b class="neg">${money(lm.reduce((t, r) => t + (+r.amt || 0), 0))}</b></span><span><small>${Y} 年</small><b class="neg">${money(ly.reduce((t, r) => t + (+r.amt || 0), 0))}</b></span><span><small>全部</small><b class="neg">${money(LL.reduce((t, r) => t + (+r.amt || 0), 0))}</b></span></div>
-        ${Object.keys(byA).length ? Object.entries(byA).map(([k, v]) => `<div class="acIt"><span class="grow">${esc(k)}</span><b class="neg">${money(v)}</b></div>`).join('') : '<div class="small muted">這個月沒有遺失 👍</div>'}
-        ${lm.map(r => `<div class="acIt" data-r="${r.id}"><span class="grow">${r.d.slice(5).replace('-', '/')} ${esc(r.note ? String(r.note).split('\n')[0] : '金額遺失')}</span><small>${esc(acctName(r.acct))}</small><b class="neg">${money(r.amt)}</b></div>`).join('')}</div>`; })()}
-    <div class="stCard card"><div class="stH"><b>📅 每天支出</b></div><div class="stDays">${D.map((v, i) => `<span title="${i + 1}日 ${money(v)}"><i style="height:${(v / dmx * 100).toFixed(1)}%"></i></span>`).join('')}</div><div class="stDayX"><span>1</span><span>${Math.ceil(nd / 2)}</span><span>${nd}</span></div><div class="small muted">平均每天 ${money(tot / nd)}・最高 ${money(dmx === 1 && !D.some(Boolean) ? 0 : dmx)}</div></div>
-    <div class="stCard card"><div class="stH"><b>📈 近 6 個月</b><span class="stKey"><i class="o"></i>支出 <i class="n"></i>收入</span></div><div class="stMon">${M6.map(x => `<div><span class="stMB"><i class="o" style="height:${(x.o / mx * 100).toFixed(1)}%"></i><i class="n" style="height:${(x.n / mx * 100).toFixed(1)}%"></i></span><small>${x.m}月</small></div>`).join('')}</div></div>
-    ${PY.length ? `<div class="stCard card"><div class="stH"><b>🏪 最常花錢的地方</b></div>${PY.map(([n, v]) => `<div class="stPy"><span class="grow">${esc(n)}</span><b>${money(v)}</b><span class="stBar"><i style="width:${(v / PY[0][1] * 100).toFixed(1)}%"></i></span></div>`).join('')}</div>` : ''}`;
-  $('#accSSub').textContent = `${Y}年${Mo + 1}月`;
+      <div class="stOpt"><div class="stOptBar"><i style="width:${tot ? (ess / tot * 100).toFixed(1) : 100}%"></i></div><div class="stOptL"><span><i class="ess"></i>必要 <b>${money(ess)}</b>（${tot ? (ess / tot * 100).toFixed(0) : 0}%）</span><span><i class="opt"></i>非必要 <b>${money(opt)}</b>（${tot ? (opt / tot * 100).toFixed(0) : 0}%）</span></div></div>
+      ${tot ? `<div class="stTwo"><div><div class="lbl">✅ 必要消費的分類佔比</div>${GE.length ? donut(GE, ess, '必要', 150) + `<div class="stLeg">${legend(GE, ess, 'e')}</div>` : '<div class="small muted">沒有必要消費</div>'}</div>
+        <div><div class="lbl">🎈 非必要消費的分類佔比</div>${GO.length ? donut(GO, opt, '非必要', 150) + `<div class="stLeg">${legend(GO, opt, 'o')}</div>` : '<div class="small muted">沒有非必要消費 👍</div>'}</div></div>` : ''}
+      ${opt ? `<div class="stTip">💡 如果非必要消費少一半，這個${uN}可以多存 <b>${money(Math.round(opt / 2))}</b>${u !== 'y' ? `，一年大約 <b>${money(Math.round(opt / 2 / Rg.days * 365))}</b>` : ''}。</div>` : ''}</div>
+    ${u !== 'd' && u !== 'w' && tot ? `<div class="stCard card"><div class="stH"><b>📆 星期幾花最多</b></div><div class="stWd">${WD.map((v, k) => `<div><small class="stV">${v ? kMoney(v) : ''}</small><span><i style="height:${(v / wmx * 100).toFixed(1)}%"></i></span><em>${'一二三四五六日'[k]}</em></div>`).join('')}</div></div>` : ''}
+    ${big.length ? `<div class="stCard card"><div class="stH"><b>🔝 最大筆的支出</b></div>${big.map(r => `<div class="acIt" data-r="${r.id}"><span class="grow">${r.d.slice(5).replace('-', '/')} ${esc(accCat(r).i)} ${esc(r.payee || accCat(r).n)}${isOpt(r) ? ' <small class="optTag">非必要</small>' : ''}</span><b class="neg">${money(accMine(r))}</b></div>`).join('')}</div>` : ''}
+    ${PY.length ? `<div class="stCard card"><div class="stH"><b>🏪 最常花錢的地方</b></div>${PY.map(([n, o]) => `<div class="stPy"><span class="grow">${esc(n)}<small class="muted"> ${o.c} 次</small></span><b>${money(o.v)}</b><span class="stBar"><i style="width:${(o.v / PY[0][1].v * 100).toFixed(1)}%"></i></span></div>`).join('')}</div>` : ''}
+    ${(() => { const LL = DB.acc.recs.filter(r => r.type === 'loss'), lm = LL.filter(r => inR(r, Rg)); if (!LL.length) return ''; const byA = {}; lm.forEach(r => { const k = acctName(r.acct) || '未指定'; byA[k] = (byA[k] || 0) + (+r.amt || 0); });
+      return `<div class="stCard card"><div class="stH"><b>💸 金額遺失</b></div><div class="stLossG"><span><small>這個${uN}</small><b class="neg">${money(lm.reduce((t, r) => t + (+r.amt || 0), 0))}</b></span><span><small>全部</small><b class="neg">${money(LL.reduce((t, r) => t + (+r.amt || 0), 0))}</b></span></div>
+        ${Object.keys(byA).length ? Object.entries(byA).map(([k, v]) => `<div class="acIt"><span class="grow">${esc(k)}</span><b class="neg">${money(v)}</b></div>`).join('') : '<div class="small muted">這段期間沒有遺失 👍</div>'}</div>`; })()}`;
+  $('#accSSub').textContent = Rg.lab;
 }
 async function accStatClick(e) {
-  const t = e.target.closest('[data-a],[data-sp],[data-r]'); if (!t) return; buzz(8); const a = t.dataset.a, [Y, Mo] = Acc.sym;
+  const t = e.target.closest('[data-a],[data-sp],[data-r],[data-u],[data-bk]'); if (!t) return; buzz(8); const a = t.dataset.a, sp = Acc.sp;
+  if (t.dataset.u) { sp.u = t.dataset.u; Acc.bk = null; renderAccStat(); return; }
+  if (t.dataset.bk != null) { const k = +t.dataset.bk; Acc.bk = Acc.bk === k ? null : k; renderAccStat(); return; }
   if (t.dataset.sp) { Acc.statOpen = Acc.statOpen === t.dataset.sp ? '' : t.dataset.sp; renderAccStat(); return; }
   if (t.dataset.r) { const r = DB.acc.recs.find(x => x.id === t.dataset.r); if (r) accEdit(r).then(renderAccStat); return; }
-  if (a === 'pm' || a === 'nm') { const d = new Date(Y, Mo + (a === 'pm' ? -1 : 1), 1); Acc.sym = [d.getFullYear(), d.getMonth()]; renderAccStat(); }
-  else if (a === 'ymY' || a === 'ymM') { const r = await ymPick(Y, Mo, a === 'ymY' ? 'y' : 'm'); if (r) { Acc.sym = r; renderAccStat(); } }
+  if (a === 'sp-' || a === 'sp+') { sp.a = spShift(sp.u, sp.a, a === 'sp-' ? -1 : 1); Acc.bk = null; renderAccStat(); }
+  else if (a === 'spPick') { const d = new Date(sp.a + 'T00:00:00'); if (sp.u === 'd' || sp.u === 'w') { const v = await datePick(sp.a); if (v) { sp.a = v; renderAccStat(); } }
+    else { const r = await ymPick(d.getFullYear(), d.getMonth(), sp.u === 'm' ? 'm' : 'y'); if (r) { sp.a = ymd(new Date(r[0], r[1], 1)); Acc.bk = null; renderAccStat(); } } }
   else if (a === 'optCfg') optCfg();
 }
 function optCfg() {

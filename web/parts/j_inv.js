@@ -166,13 +166,16 @@ function camKit(box, v, onErr) {
   K.stop = () => { K.stopped = true; if (K.stream) K.stream.getTracks().forEach(t => t.stop()); };
   const mainBack = L => { const b = L.filter(d => /back|rear|environment|後/i.test(d.label)); if (!b.length) return null; const n = d => { const m = d.label.match(/camera2?\s*(\d+)/i); return m ? +m[1] : 99; }; return b.slice().sort((x, y) => n(x) - n(y))[0]; };
   const veil = on => { let o = $('.camVeil', box); if (on && !o) box.insertAdjacentHTML('beforeend', '<div class="camVeil">切換鏡頭中…</div>'); else if (!on && o) o.remove(); };
-  K.open = async dev => { if (K.busy) return; K.busy = true; veil(!!K.stream); if (K.stream) { K.stream.getTracks().forEach(t => t.stop()); K.stream = null; }
+  K.open = async (dev, pick) => { if (K.busy) return; K.busy = true; veil(!!K.stream); if (K.stream) { K.stream.getTracks().forEach(t => t.stop()); K.stream = null; }
     /* 沒有自己選過鏡頭：先找編號最小的後鏡頭（通常就是 1× 主鏡頭），避開長焦或超廣角 */
-    if (!dev) { try { const all = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === 'videoinput'), m = mainBack(all); if (m && m.deviceId) dev = m.deviceId; } catch (e) {} }
+    if (!dev) { try { const all = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === 'videoinput'), m = mainBack(all); if (m && m.deviceId) dev = m.deviceId; else if (S.camMain && all.some(d => d.deviceId === S.camMain)) dev = S.camMain; } catch (e) {} }
     const base = {width: {ideal: 1920}, height: {ideal: 1080}}, c = dev ? Object.assign({deviceId: {exact: dev}}, base) : Object.assign({facingMode: {ideal: 'environment'}}, base);
-    let s; try { s = await navigator.mediaDevices.getUserMedia({video: c, audio: false}); } catch (er) { K.busy = false; if (dev) { S.camDev = ''; return K.open(''); } veil(false); onErr && onErr(er); return; }
+    let s; try { s = await navigator.mediaDevices.getUserMedia({video: c, audio: false}); } catch (er) { K.busy = false; if (dev) { if (dev === S.camMain) S.camMain = ''; return K.open('', true); } veil(false); onErr && onErr(er); return; }
     if (K.stopped) { s.getTracks().forEach(t => t.stop()); K.busy = false; return; } K.stream = s; K.track = s.getVideoTracks()[0]; v.srcObject = s; v.play().catch(() => {});
     v.addEventListener('playing', () => veil(false), {once: true}); setTimeout(() => veil(false), 2500); K.busy = false;
+    /* 第一次打開（還沒拿到鏡頭名稱）時系統可能給了長焦或超廣角：拿到權限後馬上確認，不是 1× 主鏡頭就自動換過去，並記住主鏡頭 */
+    if (!pick) { try { const all = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === 'videoinput'), m = mainBack(all), id = K.track.getSettings && K.track.getSettings().deviceId;
+      if (m && m.deviceId) { if (S.camMain !== m.deviceId) { S.camMain = m.deviceId; saveS(); } if (id && id !== m.deviceId && !K.stopped) return K.open(m.deviceId, true); } } catch (e) {} }
     const cap = (K.track.getCapabilities && K.track.getCapabilities()) || {}; K.hw = cap.zoom && cap.zoom.max > cap.zoom.min ? cap.zoom : null;
     R.min = K.hw ? Math.min(1, Math.max(.5, K.hw.min)) : 1; R.max = K.hw ? Math.min(10, K.hw.max) : 5; K.z = 1;
     if (cap.focusMode && cap.focusMode.includes('continuous')) K.track.applyConstraints({advanced: [{focusMode: 'continuous'}]}).catch(() => {});
@@ -183,13 +186,13 @@ function camKit(box, v, onErr) {
       cb.textContent = `🔄 換鏡頭 ${K.di + 1}/${K.devs.length}`; } catch (e) {} };
   bar.addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; buzz(8);
     if (b.dataset.cz) { K.z += b.dataset.cz === '+' ? (K.z < 1 ? .25 : .5) : (K.z <= 1 ? -.25 : -.5); K.apply(); }
-    else if (b.dataset.cam && K.devs.length > 1 && !K.busy) { K.di = (K.di + 1) % K.devs.length; S.camDev = K.devs[K.di].deviceId; saveS(); K.open(S.camDev); toast(`鏡頭 ${K.di + 1}／${K.devs.length}${K.devs[K.di].label ? '：' + K.devs[K.di].label : ''}`); } });
+    else if (b.dataset.cam && K.devs.length > 1 && !K.busy) { K.di = (K.di + 1) % K.devs.length; K.open(K.devs[K.di].deviceId, true); toast(`鏡頭 ${K.di + 1}／${K.devs.length}${K.devs[K.di].label ? '：' + K.devs[K.di].label : ''}`); } });
   R.addEventListener('input', () => { K.z = +R.value; K.apply(); });
   /* 雙指縮放畫面也可以調整倍率 */
   let d0 = 0, z0 = 1; box.addEventListener('touchstart', e => { if (e.touches.length === 2) { d0 = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY); z0 = K.z; } }, {passive: true});
   box.addEventListener('touchmove', e => { if (e.touches.length === 2 && d0) { const d = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY); K.z = z0 * d / d0; K.apply(); } }, {passive: true});
   box.addEventListener('touchend', () => { d0 = 0; }, {passive: true});
-  K.open(S.camDev || ''); return K;
+  K.open(''); return K;
 }
 function openInvScan() {
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { toast('這台手機不支援相機掃描'); return; }

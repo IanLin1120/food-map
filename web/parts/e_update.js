@@ -90,7 +90,35 @@ var Upd = {
     else if (d.state === 'error') { this.instAt = 0; const u = this.instUrl; this.dialog('更新沒有完成', esc(d.msg || '未知錯誤') + '<br><br>可以改用瀏覽器下載 APK，再點通知安裝（直接覆蓋舊版）。', [['改用瀏覽器下載', () => { if (u) openUrl(u); }], ['關閉', null]]); }
   },
   restore() { this.dialog('還原為 APK 內建版本？', '會刪除線上下載的新版介面，改回這支 APK 內建的版本。收藏、菜單、食譜與設定不受影響。', [['還原', () => { try { localStorage.removeItem('fm.ota'); } catch (e) {} location.replace(location.pathname + '#builtin'); location.reload(); }], ['取消', null]]); },
-  share() { const url = GH.pages + 'download.html'; if (IS_APP && NB.share) NB.share('日日帳本 App 下載：' + url); else if (navigator.share) navigator.share({title: '日日帳本', url}).catch(() => {}); else copyText(url); },
+  /* 分享 App：選「連結」或「QR Code」。QR Code 可以給對方直接掃，也可以存成精美圖片分享 */
+  share() { const url = GH.pages + 'download.html', txt = '日日帳本 App 下載：' + url;
+    const sh = sheet({title: '📤 分享這個 App'}); sh.body.innerHTML = `<div class="shareCh"><button class="card" data-s="link"><i>🔗</i><b>分享連結</b><small>傳到 LINE、訊息、Email</small></button><button class="card" data-s="qr"><i>🔳</i><b>QR Code</b><small>給對方掃描，或分享成圖片</small></button></div><div class="small muted" style="margin-top:.6rem">網址固定不變，打開永遠是最新版 APK</div>`;
+    sh.body.onclick = e => { const b = e.target.closest('[data-s]'); if (!b) return; buzz(10);
+      if (b.dataset.s === 'link') { sh.close(); if (IS_APP && NB.share) NB.share(txt); else if (navigator.share) navigator.share({title: '日日帳本', text: txt, url}).catch(() => {}); else copyText(url); return; }
+      sh.close(); this.shareQr(url, txt); }; },
+  /* 畫一張大地色系的分享卡：App 圖示、名稱、QR Code、網址 */
+  async qrCard(url) { const W = 1080, H = 1500, cv = document.createElement('canvas'); cv.width = W; cv.height = H; const g = cv.getContext('2d'), F = '"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif';
+    const bg = g.createLinearGradient(0, 0, W, H); bg.addColorStop(0, '#f6eddc'); bg.addColorStop(1, '#e8d8bc'); g.fillStyle = bg; g.fillRect(0, 0, W, H);
+    g.fillStyle = 'rgba(181,101,58,.08)'; g.beginPath(); g.arc(W - 80, 120, 260, 0, 7); g.fill(); g.beginPath(); g.arc(90, H - 60, 220, 0, 7); g.fill();
+    const rr = (x, y, w, h, r) => { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); };
+    try { const im = new Image(); im.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(APP_ICON); await im.decode(); g.save(); rr(W / 2 - 110, 110, 220, 220, 48); g.clip(); g.drawImage(im, W / 2 - 110, 110, 220, 220); g.restore(); } catch (e) {}
+    g.textAlign = 'center'; g.fillStyle = '#3b2b1d'; g.font = `900 92px ${F}`; g.fillText('日日帳本', W / 2, 450);
+    g.fillStyle = '#7a6550'; g.font = `500 40px ${F}`; g.fillText('收藏愛店・點餐分帳・發票・記帳', W / 2, 515);
+    g.shadowColor = 'rgba(60,40,20,.18)'; g.shadowBlur = 40; g.shadowOffsetY = 12; g.fillStyle = '#fffaf0'; rr(170, 590, 740, 740, 36); g.fill(); g.shadowColor = 'transparent';
+    const q = qrcode(0, 'M'); q.addData(url); q.make(); const n = q.getModuleCount(), cell = Math.floor(620 / n), qs = cell * n, x0 = (W - qs) / 2, y0 = 590 + (740 - qs) / 2;
+    g.fillStyle = '#3b2b1d'; for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) if (q.isDark(r, c)) g.fillRect(x0 + c * cell, y0 + r * cell, cell + .5, cell + .5);
+    g.fillStyle = '#fffaf0'; rr(W / 2 - 62, y0 + qs / 2 - 62, 124, 124, 26); g.fill(); try { const im = new Image(); im.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(APP_ICON); await im.decode(); g.save(); rr(W / 2 - 52, y0 + qs / 2 - 52, 104, 104, 22); g.clip(); g.drawImage(im, W / 2 - 52, y0 + qs / 2 - 52, 104, 104); g.restore(); } catch (e) {}
+    g.fillStyle = '#5a7a3a'; g.font = `800 44px ${F}`; g.fillText('📷 用相機掃描，下載最新版 APK', W / 2, 1405);
+    g.fillStyle = '#8a7560'; g.font = `500 30px ${F}`; g.fillText(url.replace(/^https?:\/\//, ''), W / 2, 1458); return cv; },
+  async shareQr(url, txt) { const cv = await this.qrCard(url), png = cv.toDataURL('image/png'), sh = sheet({title: '🔳 QR Code', full: true,
+      foot: `<div class="qrFoot"><button class="btn pri" data-q="share">📤 分享圖片</button><button class="btn" data-q="save">💾 存到相簿</button><button class="btn" data-q="copy">🔗 複製連結</button></div>`});
+    sh.body.innerHTML = `<div class="qrCardW"><img src="${png}" alt="日日帳本 QR Code"></div><div class="small muted" style="text-align:center;margin-top:.5rem">讓對方直接用相機掃畫面，或分享這張圖片</div>`;
+    sh.foot.onclick = async e => { const b = e.target.closest('[data-q]'); if (!b) return; buzz(10); const q = b.dataset.q, b64 = png.split(',')[1], name = `日日帳本_QR_${Date.now()}.png`;
+      if (q === 'copy') { copyText(url); toast('已複製下載連結'); return; }
+      if (IS_APP && NB.shareImg) { const ok = NB.shareImg(b64, name, q === 'share' ? txt : '', q === 'share'); if (q === 'save') toast(ok ? '💾 已存到相簿（圖片／日日帳本）' : '存檔失敗'); else if (!ok) NB.share(txt); return; }
+      const blob = await (await fetch(png)).blob(), file = new File([blob], name, {type: 'image/png'});
+      if (q === 'share' && navigator.canShare && navigator.canShare({files: [file]})) { navigator.share({files: [file], text: txt}).catch(() => {}); return; }
+      const a = document.createElement('a'); a.href = png; a.download = name; a.click(); }; },
   dialog(title, html, btns) { if (this.dlg) this.dlg.close(); this.dlg = dialog(title, html, btns); return this.dlg; },
   isOpen() { return !!(this.dlg && !this.dlg.closed); },
   /* 設定頁的「版本與更新」卡片 */

@@ -1258,6 +1258,34 @@ public class MainActivity extends Activity {
             });
         }
 
+        /* 把圖片存到相簿（圖片／日日帳本），share=true 時接著叫出分享選單 */
+        @JavascriptInterface
+        public boolean shareImg(final String b64, final String name, final String text, final boolean share) {
+            try {
+                byte[] data = android.util.Base64.decode(b64, android.util.Base64.DEFAULT);
+                android.net.Uri uri;
+                if (Build.VERSION.SDK_INT >= 29) {
+                    android.content.ContentValues cv = new android.content.ContentValues();
+                    cv.put(android.provider.MediaStore.Images.Media.DISPLAY_NAME, name);
+                    cv.put(android.provider.MediaStore.Images.Media.MIME_TYPE, "image/png");
+                    cv.put(android.provider.MediaStore.Images.Media.RELATIVE_PATH, "Pictures/日日帳本");
+                    uri = getContentResolver().insert(android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI, cv);
+                    if (uri == null) return false;
+                    java.io.OutputStream os = getContentResolver().openOutputStream(uri); os.write(data); os.close();
+                } else {
+                    android.graphics.Bitmap bm = android.graphics.BitmapFactory.decodeByteArray(data, 0, data.length);
+                    String u = android.provider.MediaStore.Images.Media.insertImage(getContentResolver(), bm, name, text);
+                    if (u == null) return false; uri = android.net.Uri.parse(u);
+                }
+                if (share) {
+                    final android.net.Uri fu = uri;
+                    runOnUiThread(() -> { try { Intent i = new Intent(Intent.ACTION_SEND); i.setType("image/png"); i.putExtra(Intent.EXTRA_STREAM, fu); if (text != null && !text.isEmpty()) i.putExtra(Intent.EXTRA_TEXT, text);
+                        i.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION); startActivity(Intent.createChooser(i, "分享")); } catch (Throwable t) { } });
+                }
+                return true;
+            } catch (Throwable t) { return false; }
+        }
+
         @JavascriptInterface
         public void copy(String t) {
             ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
