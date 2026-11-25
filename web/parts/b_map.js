@@ -123,10 +123,10 @@ function openState(p) {
 function stateHtml(p) { const s = openState(p); if (!s) return ''; return `<span class="dot ${s.open === true ? 'ok' : s.open === false ? 'no' : ''}"></span>${s.open === true ? '營業中 · ' : s.open === false && s.txt !== '今日休息' ? '休息中 · ' : ''}${esc(s.txt)}`; }
 
 /* ---------- 地圖下方資訊卡 ---------- */
-function showCard(html) { const c = $('#mCard'); c.innerHTML = html; c.classList.add('on'); requestAnimationFrame(() => { const f = $('#mapFabs'); f.style.bottom = c.offsetHeight + 22 + 'px'; fabFit(); }); }
+function showCard(html) { const c = $('#mCard'); c.innerHTML = html; c.classList.add('on'); requestAnimationFrame(() => { $$('.mapFabs').forEach(f => { f.style.bottom = c.offsetHeight + 22 + 'px'; }); fabFit(); }); }
 /* 下方清冊打開、空間不夠時，先把 ＋／－ 收起來，避免按鈕疊到上面的區域選單 */
-function fabFit() { const f = $('#mapFabs'), bar = $('#areaBar'); if (!f) return; f.classList.remove('tight'); if (!bar) return; const top = bar.getBoundingClientRect().bottom; if (f.getBoundingClientRect().top < top + 8) f.classList.add('tight'); }
-function hideCard() { $('#mCard').classList.remove('on'); $('#mapFabs').style.bottom = ''; $('#mapFabs').classList.remove('tight'); }
+function fabFit() { const bar = $('#areaBar'); $$('.mapFabs').forEach(f => { f.classList.remove('tight'); if (bar && f.getBoundingClientRect().top < bar.getBoundingClientRect().bottom + 8) f.classList.add('tight'); }); }
+function hideCard() { $('#mCard').classList.remove('on'); $$('.mapFabs').forEach(f => { f.style.bottom = ''; f.classList.remove('tight'); }); }
 function clearSel() { M.sel = null; M.draft = null; if (M.temp) { M.temp.remove(); M.temp = null; } hideCard(); syncMarkers(); if (S.area && !Area.hideList) Area.card(); }
 function mapBack() { if (curTab !== 'Map') return false; if (!$('#mResults').classList.contains('hide')) { hideResults(); return true; } if (M.sel || M.draft) { clearSel(); return true; } if (S.area) { Area.set(null); return true; } return false; }
 function selectPlace(id, fly) {

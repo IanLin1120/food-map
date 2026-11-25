@@ -1463,7 +1463,13 @@ table.ckT td.s{text-align:center}table.ckT th.s{text-align:center}
 .spk button.on{background:var(--accent);border-color:var(--accent);color:#fff}.spk button i{font-style:normal;font-size:.8rem}
 .spk button:disabled{opacity:.45}
 .spkG{font-size:.78rem;font-weight:800;color:var(--muted);margin:.4rem 0 .35rem}
-select:not([multiple]){-webkit-appearance:none;appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);background-position:calc(100% - 1.05rem) 50%,calc(100% - .7rem) 50%;background-size:.35rem .35rem;background-repeat:no-repeat;padding-right:1.8rem!important;text-overflow:ellipsis;white-space:nowrap;overflow:hidden}
 .dkSeg.acKind{grid-template-columns:repeat(5,minmax(0,1fr))!important}
 .dkSeg.acKind button b{font-size:.7rem;letter-spacing:-.02em}
 .mock .bd .row>.card2{min-width:6.5rem}
+/* 地圖：＋／－、2D／3D 移到左邊，和右邊的按鈕同一高度對齊 */
+.mapFabs.left{right:auto;left:.7rem}
+@media (min-width:760px){.mapFabs.left{left:1rem}}
+.mapFabs.tight .zm{display:flex}.mapFabs.left.tight{display:none}
+/* 常用紀錄收合後，分類之間的距離縮小 */
+.tpG.fold{margin-bottom:0}.tpG.fold .tpGH{margin:.35rem 0}.tpG.fold+.tpG .tpGH{margin-top:.35rem}
+.tpG.fold:first-child .tpGH{margin-top:.2rem}
