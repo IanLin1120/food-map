@@ -51,7 +51,7 @@ function newRecipe() {
 }
 const recSel = {};
 function viewRecipe(id) {
-  const r = DB.recipes.find(x => x.id === id); if (!r) return; const sh = sheet({title: '食譜', full: true}); sh.tools.innerHTML = '<button class="btn sm" data-a="copy">複製文字</button><button class="btn sm" data-a="edit">✎ 編輯</button>';
+  const r = DB.recipes.find(x => x.id === id); if (!r) return; const sh = sheet({title: '食譜', full: true}); sh.tools.innerHTML = '<button class="btn sm" data-a="copy">📋 複製</button><button class="btn sm" data-a="dup">📄 另存</button><button class="btn sm" data-a="edit">✎ 編輯</button>';
   const render = async () => { const cov = await imgURL(r.cover), c = rcatOf(rcatKey(r)), P = r.portions || []; let tbl;
     if (r.type === 'ratio') { let sel = recSel[r.id]; if (sel == null || sel >= P.length) sel = -1;
       tbl = `<div class="mcats noSel">${P.length > 1 ? `<button class="chip ${sel < 0 ? 'on' : ''}" data-p="-1">全部對照</button>` : ''}${P.map((pn, j) => `<button class="chip ${sel === j || P.length === 1 ? 'on' : ''}" data-p="${j}">${esc(pn || '份量 ' + (j + 1))}</button>`).join('')}</div>` +
@@ -65,14 +65,21 @@ function viewRecipe(id) {
   sh.body.addEventListener('click', e => { const b = e.target.closest('[data-p]'); if (!b) return; recSel[r.id] = +b.dataset.p; render(); });
   sh.tools.addEventListener('click', e => { const b = e.target.closest('[data-a]'); if (!b) return;
     if (b.dataset.a === 'copy') { const P = r.portions || []; copyText(`${r.title}\n${r.type === 'ratio' ? '' : '份數：' + (r.serv || '') + '\n'}\n【食材】\n${r.type === 'ratio' ? '食材｜' + P.join('｜') + '\n' + (r.ing || []).map(i => i.n + '｜' + P.map((_, j) => (i.q || [])[j] || '—').join('｜')).join('\n') : (r.ing || []).map(i => `${i.n}　${i.q}`).join('\n')}${(r.steps || []).length ? '\n\n【步驟】\n' + r.steps.map((s, i) => `${i + 1}. ${s}`).join('\n') : ''}${r.note ? '\n\n【備註】\n' + r.note : ''}`); }
+    else if (b.dataset.a === 'dup') { buzz(10); dupRecipe(r).then(n => { if (!n) return; sh.close(); viewRecipe(n.id); editRecipe(n, false, () => {}); }); }
     else editRecipe(r, false, del => { if (del) sh.close(); else render(); }); });
 }
+/* 另存新檔：複製一份食譜（封面圖片也複製一份，兩份互不影響），改個名字，放在原本那份後面 */
+async function dupRecipe(r, data) { const nm = ((await askText('新食譜的名稱', (data || r).title + '（複製）')) || '').trim(); if (!nm) return null;
+  const n = JSON.parse(JSON.stringify(data || r)); n.id = 'r' + uid(); n.t = Date.now(); n.title = nm;
+  if (n.cover) n.cover = (await copyImgs([n.cover]))[0] || '';
+  const at = DB.recipes.indexOf(r); DB.recipes.splice(at >= 0 ? at + 1 : 0, 0, n); DB.recipes.forEach((x, i) => { x.ord = i; saveRecipe(x); });
+  renderRec(); updCounts(); buzz(20); toast('📄 已另存成「' + nm + '」'); return n; }
 function editRecipe(src, isNew, done) {
   const d = JSON.parse(JSON.stringify(src)); d.type = d.type === 'ratio' ? 'ratio' : 'std'; d.portions = (d.portions || []).slice(); d.steps = d.steps && d.steps.length ? d.steps : ['']; d.cat = isNew ? (d.cat || '') : rcatKey(d);
   /* 編輯時兩種模板的資料都留著（q＝一般、qs＝各份量），切換模板不會遺失已輸入的內容 */
   d.ing = (d.ing && d.ing.length ? d.ing : [{n: '', q: ''}]).map(x => Array.isArray(x.q) ? {n: x.n, q: x.q[0] || '', qs: x.q.slice()} : {n: x.n, q: x.q || '', qs: [x.q || '']});
   let newCover = null;
-  const sh = sheet({title: isNew ? '新增食譜' : '編輯食譜', full: true, foot: `${isNew ? '' : '<button class="btn danger" data-a="del" style="flex:0 0 auto">刪除</button>'}<button class="btn pri" data-a="ok">儲存</button>`});
+  const sh = sheet({title: isNew ? '新增食譜' : '編輯食譜', full: true, foot: `<div class="tplFoot ${isNew ? 'new' : ''}">${isNew ? '' : '<button class="btn danger" data-a="del">🗑 刪除</button><button class="btn" data-a="saveAs">📄 另存新檔</button>'}<button class="btn pri" data-a="ok">✓ 儲存</button></div>`});
   sh.body.innerHTML = `<div class="field"><label>模板</label><div class="seg" id="rType"><button data-v="std">📝 一般食譜</button><button data-v="ratio">⚖️ 份量比例表</button></div></div>
     <div class="field"><label>食譜名稱</label><input id="rT" value="${esc(d.title)}" placeholder="例如：電鍋蒸飯、高麗菜大阪燒"></div>
     <div class="field"><label>分類（資料夾）</label><div class="catPick" id="rC"></div></div>
@@ -118,9 +125,12 @@ function editRecipe(src, isNew, done) {
   sh.foot.addEventListener('click', async e => { const b = e.target.closest('[data-a]'); if (!b) return;
     if (b.dataset.a === 'del') { if (!await ask(`確定要刪除食譜「${src.title}」嗎？`, '刪除', true)) return; await imgDel(src.cover); DB.recipes.splice(DB.recipes.indexOf(src), 1); await IDB.del('recipes', src.id).catch(() => {}); sh.close(); renderRec(); updCounts(); toast('已刪除'); done && done(true); return; }
     readTop(); if (!d.title) { toast('請輸入食譜名稱'); $('#rT', sh.body).focus(); return; }
-    const R = d.type === 'ratio', out = {id: d.id, type: d.type, title: d.title, note: d.note, cover: d.cover, cat: d.cat, ord: d.ord, t: d.t, steps: d.steps.map(s => s.trim()).filter(Boolean)};
+    const saveAs = b.dataset.a === 'saveAs'; const R = d.type === 'ratio', out = {id: d.id, type: d.type, title: d.title, note: d.note, cover: d.cover, cat: d.cat, ord: d.ord, t: d.t, steps: d.steps.map(s => s.trim()).filter(Boolean)};
     if (R) { out.portions = d.portions.map((p, j) => p.trim() || '份量 ' + (j + 1)); out.serv = ''; out.ing = d.ing.filter(x => (x.n + x.qs.join('')).trim()).map(x => ({n: x.n.trim(), q: out.portions.map((_, j) => (x.qs[j] || '').trim())})); }
     else { out.serv = d.serv; out.ing = d.ing.filter(x => (x.n + x.q).trim()).map(x => ({n: x.n.trim(), q: x.q.trim()})); }
+    /* 另存新檔：用目前改好的內容存成一份新的，原本那份不動 */
+    if (saveAs) { try { if (newCover) { out.cover = await imgStore(newCover.file, 1600); URL.revokeObjectURL(newCover.url); newCover = null; const n = await dupRecipe(src, Object.assign({}, out, {cover: ''})); if (n) { n.cover = out.cover; await saveRecipe(n); } else await imgDel(out.cover); if (n) { sh.close(); done && done(false); } }
+        else { const n = await dupRecipe(src, out); if (n) { sh.close(); done && done(false); } } } catch (er) { toast('❌ ' + er.message); } return; }
     busy('儲存中…'); try { if (newCover) { out.cover = await imgStore(newCover.file, 1600); URL.revokeObjectURL(newCover.url); } if (!isNew && src.cover && src.cover !== out.cover) await imgDel(src.cover);
       if (isNew) { out.id = 'r' + uid(); out.t = Date.now(); DB.recipes.unshift(out); DB.recipes.forEach((r, i) => { r.ord = i; saveRecipe(r); }); } else { Object.keys(src).forEach(k => delete src[k]); Object.assign(src, out); await saveRecipe(src); } } catch (er) { busy(false); toast('❌ ' + er.message); return; }
     busy(false); sh.close(); renderRec(); updCounts(); toast('已儲存'); done && done(false); });
