@@ -345,3 +345,14 @@ function initViewer() {
   sc.addEventListener('wheel', e => { if (e.ctrlKey) { e.preventDefault(); Viewer.zoom(e.deltaY < 0 ? 1.15 : 1 / 1.15); } }, {passive: false});
   document.addEventListener('keydown', e => { if (!$('#viewer').classList.contains('on')) return; if (e.key === 'ArrowRight') Viewer.step(1); else if (e.key === 'ArrowLeft') Viewer.step(-1); else if (e.key === 'Escape') Viewer.close(); });
 }
+
+/* ---------- 全 App：橫向捲動的分類列，在畫面重畫時保留捲動位置，不要每次跳回最前面 ----------
+   （地點地圖、選店家、點餐、記帳類別、常用紀錄…都會用 innerHTML 重畫，這裡統一處理） */
+(() => { const D = Object.getOwnPropertyDescriptor(Element.prototype, 'innerHTML'); if (!D || !D.set) return;
+  const SEL = '#chips,.amChips,.psChips,.ordCats,.mcats,.acPar,.acTpl,.chipRow,.regBar .seg,.thumbs,.ebImgs,.pal,.dkSeg,.catRow,.hScroll';
+  const key = e => (e.id ? '#' + e.id : String(e.className || '').split(/\s+/)[0]);
+  Object.defineProperty(Element.prototype, 'innerHTML', {configurable: true, enumerable: D.enumerable, get() { return D.get.call(this); },
+    set(v) { let keep = null; if (this.isConnected && this.firstElementChild) { const L = this.querySelectorAll(SEL); if (L.length) { const cnt = {}; keep = []; L.forEach(e => { const k = key(e), i = cnt[k] = (cnt[k] || 0) + 1; if (e.scrollLeft > 0) keep.push([k, i, e.scrollLeft]); }); } }
+      D.set.call(this, v);
+      if (keep && keep.length) { const cnt = {}, N = {}; this.querySelectorAll(SEL).forEach(e => { const k = key(e), i = cnt[k] = (cnt[k] || 0) + 1; N[k + '#' + i] = e; });
+        keep.forEach(([k, i, x]) => { const e = N[k + '#' + i]; if (!e) return; e.scrollLeft = x; const on = e.querySelector('.on'); if (on && (on.offsetLeft < e.scrollLeft || on.offsetLeft + on.offsetWidth > e.scrollLeft + e.clientWidth)) e.scrollLeft = on.offsetLeft - e.clientWidth / 2 + on.offsetWidth / 2; }); } }}); })();

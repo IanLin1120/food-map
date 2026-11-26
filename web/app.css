@@ -1600,3 +1600,12 @@ table.ckT td.s{text-align:center}table.ckT th.s{text-align:center}
 .acR>.acLns{flex:0 0 100%;align-items:stretch;margin-top:.1rem}
 .acR>.acLns .acLn{max-width:none;padding:.3rem .6rem;font-size:.78rem}
 .acMeta{gap:.3rem .4rem}
+/* 記帳卡片改用格線：時間和帳戶標籤可以延伸到金額下方，不會被擠到第二行 */
+.acR{display:grid!important;grid-template-columns:2.6rem minmax(0,1fr) auto;column-gap:.7rem;row-gap:.2rem;align-items:start}
+.acR>.acI{grid-column:1;grid-row:1/3}
+.acR>.acM{display:contents}
+.acR>.acM>b{grid-column:2;grid-row:1;align-self:center}
+.acR>.acV{grid-column:3;grid-row:1;align-self:center}
+.acR>.acM>.acMeta{grid-column:2/4;grid-row:2}
+.acR>.acM>.acNoteL{grid-column:2/4}
+.acR>.acLns{grid-column:1/-1}
