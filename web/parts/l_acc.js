@@ -899,10 +899,11 @@ async function renderAccMap() {
   const base = all.filter(o => amInArea(o) && inQ(o)), cnt = k => base.filter(o => k === 'all' || (o.cats || [o.cat]).includes(k)).length;
   if (AM.f !== 'all' && !cnt(AM.f)) AM.f = 'all';
   const V = base.filter(o => AM.f === 'all' || (o.cats || [o.cat]).includes(AM.f)), pinned = all.filter(o => o.loc).length;
-  $('#accMSub').textContent = `${all.length} 個地點・${pinned} 間在地圖上`;
+  $('#accMSub').textContent = `${all.length} 個地點・${pinned} 個在地圖上`;
   const co = DB.acc.amCord || [], cats0 = DB.cats.map(c => c.id).concat(['', '_acc']), cats = cats0.map((k, i) => [k, co.indexOf(k) < 0 ? 1e4 + i : co.indexOf(k)]).sort((a, b) => a[1] - b[1]).map(x => x[0]).filter(k => cnt(k));
   const ordOf = k => ((DB.acc.amOrd || {})[k]) || [], anyOpen = AM.f === 'all' && cats.some(k => !amFolded(k));
   const towns = AM.area && TW.counties[AM.area.c] ? TW.counties[AM.area.c].towns : [];
+  const chX = ($('#accMList .amChips') || {}).scrollLeft || 0;   /* 重畫時保留分類列的捲動位置，不要每次跳回最前面 */
   $('#accMList').innerHTML = `<div class="amChips">${[['all', '🗺️ 全部', '']].concat(cats.map(k => { const c = amCat(k); return [k, `${c.icon} ${c.name}`, c.color]; })).map(([k, t, c]) => `<button class="chip ${AM.f === k ? 'on' : ''}" data-f="${k}" ${c ? `style="--c:${c}"` : ''}>${esc(t)} <span class="n">${cnt(k)}</span></button>`).join('')}</div>
     ${TW.ready ? `<div class="amArea"><select id="amC" aria-label="選擇縣市"><option value="">全部縣市</option>${TW.names.map(n => `<option ${AM.area && AM.area.c === n ? 'selected' : ''}>${n}</option>`).join('')}</select><select id="amT" aria-label="選擇鄉鎮市區" ${AM.area ? '' : 'disabled'}><option value="">全部鄉鎮市區</option>${towns.map(t => `<option ${AM.area && AM.area.t === t.name ? 'selected' : ''}>${t.name}</option>`).join('')}</select>${AM.area ? '<button class="ic" data-a="arX" aria-label="取消區域">✕</button>' : ''}</div>` : ''}
     <div class="amBar"><div class="searchBox amQ"><input id="amQ" type="search" placeholder="搜尋名稱或地址" value="${esc(AM.q)}"></div>${AM.f === 'all' && cats.length > 1 ? `<button class="btn sm amFoldAll" data-a="foldAll">${anyOpen ? '⊟ 全部收合' : '⊞ 全部展開'}</button>` : ''}</div>
@@ -912,6 +913,7 @@ async function renderAccMap() {
       return `<div class="amSec ${fd ? 'fold' : ''}" data-k="${k}"><button class="amSecH" data-fold="${k}" style="--c:${c.color}"><span class="grip"></span><span>${esc(c.icon)}</span><b>${esc(c.name)}</b><em>${L.length}</em>${AM.f === 'all' ? `<i>${fd ? '▸' : '▾'}</i>` : ''}</button>
         ${fd ? '' : L.map(o => `<button class="amR card ${AM.sel === o.n ? 'sel' : ''}" data-st="${esc(o.n)}"><span class="amPinI ${o.loc ? 'on' : ''}">${o.loc ? '📍' : '📌'}</span><span class="grow"><b>${esc(o.n)}</b><small>${o.loc ? esc(o.loc.addr || '已釘選位置') : '還沒有位置'}</small><small>${o.st ? `記帳 ${o.st.cnt} 筆・${money(o.st.sum)}・最近 ${o.st.last.slice(5).replace('-', '/')}` : '還沒有記帳紀錄'}</small></span>${o.loc ? '<span class="chev">›</span>' : `<span class="btn sm" data-pin="${esc(o.n)}">📍 釘選</span>`}</button>`).join('')}</div>`; }).join('') || '<div class="empty">沒有符合的店家</div>'}</div>`;
   /* 長按拖曳：分類整組上下移動、分類裡的店家排序（只影響記帳這張地圖的順序） */
+  { const ch = $('#accMList .amChips'); if (ch) { ch.scrollLeft = chX; const on = $('.chip.on', ch); if (on && (on.offsetLeft < ch.scrollLeft || on.offsetLeft + on.offsetWidth > ch.scrollLeft + ch.clientWidth)) ch.scrollLeft = on.offsetLeft - ch.clientWidth / 2 + on.offsetWidth / 2; } }
   const secs = $('#amSecs');
   if (AM.f === 'all' && cats.length > 1) sortable(secs, {item: '.amSec', handle: '.amSecH', handleOnly: true, scroller: $('#pgAccM .pgBody'), onSort(f, t) { const ks = $$('.amSec', secs).map(e => e.dataset.k), m = ks.splice(f, 1)[0]; ks.splice(t, 0, m);
     DB.acc.amCord = ks.concat(cats0.filter(k => !ks.includes(k))); saveAcc(); renderAccMap(); }});
@@ -1258,19 +1260,42 @@ function invQrStrings(r) { const v = (DB.invs || {})[r.inv] || {}, no = r.inv, d
 function qrSvgStr(t, sz = 240) { const q = qrcode(0, 'L'); q.addData(unescape(encodeURIComponent(t))); q.make(); const n = q.getModuleCount(), c = sz / (n + 4); let d = '';
   for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) if (q.isDark(y, x)) d += `M${((x + 2) * c).toFixed(2)} ${((y + 2) * c).toFixed(2)}h${c.toFixed(2)}v${c.toFixed(2)}h-${c.toFixed(2)}z`;
   return `<svg viewBox="0 0 ${sz} ${sz}" class="qrSvg"><rect width="${sz}" height="${sz}" fill="#fff"/><path d="${d}" fill="#000"/></svg>`; }
-function accInvQr(r) { const Q = invQrStrings(r), v = (DB.invs || {})[r.inv] || {};
-  const sh = sheet({title: '🔳 發票 QR Code', full: true});
-  sh.body.innerHTML = `<div class="einv"><div class="einvT">電子發票證明聯</div><div class="einvP">${(() => { const d = new Date((v.date || r.d) + 'T00:00:00'), y = d.getFullYear() - 1911, m = d.getMonth() + 1, a = m % 2 ? m : m - 1; return `${y}年${String(a).padStart(2, '0')}-${String(a + 1).padStart(2, '0')}月`; })()}</div>
-    <div class="einvNo">${esc(r.inv.slice(0, 2))}-${esc(r.inv.slice(2))}</div><div class="einvD"><span>${esc(v.date || r.d)}${v.time || r.t ? ' ' + esc(v.time || r.t) : ''}</span></div>
-    <div class="einvD"><span>隨機碼：${esc(v.rnd || '----')}</span><span>總計：${Math.round(numP(v.total) || +r.amt || 0)}</span></div>
-    <div class="einvD"><span>賣方：${esc(v.sellerId || '—')}</span><span>${esc(v.seller ? invSeller(v) : r.payee || '')}</span></div>
-    <div class="einvQ">${qrSvgStr(Q.L)}${qrSvgStr(Q.R)}</div><div class="einvF">左：發票資訊＋前段品項　右：其餘品項（共 ${Q.n} 項）</div></div>
-    <div class="einvSw"><button class="btn" data-q="plain">📷 一般相機版（掃了直接看到明細文字）</button></div><div id="einvPlain"></div>
+function accInvQr(r) { invQrCard(r.inv, r); }
+/* 發票證明聯卡片：QR Code＋購物明細條列，可以存成 PNG。記帳、發票區、分帳都能打開（r 可省略，直接用發票資料） */
+function invQrData(no, r) { const v = (DB.invs || {})[no] || {}; r = r || {inv: no, d: v.date || ymd(new Date()), t: v.time || '', amt: numP(v.total) || 0, payee: v.seller ? invSeller(v) : '', items: []};
+  const its = (v.items || []).length ? (v.items || []).map(x => ({n: x.n, q: x.q || 1, amt: +x.amt || 0})) : ((r.bill && r.bill.items) || r.items || []).map(x => ({n: x.n, q: x.q || 1, amt: +x.amt || 0}));
+  const ds = (v.disc || []).map(d => ({n: d.n, amt: -(+d.amt || 0)})).concat((v.odisc || []).map(d => ({n: d.n, amt: -(+d.amt || 0)})), (v.fees || []).map(d => ({n: d.n, amt: +d.amt || 0})));
+  const d = new Date((v.date || r.d) + 'T00:00:00'), y = d.getFullYear() - 1911, m = d.getMonth() + 1, a = m % 2 ? m : m - 1;
+  return {v, r, its, ds, per: `${y}年${String(a).padStart(2, '0')}-${String(a + 1).padStart(2, '0')}月`, dt: `${v.date || r.d}${v.time || r.t ? ' ' + (v.time || r.t) : ''}`, tot: Math.round(numP(v.total) || +r.amt || 0), seller: v.seller ? invSeller(v) : r.payee || '', Q: invQrStrings(r)}; }
+function invCardHtml(D) { const {v, r, its, ds, Q} = D, f = n => (n < 0 ? '-$' : '$') + Math.abs(Math.round(n * 100) / 100).toLocaleString('en-US');
+  return `<div class="einv"><div class="einvT">電子發票證明聯</div><div class="einvP">${D.per}</div><div class="einvNo">${esc(r.inv.slice(0, 2))}-${esc(r.inv.slice(2))}</div>
+    <div class="einvD"><span>${esc(D.dt)}</span></div><div class="einvD"><span>隨機碼：${esc(v.rnd || '----')}</span><span>總計：${D.tot}</span></div>
+    <div class="einvD"><span>賣方：${esc(v.sellerId || '—')}</span><span>${esc(D.seller)}</span></div>
+    <div class="einvQ">${qrSvgStr(Q.L)}${qrSvgStr(Q.R)}</div><div class="einvF">左：發票資訊＋前段品項　右：其餘品項（共 ${Q.n} 項）</div>
+    ${its.length ? `<div class="einvL"><div class="einvLH"><span>品名</span><span>數量</span><span>金額</span></div>${its.map(x => `<div class="einvLR ${x.amt < 0 ? 'neg' : ''}"><span>${esc(x.n)}</span><span>${x.q}</span><span>${f(x.amt)}</span></div>`).join('')}
+      ${ds.map(x => `<div class="einvLR ${x.amt < 0 ? 'neg' : ''}"><span>${esc(x.n)}</span><span></span><span>${f(x.amt)}</span></div>`).join('')}<div class="einvLT"><span>總計</span><span>${f(D.tot)}</span></div></div>` : ''}</div>`; }
+const INV_CARD_CSS = `body{margin:0;background:#fff;font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif}.wrap{padding:28px 0;display:flex;justify-content:center}
+.einv{width:480px;background:#fff;color:#111;border:1px solid #ddd;border-radius:10px;padding:26px 26px 22px;box-sizing:border-box}.einvT{text-align:center;font-size:26px;font-weight:900;letter-spacing:.1em}.einvP{text-align:center;font-size:28px;font-weight:900;margin:2px 0}
+.einvNo{text-align:center;font-size:34px;font-weight:900;letter-spacing:.04em;margin-bottom:8px}.einvD{display:flex;justify-content:space-between;gap:8px;font-size:16px;margin:3px 0}
+.einvQ{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}.einvQ svg{width:100%;height:auto;display:block}.einvF{text-align:center;font-size:13px;color:#666;margin-top:8px}
+.einvL{margin-top:16px;border-top:2px dashed #999;padding-top:10px;font-size:15px}.einvLH,.einvLR,.einvLT{display:grid;grid-template-columns:1fr 44px 84px;gap:8px;padding:4px 0}.einvLH{color:#777;font-size:13px;border-bottom:1px solid #ddd}
+.einvLH span:nth-child(n+2),.einvLR span:nth-child(n+2){text-align:right}.einvLR.neg{color:#a8472f}.einvLT{grid-template-columns:1fr 100px;font-weight:900;font-size:17px;border-top:1px solid #ccc;margin-top:4px;padding-top:8px}.einvLT span:last-child{text-align:right}`;
+async function invCardPng(D) { try { busy('產生圖片…');
+    const html = `<!doctype html><html><head><meta charset="utf-8"><style>${INV_CARD_CSS}</style></head><body><div class="wrap">${invCardHtml(D)}</div></body></html>`, [c] = await renderPages(html, false);
+    /* 只留卡片那一塊（去掉左右空白） */
+    const W = c.width, k = W / 794, cw = Math.round(540 * k), x0 = Math.round((W - cw) / 2), o = document.createElement('canvas'); o.width = cw; o.height = c.height; o.getContext('2d').drawImage(c, x0, 0, cw, c.height, 0, 0, cw, c.height);
+    const name = `發票_${D.r.inv}.png`, url = o.toDataURL('image/png'); busy(false);
+    if (IS_APP && NB.shareImg) { const ok = NB.shareImg(url.split(',')[1], name, '', false); toast(ok ? '🖼️ 已存到相簿（圖片／日日帳本）' : '存檔失敗', 3500); return; }
+    await saveFile(name, await (await fetch(url)).blob()); } catch (e) { busy(false); toast('❌ 產生圖片失敗：' + e.message, 3500); } }
+function invQrCard(no, r) { const D = invQrData(no, r), v = D.v;
+  const sh = sheet({title: '🔳 發票 QR Code', full: true, foot: '<button class="btn pri" data-a="png">🖼️ 存成圖片（PNG）</button>'});
+  sh.body.innerHTML = invCardHtml(D) + `<div class="einvSw"><button class="btn" data-q="plain">📷 一般相機版（掃了直接看到明細文字）</button></div><div id="einvPlain"></div>
     <div class="blWarn" style="margin-top:.7rem">這是依發票格式產生的資料碼，用日日帳本或發票 App 掃描可以讀到號碼和品項；因為沒有店家的加密驗證，不能拿去兌獎或載具歸戶。</div>`;
+  sh.foot.onclick = e => { if (e.target.closest('[data-a="png"]')) { buzz(10); invCardPng(D); } };
   /* 一般手機相機掃 QR 只會顯示原始文字：另外做一個「易讀版」，掃了直接看到發票號碼、店家、品項和金額 */
   sh.body.addEventListener('click', e => { const b = e.target.closest('[data-q="plain"]'); if (!b) return; buzz(10); const box = $('#einvPlain', sh.body); if (box.innerHTML) { box.innerHTML = ''; return; }
-    const its = (v.items || []).filter(x => +x.amt > 0), L = its.length ? its.map(x => `${x.n} ×${x.q || 1}  $${Math.round(+x.amt)}`) : ((r.bill && r.bill.items) || r.items || []).map(x => `${x.n} ×${x.q || 1}  $${Math.round(+x.amt || 0)}`);
-    const t = [`電子發票 ${r.inv.slice(0, 2)}-${r.inv.slice(2)}`, `${v.date || r.d}${v.time || r.t ? ' ' + (v.time || r.t) : ''}`, (v.seller ? invSeller(v) : r.payee) || '', ...L, `總計 $${Math.round(numP(v.total) || +r.amt || 0)}`].filter(Boolean).join('\n');
+    const L = D.its.filter(x => x.amt > 0).map(x => `${x.n} ×${x.q}  $${Math.round(x.amt)}`);
+    const t = [`電子發票 ${no.slice(0, 2)}-${no.slice(2)}`, D.dt, D.seller, ...L, `總計 $${D.tot}`].filter(Boolean).join('\n');
     box.innerHTML = `<div class="einv" style="margin-top:.7rem"><div class="einvT" style="font-size:1rem">一般相機版</div><div style="max-width:15rem;margin:.5rem auto">${qrSvgStr(t, 300)}</div><pre class="einvTxt">${esc(t)}</pre></div>`; }); }
 
 /* ===== 對帳還款歷史：未完成（還沒結清的每一筆）／已完成（每一次結清還款），可以依人或依時間分類、篩選某個人 ===== */

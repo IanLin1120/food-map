@@ -21,10 +21,10 @@ function guideAnim(root) { const T = []; const stop = () => T.forEach(clearTimeo
     GImg.load().then(D => { if (!D || !document.body.contains(ph)) { $('.gLoad', ph).textContent = '示意圖要連上網路下載一次，之後離線也能看'; return; }
       scr.innerHTML = F.map(f => D[f[0]] ? `<img src="${D[f[0]]}" alt="">` : '<i class="gMiss"></i>').join(''); const im = $$('img, .gMiss', scr);
       let k = 0; const show = n => im.forEach((e, j) => e.classList.toggle('on', j === n));
-      const step = () => { if (!document.body.contains(ph)) return; const f = F[k]; show(k); scr.style.transformOrigin = '50% 50%'; scr.classList.remove('zm');
+      const step = () => { if (!document.body.contains(ph)) return; const f = F[k]; show(k);
         if (f[1] != null) { fg.style.transition = 'none'; fg.style.left = Math.min(92, f[1] + 18) + '%'; fg.style.top = Math.min(96, f[2] + 16) + '%'; fg.classList.remove('dn', 'on'); fg.offsetWidth;
           T.push(setTimeout(() => { fg.style.transition = ''; fg.classList.add('on'); fg.style.left = f[1] + '%'; fg.style.top = f[2] + '%'; }, 450));
-          T.push(setTimeout(() => { fg.classList.add('dn'); rp.style.left = f[1] + '%'; rp.style.top = f[2] + '%'; rp.classList.remove('go'); rp.offsetWidth; rp.classList.add('go'); scr.style.transformOrigin = f[1] + '% ' + f[2] + '%'; scr.classList.add('zm'); }, 1350));
+          T.push(setTimeout(() => { fg.classList.add('dn'); rp.style.left = f[1] + '%'; rp.style.top = f[2] + '%'; rp.classList.remove('go'); rp.offsetWidth; rp.classList.add('go'); }, 1350));
           T.push(setTimeout(() => { fg.classList.remove('dn'); }, 1650));
           T.push(setTimeout(() => { k = (k + 1) % F.length; if (k === 0) fg.classList.remove('on'); step(); }, k === F.length - 1 ? 3000 : 2100)); }
         else { fg.classList.remove('on'); T.push(setTimeout(() => { k = (k + 1) % F.length; step(); }, F.length > 1 ? 2600 : 99999)); } };

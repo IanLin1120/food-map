@@ -183,7 +183,9 @@ B. 組合式（自選）菜單：顧客依步驟挑選，例如「1 主食（選
   ・勾選框欄上面的價格欄（例如 一般量 55／特大量 65）才是尺寸，照第 3 條寫。
 21. 推薦星號★、NEW、新品、辣椒圖示、HOT 這類標記不要寫進品名，品名只寫文字本身。
 22. 區塊標題旁邊或品項旁邊的小字提醒（例如「飲料換購可補差價」「可加價升級尺寸&口味」「嚴選去骨腿丁」），寫成說明行：說明|經典組合餐系列|飲料換購可補差價。整張菜單最下面的注意事項（咖啡因標示、圖片僅供參考、偶發性碎骨）、品牌宣傳（本店使用○○肉品）、線上點餐 QR code 都不要輸出。
-23. 同一個系列有好幾種口味、共用同一排尺寸價格時（例如「臻寶腿丁（醬料系列）台式椒鹽／川味麻辣／泰式糖醋，小79 中119 大229」），每個口味各自寫出每個尺寸，例如：品項|臻寶腿丁（醬料系列）|台式椒鹽 (小)|79、品項|臻寶腿丁（醬料系列）|台式椒鹽 (中)|119……；口味後面括號裡的配料說明（內含：蔥花、蒜片、辣椒）寫成說明行。如果口味是讓顧客挑的灑粉、醬料、只有一個品名（例如「臻寶腿丁（灑粉系列）胡椒粉／香辣粉／海苔粉／梅粉，小75 中115 大225」），品名寫系列名稱並寫出每個尺寸，口味寫成選項：品項|臻寶腿丁（灑粉系列）|臻寶腿丁 (小)|75、選項|臻寶腿丁（灑粉系列）・灑粉（選一）|胡椒粉|。`;
+23. 同一個系列有好幾種口味、共用同一排尺寸價格時（例如「臻寶腿丁（醬料系列）台式椒鹽／川味麻辣／泰式糖醋，小79 中119 大229」），每個口味各自寫出每個尺寸，例如：品項|臻寶腿丁（醬料系列）|台式椒鹽 (小)|79、品項|臻寶腿丁（醬料系列）|台式椒鹽 (中)|119……；口味後面括號裡的配料說明（內含：蔥花、蒜片、辣椒）寫成說明行。如果口味是讓顧客挑的灑粉、醬料、只有一個品名（例如「臻寶腿丁（灑粉系列）胡椒粉／香辣粉／海苔粉／梅粉，小75 中115 大225」），品名寫系列名稱並寫出每個尺寸，口味寫成選項：品項|臻寶腿丁（灑粉系列）|臻寶腿丁 (小)|75、選項|臻寶腿丁（灑粉系列）・灑粉（選一）|胡椒粉|。
+24. 一張表有好幾個價格欄（例如「吐司｜漢堡｜波羅堡」「蛋餅｜千層｜蔥抓餅」），每個價格一定要對應「正上方那一欄」的標題，由左到右照順序，不要把兩欄對調。輸出前用第一列再核對一次（例如 蔬菜：吐司 25、漢堡 30、波羅堡 35，價格通常由左往右變貴）。
+25. 套餐後面用□勾選的選擇（例如「4 鐵板麵 □蘑菇 □黑胡椒 □魯肉 +蛋+里肌肉」「2 小雞球+千層 □火腿 □鮪魚 □培根」），一律寫成選項，不要寫成尺寸或分開的品項；選項分類寫「套餐編號和名稱・選擇的名稱（選一）」，中間一定要用「・」隔開，例如：選項|4 鐵板麵+蛋+里肌肉・麵的口味（選一）|蘑菇|。`;
 const SZ = /\s*[（(]([^()（）]{1,8})[)）]\s*$/;
 /* 尺寸由小到大：S → M → L → XL → 瓶 */
 const SZ_ORDER = ['XS', 'S', '小', '小杯', '小碗', '小份', '薄', '薄片', '單', 'M', '中', '中杯', '中碗', '一般', '一般量', '正常', 'L', '大', '大杯', '大碗', '大份', '厚', '厚片', '雙', 'XL', '特大', '特大杯', '加大', '超大', 'XXL', '瓶', '瓶裝', '罐', '桶'];
@@ -195,7 +197,7 @@ const szOf = n => { const m = String(n || '').match(SZ); if (!m) return ''; cons
 const isSizeWord = (z, multi) => !!z && (SZ_ORDER.includes(z.toUpperCase()) || /杯|瓶|罐|碗|份|盒|吋|寸|oz|ml|cc|公克|克|斤|兩|^(一般|特大|大|小|中|加大|超大)量$/i.test(z) || (multi && /^\d+\s*(片|隻|顆|個|入|塊|串|粒|條|支|尾|人)$/.test(z)));
 /* 選項群組：「經典系列・麵包（選一）」→ 屬於「經典系列」、名稱「麵包」、標籤「選一」 */
 /* 品名比對時忽略編號和尺寸：「5 雙人臻寶炸雞餐」「1號餐-清爽鳳梨 (套餐)」→「雙人臻寶炸雞餐」「清爽鳳梨」 */
-const itemKey = n => String(n || '').replace(SZ, '').replace(/^\s*(?:[A-Za-z]?\d+|[A-Z])\s*(?:號餐|號|[.、．\-－])?\s*[-－]?\s*/, '').replace(/\s+/g, '').trim();
+const itemKey = n => String(n || '').replace(/（/g, '(').replace(/）/g, ')').replace(/＋/g, '+').replace(SZ, '').replace(/^\s*(?:[A-Za-z]?\d+|[A-Z])\s*(?:號餐|號|[.、．\-－])?\s*[-－]?\s*/, '').replace(/\s+/g, '').replace(/\([^()]*\)$/, '').trim();
 const ownerIs = (name, owner) => !!owner && (owner === name || String(name).replace(SZ, '').trim() === owner || (itemKey(owner).length >= 2 && itemKey(name) === itemKey(owner)));
 function optGroups(rows, all) { const gs = []; rows.forEach(r => { let g = gs.find(x => x.c === r.c); if (!g) gs.push(g = {c: r.c, L: []}); g.L.push(r); });
   gs.forEach(g => { const m = String(g.c || '').match(/^(.*?)[（(]([^()（）]+)[)）]$/), nm = (m ? m[1] : g.c || '').trim(), parts = nm.split(/\s*[・·‧．\-－:：]\s*/).filter(Boolean);
@@ -204,6 +206,11 @@ function optGroups(rows, all) { const gs = []; rows.forEach(r => { let g = gs.fi
     g.excl = []; g.tag = g.tag.replace(/[，,、\s]*([^，,（）()]+?)(除外|不適用|無加大|不可選)$/, (x, a) => { g.excl = a.split(/[、\/／和及]/).map(t => t.trim()).filter(Boolean); return ''; }).trim(); });
   /* 群組名稱開頭就是某個品項（例如「雙人臻寶炸雞餐・灑粉（4選3）」）：只屬於那個品項所在的分類，不要因為名稱裡有「炸雞」就跑到炸雞系列 */
   const items = (all || rows).filter(r => (r.t || 'item') === 'item');
+  /* AI 有時沒寫分隔符號：「7蛋餅+薯餅+雞塊（4顆）蛋餅口味（選一）」→ 開頭就是品項「7 蛋餅+薯餅+雞塊 (4顆)」，拆成 品項＋「蛋餅口味」 */
+  const nz = t => String(t || '').replace(/（/g, '(').replace(/）/g, ')').replace(/＋/g, '+').replace(/\s+/g, '').replace(/^(?:[A-Za-z]?\d+|[A-Z])(?:號餐|號|[.、．\-－])?/, '');
+  gs.forEach(g => { if (g.owner || items.some(r => normCat(r.c) === normCat(g.label))) return; const L = nz(g.label); let best = null, bk = '';
+    items.forEach(r => { const k = nz(String(r.n).replace(SZ, '')); if (k.length >= 3 && k.length > bk.length && L.startsWith(k) && L.length > k.length) { best = r; bk = k; } });
+    if (!best) return; const rest = L.slice(bk.length).replace(/^\([^()]*\)/, '').replace(/^[・·‧．\-－:：]/, '').trim(); if (rest.length < 1) return; g.owner = String(best.n).replace(SZ, '').trim(); g.label = rest; });
   gs.forEach(g => { if (!g.owner || items.some(r => normCat(r.c) === normCat(g.owner))) return; const it = items.find(r => ownerIs(r.n, g.owner)); if (it) g.ownerCat = normCat(it.c); });
   return gs; }
 const ownsGroup = (c, g) => !!g.owner && (g.ownerCat ? normCat(c) === g.ownerCat : g.owner === c || String(c).includes(g.owner) || g.owner.includes(String(c).replace(/(系列|類|區)$/, '')));

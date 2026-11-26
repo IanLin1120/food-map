@@ -1536,7 +1536,6 @@ table.ckT td.s{text-align:center}table.ckT th.s{text-align:center}
 /* ---------- 使用說明：真實畫面截圖＋手指動畫 ---------- */
 .gPh{position:relative;width:min(14rem,64vw);aspect-ratio:1/2;margin:.2rem auto 1rem;border:7px solid #3a2c22;border-radius:28px;background:var(--bg);box-shadow:0 12px 30px var(--sh);overflow:hidden;flex-shrink:0}
 .gScr{position:absolute;inset:0;transition:transform .5s cubic-bezier(.2,.8,.2,1)}
-.gScr.zm{transform:scale(1.06)}
 .gScr img,.gScr .gMiss{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .45s ease}
 .gScr img.on{opacity:1}
 .gLoad{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;padding:1rem;color:var(--muted);font-size:.85rem}
@@ -1564,3 +1563,8 @@ table.ckT td.s{text-align:center}table.ckT th.s{text-align:center}
 .stDet:active{transform:scale(.95)}
 .acV small.neg{color:#a8472f;font-weight:800}.acV small.wait{color:#b0701f;font-weight:800}.acV small.ok{color:#5c6b2c;font-weight:800}
 .acStV b{white-space:nowrap;font-variant-numeric:tabular-nums}
+.einvL{margin-top:.9rem;border-top:2px dashed #aaa;padding-top:.5rem;font-size:.85rem}
+.einvLH,.einvLR,.einvLT{display:grid;grid-template-columns:1fr 2.2rem 4.6rem;gap:.4rem;padding:.2rem 0}
+.einvLH{color:#777;font-size:.72rem;border-bottom:1px solid #ddd}.einvLH span:nth-child(n+2),.einvLR span:nth-child(n+2){text-align:right;font-variant-numeric:tabular-nums}
+.einvLR.neg{color:#a8472f}.einvLT{grid-template-columns:1fr 6rem;font-weight:900;font-size:.95rem;border-top:1px solid #ccc;margin-top:.2rem;padding-top:.4rem}.einvLT span:last-child{text-align:right}
+.shWrap.center{z-index:130}#toast{z-index:140}

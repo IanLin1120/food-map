@@ -316,7 +316,21 @@ const Viewer = {items: [], i: 0, z: 1, title: '',
   step(d) { const n = Viewer.i + d; if (n < 0 || n >= Viewer.items.length) { buzz(30); return; } buzz(10); Viewer.i = n; Viewer.show(); },
   close() { $('#viewer').classList.remove('on'); $('#vImg').removeAttribute('src'); }
 };
+/* 把自己上傳的圖片存回手機：App 存進相簿（圖片／日日帳本），網頁版直接下載 */
+async function saveImgToPhone(id, name) { const b = await imgBlob(id); if (!b) { toast('找不到這張圖片'); return; }
+  const fn = String(name || '圖片').replace(/[\\/:*?"<>|\s]+/g, '_').slice(0, 60) + '.jpg';
+  if (IS_APP && NB.shareImg) { const ok = NB.shareImg(await blobB64(b), fn, '', false); buzz(30); toast(ok ? '⬇️ 已存到相簿（圖片／日日帳本）' : '存檔失敗', 3000); return; }
+  await saveFile(fn, b); }
+Viewer.save = () => { const it = Viewer.items[Viewer.i]; if (!it) return; saveImgToPhone(it.id, (Viewer.title || '圖片') + (it.label ? '_' + it.label : '') + (Viewer.items.length > 1 ? '_' + (Viewer.i + 1) : '')); };
 function initViewer() {
+  $('#vDl').onclick = () => { buzz(10); Viewer.save(); };
+  /* 長按圖片：問要不要存回手機 */
+  { const im = $('#vScroll'); let lt = null, lx = 0, ly = 0; const cancel = () => { clearTimeout(lt); lt = null; };
+    im.addEventListener('touchstart', e => { if (e.touches.length !== 1) { cancel(); return; } lx = e.touches[0].clientX; ly = e.touches[0].clientY; cancel();
+      lt = setTimeout(async () => { lt = null; buzz([15, 30, 15]); if (await ask('把這張圖片存到手機？', '⬇️ 下載')) Viewer.save(); }, 550); }, {passive: true});
+    im.addEventListener('touchmove', e => { if (lt && Math.hypot(e.touches[0].clientX - lx, e.touches[0].clientY - ly) > 10) cancel(); }, {passive: true});
+    im.addEventListener('touchend', cancel); im.addEventListener('touchcancel', cancel);
+    im.addEventListener('contextmenu', e => { e.preventDefault(); if (!('ontouchstart' in window)) Viewer.save(); }); }
   $('#vX').onclick = Viewer.close; $('#vPrev').onclick = () => Viewer.step(-1); $('#vNext').onclick = () => Viewer.step(1);
   $('#vZi').onclick = () => Viewer.zoom(1.5); $('#vZo').onclick = () => Viewer.zoom(1 / 1.5);
   const sc = $('#vScroll'); let d0 = 0, z0 = 1, lastTap = 0, sx = 0, sy = 0, multi = false;

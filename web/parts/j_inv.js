@@ -302,6 +302,7 @@ function openInvDetail(no) {
         <button class="ihR ihS" data-a="seller"><span>消費店家</span><b><em>${esc(invSeller(v))}</em><i class="ed">✎</i></b></button>
         <button class="ihR ihS" data-a="sid"><span>店家統編</span><b><em>${v.sellerId || '未填'}</em><i class="ed">✎</i></b></button></div>
       <div class="ihWay">${wayBox(v.way)}</div>
+      <button class="btn block" data-a="qr" style="margin-top:.5rem">🔳 發票證明聯・QR Code・存成圖片</button>
       <button class="ihAmt card" data-a="total"><span>💲 消費金額</span><b>${money(v.total)} <i class="ed">✎</i></b></button>
       <div class="lbl ihLbl" style="margin-top:.8rem"><span>🛍️ 消費品項</span><button class="btn sm" data-a="addIt">＋ 品項</button></div>
       ${its.length ? `<div class="ihT card"><div class="ihTr h"><span>品名</span><span>數量</span><span>小計</span></div>${its.map((x, i) => `<button class="ihTr ${+x.amt < 0 ? 'neg' : ''}" data-i="${i}"><span>${esc(x.n)}</span><span>${fq(x.q)}</span><span>${money(x.amt)}</span></button>`).join('')}</div>
@@ -327,6 +328,7 @@ function openInvDetail(no) {
     if (a === 'addOd') { v.odisc = v.odisc || []; await editAmtRow(v, 'odisc'); save(); return; }
     if (a === 'addFe') { v.fees = v.fees || []; await editAmtRow(v, 'fees'); save(); return; }
     if (a === 'fromBill') { const bb = await pickBillFor(v); if (bb && await applyBillToInv(bb, v)) save(); return; }
+    if (a === 'qr') { invQrCard(v.no); return; }
     if (a === 'way') { v.way = v.way === t.dataset.w ? '' : t.dataset.w; save(); return; }
     if (a === 'wayAdd') { const w = await addWay(); if (w) { v.way = w; save(); } return; }
     if (a === 'addIt') { await invItemEdit(v, -1); save(); }
