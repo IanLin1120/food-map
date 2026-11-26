@@ -4,7 +4,7 @@
 <script>/* 線上更新開機程式：手機上若已下載比 APK 內建更新的介面版本，就改用新版（存在 IndexedDB）。
    新版連續兩次沒有正常開啟 → 自動退回 APK 內建版本。網址加上 #builtin 也會強制使用內建版本。 */
 (function () {
-  var B = '3.40.0'; if (!window.__OTA) window.APP_BUILTIN = B;
+  var B = '3.40.1'; if (!window.__OTA) window.APP_BUILTIN = B;
   if (window.__OTA || location.hash.indexOf('builtin') >= 0) return;
   var v = null; try { v = JSON.parse(localStorage.getItem('fm.ota') || 'null'); } catch (e) {}
   function gt(a, b) { a = String(a).split('.').map(Number); b = String(b).split('.').map(Number); for (var i = 0; i < Math.max(a.length, b.length); i++) { var p = a[i] || 0, q = b[i] || 0; if (p !== q) return p > q; } return false; }
@@ -1638,6 +1638,10 @@ table.ckT td.s{text-align:center}table.ckT th.s{text-align:center}
 .clProg{margin-bottom:.8rem}.clPT{display:flex;justify-content:space-between;font-size:.9rem;margin-bottom:.35rem}.clPT span{font-weight:800;color:var(--accent)}
 .clBar{height:.55rem;border-radius:3px;background:var(--surface-3);border:1px solid var(--border-soft);overflow:hidden}.clBar i{display:block;height:100%;background:var(--accent);transition:width .4s}
 .clR{align-items:center}.clR .btn{flex:none;white-space:nowrap}
+.acR{flex-wrap:wrap}
+.acR>.acLns{flex:0 0 100%;align-items:stretch;margin-top:.1rem}
+.acR>.acLns .acLn{max-width:none;padding:.3rem .6rem;font-size:.78rem}
+.acMeta{gap:.3rem .4rem}
 </style>
 </head>
 <body>
@@ -4113,7 +4117,7 @@ var qrcode = function() {
 /* ============================================================
    日日帳本 — 核心：工具、資料儲存、主題、面板、拖曳排序、圖片
    ============================================================ */
-const APP_VERSION = '3.40.0';
+const APP_VERSION = '3.40.1';
 const APP_VER = APP_VERSION;
 /* 線上更新來源（GitHub Pages）：IanLin1120/food-map */
 const GH = {repo: 'https://github.com/IanLin1120/food-map', pages: 'https://ianlin1120.github.io/food-map/'};
@@ -6703,7 +6707,8 @@ function openOrder(m, opt = {}) {
   const add = (n, s, p, o) => { if (!who) { toast('請先新增要點餐的人'); return; } const pv = numP(p), x = m.items.find(i => wkey(i) === who && i.n === n && (i.s || '') === (s || '') && (i.o || '') === (o || '') && numP(i.p) === pv);
     const sh0 = who.startsWith('S:') ? {who: SHARE, share: keyIds(who)} : {who};
     if (x) x.q++; else { const it = Object.assign({id: 'i' + uid(), n, s: s || '', p: pv, q: 1}, sh0, o ? {o} : {}); fixOptSize(it); m.items.push(it); } m.lastWho = who; buzz(12); saveDays(); draw(); };
-  const draw = () => { const C = P ? menuChoices(P, rg) : {list: [], regs: [], cur: ''}; rg = C.cur;
+  const draw = () => { const ox = ($('.ordCats', sh.body) || {}).scrollLeft || 0; draw0(); const oc = $('.ordCats', sh.body); if (oc) oc.scrollLeft = ox; };   /* 重畫時分類列不要跳回最前面 */
+  const draw0 = () => { const C = P ? menuChoices(P, rg) : {list: [], regs: [], cur: ''}; rg = C.cur;
     const cus = DB.mcfg.custom.filter(c => (m.place ? c.place === m.place : c.pname === m.pname)).map(c => ({t: 'cus', c: '⭐ 自訂品項', n: c.n, full: c.n, og: [], v: [{s: '', p: c.p}], cid: c.id}));
     const all = cus.concat(C.list), cats = [...new Set(all.map(o => o.c))], hit = o => (!q || o.n.toLowerCase().includes(q)) && (!cat || o.c === cat);
     const L = all.filter(hit); LIST = L; const mine = m.items.filter(x => wkey(x) === who), tot = mealTotal(m), isS = who.startsWith('S:'), sIds = keyIds(who), mt = mine.reduce((s, x) => s + xAmt(x), 0);
@@ -6724,7 +6729,7 @@ function openOrder(m, opt = {}) {
   sh.body.addEventListener('click', async e => { const b = e.target.closest('button'); if (!b) return;
     if (b.dataset.who) { who = b.dataset.who; draw(); }
     else if (b.dataset.rg != null) { rg = b.dataset.rg; draw(); }
-    else if (b.dataset.cat != null) { cat = b.dataset.cat; draw(); }
+    else if (b.dataset.cat != null) { const ox = ($('.ordCats', sh.body) || {}).scrollLeft || 0; cat = b.dataset.cat; draw(); const oc = $('.ordCats', sh.body); if (oc) { oc.scrollLeft = ox; const on = $('.chip.on', oc); if (on && (on.offsetLeft < oc.scrollLeft || on.offsetLeft + on.offsetWidth > oc.scrollLeft + oc.clientWidth)) oc.scrollLeft = on.offsetLeft - oc.clientWidth / 2 + on.offsetWidth / 2; } }   /* 分類列保持原本捲動位置 */
     else if (b.dataset.oi != null) { const o = LIST[+b.dataset.oi], v = o && o.v[+b.dataset.vi]; if (!v) return;
       if (o.og && o.og.length) { const r = await pickOpts(o, v); if (!r) return; add(o.full || o.n, v.s, numP(v.p) + r.add, r.o); } else add(o.full || o.n, v.s, v.p); }
     else if (b.dataset.a === 'newWho') editMealCfg('people', null, u => { if (u) who = u.id; draw(); });
@@ -7504,7 +7509,7 @@ function openShopSettings() {
 const APP_ICON = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="54 54 324 324"><defs> <linearGradient id="gicv" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#E0844B"/><stop offset=".55" stop-color="#C2633A"/><stop offset="1" stop-color="#9A4226"/></linearGradient> <linearGradient id="gisp" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#7E321C"/><stop offset="1" stop-color="#9C4527"/></linearGradient> <linearGradient id="gipl" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFF9EC"/><stop offset="1" stop-color="#F2E2C2"/></linearGradient> <linearGradient id="gicn" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F7D27A"/><stop offset="1" stop-color="#DB9A33"/></linearGradient> <radialGradient id="gigl" cx=".35" cy=".25" r=".8"><stop offset="0" stop-color="#fff" stop-opacity=".22"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient> <filter id="gish" x="-30%" y="-30%" width="160%" height="170%"><feDropShadow dx="0" dy="8" stdDeviation="9" flood-color="#5A2410" flood-opacity=".35"/></filter></defs><rect width="432" height="432" fill="url(#gicv)"/> <g opacity=".10" stroke="#FFF3DC" stroke-width="10" fill="none"><path d="M-10 120 L442 70"/><path d="M-10 350 L442 380"/><path d="M330 -10 L360 442"/></g> <rect x="0" y="0" width="112" height="432" fill="url(#gisp)"/><rect x="112" y="0" width="7" height="432" fill="#6E2A16" opacity=".45"/> <g stroke="#F4D9B6" stroke-width="5" stroke-linecap="round" stroke-dasharray="14 14" opacity=".75"><path d="M96 -6 V440"/></g> <path d="M286 0 h44 v150 l-22 -20 l-22 20z" fill="#7C8B4E"/><path d="M286 0 h44 v8 h-44z" fill="#5F6C39"/> <rect width="432" height="432" fill="url(#gigl)"/><g filter="url(#gish)"><circle cx="222" cy="210" r="102" fill="url(#gipl)"/><circle cx="222" cy="210" r="84" fill="none" stroke="#E4CDA4" stroke-width="4"/> <g fill="#A3482A"><path d="M178 150 h9 v46 h7 v-46 h9 v46 h7 v-46 h9 v55 a21 21 0 0 1 -16 20 v66 a8 8 0 0 1 -16 0 v-66 a21 21 0 0 1 -16 -20z"/> <ellipse cx="262" cy="182" rx="21" ry="31"/><rect x="254" y="206" width="16" height="85" rx="8"/></g></g> <g filter="url(#gish)"><circle cx="296" cy="290" r="40" fill="url(#gicn)" stroke="#FFF1CF" stroke-width="6"/><circle cx="296" cy="290" r="28" fill="none" stroke="#B5741C" stroke-width="3" opacity=".55"/> <text x="296" y="305" text-anchor="middle" font-family="DejaVu Sans, Arial" font-weight="700" font-size="40" fill="#8A5310">$</text></g></svg>';
 /* ---------- 示意圖：真實畫面截圖（虛構資料）＋手指點擊動畫 ----------
    截圖放在 guide.json（APK 內建一份，GitHub 上也有一份），第一次打開說明時讀進來並存在手機裡 */
-const GUIDE_V = '84eacfab05', GUIDE_META = {"f_home":[{"i":"f_home_0","t":[90.4,78]}],"f_search":[{"i":"f_search_0","t":[37.7,4.7]},{"i":"f_search_1","t":[50,13.3]},{"i":"f_search_2","t":null}],"f_card":[{"i":"f_card_0","t":[20.5,84.3]},{"i":"f_card_1","t":null}],"f_cat":[{"i":"f_cat_0","t":[62.1,62.3]}],"f_menu":[{"i":"f_menu_0","t":[26.9,30.6]},{"i":"f_menu_1","t":[73.1,30.6]}],"f_claude":[{"i":"f_claude_0","t":[55.6,49.5]},{"i":"f_claude_1","t":[50,95.2]}],"f_meal":[{"i":"f_meal_0","t":[26.7,10.4]},{"i":"f_meal_1","t":[50,56.8]},{"i":"f_meal_2","t":[50,46.9]}],"f_order":[{"i":"f_order_0","t":[87.8,53.2]}],"f_export":[{"i":"f_export_0","t":[69.8,87.4]},{"i":"f_export_1","t":null}],"f_list":[{"i":"f_list_0","t":[11.5,92.3]},{"i":"f_list_1","t":null}],"f_rec":[{"i":"f_rec_0","t":[50,69.2]},{"i":"f_rec_1","t":null}],"f_set":[{"i":"f_set_0","t":null},{"i":"f_set_1","t":[28.8,24.5]}],"f_keys":[{"i":"f_keys_0","t":null}],"s_home":[{"i":"s_home_0","t":[26.7,10.4]}],"s_bill":[{"i":"s_bill_0","t":[85.6,88.3]},{"i":"s_bill_1","t":[24.4,53.3]},{"i":"s_bill_2","t":null}],"s_who":[{"i":"s_who_0","t":null}],"s_disc":[{"i":"s_disc_0","t":null}],"s_exp":[{"i":"s_exp_0","t":null}],"i_home":[{"i":"i_home_0","t":[50,30.6]},{"i":"i_home_1","t":null}],"i_scan":[{"i":"i_scan_0","t":[19,10.2]},{"i":"i_scan_1","t":null}],"i_shot":[{"i":"i_shot_0","t":[50,10.2]}],"i_acc":[{"i":"i_acc_0","t":[81,10.2]}],"i_cal":[{"i":"i_cal_0","t":null}],"i_edit":[{"i":"i_edit_0","t":null}],"i_bill":[{"i":"i_bill_0","t":[60.1,95.2]}],"a_home":[{"i":"a_home_0","t":[26.7,10.4]}],"a_new":[{"i":"a_new_0","t":[61.5,55.5]},{"i":"a_new_1","t":[15.5,31]}],"a_split":[{"i":"a_split_0","t":null}],"a_tpl":[{"i":"a_tpl_0","t":[84.8,26.2]},{"i":"a_tpl_1","t":null}],"a_owe":[{"i":"a_owe_0","t":[50,63.1]},{"i":"a_owe_1","t":null}],"a_asset":[{"i":"a_asset_0","t":null}],"a_stat":[{"i":"a_stat_0","t":null},{"i":"a_stat_1","t":[82,6.9]},{"i":"a_stat_2","t":null}],"a_map":[{"i":"a_map_0","t":[34.6,60.7]}],"a_store":[{"i":"a_store_0","t":null}],"a_ppl":[{"i":"a_ppl_0","t":null}],"a_cfg":[{"i":"a_cfg_0","t":null}]};
+const GUIDE_V = '043a999718', GUIDE_META = {"f_home":[{"i":"f_home_0","t":[90.4,78]}],"f_search":[{"i":"f_search_0","t":[37.7,4.7]},{"i":"f_search_1","t":[50,13.3]},{"i":"f_search_2","t":null}],"f_card":[{"i":"f_card_0","t":[20.5,84.3]},{"i":"f_card_1","t":null}],"f_cat":[{"i":"f_cat_0","t":[62.1,62.3]}],"f_menu":[{"i":"f_menu_0","t":[26.9,30.6]},{"i":"f_menu_1","t":[73.1,30.6]}],"f_claude":[{"i":"f_claude_0","t":[55.6,49.5]},{"i":"f_claude_1","t":[50,95.2]}],"f_meal":[{"i":"f_meal_0","t":[26.7,10.4]},{"i":"f_meal_1","t":[50,56.8]},{"i":"f_meal_2","t":[50,46.9]}],"f_order":[{"i":"f_order_0","t":[87.8,53.2]}],"f_export":[{"i":"f_export_0","t":[69.8,87.4]},{"i":"f_export_1","t":null}],"f_list":[{"i":"f_list_0","t":[11.5,92.3]},{"i":"f_list_1","t":null}],"f_rec":[{"i":"f_rec_0","t":[50,69.2]},{"i":"f_rec_1","t":null}],"f_set":[{"i":"f_set_0","t":null},{"i":"f_set_1","t":[28.8,24.5]}],"f_keys":[{"i":"f_keys_0","t":null}],"s_home":[{"i":"s_home_0","t":[26.7,10.4]}],"s_bill":[{"i":"s_bill_0","t":[85.6,88.3]},{"i":"s_bill_1","t":[24.4,53.3]},{"i":"s_bill_2","t":null}],"s_who":[{"i":"s_who_0","t":null}],"s_disc":[{"i":"s_disc_0","t":null}],"s_exp":[{"i":"s_exp_0","t":null}],"i_home":[{"i":"i_home_0","t":[50,30.6]},{"i":"i_home_1","t":null}],"i_scan":[{"i":"i_scan_0","t":[19,10.2]},{"i":"i_scan_1","t":null}],"i_shot":[{"i":"i_shot_0","t":[50,10.2]}],"i_acc":[{"i":"i_acc_0","t":[81,10.2]}],"i_cal":[{"i":"i_cal_0","t":null}],"i_edit":[{"i":"i_edit_0","t":null}],"i_bill":[{"i":"i_bill_0","t":[60.1,95.2]}],"a_home":[{"i":"a_home_0","t":[26.7,10.4]}],"a_new":[{"i":"a_new_0","t":[61.5,55.5]},{"i":"a_new_1","t":[15.5,31]}],"a_split":[{"i":"a_split_0","t":null}],"a_tpl":[{"i":"a_tpl_0","t":[84.8,26.2]},{"i":"a_tpl_1","t":null}],"a_owe":[{"i":"a_owe_0","t":[50,63.1]},{"i":"a_owe_1","t":null}],"a_asset":[{"i":"a_asset_0","t":null}],"a_stat":[{"i":"a_stat_0","t":null},{"i":"a_stat_1","t":[82,6.9]},{"i":"a_stat_2","t":null}],"a_map":[{"i":"a_map_0","t":[34.6,60.7]}],"a_store":[{"i":"a_store_0","t":null}],"a_ppl":[{"i":"a_ppl_0","t":null}],"a_cfg":[{"i":"a_cfg_0","t":null}]};
 const GImg = {d: null, p: null,
   async load() { if (this.d) return this.d; if (this.p) return this.p;
     this.p = (async () => { let old = null; try { old = await IDB.get('kv', 'guideImg'); } catch (e) {} if (old && old.v === GUIDE_V) return (this.d = old.img);
@@ -8630,10 +8635,12 @@ function renderAcc() {
 /* 帳戶名稱（只要文字，不要圖示） */
 const acctTxt = id => (accAcct(id) || {}).n || '';
 function accCard(r) {
-  const c = accCat(r), me = accMe(), sp = (r.split || []).filter(s => s.p !== me), payer = r.payer || me, imgN = (r.imgs || []).length;
+  const c = accCat(r), me = accMe(), sp = (r.split || []).filter(s => s.p !== me), payer = r.payer || me;
   /* 第二行：時間＋實際收支的帳戶（文字標籤，名稱很長會自動換行，不會被切掉） */
-  const meta = (acc, extra) => `<span class="acMeta">${r.t ? `<span>${esc(r.t)}</span>` : ''}${acc ? `<span class="acA">${esc(acc)}</span>` : ''}${extra || ''}${imgN ? `<span>🖼️${imgN}</span>` : ''}</span>`;
-  if (r.type === 'loss') return `<button class="acR card" data-r="${r.id}"><span class="acI loss">💸</span><span class="acM"><b>金額遺失${r.note ? `<em>${esc(String(r.note).split('\n')[0])}</em>` : ''}</b>${meta(acctTxt(r.acct))}</span><span class="acV neg">-${money(r.amt)}</span></button>`;
+  const meta = (acc, extra) => `<span class="acMeta">${r.t ? `<span>${esc(r.t)}</span>` : ''}${[].concat(acc || []).filter(Boolean).map(x => `<span class="acA">${esc(x)}</span>`).join('')}${extra || ''}</span>`;
+  /* 行動支付（例如「轉帳」）另外顯示實際扣款的帳戶（例如上海商銀） */
+  const tags = (id, fund) => { const a = accAcct(id); if (!a) return []; const F = a.kind === 'pay' ? (fund || a.fund || '') : ''; return F && F !== id && acctTxt(F) ? [a.n, acctTxt(F)] : [a.n]; };
+  if (r.type === 'loss') return `<button class="acR card" data-r="${r.id}"><span class="acI loss">💸</span><span class="acM"><b>金額遺失${r.note ? `<em>${esc(String(r.note).split('\n')[0])}</em>` : ''}</b>${meta(tags(r.acct, r.fund))}</span><span class="acV neg">-${money(r.amt)}</span></button>`;
   if (r.type === 'tr') { const nl = String(r.note || '').split('\n'), ext = '外部' + (r.via ? `（${r.via}）` : '');
     return `<button class="acR card" data-r="${r.id}"><span class="acI tr ${c.k || ''}">${r.settle ? '🤝' : c.svg || '🔄'}</span><span class="acM"><b>${esc(nl[0] || c.n)}</b>${meta((r.acct ? acctTxt(r.acct) : ext) + ' → ' + (r.to ? acctTxt(r.to) : ext), +r.fee ? `<span>手續費 ${money(r.fee)}</span>` : '')}${nl.length > 1 ? `<span class="acNoteL">${esc(nl.slice(1).join('\n'))}</span>` : ''}</span><span class="acV ${r.settle && r.to ? 'pos' : ''}">${money(r.amt)}</span></button>`; }
   /* 分帳：兩行說明（第一行誰墊款、誰消費多少；第二行欠款和還款狀態：未還款＝紅／橘、已還款＝綠） */
@@ -8645,8 +8652,8 @@ function accCard(r) {
     else lines = `<span class="acLn">我先墊款 ${money(r.amt)}，我的消費 ${money(mine)}</span>` + sp.map(x => `<span class="acLn ${ST[x.p] ? 'ok' : 'wait'}">${esc(aWho(x.p).name)}欠我 ${money(x.amt)}，${ST[x.p] ? '已還款' : '未還款'}</span>`).join('');
   }
   const big = sp.length && r.type === 'out' ? (owe ? mine : r.amt) : r.amt;   /* 我先付：顯示我付出去的總額；別人先付：顯示我那份 */
-  return `<button class="acR card" data-r="${r.id}"><span class="acI">${esc(c.i)}</span><span class="acM"><b>${esc(r.payee || c.n)}${r.payee ? `<em>${esc(c.n)}</em>` : ''}</b>${meta(owe ? aWho(payer).name + ' 墊付' : acctTxt(r.acct))}${lines ? `<span class="acLns">${lines}</span>` : ''}</span>
-    <span class="acV ${r.type === 'in' ? 'pos' : 'neg'}">${r.type === 'in' ? '+' : '-'}${money(big)}</span></button>`;
+  return `<button class="acR card" data-r="${r.id}"><span class="acI">${esc(c.i)}</span><span class="acM"><b>${esc(r.payee || c.n)}${r.payee ? `<em>${esc(c.n)}</em>` : ''}</b>${meta(owe ? aWho(payer).name + ' 墊付' : tags(r.acct, r.fund))}</span>
+    <span class="acV ${r.type === 'in' ? 'pos' : 'neg'}">${r.type === 'in' ? '+' : '-'}${money(big)}</span>${lines ? `<span class="acLns">${lines}</span>` : ''}</button>`;
 }
 /* 點常用紀錄：一律先打開「記一筆」讓你確認內容（金額有設就帶入），按儲存才記下 */
 async function useTpl(t) {
