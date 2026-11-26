@@ -683,7 +683,7 @@ function accNoteFromBill(b) {
 }
 function billToAccRec(b, k) {
   const c = billCalc(b), me = accMe(), tot = r2(c.total != null ? c.total : c.computed), per = c.per, ids = pOrder(Object.keys(per));
-  let split = []; ids.forEach(p0 => { const p = accPid(p0), o = split.find(x => x.p === p); if (o) o.amt = r2(o.amt + r2(per[p0])); else split.push({p, amt: r2(per[p0])}); }); const diff = r2(tot - split.reduce((s, x) => s + x.amt, 0)); if (split.length && Math.abs(diff) < 1) split[split.length - 1].amt = r2(split[split.length - 1].amt + diff);
+  let split = []; ids.forEach(p0 => { const p = accPid(p0), o = split.find(x => x.p === p); if (o) o.amt = r2(o.amt + r2(per[p0])); else split.push({p, amt: r2(per[p0])}); }); const diff = r2(tot - split.reduce((s, x) => s + x.amt, 0)); if (split.length && Math.abs(diff) < 1 + split.length) { const tg = split.find(x => x.p === me) || split[split.length - 1]; tg.amt = r2(tg.amt + diff); }   /* 小數點進位／捨去造成的差額算在自己身上 */
   if (split.length === 1 && split[0].p === me) split = [];
   const items = (b.items || []).map(x => ({n: x.n, amt: r2(numP(x.amt) - (c.itemDisc[x.id] || 0)), ppl: [...new Set((x.ppl || []).map(accPid))], q: x.q || 1}));
   const note = accNoteFromBill(b);

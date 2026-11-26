@@ -37,7 +37,11 @@ function billCalc(b) {
   (b.fees || []).forEach(d => { const ids = d.ppl || []; if (!ids.length) unassigned += numP(d.amt); else ids.forEach(id => add(id, numP(d.amt) / ids.length)); });
   const S1 = L => (L || []).reduce((s, x) => s + numP(x.amt), 0), sumItems = S1(items), sumDisc = S1(b.disc), sumOd = S1(b.odisc), sumFee = S1(b.fees);
   const computed = sumItems - sumDisc - sumOd + sumFee, total = b.total === '' || b.total == null ? null : numP(b.total);
-  return {per, itemDisc, unassigned, computed, sumItems, sumDisc, sumOd, sumFee, total, diff: total == null ? 0 : Math.round((computed - total) * 100) / 100,
+  /* 每個人的小數點處理（分帳設定裡每人各自選）：無條件進位／無條件捨去／四捨五入／保留小數 */
+  const per0 = Object.assign({}, per), RD = (DB.scfg && DB.scfg.round) || {}; let rdiff = 0;
+  Object.keys(per).forEach(id => { const v = Math.round(per[id] * 100) / 100, m = RD[id]; per[id] = m === 'up' ? Math.ceil(v) : m === 'down' ? Math.floor(v) : m === 'round' ? Math.round(v) : v; rdiff += per[id] - v; });
+  rdiff = Math.round(rdiff * 100) / 100;
+  return {per, per0, rdiff, itemDisc, unassigned, computed, sumItems, sumDisc, sumOd, sumFee, total, diff: total == null ? 0 : Math.round((computed - total) * 100) / 100,
     noWho: items.filter(x => !(x.ppl || []).length).length, unlinked: (b.disc || []).filter(d => !(d.items || []).length).length,
     noShare: (b.odisc || []).concat(b.fees || []).filter(d => !(d.ppl || []).length).length};
 }
@@ -61,7 +65,7 @@ function renderShop() {
     <div class="dayHead"><b class="dhD">${sel.getMonth() + 1}月${sel.getDate()}日 星期${MWD[sel.getDay()]}</b><span class="grow"></span>${bs.length ? `<span class="dayTot">${money(dayTot)}</span><button class="btn sm" data-a="exportDay">📤 匯出</button>` : ''}</div>
     ${bs.map(billCard).join('') || '<div class="empty mealEmpty"><span class="big">🧾</span>這天還沒有消費明細<br><span class="small">按上面的「上傳明細」拍照或選截圖，或「手動輸入」<br>也可以在 Foodpanda、相簿裡按「分享」傳給日日帳本</span></div>'}
     
-    ${order.length ? `<div class="perSum card"><div class="psH">👥 每個人這天要付</div>${order.map(id => { const u = mWho(id); return `<div class="psR"><span class="psI">${esc(u.icon)}</span><b class="grow">${esc(u.name)}</b><span>${money(per[id])}</span></div>`; }).join('')}<div class="psR tot"><b class="grow">合計</b><span>${money(dayTot)}</span></div></div>` : ''}`;
+    ${order.length ? `<div class="perSum card"><div class="psH">👥 每個人這天要付</div>${order.map(id => { const u = mWho(id); return `<div class="psR"><span class="psI">${esc(u.icon)}</span><b class="grow">${esc(u.name)}</b><span>${money(per[id])}</span></div>`; }).join('')}<div class="psR tot"><b class="grow">合計</b><span>${money(dayTot)}</span></div>${(() => { const d = Math.round((order.reduce((t, id) => t + per[id], 0) - dayTot) * 100) / 100; return d ? `<div class="blRd" style="margin-top:.5rem">🔢 小數點處理後每人加總 ${money(dayTot + d)}（${d > 0 ? '多' : '少'} ${money(Math.abs(d))}）</div>` : ''; })()}</div>` : ''}`;
 }
 function billCard(b) {
   const c = billCalc(b), w = billWarn(c), ids = pOrder(Object.keys(c.per)), nm = billStore(b);
@@ -69,6 +73,7 @@ function billCard(b) {
     <div class="blH"><div class="blT"><b>${esc(nm || '未選店家')}</b><button class="ic" data-a="bMore" aria-label="更多">⋯</button></div><div class="blB"><div class="mlS grow">${b.way ? `<span class="wayTag">${wayIcon(b.way)} ${esc(b.way)}</span>` : ''}${b.aiBusy ? `<span class="spin"></span> <span class="rcMsg" data-b="${b.id}">${esc(b.aiMsg || 'AI 辨識中')}</span>・` : ''}${b.time ? '🕒 ' + esc(b.time) + '・' : ''}${b.items.length} 項${(b.imgs || []).length ? '・🖼️ ' + b.imgs.length : ''}</div><span class="blTot">${money(c.computed)}</span><button class="btn sm pri" data-a="edit">編輯</button></div></div>
     ${ids.length ? `<div class="blPer">${ids.map(id => `<span><i>${esc(mWho(id).icon)}</i>${esc(mWho(id).name)} <b>${money(c.per[id])}</b></span>`).join('')}</div>` : ''}
     ${w.length ? `<div class="blWarn">⚠️ ${w.map(esc).join('・')}</div>` : c.total != null ? '<div class="blOk">✅ 金額和明細一致</div>' : ''}
+    ${c.rdiff ? `<div class="blRd">🔢 小數點處理後每人合計 ${money(c.computed + c.rdiff)}，比實付${c.rdiff > 0 ? '多' : '少'} ${money(Math.abs(c.rdiff))}</div>` : ''}
     ${b.items.length ? `<div class="blItems">${b.items.slice(0, 6).map(x => `<div><span class="grow">${esc(x.n)}${x.q > 1 ? ' ×' + x.q : ''}</span><span class="muted">${esc(pplNames(x.ppl)) || '—'}</span><b>${money(numP(x.amt) - (c.itemDisc[x.id] || 0))}</b></div>`).join('')}${b.items.length > 6 ? `<div class="muted small">…還有 ${b.items.length - 6} 項</div>` : ''}</div>` : ''}</div>`;
 }
 /* 時間選擇器：大地色系，上面大字顯示，下面選「時」「分」 */
@@ -558,10 +563,13 @@ function openShopSettings() {
   const draw = () => { const n = Object.values(DB.bills).reduce((s, L) => s + L.length, 0);
     sh.body.innerHTML = `<div class="msSec"><div class="msH"><b class="grow">人名</b><button class="btn sm" data-a="addP">＋ 新增</button></div><div class="small muted" style="margin:-.2rem 0 .5rem">和點餐共用同一份人名，按住 ☰ 拖曳排序</div>
         <div class="msL" data-k="people">${DB.mcfg.people.map(u => `<div class="msR" data-id="${u.id}"><span class="grip"></span><span class="msI">${esc(u.icon)}</span><b class="grow">${esc(u.name)}</b><button class="btn sm" data-a="editP">✎ 編輯</button></div>`).join('')}</div></div>
+      <div class="msSec"><div class="msH"><b class="grow">小數點處理</b></div><div class="small muted" style="margin:-.2rem 0 .6rem">分到的金額有小數時，每個人各自怎麼算（例如 $144.5 進位成 $145、捨去成 $144）</div>
+        ${DB.mcfg.people.map(u => { const m = (DB.scfg.round || {})[u.id] || ''; return `<div class="rdR"><b><span class="msI">${esc(u.icon)}</span>${esc(u.name)}</b><div class="seg rdSeg">${[['', '保留小數'], ['up', '無條件進位'], ['down', '無條件捨去'], ['round', '四捨五入']].map(([k, t]) => `<button data-rd="${u.id}" data-m="${k}" class="${m === k ? 'on' : ''}">${t}</button>`).join('')}</div></div>`; }).join('')}</div>
       ${list('ways', '購物方式', '明細裡選擇在哪裡買的：實體店購物、Foodpanda、Uber Eats…')}${list('fees', '費用名稱', '新增費用時可以一鍵選，例如平台費、外送服務費、包材費')}${list('odisc', '整單折扣名稱', '例如優惠券、整單折扣')}
       <div class="msSec"><div class="msH"><b class="grow">消費紀錄</b></div><div class="small muted">共有 ${n} 筆明細。紀錄會一起放進「設定 → 匯出備份」。</div>${n ? '<button class="btn sm danger" data-a="wipe" style="margin-top:.6rem">清除所有消費紀錄</button>' : ''}</div>`;
     $$('.msL', sh.body).forEach(l => sortable(l, {item: '.msR', handle: '.grip', scroller: sh.body, onSort(from, to) { const k = l.dataset.k; moveItem(k === 'people' ? DB.mcfg.people : DB.scfg[k], from, to); k === 'people' ? saveMcfg() : saveScfg(); draw(); }})); };
   draw();
+  sh.body.addEventListener('click', e => { const r = e.target.closest('[data-rd]'); if (!r) return; buzz(10); DB.scfg.round = DB.scfg.round || {}; if (r.dataset.m) DB.scfg.round[r.dataset.rd] = r.dataset.m; else delete DB.scfg.round[r.dataset.rd]; saveScfg(); draw(); });
   sh.body.addEventListener('click', async e => { const t = e.target.closest('[data-a]'); if (!t) return; const a = t.dataset.a, row = t.closest('.msR'), k = (t.closest('.msL') || t).dataset.k;
     if (a === 'addP') editMealCfg('people', null, draw); else if (a === 'editP') editMealCfg('people', DB.mcfg.people.find(u => u.id === row.dataset.id), draw);
     else if (a === 'add') { const v = ((await askText('名稱', '')) || '').trim(); if (v) { DB.scfg[k].push(v); saveScfg(); draw(); } }

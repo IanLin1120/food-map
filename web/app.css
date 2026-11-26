@@ -1578,3 +1578,7 @@ table.ckT td.s{text-align:center}table.ckT th.s{text-align:center}
 .shG>.btn.block,.card>.btn.cardFoot{display:flex;width:100%;margin:0!important;border:0!important;border-top:1px solid var(--border-soft)!important;border-radius:0!important;box-shadow:none!important;padding:.75rem 1rem;background:var(--surface-3)}
 .shBody>.btn.block+.card,.shBody>.card+.btn.block,.shBody>.btn.block+.btn.block,.shBody>.card+.card,.shBody>.card+.lbl,.shBody>.btn.block+.lbl{margin-top:.7rem}
 .qrFoot.two{grid-template-columns:1fr 1fr}
+.rdR{padding:.55rem 0;border-bottom:1px dashed var(--border-soft)}.rdR:last-child{border:0}
+.rdR>b{display:flex;align-items:center;gap:.4rem;margin-bottom:.4rem;font-size:.95rem}
+.rdSeg{display:grid!important;grid-template-columns:repeat(4,1fr)}.rdSeg button{padding:.5rem .1rem!important;font-size:.8rem!important;min-width:0}
+.blRd{margin:.5rem 0 0;padding:.45rem .65rem;border-radius:6px;background:color-mix(in srgb,#c08a3e 12%,var(--surface));color:#8a5a1c;font-size:.82rem;font-weight:700}
