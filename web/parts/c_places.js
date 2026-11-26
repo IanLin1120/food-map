@@ -28,6 +28,14 @@ const AIQ = {
     const sec = ((p.hour % 24) * 3600 + p.minute * 60 + p.second), t = new Date(Date.now() + (86400 - sec) * 1000); return String(t.getHours()).padStart(2, '0') + ':' + String(t.getMinutes()).padStart(2, '0'); } catch (e) { return '16:00'; } }
 };
 /* 每次 AI 執行都記下來，設定頁可以看到失敗原因 */
+/* Claude App 的額度：App 讀不到實際剩餘量，只記錄最近 5 小時從這裡傳了幾次；可以自己填一個大概的上限來估算 */
+const CQ = {log() { return lsGet('fm.cq', []).filter(t => Date.now() - t < 5 * 3600e3); }, hit() { const L = this.log(); L.push(Date.now()); lsSet('fm.cq', L); },
+  lim() { return +lsGet('fm.cqLim', 0) || 0; }, next() { const L = this.log(); return L.length ? new Date(L[0] + 5 * 3600e3) : null; }};
+const cqHtml = () => { const n = CQ.log().length, lim = CQ.lim(), nx = CQ.next();
+  return `<div class="cqBox"><div class="cqT"><b>最近 5 小時已從這裡傳給 Claude ${n} 次</b>${lim ? `<span class="${lim - n <= 2 ? 'neg' : ''}">估計還剩 ${Math.max(0, lim - n)} 次</span>` : ''}</div>
+    <small>Claude 的額度依方案、訊息長短和圖片大小變動，官方沒有公布固定次數，App 也讀不到實際剩餘量，這裡是用傳送次數估算${nx && n ? `；最早的一次在 ${nx.getHours()}:${String(nx.getMinutes()).padStart(2, '0')} 後不再計入` : ''}。</small>
+    <button class="btn sm" data-a="cqLim">${lim ? `✎ 我估計每 5 小時可以傳 ${lim} 次` : '＋ 設定我估計的 5 小時上限'}</button></div>`; };
+async function cqSetLim(after) { const v = await askText('你的 Claude 大約每 5 小時可以傳幾次菜單？（留空＝不估算）', CQ.lim() ? String(CQ.lim()) : '', '例如 10'); if (v == null) return; lsSet('fm.cqLim', Math.max(0, parseInt(v, 10) || 0)); after && after(); }
 const AILOG = {
   add(o) { const L = lsGet('fm.ailog', []); L.unshift(Object.assign({t: Date.now()}, o)); lsSet('fm.ailog', L.slice(0, 25)); },
   list() { return lsGet('fm.ailog', []); }
@@ -342,12 +350,23 @@ function menuIssues(p) {
 }
 /* 自動挑要辨識的圖：每個區域各取最新的版本 */
 const autoAlbums = p => { const seen = new Set(), L = []; albumsOf(p).filter(a => a.imgs.length).forEach(a => { const g = a.rg || ''; if (!seen.has(g)) { seen.add(g); L.push(a); } }); return L; };
-function openMenuCheck() {
-  if (!S.aikey) { needAiKey(); return; }
+function openMenuCheck(tab) {
   const rows = DB.places.map(p => ({p, iss: menuIssues(p)})).filter(x => x.iss), bad = rows.filter(x => x.iss.length), ok = rows.filter(x => !x.iss.length), sel = new Set(bad.map(x => x.p.id));
-  let model = 'flash', running = false; const sh = sheet({title: '🩺 檢查所有菜單表格', full: true, foot: '<div class="grow ordTot" id="mcT"></div><button class="btn pri" data-a="go" style="flex:0 0 auto">重新辨識</button>'});
+  let model = 'flash', running = false, mode = tab || 'claude'; const sh = sheet({title: '🩺 檢查所有菜單表格', full: true, foot: '<div class="grow ordTot" id="mcT"></div><button class="btn pri" data-a="go" style="flex:0 0 auto">重新辨識</button>', onClose() { document.removeEventListener('fm:job', onJob); }});
+  const isCl = p => /Claude/.test((p.menuSrc || {}).model || '');
+  const onJob = () => { if (mode === 'claude' && !sh.closed) draw(); }; document.addEventListener('fm:job', onJob);
+  /* Claude 建立進度：哪些菜單已經用 Claude 建立，還沒的可以一間一間補 */
+  const drawCl = () => { const all = DB.places.filter(p => albumsOf(p).some(a => a.imgs.length)), done = all.filter(isCl), todo = all.filter(p => !isCl(p)), pct = all.length ? Math.round(done.length / all.length * 100) : 0;
+    const row = (p, i) => { const m = p.menuSrc || {}; return `<div class="mcR clR"><div class="grow"><b>${esc(p.name)}</b><small>${(p.menu || []).length ? `目前表格：${m.model ? esc(aiShort(String(m.model).split('、')[0])) : '手動或舊版'}${m.t ? '・' + new Date(m.t).toLocaleDateString('zh-TW') : ''}・${(p.menu || []).length} 個品項` : '還沒有表格'}</small></div><button class="btn sm ${i === 0 ? 'pri' : ''}" data-cl="${p.id}">${i === 0 ? '🤖 下一間' : '🤖 辨識'}</button></div>`; };
+    return `<div class="clProg"><div class="clPT"><b>Claude 建立進度</b><span>${done.length} / ${all.length} 間</span></div><div class="clBar"><i style="width:${pct}%"></i></div></div>${cqHtml()}
+      ${todo.length ? `<div class="msH"><b class="grow">⏳ 還沒用 Claude 建立（${todo.length}）</b></div><div class="small muted" style="margin:-.2rem 0 .5rem">按「下一間」照順序補齊；辨識完回到這裡，清單會自動更新</div>${todo.map(row).join('')}` : '<div class="empty" style="padding:1rem">🎉 全部菜單都已經用 Claude 建立好了</div>'}
+      ${done.length ? `<div class="msH" style="margin-top:1rem"><b class="grow">✅ 已用 Claude 建立（${done.length}）</b></div>${done.map(p => `<div class="mcR clR"><div class="grow"><b>${esc(p.name)}</b><small>${new Date((p.menuSrc || {}).t || 0).toLocaleDateString('zh-TW')}・${(p.menu || []).length} 個品項</small></div><button class="btn sm" data-cl="${p.id}">↻ 重新辨識</button></div>`).join('')}` : ''}`; };
+  const gemQ = () => { const M = S.aiM || {}, L = [['Flash', M.flash || 'gemini-flash-latest'], ['Flash-Lite', M.lite || 'gemini-flash-lite-latest']];
+    return `<div class="cqBox"><div class="cqT"><b>Gemini 免費額度（今天）</b></div><div class="gqG">${L.map(([n, m]) => { const left = AIQ.blocked(m) ? 0 : AIQ.left(m); return `<div class="${left < (n === 'Flash' ? 4 : 30) ? 'neg' : ''}"><b>${n}</b>已用 ${AIQ.used(m)} 次・剩約 ${left} 次</div>`; }).join('')}</div><small>依免費版每天約 20／500 次估算（只算這支手機送出的次數${Object.keys(AIQ.st.lim || {}).length ? '，已依 Google 回報的上限校正' : ''}），每天 ${AIQ.resetAt()} 重置。一張圖約用 1 次，失敗重試也會算。</small></div>`; };
   const item = x => { const m = x.p.menuSrc || {}; return `<label class="mcR"><input type="checkbox" data-id="${x.p.id}" ${sel.has(x.p.id) ? 'checked' : ''}><div class="grow"><b>${esc(x.p.name)}</b><small>${x.iss.length ? x.iss.map(esc).join('<br>') : '沒發現明顯問題'}${m.t ? `<br><span class="muted">上次辨識：${new Date(m.t).toLocaleDateString('zh-TW')}${m.model ? '・' + esc(aiShort(m.model.split('、')[0])) : ''}・${autoAlbums(x.p).length} 個版本 / ${autoAlbums(x.p).reduce((a, b) => a + b.imgs.length, 0)} 張圖</span>` : ''}</small></div><span class="mcS" id="mcs-${x.p.id}"></span></label>`; };
-  const draw = () => { sh.body.innerHTML = `<div class="small muted" style="margin-bottom:.7rem">程式會檢查每家店的表格有沒有常見的辨識錯誤。勾選的店家會用每個區域<b>最新的菜單圖片</b>重新辨識，並<b>直接取代</b>舊表格（圖片不會刪除）。</div>
+  const draw = () => { sh.foot.style.display = mode === 'claude' ? 'none' : ''; const tabs = `<div class="seg mcTabs"><button data-tab="claude" class="${mode === 'claude' ? 'on' : ''}">🤖 Claude 建立進度</button><button data-tab="gem" class="${mode === 'gem' ? 'on' : ''}">✨ Gemini 檢查</button></div>`;
+    if (mode === 'claude') { sh.body.innerHTML = tabs + drawCl(); return; }
+    sh.body.innerHTML = tabs + gemQ() + `<div class="small muted" style="margin-bottom:.7rem">程式會檢查每家店的表格有沒有常見的辨識錯誤。勾選的店家會用每個區域<b>最新的菜單圖片</b>重新辨識，並<b>直接取代</b>舊表格（圖片不會刪除）。</div>
       <div class="lbl">辨識模型</div><div class="tplRow" style="grid-template-columns:repeat(2,minmax(0,1fr))"><button data-m="flash" class="${model === 'flash' ? 'on' : ''}"><b>Flash</b><small>較準・每天約 20 次</small></button><button data-m="lite" class="${model === 'lite' ? 'on' : ''}"><b>Flash-Lite</b><small>較快・每天約 500 次</small></button></div>
       ${bad.length ? `<div class="msH"><b class="grow">⚠️ 可能有問題（${bad.length}）</b><button class="btn sm" data-a="all">全選</button><button class="btn sm" data-a="none">全不選</button></div>${bad.map(item).join('')}` : '<div class="empty" style="padding:1rem">🎉 沒有找到明顯有問題的菜單表格</div>'}
       ${ok.length ? `<div class="msH" style="margin-top:1rem"><b class="grow">✅ 沒發現問題（${ok.length}）</b></div><div class="small muted" style="margin:-.2rem 0 .5rem">也可以勾選，用最新規則重新辨識</div>${ok.map(item).join('')}` : ''}`;
@@ -355,8 +374,10 @@ function openMenuCheck() {
   const upd = () => { const n = sel.size, imgs = DB.places.filter(p => sel.has(p.id)).reduce((a, p) => a + autoAlbums(p).reduce((b, al) => b + al.imgs.length, 0), 0); $('#mcT', sh.foot).innerHTML = running ? '辨識中，可以關掉這個畫面…' : `勾選 ${n} 間・共 ${imgs} 張圖${model === 'flash' && imgs > 15 ? '<br><span style="color:var(--danger)">Flash 每天約 20 次，張數多建議用 Flash-Lite</span>' : ''}`; };
   draw();
   sh.body.addEventListener('change', e => { const c = e.target.closest('[data-id]'); if (!c) return; if (c.checked) sel.add(c.dataset.id); else sel.delete(c.dataset.id); upd(); });
-  sh.body.addEventListener('click', e => { const b = e.target.closest('[data-m],[data-a]'); if (!b || running) return; if (b.dataset.m) { model = b.dataset.m; draw(); } else if (b.dataset.a === 'all') { rows.forEach(x => { if (x.iss.length) sel.add(x.p.id); }); draw(); } else if (b.dataset.a === 'none') { bad.forEach(x => sel.delete(x.p.id)); draw(); } });
-  sh.foot.addEventListener('click', async e => { if (!e.target.closest('[data-a="go"]') || running) return; const L = DB.places.filter(p => sel.has(p.id)); if (!L.length) { toast('請先勾選店家'); return; }
+  sh.body.addEventListener('click', e => { const t = e.target.closest('[data-tab],[data-cl],[data-a="cqLim"]'); if (t) { buzz(10);
+      if (t.dataset.tab) { mode = t.dataset.tab; draw(); } else if (t.dataset.cl) { const p = DB.places.find(x => x.id === t.dataset.cl); if (p) claudeMenu(p); } else cqSetLim(draw); return; }
+    const b = e.target.closest('[data-m],[data-a]'); if (!b || running) return; if (b.dataset.m) { model = b.dataset.m; draw(); } else if (b.dataset.a === 'all') { rows.forEach(x => { if (x.iss.length) sel.add(x.p.id); }); draw(); } else if (b.dataset.a === 'none') { bad.forEach(x => sel.delete(x.p.id)); draw(); } });
+  sh.foot.addEventListener('click', async e => { if (!e.target.closest('[data-a="go"]') || running) return; if (!S.aikey) { needAiKey(); return; } const L = DB.places.filter(p => sel.has(p.id)); if (!L.length) { toast('請先勾選店家'); return; }
     if (!await ask(`要用 ${model === 'flash' ? 'Flash' : 'Flash-Lite'} 重新辨識這 ${L.length} 間店的菜單嗎？\n舊表格會被新的結果取代。`, '開始')) return;
     running = true; upd(); let ok2 = 0, fail = 0; toast(`開始在背景依序辨識 ${L.length} 間店`, 3000);
     for (const p of L) { const st = document.getElementById('mcs-' + p.id); if (st) st.textContent = '⏳'; const before = (p.menuSrc || {}).t;
@@ -422,7 +443,7 @@ async function claudeMenu(p) {
   let al = L[0], sent = false;
   const sh = sheet({title: '🤖 用 Claude 辨識菜單', full: true, foot: '<button class="btn pri" data-a="put">帶入表格</button>', onClose() { document.removeEventListener('visibilitychange', onVis); }});
   const render = () => { const v = ($('#clT', sh.body) || {}).value || '';
-    sh.body.innerHTML = `<div class="small muted" style="margin-bottom:.8rem">使用你的 <b>Claude 月租方案</b>（Pro／Max）辨識，不會用到 API 用量額度。Claude 月租只能在 Claude 官方 App 裡使用，所以分兩步：</div>
+    sh.body.innerHTML = `<div class="small muted" style="margin-bottom:.6rem">在 <b>Claude 官方 App</b> 裡辨識，免費版或付費方案都可以，不需要 API 金鑰。分兩步：</div>${cqHtml()}
       ${L.length > 1 ? `<div class="h3">要辨識哪個版本？</div><div class="clAl">${L.map(a => `<button class="chip ${a === al ? 'on' : ''}" data-al="${a.id}">${a.rg ? '【' + esc(a.rg) + '】' : ''}${esc(a.name)}（${a.imgs.length} 張）</button>`).join('')}</div>` : ''}
       <div class="clStep"><b>①</b><div class="grow"><b>傳給 Claude</b><small>會把 ${al.imgs.length} 張菜單照片和辨識指令一起傳到 Claude App（指令也會複製好；如果輸入框是空的，長按貼上），在 Claude 按送出。</small>
         <button class="btn olive block" data-a="send">${sent ? '↻ 再傳一次' : '📤 傳到 Claude App'}</button><button class="btn sm block" data-a="cp" style="margin-top:.4rem">📋 只複製辨識指令</button></div></div>
@@ -436,7 +457,7 @@ async function claudeMenu(p) {
   document.addEventListener('visibilitychange', onVis);
   render();
   sh.body.addEventListener('input', e => { if (e.target.id === 'clT') count(); });
-  sh.body.addEventListener('click', async e => { const c = e.target.closest('[data-al]'); if (c) { buzz(10); al = L.find(a => a.id === c.dataset.al) || al; render(); return; }
+  sh.body.addEventListener('click', async e => { if (e.target.closest('[data-a="cqLim"]')) { buzz(10); cqSetLim(render); return; } const c = e.target.closest('[data-al]'); if (c) { buzz(10); al = L.find(a => a.id === c.dataset.al) || al; render(); return; }
     const b = e.target.closest('[data-a]'); if (!b) return; buzz(15); const a = b.dataset.a, prompt = claudePrompt(al.rg || '');
     if (a === 'cp') copyText(prompt);
     else if (a === 'paste') { const t = await readClip(); $('#clT', sh.body).value = t; count(); }
@@ -448,7 +469,7 @@ async function claudeMenu(p) {
         else if (navigator.canShare && navigator.canShare({files: blobs.map((x, k) => new File([x], 'menu' + (k + 1) + '.jpg', {type: x.type || 'image/jpeg'}))})) {
           await navigator.share({files: blobs.map((x, k) => new File([x], 'menu' + (k + 1) + '.jpg', {type: x.type || 'image/jpeg'})), text: prompt}); }
         else { toast(IS_APP ? '這個功能需要更新 APK，已複製指令，請在 Claude 自己加入菜單照片後貼上' : '已複製辨識指令：請在 claude.ai 上傳菜單照片後貼上指令', 5000); openUrl('https://claude.ai/new'); }
-        sent = true; } catch (e2) { toast('❌ ' + e2.message, 3500); }
+        sent = true; CQ.hit(); } catch (e2) { toast('❌ ' + e2.message, 3500); }
       render(); } });
   sh.foot.onclick = async () => { const t = $('#clT', sh.body).value, rows0 = parseMenu(t); if (!rows0.length) return;
     const g = al.rg || '', pk = pickRegionRows(rows0, g), rows = pk.rows, regs = new Set([g]); const got = new Set(rows.map(r => r.g || '')); if (got.size && !got.has('')) regs.delete(''); got.forEach(x => regs.add(x));
@@ -457,8 +478,8 @@ async function claudeMenu(p) {
     if (!DB.places.includes(p)) return;
     p.menu = groupMenu(replace ? (p.menu || []).filter(r => !regs.has(r.g || '')).concat(rows) : (p.menu || []).concat(rows));
     const rs = [...regs].filter(Boolean); if (rs.length && !rs.includes(p.rgSel)) p.rgSel = rs[0];
-    p.menuSrc = {kind: 'ai', t: Date.now(), ver: al.name, model: 'Claude（月租）', partial: false, appv: APP_VERSION};
-    AILOG.add({kind: '菜單辨識', place: p.name, model: 'Claude（月租・手動貼上）', ms: 0, ok: true, n: rows.length, note: g});
+    p.menuSrc = {kind: 'ai', t: Date.now(), ver: al.name, model: 'Claude App', partial: false, appv: APP_VERSION};
+    AILOG.add({kind: '菜單辨識', place: p.name, model: 'Claude App（手動貼上）', ms: 0, ok: true, n: rows.length, note: g});
     await savePlace(p); sh.close(); menuDone(p, `✅「${p.name}」已帶入 Claude 的辨識結果：${rows.length} 個品項`); };
 }
 

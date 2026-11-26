@@ -295,20 +295,26 @@ function renderAcc() {
     ${days.map(g => { const s = g.L.reduce((t, r) => t + accSign(r) * accMine(r), 0); return `<div class="acDay"><span>${dayLabel(g.d)}</span>${s ? `<b class="${s > 0 ? 'pos' : 'neg'}">${s > 0 ? '+' : ''}${money(s)}</b>` : ''}</div>${g.L.map(accCard).join('')}`; }).join('')
       || `<div class="empty mealEmpty"><span class="big">📒</span>${Acc.day ? '這天' : '這個月'}還沒有記帳<br><span class="small">按上面的「＋ 記一筆」，或「從分帳匯入」把消費明細帶進來</span></div>`}`;
 }
+/* 帳戶名稱（只要文字，不要圖示） */
+const acctTxt = id => (accAcct(id) || {}).n || '';
 function accCard(r) {
-  const c = accCat(r), me = accMe(), sp = (r.split || []).filter(s => s.p !== me), payer = r.payer || me;
-  if (r.type === 'loss') return `<button class="acR card" data-r="${r.id}"><span class="acI loss">💸</span><span class="acM"><b>金額遺失${r.note ? `<em>${esc(String(r.note).split('\n')[0])}</em>` : ''}</b><small>${esc([r.t, acctName(r.acct)].filter(Boolean).join('・'))}</small></span><span class="acV neg">-${money(r.amt)}</span></button>`;
+  const c = accCat(r), me = accMe(), sp = (r.split || []).filter(s => s.p !== me), payer = r.payer || me, imgN = (r.imgs || []).length;
+  /* 第二行：時間＋實際收支的帳戶（文字標籤，名稱很長會自動換行，不會被切掉） */
+  const meta = (acc, extra) => `<span class="acMeta">${r.t ? `<span>${esc(r.t)}</span>` : ''}${acc ? `<span class="acA">${esc(acc)}</span>` : ''}${extra || ''}${imgN ? `<span>🖼️${imgN}</span>` : ''}</span>`;
+  if (r.type === 'loss') return `<button class="acR card" data-r="${r.id}"><span class="acI loss">💸</span><span class="acM"><b>金額遺失${r.note ? `<em>${esc(String(r.note).split('\n')[0])}</em>` : ''}</b>${meta(acctTxt(r.acct))}</span><span class="acV neg">-${money(r.amt)}</span></button>`;
   if (r.type === 'tr') { const nl = String(r.note || '').split('\n'), ext = '外部' + (r.via ? `（${r.via}）` : '');
-    return `<button class="acR card" data-r="${r.id}"><span class="acI tr ${c.k || ''}">${r.settle ? '🤝' : c.svg || '🔄'}</span><span class="acM"><b>${esc(nl[0] || c.n)}</b><small>${esc([r.t, (r.acct ? acctName(r.acct) : ext) + ' → ' + (acctName(r.to) || ext), +r.fee ? '手續費 ' + money(r.fee) : ''].filter(Boolean).join('・'))}</small>${nl.length > 1 ? `<span class="acNoteL">${esc(nl.slice(1).join('\n'))}</span>` : ''}</span><span class="acV ${r.settle && r.to ? 'pos' : ''}">${money(r.amt)}</span></button>`; }
-  /* 分帳的紀錄：右邊顯示「我的那份」，下面標狀態（未還＝紅、未收＝橘、結清＝綠）；總額和誰付的放在下方標籤 */
-  const ST = r.settled || {}, owe = sp.length && payer !== me, mine = accMine(r);
-  const chips = !sp.length ? '' : owe ? `<span class="acChip ${ST[payer] ? 'ok' : 'neg'}">${esc(aWho(payer).name)}付 ${money(r.amt)}・我欠 ${money(-accOwe(r, payer))}</span>`
-    : `<span class="acChip ${sp.every(x => ST[x.p]) ? 'ok' : 'wait'}">${esc(aWho(me).name)}付 ${money(r.amt)}</span>` + sp.map(x => `<span class="acChip ${ST[x.p] ? 'ok' : 'wait'}">${esc(aWho(x.p).name)} 欠我 ${money(x.amt)}</span>`).join('');
-  const stat = !sp.length || r.type !== 'out' ? '' : owe ? (ST[payer] ? '<small class="ok">已還款</small>' : '<small class="neg">未還</small>')
-    : (sp.every(x => ST[x.p]) ? '<small class="ok">已收款</small>' : `<small class="wait">未收${sp.length > 1 && sp.some(x => ST[x.p]) ? ` ${sp.filter(x => !ST[x.p]).length} 人` : ''}</small>`);
-  const first = String(r.note || '').split('\n')[0];
-  return `<button class="acR card" data-r="${r.id}"><span class="acI">${esc(c.i)}</span><span class="acM"><b>${esc(r.payee || c.n)}${r.payee ? `<em>${esc(c.n)}</em>` : ''}</b><small>${[r.t, owe ? '' : acctName(r.acct), first, (r.imgs || []).length ? '🖼️' + r.imgs.length : ''].filter(Boolean).map(esc).join('・')}</small>${chips ? `<span class="acChips">${chips}</span>` : ''}</span>
-    <span class="acV ${r.type === 'in' ? 'pos' : 'neg'}">${r.type === 'in' ? '+' : '-'}${money(sp.length && r.type === 'out' ? mine : r.amt)}${stat}</span></button>`;
+    return `<button class="acR card" data-r="${r.id}"><span class="acI tr ${c.k || ''}">${r.settle ? '🤝' : c.svg || '🔄'}</span><span class="acM"><b>${esc(nl[0] || c.n)}</b>${meta((r.acct ? acctTxt(r.acct) : ext) + ' → ' + (r.to ? acctTxt(r.to) : ext), +r.fee ? `<span>手續費 ${money(r.fee)}</span>` : '')}${nl.length > 1 ? `<span class="acNoteL">${esc(nl.slice(1).join('\n'))}</span>` : ''}</span><span class="acV ${r.settle && r.to ? 'pos' : ''}">${money(r.amt)}</span></button>`; }
+  /* 分帳：兩行說明（第一行誰墊款、誰消費多少；第二行欠款和還款狀態：未還款＝紅／橘、已還款＝綠） */
+  const ST = r.settled || {}, owe = sp.length && payer !== me, mine = accMine(r), payShare = ((r.split || []).find(x => x.p === payer) || {}).amt || 0;
+  let lines = '';
+  if (sp.length && r.type === 'out') {
+    if (owe) { const nm = esc(aWho(payer).name), ok = ST[payer];
+      lines = `<span class="acLn">${nm}先墊款 ${money(r.amt)}${payShare ? `，${nm}消費 ${money(payShare)}` : ''}</span><span class="acLn ${ok ? 'ok' : 'neg'}">我的消費 ${money(mine)}，我欠${nm} ${money(-accOwe(r, payer))}，${ok ? '已還款' : '未還款'}</span>`; }
+    else lines = `<span class="acLn">我先墊款 ${money(r.amt)}，我的消費 ${money(mine)}</span>` + sp.map(x => `<span class="acLn ${ST[x.p] ? 'ok' : 'wait'}">${esc(aWho(x.p).name)}欠我 ${money(x.amt)}，${ST[x.p] ? '已還款' : '未還款'}</span>`).join('');
+  }
+  const big = sp.length && r.type === 'out' ? (owe ? mine : r.amt) : r.amt;   /* 我先付：顯示我付出去的總額；別人先付：顯示我那份 */
+  return `<button class="acR card" data-r="${r.id}"><span class="acI">${esc(c.i)}</span><span class="acM"><b>${esc(r.payee || c.n)}${r.payee ? `<em>${esc(c.n)}</em>` : ''}</b>${meta(owe ? aWho(payer).name + ' 墊付' : acctTxt(r.acct))}${lines ? `<span class="acLns">${lines}</span>` : ''}</span>
+    <span class="acV ${r.type === 'in' ? 'pos' : 'neg'}">${r.type === 'in' ? '+' : '-'}${money(big)}</span></button>`;
 }
 /* 點常用紀錄：一律先打開「記一筆」讓你確認內容（金額有設就帶入），按儲存才記下 */
 async function useTpl(t) {
