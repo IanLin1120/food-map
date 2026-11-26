@@ -103,7 +103,9 @@ public class MainActivity extends Activity {
     /* 從小工具、通知欄、控制中心打開：記下要做的動作，網頁準備好就去拿 */
     volatile String quickPending;
     void handleQuick(Intent i) {
-        if (i == null) return; String q = i.getStringExtra("quick"); if (q == null) return;
+        if (i == null) return;
+        if (Intent.ACTION_VIEW.equals(i.getAction()) && i.getData() != null && "ririzb".equals(i.getData().getScheme())) { quickPending = "link:" + i.getData().toString(); i.setData(null); if (web != null) web.evaluateJavascript("typeof Quick!=='undefined'&&Quick.check()", null); return; }
+        String q = i.getStringExtra("quick"); if (q == null) return;
         quickPending = q; i.removeExtra("quick");
         if (web != null) web.evaluateJavascript("typeof Quick!=='undefined'&&Quick.check()", null);
     }

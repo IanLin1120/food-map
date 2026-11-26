@@ -45,13 +45,17 @@ function initRec() {
 function newRecipe() {
   const sh = sheet({title: '新增食譜 · 選擇模板', html: `<div class="setC">
     <button class="setR" data-t="std" style="width:100%;text-align:left"><span style="font-size:1.6rem">📝</span><span class="t"><b>一般食譜</b><small>食材表（食材／數量）＋ 製作步驟。適合一道完整的料理。</small></span><span class="muted">›</span></button>
-    <button class="setR" data-t="ratio" style="width:100%;text-align:left"><span style="font-size:1.6rem">⚖️</span><span class="t"><b>份量比例表</b><small>同一道料理，一人份、兩人份…各自的用量並排對照，例如電鍋蒸飯的米水比例。步驟可以不填、之後再補。</small></span><span class="muted">›</span></button></div>`});
+    <button class="setR" data-t="ratio" style="width:100%;text-align:left"><span style="font-size:1.6rem">⚖️</span><span class="t"><b>份量比例表</b><small>同一道料理，一人份、兩人份…各自的用量並排對照，例如電鍋蒸飯的米水比例。步驟可以不填、之後再補。</small></span><span class="muted">›</span></button>
+    <button class="setR" data-t="scan" style="width:100%;text-align:left"><span style="font-size:1.6rem">📷</span><span class="t"><b>掃描朋友分享的食譜</b><small>掃對方給的食譜 QR Code（畫面或圖片都可以）。</small></span><span class="muted">›</span></button>
+    <button class="setR" data-t="link" style="width:100%;text-align:left"><span style="font-size:1.6rem">🔗</span><span class="t"><b>貼上食譜連結</b><small>朋友從日日帳本傳來的食譜連結。</small></span><span class="muted">›</span></button></div>`});
   sh.body.addEventListener('click', e => { const b = e.target.closest('[data-t]'); if (!b) return; sh.close(); const t = b.dataset.t;
+    if (t === 'scan') { qrScanOnce('📷 掃描食譜 QR Code', x => /[#&]r=|recipe\//.test(x)).then(x => { if (x) recOpenLink(x); }); return; }
+    if (t === 'link') { askText('貼上食譜連結', '', 'https://…#r=…').then(x => { if (x) recOpenLink(x); }); return; }
     editRecipe(t === 'ratio' ? {id: '', type: 'ratio', title: '', serv: '', portions: ['一人份', '兩人份'], ing: [{n: '', q: ['', '']}], steps: [], note: '', cover: '', cat: ''} : {id: '', type: 'std', title: '', serv: '', ing: [{n: '', q: ''}], steps: [''], note: '', cover: '', cat: ''}, true); });
 }
 const recSel = {};
 function viewRecipe(id) {
-  const r = DB.recipes.find(x => x.id === id); if (!r) return; const sh = sheet({title: '食譜', full: true}); sh.tools.innerHTML = '<button class="btn sm" data-a="copy">📋 複製</button><button class="btn sm" data-a="dup">📄 另存</button><button class="btn sm" data-a="edit">✎ 編輯</button>';
+  const r = DB.recipes.find(x => x.id === id); if (!r) return; const sh = sheet({title: '食譜', full: true}); sh.tools.innerHTML = '<button class="btn sm" data-a="share">📤 分享</button><button class="btn sm" data-a="dup">📄 另存</button><button class="btn sm" data-a="edit">✎ 編輯</button>';
   const render = async () => { const cov = await imgURL(r.cover), c = rcatOf(rcatKey(r)), P = r.portions || []; let tbl;
     if (r.type === 'ratio') { let sel = recSel[r.id]; if (sel == null || sel >= P.length) sel = -1;
       tbl = `<div class="mcats noSel">${P.length > 1 ? `<button class="chip ${sel < 0 ? 'on' : ''}" data-p="-1">全部對照</button>` : ''}${P.map((pn, j) => `<button class="chip ${sel === j || P.length === 1 ? 'on' : ''}" data-p="${j}">${esc(pn || '份量 ' + (j + 1))}</button>`).join('')}</div>` +
@@ -64,7 +68,7 @@ function viewRecipe(id) {
   render();
   sh.body.addEventListener('click', e => { if (e.target.closest('[data-a="covView"]')) { buzz(10); Viewer.open([{id: r.cover, label: ''}], 0, r.title || '食譜'); return; } const b = e.target.closest('[data-p]'); if (!b) return; recSel[r.id] = +b.dataset.p; render(); });
   sh.tools.addEventListener('click', e => { const b = e.target.closest('[data-a]'); if (!b) return;
-    if (b.dataset.a === 'copy') { const P = r.portions || []; copyText(`${r.title}\n${r.type === 'ratio' ? '' : '份數：' + (r.serv || '') + '\n'}\n【食材】\n${r.type === 'ratio' ? '食材｜' + P.join('｜') + '\n' + (r.ing || []).map(i => i.n + '｜' + P.map((_, j) => (i.q || [])[j] || '—').join('｜')).join('\n') : (r.ing || []).map(i => `${i.n}　${i.q}`).join('\n')}${(r.steps || []).length ? '\n\n【步驟】\n' + r.steps.map((s, i) => `${i + 1}. ${s}`).join('\n') : ''}${r.note ? '\n\n【備註】\n' + r.note : ''}`); }
+    if (b.dataset.a === 'share') { buzz(10); shareRecipe(r); }
     else if (b.dataset.a === 'dup') { buzz(10); dupRecipe(r).then(n => { if (!n) return; sh.close(); viewRecipe(n.id); editRecipe(n, false, () => {}); }); }
     else editRecipe(r, false, del => { if (del) sh.close(); else render(); }); });
 }
@@ -329,3 +333,75 @@ function importBackup() { const f = $('#jsonPick'); f.value = ''; f.onchange = a
     await applyBackup(j); location.reload();
   } catch (e) { busy(false); toast('❌ 匯入失敗：' + (e instanceof SyntaxError ? '檔案格式不正確' : e.message), 4500); } }; f.click(); }
 
+
+/* ============================================================
+   分享食譜：圖片、QR Code、連結（QR 的內容就是連結：一般手機相機掃會打開網頁版看食譜，用日日帳本掃可以直接加入）
+   食譜內容壓縮後放在網址的 #r= 後面，不經過任何伺服器；封面照片只放在「圖片」分享
+   ============================================================ */
+const recText = r => { const P = r.portions || []; return `${r.title}\n${r.type === 'ratio' ? '' : '份數：' + (r.serv || '') + '\n'}\n【食材】\n${r.type === 'ratio' ? '食材｜' + P.join('｜') + '\n' + (r.ing || []).map(i => i.n + '｜' + P.map((_, j) => (i.q || [])[j] || '—').join('｜')).join('\n') : (r.ing || []).map(i => `${i.n}　${i.q}`).join('\n')}${(r.steps || []).length ? '\n\n【步驟】\n' + r.steps.map((x, i) => `${i + 1}. ${x}`).join('\n') : ''}${r.note ? '\n\n【備註】\n' + r.note : ''}`; };
+const recPack = r => { const o = {t: r.title || '', i: (r.ing || []).map(x => [x.n || '', x.q == null ? '' : x.q]), st: (r.steps || []).filter(Boolean)}; if (r.type === 'ratio') { o.y = 'ratio'; o.p = r.portions || []; } if (r.serv) o.s = r.serv; if (r.note) o.n = r.note; return o; };
+const recUnpack = o => ({id: '', type: o.y === 'ratio' ? 'ratio' : 'std', title: String(o.t || '分享的食譜'), serv: o.s || '', portions: o.y === 'ratio' ? (o.p || []) : undefined, ing: (o.i || []).map(([n, q]) => ({n, q})), steps: o.st || [], note: o.n || '', cover: '', cat: ''});
+async function b64uZip(str) { const st = new Blob([new TextEncoder().encode(str)]).stream().pipeThrough(new CompressionStream('deflate-raw')), u = new Uint8Array(await new Response(st).arrayBuffer()); let b = ''; for (let i = 0; i < u.length; i++) b += String.fromCharCode(u[i]); return btoa(b).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); }
+async function b64uUnzip(t) { const b = atob(t.replace(/-/g, '+').replace(/_/g, '/')), u = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); const st = new Blob([u]).stream().pipeThrough(new DecompressionStream('deflate-raw')); return new TextDecoder().decode(await new Response(st).arrayBuffer()); }
+const recLink = async r => GH.pages + '#r=' + await b64uZip(JSON.stringify(recPack(r)));
+async function recOpenLink(u) { const m = String(u || '').match(/[#&?]r=([A-Za-z0-9_-]+)/) || String(u || '').match(/recipe\/([A-Za-z0-9_-]+)/); if (!m) { toast('這不是日日帳本的食譜連結'); return; }
+  let r; try { r = recUnpack(JSON.parse(await b64uUnzip(m[1]))); } catch (e) { toast('食譜連結不完整，請對方重新傳一次'); return; } recImport(r, m[1]); }
+/* 收到別人分享的食譜：先預覽，按「加入我的食譜」才存 */
+function recImport(r, code) { buzz(20);
+  const sh = sheet({title: '📖 朋友分享的食譜', full: true, foot: `${!IS_APP && code ? `<button class="btn" data-a="app">📱 用 App 打開</button>` : ''}<button class="btn pri" data-a="add">📥 加入我的食譜</button>`});
+  const P = r.portions || [];
+  sh.body.innerHTML = `<article class="recipe"><h2>${esc(r.title)}</h2><div class="serv">${r.type === 'ratio' ? '份量比例表' : '份數：' + esc(r.serv || '—')}</div>
+    ${r.type === 'ratio' ? `<div class="rtWrap"><table class="rtable ratio"><thead><tr><th>食材</th>${P.map(x => `<th>${esc(x)}</th>`).join('')}</tr></thead><tbody>${r.ing.map(i => `<tr><td>${esc(i.n)}</td>${P.map((_, j) => `<td>${esc((i.q || [])[j] || '—')}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`
+      : `<table class="rtable"><thead><tr><th style="width:50%">食材</th><th>數量</th></tr></thead><tbody>${r.ing.map(i => `<tr><td>${esc(i.n)}</td><td>${esc(i.q)}</td></tr>`).join('')}</tbody></table>`}
+    <h3>步驟</h3>${r.steps.length ? `<ol>${r.steps.map(x => `<li>${esc(x)}</li>`).join('')}</ol>` : '<p class="muted">（沒有步驟）</p>'}${r.note ? `<h3>備註</h3><div class="note">${esc(r.note)}</div>` : ''}</article>`;
+  sh.foot.onclick = async e => { const b = e.target.closest('[data-a]'); if (!b) return; buzz(10);
+    if (b.dataset.a === 'app') { location.href = `intent://recipe/${code}#Intent;scheme=ririzb;package=com.ian.foodmap;end`; return; }
+    const same = DB.recipes.find(x => x.title === r.title); if (same && !await ask(`已經有一道「${r.title}」了，還是要再加一份嗎？`, '加入')) return;
+    const n = Object.assign({}, r, {id: 'r' + uid(), ord: DB.recipes.length, t: Date.now()}); if (n.type !== 'ratio') delete n.portions; DB.recipes.push(n); await saveRecipe(n);
+    sh.close(); if (location.hash.includes('r=')) history.replaceState(null, '', location.pathname); toast(`✅ 已加入「${n.title}」`); showTab('Rec'); renderRec(); setTimeout(() => viewRecipe(n.id), 250); }; }
+/* 分享方式選單 */
+function shareRecipe(r) {
+  const sh = sheet({title: `📤 分享「${r.title || '食譜'}」`}); sh.body.innerHTML = `<div class="shareCh">
+    <button class="card" data-s="img"><i>🖼️</i><b>圖片</b><small>整份食譜做成一張圖</small></button><button class="card" data-s="qr"><i>🔳</i><b>QR Code</b><small>給朋友掃，或存成圖片</small></button>
+    <button class="card" data-s="link"><i>🔗</i><b>傳送連結</b><small>LINE、訊息都能傳</small></button><button class="card" data-s="txt"><i>📋</i><b>複製文字</b><small>貼到任何地方</small></button></div>
+    <div class="small muted" style="margin-top:.7rem">QR Code 和連結裡就是食譜內容，不會上傳到任何地方；封面照片只會放在「圖片」裡。朋友用日日帳本掃描或打開連結，就能直接加入他的食譜。</div>`;
+  sh.body.onclick = async e => { const b = e.target.closest('[data-s]'); if (!b) return; buzz(10); const k = b.dataset.s; sh.close();
+    if (k === 'txt') { copyText(recText(r)); return; }
+    if (k === 'img') { recShareImg(r); return; }
+    const url = await recLink(r), txt = `🍳 ${r.title}（日日帳本食譜）\n${url}`;
+    if (k === 'link') { if (IS_APP && NB.share) NB.share(txt); else if (navigator.share) navigator.share({title: r.title, text: txt}).catch(() => {}); else copyText(url); return; }
+    recShareQr(r, url, txt); }; }
+/* 共用的「預覽圖片＋分享／存相簿」畫面 */
+function recImgSheet(title, png, name, txt, extra) {
+  const sh = sheet({title, full: true, foot: `<div class="qrFoot ${extra ? '' : 'two'}"><button class="btn pri" data-q="share">📤 分享圖片</button><button class="btn" data-q="save">💾 存到相簿</button>${extra ? `<button class="btn" data-q="copy">🔗 複製連結</button>` : ''}</div>`});
+  sh.body.innerHTML = `<div class="qrCardW"><img src="${png}" alt=""></div>`;
+  sh.foot.onclick = async e => { const b = e.target.closest('[data-q]'); if (!b) return; buzz(10); const q = b.dataset.q, b64 = png.split(',')[1];
+    if (q === 'copy') { copyText(extra); return; }
+    if (IS_APP && NB.shareImg) { const ok = NB.shareImg(b64, name, q === 'share' ? txt : '', q === 'share'); if (q === 'save') toast(ok ? '💾 已存到相簿（圖片／日日帳本）' : '存檔失敗'); return; }
+    const blob = await (await fetch(png)).blob(), file = new File([blob], name, {type: 'image/png'});
+    if (q === 'share' && navigator.canShare && navigator.canShare({files: [file]})) { navigator.share({files: [file], text: txt}).catch(() => {}); return; }
+    const a = document.createElement('a'); a.href = png; a.download = name; a.click(); }; }
+async function recShareImg(r) { busy('產生圖片…'); try {
+    let cov = ''; if (r.cover) { const bl = await imgBlob(r.cover); if (bl) cov = await new Promise(res => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.readAsDataURL(bl); }); }
+    const P = r.portions || [], E = esc, tb = r.type === 'ratio' ? `<table><tr><th>食材</th>${P.map(x => `<th>${E(x)}</th>`).join('')}</tr>${(r.ing || []).map(i => `<tr><td>${E(i.n)}</td>${P.map((_, j) => `<td>${E((i.q || [])[j] || '—')}</td>`).join('')}</tr>`).join('')}</table>`
+      : `<table><tr><th>食材</th><th>數量</th></tr>${(r.ing || []).map(i => `<tr><td>${E(i.n)}</td><td>${E(i.q)}</td></tr>`).join('')}</table>`;
+    const html = `<!doctype html><html><head><meta charset="utf-8"><style>body{margin:0;background:#f6eddc;font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;color:#3b2b1d}
+      .c{margin:0 34px;background:#fffaf0;border:1px solid #e3d3b8;border-radius:8px;overflow:hidden}.cv{width:100%;max-height:520px;object-fit:cover;display:block}.in{padding:26px 30px 24px}
+      h1{font-size:40px;margin:0 0 6px}.m{color:#8a7560;font-size:19px;margin-bottom:18px}h2{font-size:23px;color:#5a7a3a;margin:22px 0 10px;border-bottom:2px solid #e8dcc6;padding-bottom:6px}
+      table{width:100%;border-collapse:collapse;font-size:20px}th{text-align:left;background:#efe4cf;padding:8px 12px}td{padding:8px 12px;border-bottom:1px solid #eee3d1}
+      ol{margin:0;padding-left:30px;font-size:20px;line-height:1.65}li{margin:4px 0}.n{background:#f6efe2;border-radius:6px;padding:12px 14px;font-size:19px;white-space:pre-wrap}
+      .f{text-align:center;color:#8a7560;font-size:17px;padding:16px 0 4px}</style></head><body><div class="c">${cov ? `<img class="cv" src="${cov}">` : ''}<div class="in"><h1>${E(r.title || '食譜')}</h1>
+      <div class="m">${r.type === 'ratio' ? '份量比例表' : '份數：' + E(r.serv || '—')}</div><h2>🥕 食材</h2>${tb}${(r.steps || []).length ? `<h2>👩‍🍳 步驟</h2><ol>${r.steps.map(x => `<li>${E(x)}</li>`).join('')}</ol>` : ''}${r.note ? `<h2>📝 備註</h2><div class="n">${E(r.note)}</div>` : ''}</div></div><div class="f">— 日日帳本・我的食譜 —</div></body></html>`;
+    const [c] = await renderPages(html, false), png = c.toDataURL('image/png'); busy(false);
+    recImgSheet('🖼️ 食譜圖片', png, `食譜_${(r.title || '').replace(/[\\/:*?"<>|\s]+/g, '_')}.png`, `🍳 ${r.title}`); } catch (e) { busy(false); toast('❌ 產生圖片失敗：' + e.message, 3500); } }
+async function recShareQr(r, url, txt) {
+  let q; try { q = qrcode(0, 'L'); q.addData(url); q.make(); } catch (e) { toast('這份食譜太長，QR Code 放不下，請改用「傳送連結」或「圖片」', 4500); return; }
+  const n = q.getModuleCount(), W = 1080, H = 1420, cv = document.createElement('canvas'); cv.width = W; cv.height = H; const g = cv.getContext('2d'), F = '"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif';
+  g.fillStyle = '#f6eddc'; g.fillRect(0, 0, W, H); g.fillStyle = '#fffaf0'; g.strokeStyle = '#e3d3b8'; g.lineWidth = 3; g.fillRect(70, 70, W - 140, H - 140); g.strokeRect(70, 70, W - 140, H - 140);
+  g.textAlign = 'center'; g.fillStyle = '#3b2b1d'; g.font = `900 64px ${F}`; let t = r.title || '食譜'; while (g.measureText(t).width > W - 220 && t.length > 2) t = t.slice(0, -2) + '…'; g.fillText(t, W / 2, 190);
+  g.fillStyle = '#8a7560'; g.font = `500 34px ${F}`; g.fillText(`${(r.ing || []).length} 種食材・${(r.steps || []).length} 個步驟`, W / 2, 250);
+  const side = 760, cell = Math.floor(side / (n + 2)), qs = cell * n, x0 = (W - qs) / 2, y0 = 300 + (side - qs) / 2; g.fillStyle = '#fff'; g.fillRect(x0 - cell, y0 - cell, qs + cell * 2, qs + cell * 2);
+  g.fillStyle = '#2b1f15'; for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) if (q.isDark(y, x)) g.fillRect(x0 + x * cell, y0 + y * cell, cell + .5, cell + .5);
+  g.fillStyle = '#5a7a3a'; g.font = `800 40px ${F}`; g.fillText('📷 用日日帳本掃描，直接加入食譜', W / 2, 1160);
+  g.fillStyle = '#8a7560'; g.font = `500 30px ${F}`; g.fillText('食譜 → ＋ 新增 → 掃描朋友分享的食譜', W / 2, 1215); g.fillText('一般相機掃描會打開網頁版食譜', W / 2, 1262);
+  recImgSheet('🔳 食譜 QR Code', cv.toDataURL('image/png'), `食譜QR_${(r.title || '').replace(/[\\/:*?"<>|\s]+/g, '_')}.png`, txt, url); }

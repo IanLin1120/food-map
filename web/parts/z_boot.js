@@ -20,6 +20,7 @@
   Upd.boot();
   Share.check(); document.addEventListener('visibilitychange', () => { if (!document.hidden) { setTimeout(() => Share.check(), 300); setTimeout(() => Quick.check(), 200); } });
   setTimeout(() => { Quick.check(); accWidgetPush(); }, 400);
+  if (/[#&]r=[A-Za-z0-9_-]/.test(location.hash)) setTimeout(() => recOpenLink(location.hash), 700);   /* 網頁版打開朋友分享的食譜連結 */
   window.__ready = true;
 })();
 

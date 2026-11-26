@@ -92,6 +92,7 @@ function accWidgetPush() {
 }
 /* 從小工具、通知欄、控制中心打開：直接進記帳區開始記一筆 */
 const Quick = {async check() { if (!(IS_APP && NB.quickTake)) return; const a = NB.quickTake(); if (!a) return;
+  if (a.startsWith('link:')) { recOpenLink(a.slice(5)); return; }   /* 點了食譜連結（ririzb://recipe/…）打開 App */
   while (sheets.length) sheets[sheets.length - 1].close();
   /* 有上鎖：先解鎖才能記帳 */
   if (!S.inAcc) { if (!await enterAcc('Acc')) return; } else { if (!await AccLock.need()) return; showTab('Acc'); } buzz(15);
