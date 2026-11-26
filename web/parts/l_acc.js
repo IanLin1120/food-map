@@ -164,7 +164,7 @@ function accOwe(r, p) {
   if (r.type !== 'out' || !(r.split || []).length) return 0; const me = accMe(), payer = r.payer || me, sh = id => (r.split.find(s => s.p === id) || {}).amt || 0;
   if (payer === me && p !== me) return sh(p); if (payer === p) return -sh(me); return 0;
 }
-function accDebts() { const per = {}; (DB.acc ? DB.acc.recs : []).forEach(r => (r.split || []).map(s => s.p).concat(r.payer ? [r.payer] : []).forEach(p => { if (p === accMe() || (r.settled || {})[p]) return; const o = accOwe(r, p); if (o) per[p] = r2((per[p] || 0) + o); })); Object.keys(per).forEach(p => { if (Math.abs(per[p]) < 0.01) delete per[p]; }); return per; }
+function accDebts() { const per = {}; (DB.acc ? DB.acc.recs : []).forEach(r => [...new Set((r.split || []).map(s => s.p).concat(r.payer ? [r.payer] : []))].forEach(p => {   /* 付錢的人通常也在分帳名單裡，要去重複，不然會算兩次 */ if (p === accMe() || (r.settled || {})[p]) return; const o = accOwe(r, p); if (o) per[p] = r2((per[p] || 0) + o); })); Object.keys(per).forEach(p => { if (Math.abs(per[p]) < 0.01) delete per[p]; }); return per; }
 const accSign = r => r.type === 'in' ? 1 : r.type === 'out' ? -1 : 0;
 const accMine = r => r.type === 'in' ? +r.amt || 0 : r.type !== 'out' ? 0 : (r.split || []).length ? ((r.split.find(s => s.p === accMe()) || {}).amt || 0) : +r.amt || 0;
 const recSort = (a, b) => (b.d + (b.t || '')).localeCompare(a.d + (a.t || ''));
