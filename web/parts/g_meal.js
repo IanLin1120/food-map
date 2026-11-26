@@ -234,7 +234,8 @@ function openOrder(m, opt = {}) {
   const add = (n, s, p, o) => { if (!who) { toast('請先新增要點餐的人'); return; } const pv = numP(p), x = m.items.find(i => wkey(i) === who && i.n === n && (i.s || '') === (s || '') && (i.o || '') === (o || '') && numP(i.p) === pv);
     const sh0 = who.startsWith('S:') ? {who: SHARE, share: keyIds(who)} : {who};
     if (x) x.q++; else { const it = Object.assign({id: 'i' + uid(), n, s: s || '', p: pv, q: 1}, sh0, o ? {o} : {}); fixOptSize(it); m.items.push(it); } m.lastWho = who; buzz(12); saveDays(); draw(); };
-  const draw = () => { const C = P ? menuChoices(P, rg) : {list: [], regs: [], cur: ''}; rg = C.cur;
+  const draw = () => { const ox = ($('.ordCats', sh.body) || {}).scrollLeft || 0; draw0(); const oc = $('.ordCats', sh.body); if (oc) oc.scrollLeft = ox; };   /* 重畫時分類列不要跳回最前面 */
+  const draw0 = () => { const C = P ? menuChoices(P, rg) : {list: [], regs: [], cur: ''}; rg = C.cur;
     const cus = DB.mcfg.custom.filter(c => (m.place ? c.place === m.place : c.pname === m.pname)).map(c => ({t: 'cus', c: '⭐ 自訂品項', n: c.n, full: c.n, og: [], v: [{s: '', p: c.p}], cid: c.id}));
     const all = cus.concat(C.list), cats = [...new Set(all.map(o => o.c))], hit = o => (!q || o.n.toLowerCase().includes(q)) && (!cat || o.c === cat);
     const L = all.filter(hit); LIST = L; const mine = m.items.filter(x => wkey(x) === who), tot = mealTotal(m), isS = who.startsWith('S:'), sIds = keyIds(who), mt = mine.reduce((s, x) => s + xAmt(x), 0);
@@ -255,7 +256,7 @@ function openOrder(m, opt = {}) {
   sh.body.addEventListener('click', async e => { const b = e.target.closest('button'); if (!b) return;
     if (b.dataset.who) { who = b.dataset.who; draw(); }
     else if (b.dataset.rg != null) { rg = b.dataset.rg; draw(); }
-    else if (b.dataset.cat != null) { cat = b.dataset.cat; draw(); }
+    else if (b.dataset.cat != null) { const ox = ($('.ordCats', sh.body) || {}).scrollLeft || 0; cat = b.dataset.cat; draw(); const oc = $('.ordCats', sh.body); if (oc) { oc.scrollLeft = ox; const on = $('.chip.on', oc); if (on && (on.offsetLeft < oc.scrollLeft || on.offsetLeft + on.offsetWidth > oc.scrollLeft + oc.clientWidth)) oc.scrollLeft = on.offsetLeft - oc.clientWidth / 2 + on.offsetWidth / 2; } }   /* 分類列保持原本捲動位置 */
     else if (b.dataset.oi != null) { const o = LIST[+b.dataset.oi], v = o && o.v[+b.dataset.vi]; if (!v) return;
       if (o.og && o.og.length) { const r = await pickOpts(o, v); if (!r) return; add(o.full || o.n, v.s, numP(v.p) + r.add, r.o); } else add(o.full || o.n, v.s, v.p); }
     else if (b.dataset.a === 'newWho') editMealCfg('people', null, u => { if (u) who = u.id; draw(); });
