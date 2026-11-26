@@ -4,7 +4,7 @@
 <script>/* 線上更新開機程式：手機上若已下載比 APK 內建更新的介面版本，就改用新版（存在 IndexedDB）。
    新版連續兩次沒有正常開啟 → 自動退回 APK 內建版本。網址加上 #builtin 也會強制使用內建版本。 */
 (function () {
-  var B = '3.37.3'; if (!window.__OTA) window.APP_BUILTIN = B;
+  var B = '3.38.0'; if (!window.__OTA) window.APP_BUILTIN = B;
   if (window.__OTA || location.hash.indexOf('builtin') >= 0) return;
   var v = null; try { v = JSON.parse(localStorage.getItem('fm.ota') || 'null'); } catch (e) {}
   function gt(a, b) { a = String(a).split('.').map(Number); b = String(b).split('.').map(Number); for (var i = 0; i < Math.max(a.length, b.length); i++) { var p = a[i] || 0, q = b[i] || 0; if (p !== q) return p > q; } return false; }
@@ -1578,7 +1578,6 @@ table.ckT td.s{text-align:center}table.ckT th.s{text-align:center}
 /* ---------- 使用說明：真實畫面截圖＋手指動畫 ---------- */
 .gPh{position:relative;width:min(14rem,64vw);aspect-ratio:1/2;margin:.2rem auto 1rem;border:7px solid #3a2c22;border-radius:28px;background:var(--bg);box-shadow:0 12px 30px var(--sh);overflow:hidden;flex-shrink:0}
 .gScr{position:absolute;inset:0;transition:transform .5s cubic-bezier(.2,.8,.2,1)}
-.gScr.zm{transform:scale(1.06)}
 .gScr img,.gScr .gMiss{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .45s ease}
 .gScr img.on{opacity:1}
 .gLoad{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;padding:1rem;color:var(--muted);font-size:.85rem}
@@ -1606,6 +1605,11 @@ table.ckT td.s{text-align:center}table.ckT th.s{text-align:center}
 .stDet:active{transform:scale(.95)}
 .acV small.neg{color:#a8472f;font-weight:800}.acV small.wait{color:#b0701f;font-weight:800}.acV small.ok{color:#5c6b2c;font-weight:800}
 .acStV b{white-space:nowrap;font-variant-numeric:tabular-nums}
+.einvL{margin-top:.9rem;border-top:2px dashed #aaa;padding-top:.5rem;font-size:.85rem}
+.einvLH,.einvLR,.einvLT{display:grid;grid-template-columns:1fr 2.2rem 4.6rem;gap:.4rem;padding:.2rem 0}
+.einvLH{color:#777;font-size:.72rem;border-bottom:1px solid #ddd}.einvLH span:nth-child(n+2),.einvLR span:nth-child(n+2){text-align:right;font-variant-numeric:tabular-nums}
+.einvLR.neg{color:#a8472f}.einvLT{grid-template-columns:1fr 6rem;font-weight:900;font-size:.95rem;border-top:1px solid #ccc;margin-top:.2rem;padding-top:.4rem}.einvLT span:last-child{text-align:right}
+.shWrap.center{z-index:130}#toast{z-index:140}
 </style>
 </head>
 <body>
@@ -1706,7 +1710,7 @@ table.ckT td.s{text-align:center}table.ckT th.s{text-align:center}
 
   </nav>
 </div>
-<div id="viewer"><div class="vTop"><button class="ic" id="vX">✕</button><b class="grow" id="vT"></b><span id="vN" style="opacity:.85;font-size:.9rem"></span></div><div id="vScroll"><img id="vImg" alt=""></div><div class="vBot"><button class="btn" id="vPrev">‹ 上一張</button><button class="btn" id="vZo">－</button><button class="btn" id="vZi">＋</button><button class="btn" id="vNext">下一張 ›</button></div></div>
+<div id="viewer"><div class="vTop"><button class="ic" id="vX">✕</button><b class="grow" id="vT"></b><span id="vN" style="opacity:.85;font-size:.9rem"></span><button class="ic" id="vDl" title="下載到手機" aria-label="下載到手機">⬇️</button></div><div id="vScroll"><img id="vImg" alt=""></div><div class="vBot"><button class="btn" id="vPrev">‹ 上一張</button><button class="btn" id="vZo">－</button><button class="btn" id="vZi">＋</button><button class="btn" id="vNext">下一張 ›</button></div></div>
 <div id="busy"><div class="box"><div class="spin"></div><div id="busyT"></div></div></div>
 <div id="toast"></div>
 <input type="file" id="filePick" accept="image/*" multiple class="hide">
@@ -4081,7 +4085,7 @@ var qrcode = function() {
 /* ============================================================
    日日帳本 — 核心：工具、資料儲存、主題、面板、拖曳排序、圖片
    ============================================================ */
-const APP_VERSION = '3.37.3';
+const APP_VERSION = '3.38.0';
 const APP_VER = APP_VERSION;
 /* 線上更新來源（GitHub Pages）：IanLin1120/food-map */
 const GH = {repo: 'https://github.com/IanLin1120/food-map', pages: 'https://ianlin1120.github.io/food-map/'};
@@ -4395,7 +4399,21 @@ const Viewer = {items: [], i: 0, z: 1, title: '',
   step(d) { const n = Viewer.i + d; if (n < 0 || n >= Viewer.items.length) { buzz(30); return; } buzz(10); Viewer.i = n; Viewer.show(); },
   close() { $('#viewer').classList.remove('on'); $('#vImg').removeAttribute('src'); }
 };
+/* 把自己上傳的圖片存回手機：App 存進相簿（圖片／日日帳本），網頁版直接下載 */
+async function saveImgToPhone(id, name) { const b = await imgBlob(id); if (!b) { toast('找不到這張圖片'); return; }
+  const fn = String(name || '圖片').replace(/[\\/:*?"<>|\s]+/g, '_').slice(0, 60) + '.jpg';
+  if (IS_APP && NB.shareImg) { const ok = NB.shareImg(await blobB64(b), fn, '', false); buzz(30); toast(ok ? '⬇️ 已存到相簿（圖片／日日帳本）' : '存檔失敗', 3000); return; }
+  await saveFile(fn, b); }
+Viewer.save = () => { const it = Viewer.items[Viewer.i]; if (!it) return; saveImgToPhone(it.id, (Viewer.title || '圖片') + (it.label ? '_' + it.label : '') + (Viewer.items.length > 1 ? '_' + (Viewer.i + 1) : '')); };
 function initViewer() {
+  $('#vDl').onclick = () => { buzz(10); Viewer.save(); };
+  /* 長按圖片：問要不要存回手機 */
+  { const im = $('#vScroll'); let lt = null, lx = 0, ly = 0; const cancel = () => { clearTimeout(lt); lt = null; };
+    im.addEventListener('touchstart', e => { if (e.touches.length !== 1) { cancel(); return; } lx = e.touches[0].clientX; ly = e.touches[0].clientY; cancel();
+      lt = setTimeout(async () => { lt = null; buzz([15, 30, 15]); if (await ask('把這張圖片存到手機？', '⬇️ 下載')) Viewer.save(); }, 550); }, {passive: true});
+    im.addEventListener('touchmove', e => { if (lt && Math.hypot(e.touches[0].clientX - lx, e.touches[0].clientY - ly) > 10) cancel(); }, {passive: true});
+    im.addEventListener('touchend', cancel); im.addEventListener('touchcancel', cancel);
+    im.addEventListener('contextmenu', e => { e.preventDefault(); if (!('ontouchstart' in window)) Viewer.save(); }); }
   $('#vX').onclick = Viewer.close; $('#vPrev').onclick = () => Viewer.step(-1); $('#vNext').onclick = () => Viewer.step(1);
   $('#vZi').onclick = () => Viewer.zoom(1.5); $('#vZo').onclick = () => Viewer.zoom(1 / 1.5);
   const sc = $('#vScroll'); let d0 = 0, z0 = 1, lastTap = 0, sx = 0, sy = 0, multi = false;
@@ -4937,7 +4955,9 @@ B. 組合式（自選）菜單：顧客依步驟挑選，例如「1 主食（選
   ・勾選框欄上面的價格欄（例如 一般量 55／特大量 65）才是尺寸，照第 3 條寫。
 21. 推薦星號★、NEW、新品、辣椒圖示、HOT 這類標記不要寫進品名，品名只寫文字本身。
 22. 區塊標題旁邊或品項旁邊的小字提醒（例如「飲料換購可補差價」「可加價升級尺寸&口味」「嚴選去骨腿丁」），寫成說明行：說明|經典組合餐系列|飲料換購可補差價。整張菜單最下面的注意事項（咖啡因標示、圖片僅供參考、偶發性碎骨）、品牌宣傳（本店使用○○肉品）、線上點餐 QR code 都不要輸出。
-23. 同一個系列有好幾種口味、共用同一排尺寸價格時（例如「臻寶腿丁（醬料系列）台式椒鹽／川味麻辣／泰式糖醋，小79 中119 大229」），每個口味各自寫出每個尺寸，例如：品項|臻寶腿丁（醬料系列）|台式椒鹽 (小)|79、品項|臻寶腿丁（醬料系列）|台式椒鹽 (中)|119……；口味後面括號裡的配料說明（內含：蔥花、蒜片、辣椒）寫成說明行。如果口味是讓顧客挑的灑粉、醬料、只有一個品名（例如「臻寶腿丁（灑粉系列）胡椒粉／香辣粉／海苔粉／梅粉，小75 中115 大225」），品名寫系列名稱並寫出每個尺寸，口味寫成選項：品項|臻寶腿丁（灑粉系列）|臻寶腿丁 (小)|75、選項|臻寶腿丁（灑粉系列）・灑粉（選一）|胡椒粉|。`;
+23. 同一個系列有好幾種口味、共用同一排尺寸價格時（例如「臻寶腿丁（醬料系列）台式椒鹽／川味麻辣／泰式糖醋，小79 中119 大229」），每個口味各自寫出每個尺寸，例如：品項|臻寶腿丁（醬料系列）|台式椒鹽 (小)|79、品項|臻寶腿丁（醬料系列）|台式椒鹽 (中)|119……；口味後面括號裡的配料說明（內含：蔥花、蒜片、辣椒）寫成說明行。如果口味是讓顧客挑的灑粉、醬料、只有一個品名（例如「臻寶腿丁（灑粉系列）胡椒粉／香辣粉／海苔粉／梅粉，小75 中115 大225」），品名寫系列名稱並寫出每個尺寸，口味寫成選項：品項|臻寶腿丁（灑粉系列）|臻寶腿丁 (小)|75、選項|臻寶腿丁（灑粉系列）・灑粉（選一）|胡椒粉|。
+24. 一張表有好幾個價格欄（例如「吐司｜漢堡｜波羅堡」「蛋餅｜千層｜蔥抓餅」），每個價格一定要對應「正上方那一欄」的標題，由左到右照順序，不要把兩欄對調。輸出前用第一列再核對一次（例如 蔬菜：吐司 25、漢堡 30、波羅堡 35，價格通常由左往右變貴）。
+25. 套餐後面用□勾選的選擇（例如「4 鐵板麵 □蘑菇 □黑胡椒 □魯肉 +蛋+里肌肉」「2 小雞球+千層 □火腿 □鮪魚 □培根」），一律寫成選項，不要寫成尺寸或分開的品項；選項分類寫「套餐編號和名稱・選擇的名稱（選一）」，中間一定要用「・」隔開，例如：選項|4 鐵板麵+蛋+里肌肉・麵的口味（選一）|蘑菇|。`;
 const SZ = /\s*[（(]([^()（）]{1,8})[)）]\s*$/;
 /* 尺寸由小到大：S → M → L → XL → 瓶 */
 const SZ_ORDER = ['XS', 'S', '小', '小杯', '小碗', '小份', '薄', '薄片', '單', 'M', '中', '中杯', '中碗', '一般', '一般量', '正常', 'L', '大', '大杯', '大碗', '大份', '厚', '厚片', '雙', 'XL', '特大', '特大杯', '加大', '超大', 'XXL', '瓶', '瓶裝', '罐', '桶'];
@@ -4949,7 +4969,7 @@ const szOf = n => { const m = String(n || '').match(SZ); if (!m) return ''; cons
 const isSizeWord = (z, multi) => !!z && (SZ_ORDER.includes(z.toUpperCase()) || /杯|瓶|罐|碗|份|盒|吋|寸|oz|ml|cc|公克|克|斤|兩|^(一般|特大|大|小|中|加大|超大)量$/i.test(z) || (multi && /^\d+\s*(片|隻|顆|個|入|塊|串|粒|條|支|尾|人)$/.test(z)));
 /* 選項群組：「經典系列・麵包（選一）」→ 屬於「經典系列」、名稱「麵包」、標籤「選一」 */
 /* 品名比對時忽略編號和尺寸：「5 雙人臻寶炸雞餐」「1號餐-清爽鳳梨 (套餐)」→「雙人臻寶炸雞餐」「清爽鳳梨」 */
-const itemKey = n => String(n || '').replace(SZ, '').replace(/^\s*(?:[A-Za-z]?\d+|[A-Z])\s*(?:號餐|號|[.、．\-－])?\s*[-－]?\s*/, '').replace(/\s+/g, '').trim();
+const itemKey = n => String(n || '').replace(/（/g, '(').replace(/）/g, ')').replace(/＋/g, '+').replace(SZ, '').replace(/^\s*(?:[A-Za-z]?\d+|[A-Z])\s*(?:號餐|號|[.、．\-－])?\s*[-－]?\s*/, '').replace(/\s+/g, '').replace(/\([^()]*\)$/, '').trim();
 const ownerIs = (name, owner) => !!owner && (owner === name || String(name).replace(SZ, '').trim() === owner || (itemKey(owner).length >= 2 && itemKey(name) === itemKey(owner)));
 function optGroups(rows, all) { const gs = []; rows.forEach(r => { let g = gs.find(x => x.c === r.c); if (!g) gs.push(g = {c: r.c, L: []}); g.L.push(r); });
   gs.forEach(g => { const m = String(g.c || '').match(/^(.*?)[（(]([^()（）]+)[)）]$/), nm = (m ? m[1] : g.c || '').trim(), parts = nm.split(/\s*[・·‧．\-－:：]\s*/).filter(Boolean);
@@ -4958,6 +4978,11 @@ function optGroups(rows, all) { const gs = []; rows.forEach(r => { let g = gs.fi
     g.excl = []; g.tag = g.tag.replace(/[，,、\s]*([^，,（）()]+?)(除外|不適用|無加大|不可選)$/, (x, a) => { g.excl = a.split(/[、\/／和及]/).map(t => t.trim()).filter(Boolean); return ''; }).trim(); });
   /* 群組名稱開頭就是某個品項（例如「雙人臻寶炸雞餐・灑粉（4選3）」）：只屬於那個品項所在的分類，不要因為名稱裡有「炸雞」就跑到炸雞系列 */
   const items = (all || rows).filter(r => (r.t || 'item') === 'item');
+  /* AI 有時沒寫分隔符號：「7蛋餅+薯餅+雞塊（4顆）蛋餅口味（選一）」→ 開頭就是品項「7 蛋餅+薯餅+雞塊 (4顆)」，拆成 品項＋「蛋餅口味」 */
+  const nz = t => String(t || '').replace(/（/g, '(').replace(/）/g, ')').replace(/＋/g, '+').replace(/\s+/g, '').replace(/^(?:[A-Za-z]?\d+|[A-Z])(?:號餐|號|[.、．\-－])?/, '');
+  gs.forEach(g => { if (g.owner || items.some(r => normCat(r.c) === normCat(g.label))) return; const L = nz(g.label); let best = null, bk = '';
+    items.forEach(r => { const k = nz(String(r.n).replace(SZ, '')); if (k.length >= 3 && k.length > bk.length && L.startsWith(k) && L.length > k.length) { best = r; bk = k; } });
+    if (!best) return; const rest = L.slice(bk.length).replace(/^\([^()]*\)/, '').replace(/^[・·‧．\-－:：]/, '').trim(); if (rest.length < 1) return; g.owner = String(best.n).replace(SZ, '').trim(); g.label = rest; });
   gs.forEach(g => { if (!g.owner || items.some(r => normCat(r.c) === normCat(g.owner))) return; const it = items.find(r => ownerIs(r.n, g.owner)); if (it) g.ownerCat = normCat(it.c); });
   return gs; }
 const ownsGroup = (c, g) => !!g.owner && (g.ownerCat ? normCat(c) === g.ownerCat : g.owner === c || String(c).includes(g.owner) || g.owner.includes(String(c).replace(/(系列|類|區)$/, '')));
@@ -5786,11 +5811,11 @@ function viewRecipe(id) {
         (sel < 0 && P.length > 1 ? `<div class="rtWrap"><table class="rtable ratio"><thead><tr><th>食材</th>${P.map((pn, j) => `<th>${esc(pn || '份量 ' + (j + 1))}</th>`).join('')}</tr></thead><tbody>${(r.ing || []).map(i => `<tr><td>${esc(i.n)}</td>${P.map((_, j) => `<td>${esc((i.q || [])[j] || '—')}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`
           : `<table class="rtable"><thead><tr><th style="width:50%">食材</th><th>${esc(P[Math.max(0, sel)] || '數量')}</th></tr></thead><tbody>${(r.ing || []).map(i => `<tr><td>${esc(i.n)}</td><td>${esc((i.q || [])[Math.max(0, sel)] || '—')}</td></tr>`).join('')}</tbody></table>`);
     } else tbl = `<table class="rtable"><thead><tr><th style="width:50%">食材</th><th>數量</th></tr></thead><tbody>${(r.ing || []).map(i => `<tr><td>${esc(i.n)}</td><td>${esc(i.q)}</td></tr>`).join('') || '<tr><td colspan="2" class="muted">（尚未填寫食材）</td></tr>'}</tbody></table>`;
-    sh.body.innerHTML = `<article class="recipe">${cov ? `<img class="cover" src="${cov}" alt="">` : ''}<h2>${esc(r.title || '未命名食譜')}</h2>
+    sh.body.innerHTML = `<article class="recipe">${cov ? `<img class="cover" data-a="covView" src="${cov}" alt="">` : ''}<h2>${esc(r.title || '未命名食譜')}</h2>
       <div class="serv">${rcatKey(r) ? `<span class="tag" style="--c:${c.color}">${esc(c.icon)} ${esc(c.name)}</span> ` : ''}${r.type === 'ratio' ? '份量比例表' : '份數：' + esc(r.serv || '—')}</div>${tbl}
       <h3>步驟</h3>${(r.steps || []).length ? `<ol>${r.steps.map(s => `<li>${esc(s)}</li>`).join('')}</ol>` : `<p class="muted">（還沒有填寫步驟${r.type === 'ratio' ? '，可以按「編輯」之後再補' : ''}）</p>`}${r.note ? `<h3>備註</h3><div class="note">${esc(r.note)}</div>` : ''}</article>`; };
   render();
-  sh.body.addEventListener('click', e => { const b = e.target.closest('[data-p]'); if (!b) return; recSel[r.id] = +b.dataset.p; render(); });
+  sh.body.addEventListener('click', e => { if (e.target.closest('[data-a="covView"]')) { buzz(10); Viewer.open([{id: r.cover, label: ''}], 0, r.title || '食譜'); return; } const b = e.target.closest('[data-p]'); if (!b) return; recSel[r.id] = +b.dataset.p; render(); });
   sh.tools.addEventListener('click', e => { const b = e.target.closest('[data-a]'); if (!b) return;
     if (b.dataset.a === 'copy') { const P = r.portions || []; copyText(`${r.title}\n${r.type === 'ratio' ? '' : '份數：' + (r.serv || '') + '\n'}\n【食材】\n${r.type === 'ratio' ? '食材｜' + P.join('｜') + '\n' + (r.ing || []).map(i => i.n + '｜' + P.map((_, j) => (i.q || [])[j] || '—').join('｜')).join('\n') : (r.ing || []).map(i => `${i.n}　${i.q}`).join('\n')}${(r.steps || []).length ? '\n\n【步驟】\n' + r.steps.map((s, i) => `${i + 1}. ${s}`).join('\n') : ''}${r.note ? '\n\n【備註】\n' + r.note : ''}`); }
     else if (b.dataset.a === 'dup') { buzz(10); dupRecipe(r).then(n => { if (!n) return; sh.close(); viewRecipe(n.id); editRecipe(n, false, () => {}); }); }
@@ -6768,6 +6793,8 @@ function zipStore(files) {
   return new Blob([...parts, ...cen, e.buffer], {type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
 }
 
+/* 分帳連結的發票號碼（從發票拿去分帳的） */
+const billInvNo = b => { const v = Object.values(DB.invs || {}).find(x => x.bill && x.bill.id === b.id); return v ? v.no : (b.inv && (DB.invs || {})[b.inv] ? b.inv : ''); };
 /* ============================================================
    購物分帳：量販店／超商／外送的明細 → 誰買的、誰一起分 → 每個人要付多少
    DB.bills = {'2026-11-08': [bill]}
@@ -6912,10 +6939,11 @@ function initShop() {
   box.addEventListener('click', e => { const card = e.target.closest('.bill'); if (card && !e.target.closest('button')) { const b = curBill(card.dataset.b); if (b) editBill(b); } });
 }
 function billMore(b) {
-  const sh = sheet({title: '🧾 ' + (billStore(b) || '消費明細'), html: `<div class="actList"><button data-a="exp">📤 匯出這筆（文字／Excel）</button>${(b.imgs || []).length ? '<button data-a="imgs">🖼️ 看明細圖片</button>' : ''}${shopPlaces().some(p => p.id === b.place) ? '<button data-a="open">🏪 打開店家</button>' : ''}<button data-a="toAcc">📒 匯入記帳（帶入每個人分到的金額）</button><button data-a="toInv">🧾 套用到發票（取代品項和折扣）</button><button data-a="move">📅 改到其他日期</button><button data-a="del" class="dng">🗑 刪除這筆</button></div>`});
+  const sh = sheet({title: '🧾 ' + (billStore(b) || '消費明細'), html: `<div class="actList"><button data-a="exp">📤 匯出這筆（文字／Excel）</button>${billInvNo(b) ? '<button data-a="invQr">🔳 發票證明聯・QR Code</button>' : ''}${(b.imgs || []).length ? '<button data-a="imgs">🖼️ 看明細圖片</button>' : ''}${shopPlaces().some(p => p.id === b.place) ? '<button data-a="open">🏪 打開店家</button>' : ''}<button data-a="toAcc">📒 匯入記帳（帶入每個人分到的金額）</button><button data-a="toInv">🧾 套用到發票（取代品項和折扣）</button><button data-a="move">📅 改到其他日期</button><button data-a="del" class="dng">🗑 刪除這筆</button></div>`});
   sh.body.onclick = async e => { const t = e.target.closest('[data-a]'); if (!t) return; const a = t.dataset.a; sh.close();
     if (a === 'exp') openShopExport(Shop.sel, b.id);
     else if (a === 'toInv') billToInv(b); else if (a === 'toAcc') { if (await enterAcc()) billToAcc(b); }
+    else if (a === 'invQr') invQrCard(billInvNo(b));
     else if (a === 'imgs') Viewer.open(b.imgs.map((id, i) => ({id, label: `明細圖片 ${i + 1}/${b.imgs.length}`})), 0, billStore(b));
     else if (a === 'open') openPlace(b.place);
     else if (a === 'move') { const v = await askText('改到哪一天？（年-月-日）', Shop.sel); if (!v) return; const k = v.trim().replace(/[/.]/g, '-'), d = new Date(k + 'T00:00'); if (isNaN(d)) { toast('日期格式不正確'); return; }
@@ -7360,10 +7388,10 @@ function guideAnim(root) { const T = []; const stop = () => T.forEach(clearTimeo
     GImg.load().then(D => { if (!D || !document.body.contains(ph)) { $('.gLoad', ph).textContent = '示意圖要連上網路下載一次，之後離線也能看'; return; }
       scr.innerHTML = F.map(f => D[f[0]] ? `<img src="${D[f[0]]}" alt="">` : '<i class="gMiss"></i>').join(''); const im = $$('img, .gMiss', scr);
       let k = 0; const show = n => im.forEach((e, j) => e.classList.toggle('on', j === n));
-      const step = () => { if (!document.body.contains(ph)) return; const f = F[k]; show(k); scr.style.transformOrigin = '50% 50%'; scr.classList.remove('zm');
+      const step = () => { if (!document.body.contains(ph)) return; const f = F[k]; show(k);
         if (f[1] != null) { fg.style.transition = 'none'; fg.style.left = Math.min(92, f[1] + 18) + '%'; fg.style.top = Math.min(96, f[2] + 16) + '%'; fg.classList.remove('dn', 'on'); fg.offsetWidth;
           T.push(setTimeout(() => { fg.style.transition = ''; fg.classList.add('on'); fg.style.left = f[1] + '%'; fg.style.top = f[2] + '%'; }, 450));
-          T.push(setTimeout(() => { fg.classList.add('dn'); rp.style.left = f[1] + '%'; rp.style.top = f[2] + '%'; rp.classList.remove('go'); rp.offsetWidth; rp.classList.add('go'); scr.style.transformOrigin = f[1] + '% ' + f[2] + '%'; scr.classList.add('zm'); }, 1350));
+          T.push(setTimeout(() => { fg.classList.add('dn'); rp.style.left = f[1] + '%'; rp.style.top = f[2] + '%'; rp.classList.remove('go'); rp.offsetWidth; rp.classList.add('go'); }, 1350));
           T.push(setTimeout(() => { fg.classList.remove('dn'); }, 1650));
           T.push(setTimeout(() => { k = (k + 1) % F.length; if (k === 0) fg.classList.remove('on'); step(); }, k === F.length - 1 ? 3000 : 2100)); }
         else { fg.classList.remove('on'); T.push(setTimeout(() => { k = (k + 1) % F.length; step(); }, F.length > 1 ? 2600 : 99999)); } };
@@ -7735,6 +7763,7 @@ function openInvDetail(no) {
         <button class="ihR ihS" data-a="seller"><span>消費店家</span><b><em>${esc(invSeller(v))}</em><i class="ed">✎</i></b></button>
         <button class="ihR ihS" data-a="sid"><span>店家統編</span><b><em>${v.sellerId || '未填'}</em><i class="ed">✎</i></b></button></div>
       <div class="ihWay">${wayBox(v.way)}</div>
+      <button class="btn block" data-a="qr" style="margin-top:.5rem">🔳 發票證明聯・QR Code・存成圖片</button>
       <button class="ihAmt card" data-a="total"><span>💲 消費金額</span><b>${money(v.total)} <i class="ed">✎</i></b></button>
       <div class="lbl ihLbl" style="margin-top:.8rem"><span>🛍️ 消費品項</span><button class="btn sm" data-a="addIt">＋ 品項</button></div>
       ${its.length ? `<div class="ihT card"><div class="ihTr h"><span>品名</span><span>數量</span><span>小計</span></div>${its.map((x, i) => `<button class="ihTr ${+x.amt < 0 ? 'neg' : ''}" data-i="${i}"><span>${esc(x.n)}</span><span>${fq(x.q)}</span><span>${money(x.amt)}</span></button>`).join('')}</div>
@@ -7760,6 +7789,7 @@ function openInvDetail(no) {
     if (a === 'addOd') { v.odisc = v.odisc || []; await editAmtRow(v, 'odisc'); save(); return; }
     if (a === 'addFe') { v.fees = v.fees || []; await editAmtRow(v, 'fees'); save(); return; }
     if (a === 'fromBill') { const bb = await pickBillFor(v); if (bb && await applyBillToInv(bb, v)) save(); return; }
+    if (a === 'qr') { invQrCard(v.no); return; }
     if (a === 'way') { v.way = v.way === t.dataset.w ? '' : t.dataset.w; save(); return; }
     if (a === 'wayAdd') { const w = await addWay(); if (w) { v.way = w; save(); } return; }
     if (a === 'addIt') { await invItemEdit(v, -1); save(); }
@@ -9068,10 +9098,11 @@ async function renderAccMap() {
   const base = all.filter(o => amInArea(o) && inQ(o)), cnt = k => base.filter(o => k === 'all' || (o.cats || [o.cat]).includes(k)).length;
   if (AM.f !== 'all' && !cnt(AM.f)) AM.f = 'all';
   const V = base.filter(o => AM.f === 'all' || (o.cats || [o.cat]).includes(AM.f)), pinned = all.filter(o => o.loc).length;
-  $('#accMSub').textContent = `${all.length} 個地點・${pinned} 間在地圖上`;
+  $('#accMSub').textContent = `${all.length} 個地點・${pinned} 個在地圖上`;
   const co = DB.acc.amCord || [], cats0 = DB.cats.map(c => c.id).concat(['', '_acc']), cats = cats0.map((k, i) => [k, co.indexOf(k) < 0 ? 1e4 + i : co.indexOf(k)]).sort((a, b) => a[1] - b[1]).map(x => x[0]).filter(k => cnt(k));
   const ordOf = k => ((DB.acc.amOrd || {})[k]) || [], anyOpen = AM.f === 'all' && cats.some(k => !amFolded(k));
   const towns = AM.area && TW.counties[AM.area.c] ? TW.counties[AM.area.c].towns : [];
+  const chX = ($('#accMList .amChips') || {}).scrollLeft || 0;   /* 重畫時保留分類列的捲動位置，不要每次跳回最前面 */
   $('#accMList').innerHTML = `<div class="amChips">${[['all', '🗺️ 全部', '']].concat(cats.map(k => { const c = amCat(k); return [k, `${c.icon} ${c.name}`, c.color]; })).map(([k, t, c]) => `<button class="chip ${AM.f === k ? 'on' : ''}" data-f="${k}" ${c ? `style="--c:${c}"` : ''}>${esc(t)} <span class="n">${cnt(k)}</span></button>`).join('')}</div>
     ${TW.ready ? `<div class="amArea"><select id="amC" aria-label="選擇縣市"><option value="">全部縣市</option>${TW.names.map(n => `<option ${AM.area && AM.area.c === n ? 'selected' : ''}>${n}</option>`).join('')}</select><select id="amT" aria-label="選擇鄉鎮市區" ${AM.area ? '' : 'disabled'}><option value="">全部鄉鎮市區</option>${towns.map(t => `<option ${AM.area && AM.area.t === t.name ? 'selected' : ''}>${t.name}</option>`).join('')}</select>${AM.area ? '<button class="ic" data-a="arX" aria-label="取消區域">✕</button>' : ''}</div>` : ''}
     <div class="amBar"><div class="searchBox amQ"><input id="amQ" type="search" placeholder="搜尋名稱或地址" value="${esc(AM.q)}"></div>${AM.f === 'all' && cats.length > 1 ? `<button class="btn sm amFoldAll" data-a="foldAll">${anyOpen ? '⊟ 全部收合' : '⊞ 全部展開'}</button>` : ''}</div>
@@ -9081,6 +9112,7 @@ async function renderAccMap() {
       return `<div class="amSec ${fd ? 'fold' : ''}" data-k="${k}"><button class="amSecH" data-fold="${k}" style="--c:${c.color}"><span class="grip"></span><span>${esc(c.icon)}</span><b>${esc(c.name)}</b><em>${L.length}</em>${AM.f === 'all' ? `<i>${fd ? '▸' : '▾'}</i>` : ''}</button>
         ${fd ? '' : L.map(o => `<button class="amR card ${AM.sel === o.n ? 'sel' : ''}" data-st="${esc(o.n)}"><span class="amPinI ${o.loc ? 'on' : ''}">${o.loc ? '📍' : '📌'}</span><span class="grow"><b>${esc(o.n)}</b><small>${o.loc ? esc(o.loc.addr || '已釘選位置') : '還沒有位置'}</small><small>${o.st ? `記帳 ${o.st.cnt} 筆・${money(o.st.sum)}・最近 ${o.st.last.slice(5).replace('-', '/')}` : '還沒有記帳紀錄'}</small></span>${o.loc ? '<span class="chev">›</span>' : `<span class="btn sm" data-pin="${esc(o.n)}">📍 釘選</span>`}</button>`).join('')}</div>`; }).join('') || '<div class="empty">沒有符合的店家</div>'}</div>`;
   /* 長按拖曳：分類整組上下移動、分類裡的店家排序（只影響記帳這張地圖的順序） */
+  { const ch = $('#accMList .amChips'); if (ch) { ch.scrollLeft = chX; const on = $('.chip.on', ch); if (on && (on.offsetLeft < ch.scrollLeft || on.offsetLeft + on.offsetWidth > ch.scrollLeft + ch.clientWidth)) ch.scrollLeft = on.offsetLeft - ch.clientWidth / 2 + on.offsetWidth / 2; } }
   const secs = $('#amSecs');
   if (AM.f === 'all' && cats.length > 1) sortable(secs, {item: '.amSec', handle: '.amSecH', handleOnly: true, scroller: $('#pgAccM .pgBody'), onSort(f, t) { const ks = $$('.amSec', secs).map(e => e.dataset.k), m = ks.splice(f, 1)[0]; ks.splice(t, 0, m);
     DB.acc.amCord = ks.concat(cats0.filter(k => !ks.includes(k))); saveAcc(); renderAccMap(); }});
@@ -9427,19 +9459,42 @@ function invQrStrings(r) { const v = (DB.invs || {})[r.inv] || {}, no = r.inv, d
 function qrSvgStr(t, sz = 240) { const q = qrcode(0, 'L'); q.addData(unescape(encodeURIComponent(t))); q.make(); const n = q.getModuleCount(), c = sz / (n + 4); let d = '';
   for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) if (q.isDark(y, x)) d += `M${((x + 2) * c).toFixed(2)} ${((y + 2) * c).toFixed(2)}h${c.toFixed(2)}v${c.toFixed(2)}h-${c.toFixed(2)}z`;
   return `<svg viewBox="0 0 ${sz} ${sz}" class="qrSvg"><rect width="${sz}" height="${sz}" fill="#fff"/><path d="${d}" fill="#000"/></svg>`; }
-function accInvQr(r) { const Q = invQrStrings(r), v = (DB.invs || {})[r.inv] || {};
-  const sh = sheet({title: '🔳 發票 QR Code', full: true});
-  sh.body.innerHTML = `<div class="einv"><div class="einvT">電子發票證明聯</div><div class="einvP">${(() => { const d = new Date((v.date || r.d) + 'T00:00:00'), y = d.getFullYear() - 1911, m = d.getMonth() + 1, a = m % 2 ? m : m - 1; return `${y}年${String(a).padStart(2, '0')}-${String(a + 1).padStart(2, '0')}月`; })()}</div>
-    <div class="einvNo">${esc(r.inv.slice(0, 2))}-${esc(r.inv.slice(2))}</div><div class="einvD"><span>${esc(v.date || r.d)}${v.time || r.t ? ' ' + esc(v.time || r.t) : ''}</span></div>
-    <div class="einvD"><span>隨機碼：${esc(v.rnd || '----')}</span><span>總計：${Math.round(numP(v.total) || +r.amt || 0)}</span></div>
-    <div class="einvD"><span>賣方：${esc(v.sellerId || '—')}</span><span>${esc(v.seller ? invSeller(v) : r.payee || '')}</span></div>
-    <div class="einvQ">${qrSvgStr(Q.L)}${qrSvgStr(Q.R)}</div><div class="einvF">左：發票資訊＋前段品項　右：其餘品項（共 ${Q.n} 項）</div></div>
-    <div class="einvSw"><button class="btn" data-q="plain">📷 一般相機版（掃了直接看到明細文字）</button></div><div id="einvPlain"></div>
+function accInvQr(r) { invQrCard(r.inv, r); }
+/* 發票證明聯卡片：QR Code＋購物明細條列，可以存成 PNG。記帳、發票區、分帳都能打開（r 可省略，直接用發票資料） */
+function invQrData(no, r) { const v = (DB.invs || {})[no] || {}; r = r || {inv: no, d: v.date || ymd(new Date()), t: v.time || '', amt: numP(v.total) || 0, payee: v.seller ? invSeller(v) : '', items: []};
+  const its = (v.items || []).length ? (v.items || []).map(x => ({n: x.n, q: x.q || 1, amt: +x.amt || 0})) : ((r.bill && r.bill.items) || r.items || []).map(x => ({n: x.n, q: x.q || 1, amt: +x.amt || 0}));
+  const ds = (v.disc || []).map(d => ({n: d.n, amt: -(+d.amt || 0)})).concat((v.odisc || []).map(d => ({n: d.n, amt: -(+d.amt || 0)})), (v.fees || []).map(d => ({n: d.n, amt: +d.amt || 0})));
+  const d = new Date((v.date || r.d) + 'T00:00:00'), y = d.getFullYear() - 1911, m = d.getMonth() + 1, a = m % 2 ? m : m - 1;
+  return {v, r, its, ds, per: `${y}年${String(a).padStart(2, '0')}-${String(a + 1).padStart(2, '0')}月`, dt: `${v.date || r.d}${v.time || r.t ? ' ' + (v.time || r.t) : ''}`, tot: Math.round(numP(v.total) || +r.amt || 0), seller: v.seller ? invSeller(v) : r.payee || '', Q: invQrStrings(r)}; }
+function invCardHtml(D) { const {v, r, its, ds, Q} = D, f = n => (n < 0 ? '-$' : '$') + Math.abs(Math.round(n * 100) / 100).toLocaleString('en-US');
+  return `<div class="einv"><div class="einvT">電子發票證明聯</div><div class="einvP">${D.per}</div><div class="einvNo">${esc(r.inv.slice(0, 2))}-${esc(r.inv.slice(2))}</div>
+    <div class="einvD"><span>${esc(D.dt)}</span></div><div class="einvD"><span>隨機碼：${esc(v.rnd || '----')}</span><span>總計：${D.tot}</span></div>
+    <div class="einvD"><span>賣方：${esc(v.sellerId || '—')}</span><span>${esc(D.seller)}</span></div>
+    <div class="einvQ">${qrSvgStr(Q.L)}${qrSvgStr(Q.R)}</div><div class="einvF">左：發票資訊＋前段品項　右：其餘品項（共 ${Q.n} 項）</div>
+    ${its.length ? `<div class="einvL"><div class="einvLH"><span>品名</span><span>數量</span><span>金額</span></div>${its.map(x => `<div class="einvLR ${x.amt < 0 ? 'neg' : ''}"><span>${esc(x.n)}</span><span>${x.q}</span><span>${f(x.amt)}</span></div>`).join('')}
+      ${ds.map(x => `<div class="einvLR ${x.amt < 0 ? 'neg' : ''}"><span>${esc(x.n)}</span><span></span><span>${f(x.amt)}</span></div>`).join('')}<div class="einvLT"><span>總計</span><span>${f(D.tot)}</span></div></div>` : ''}</div>`; }
+const INV_CARD_CSS = `body{margin:0;background:#fff;font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif}.wrap{padding:28px 0;display:flex;justify-content:center}
+.einv{width:480px;background:#fff;color:#111;border:1px solid #ddd;border-radius:10px;padding:26px 26px 22px;box-sizing:border-box}.einvT{text-align:center;font-size:26px;font-weight:900;letter-spacing:.1em}.einvP{text-align:center;font-size:28px;font-weight:900;margin:2px 0}
+.einvNo{text-align:center;font-size:34px;font-weight:900;letter-spacing:.04em;margin-bottom:8px}.einvD{display:flex;justify-content:space-between;gap:8px;font-size:16px;margin:3px 0}
+.einvQ{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}.einvQ svg{width:100%;height:auto;display:block}.einvF{text-align:center;font-size:13px;color:#666;margin-top:8px}
+.einvL{margin-top:16px;border-top:2px dashed #999;padding-top:10px;font-size:15px}.einvLH,.einvLR,.einvLT{display:grid;grid-template-columns:1fr 44px 84px;gap:8px;padding:4px 0}.einvLH{color:#777;font-size:13px;border-bottom:1px solid #ddd}
+.einvLH span:nth-child(n+2),.einvLR span:nth-child(n+2){text-align:right}.einvLR.neg{color:#a8472f}.einvLT{grid-template-columns:1fr 100px;font-weight:900;font-size:17px;border-top:1px solid #ccc;margin-top:4px;padding-top:8px}.einvLT span:last-child{text-align:right}`;
+async function invCardPng(D) { try { busy('產生圖片…');
+    const html = `<!doctype html><html><head><meta charset="utf-8"><style>${INV_CARD_CSS}</style></head><body><div class="wrap">${invCardHtml(D)}</div></body></html>`, [c] = await renderPages(html, false);
+    /* 只留卡片那一塊（去掉左右空白） */
+    const W = c.width, k = W / 794, cw = Math.round(540 * k), x0 = Math.round((W - cw) / 2), o = document.createElement('canvas'); o.width = cw; o.height = c.height; o.getContext('2d').drawImage(c, x0, 0, cw, c.height, 0, 0, cw, c.height);
+    const name = `發票_${D.r.inv}.png`, url = o.toDataURL('image/png'); busy(false);
+    if (IS_APP && NB.shareImg) { const ok = NB.shareImg(url.split(',')[1], name, '', false); toast(ok ? '🖼️ 已存到相簿（圖片／日日帳本）' : '存檔失敗', 3500); return; }
+    await saveFile(name, await (await fetch(url)).blob()); } catch (e) { busy(false); toast('❌ 產生圖片失敗：' + e.message, 3500); } }
+function invQrCard(no, r) { const D = invQrData(no, r), v = D.v;
+  const sh = sheet({title: '🔳 發票 QR Code', full: true, foot: '<button class="btn pri" data-a="png">🖼️ 存成圖片（PNG）</button>'});
+  sh.body.innerHTML = invCardHtml(D) + `<div class="einvSw"><button class="btn" data-q="plain">📷 一般相機版（掃了直接看到明細文字）</button></div><div id="einvPlain"></div>
     <div class="blWarn" style="margin-top:.7rem">這是依發票格式產生的資料碼，用日日帳本或發票 App 掃描可以讀到號碼和品項；因為沒有店家的加密驗證，不能拿去兌獎或載具歸戶。</div>`;
+  sh.foot.onclick = e => { if (e.target.closest('[data-a="png"]')) { buzz(10); invCardPng(D); } };
   /* 一般手機相機掃 QR 只會顯示原始文字：另外做一個「易讀版」，掃了直接看到發票號碼、店家、品項和金額 */
   sh.body.addEventListener('click', e => { const b = e.target.closest('[data-q="plain"]'); if (!b) return; buzz(10); const box = $('#einvPlain', sh.body); if (box.innerHTML) { box.innerHTML = ''; return; }
-    const its = (v.items || []).filter(x => +x.amt > 0), L = its.length ? its.map(x => `${x.n} ×${x.q || 1}  $${Math.round(+x.amt)}`) : ((r.bill && r.bill.items) || r.items || []).map(x => `${x.n} ×${x.q || 1}  $${Math.round(+x.amt || 0)}`);
-    const t = [`電子發票 ${r.inv.slice(0, 2)}-${r.inv.slice(2)}`, `${v.date || r.d}${v.time || r.t ? ' ' + (v.time || r.t) : ''}`, (v.seller ? invSeller(v) : r.payee) || '', ...L, `總計 $${Math.round(numP(v.total) || +r.amt || 0)}`].filter(Boolean).join('\n');
+    const L = D.its.filter(x => x.amt > 0).map(x => `${x.n} ×${x.q}  $${Math.round(x.amt)}`);
+    const t = [`電子發票 ${no.slice(0, 2)}-${no.slice(2)}`, D.dt, D.seller, ...L, `總計 $${D.tot}`].filter(Boolean).join('\n');
     box.innerHTML = `<div class="einv" style="margin-top:.7rem"><div class="einvT" style="font-size:1rem">一般相機版</div><div style="max-width:15rem;margin:.5rem auto">${qrSvgStr(t, 300)}</div><pre class="einvTxt">${esc(t)}</pre></div>`; }); }
 
 /* ===== 對帳還款歷史：未完成（還沒結清的每一筆）／已完成（每一次結清還款），可以依人或依時間分類、篩選某個人 ===== */
